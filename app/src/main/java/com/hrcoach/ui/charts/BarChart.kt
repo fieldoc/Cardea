@@ -1,0 +1,152 @@
+package com.hrcoach.ui.charts
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.unit.dp
+import kotlin.math.max
+
+data class BarEntry(val label: String, val value: Float)
+
+@Composable
+fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) {
+    val maxValue = bars.maxOfOrNull { it.value } ?: 0f
+
+    if (bars.isEmpty() || maxValue == 0f) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text(text = "No data")
+        }
+        return
+    }
+
+    val gridColor = MaterialTheme.colorScheme.surfaceVariant
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    val textPaint = remember {
+        android.graphics.Paint().apply {
+            textSize = 28f
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+    }
+
+    val yLabelPaint = remember {
+        android.graphics.Paint().apply {
+            textSize = 28f
+            isAntiAlias = true
+            textAlign = android.graphics.Paint.Align.RIGHT
+        }
+    }
+
+    Canvas(modifier = modifier) {
+        val paddingLeft = 48.dp.toPx()
+        val paddingBottom = 32.dp.toPx()
+        val paddingTop = 8.dp.toPx()
+        val paddingRight = 8.dp.toPx()
+
+        val chartLeft = paddingLeft
+        val chartTop = paddingTop
+        val chartRight = size.width - paddingRight
+        val chartBottom = size.height - paddingBottom
+
+        val chartWidth = chartRight - chartLeft
+        val chartHeight = chartBottom - chartTop
+
+        val gridLineColor = gridColor
+        val onSurfaceVariantArgb = labelColor.toArgb()
+        textPaint.color = onSurfaceVariantArgb
+        yLabelPaint.color = onSurfaceVariantArgb
+
+        // Draw 4 horizontal dashed grid lines with Y-axis labels
+        val gridLineCount = 4
+        for (i in 0..gridLineCount) {
+            val fraction = i.toFloat() / gridLineCount
+            val y = chartBottom - fraction * chartHeight
+            val gridValue = fraction * maxValue
+
+            // Dashed grid line
+            val dashWidth = 12.dp.toPx()
+            val dashGap = 6.dp.toPx()
+            var x = chartLeft
+            while (x < chartRight) {
+                val endX = minOf(x + dashWidth, chartRight)
+                drawLine(
+                    color = gridLineColor,
+                    start = Offset(x, y),
+                    end = Offset(endX, y),
+                    strokeWidth = 1.dp.toPx()
+                )
+                x += dashWidth + dashGap
+            }
+
+            // Y-axis label
+            val labelText = "%.0f".format(gridValue)
+            drawContext.canvas.nativeCanvas.drawText(
+                labelText,
+                chartLeft - 6.dp.toPx(),
+                y + (yLabelPaint.textSize / 3f),
+                yLabelPaint
+            )
+        }
+
+        // Draw bars
+        val totalBarSlotWidth = chartWidth / bars.size
+        val gapFraction = 0.20f
+        val barWidth = totalBarSlotWidth * (1f - gapFraction)
+        val halfGap = totalBarSlotWidth * gapFraction / 2f
+        val cornerRadius = 4.dp.toPx()
+
+        bars.forEachIndexed { index, entry ->
+            val isLast = index == bars.size - 1
+            val barColor = if (isLast) color else color.copy(alpha = 0.55f)
+
+            val slotLeft = chartLeft + index * totalBarSlotWidth
+            val barLeft = slotLeft + halfGap
+            val barRight = barLeft + barWidth
+            val barHeight = (entry.value / maxValue) * chartHeight
+            val barTop = chartBottom - barHeight
+            val barCenterX = barLeft + barWidth / 2f
+
+            // Draw bar with rounded top corners only using Path
+            val path = Path()
+            path.addRoundRect(
+                RoundRect(
+                    rect = Rect(
+                        left = barLeft,
+                        top = barTop,
+                        right = barRight,
+                        bottom = chartBottom
+                    ),
+                    topLeft = CornerRadius(cornerRadius, cornerRadius),
+                    topRight = CornerRadius(cornerRadius, cornerRadius),
+                    bottomLeft = CornerRadius(0f, 0f),
+                    bottomRight = CornerRadius(0f, 0f)
+                )
+            )
+            drawPath(path = path, color = barColor)
+
+            // X-axis label centered below each bar
+            drawContext.canvas.nativeCanvas.drawText(
+                entry.label,
+                barCenterX,
+                chartBottom + 24.dp.toPx(),
+                textPaint
+            )
+        }
+    }
+}

@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(where kotlin-lsp:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(echo $PATH:*)",
+      "Bash(/c/tools/kotlin-lsp/kotlin-lsp.sh:*)",
+      "Bash(/c/tools/kotlin-lsp/kotlin-lsp.cmd:*)",
+      "Bash(python3:*)",
+      "Bash(claude mcp:*)",
+      "Bash(timeout 10 cmd:*)",
+      "Bash(printf:*)",
+      "Bash(export:*)",
+      "Bash(echo exit: $?:*)",
+      "Bash(kotlin-lsp:*)",
+      "Bash(\"$JAVA_BIN\":*)",
+      "Bash(\"/c/tools/kotlin-lsp/jre/bin/java\":*)",
+      "Bash(xargs ls:*)",
+      "Bash(echo:*)",
+      "Bash(C:/Python314/python.exe:*)",
+      "Bash(tasklist:*)",
+      "Bash(wmic process:*)",
+      "Bash(./gradlew.bat help:*)",
+      "Bash(xargs cat:*)",
+      "Bash(where uvx:*)",
+      "Bash(\"/c/Users/glm_6/.local/bin/uvx\":*)",
+      "mcp__plugin_serena_serena__activate_project",
+      "mcp__plugin_serena_serena__get_symbols_overview",
+      "Bash(powershell.exe:*)",
+      "mcp__plugin_serena_serena__find_referencing_symbols",
+      "mcp__plugin_serena_serena__find_symbol",
+      "mcp__plugin_serena_serena__check_onboarding_performed",
+      "mcp__plugin_serena_serena__search_for_pattern",
+      "mcp__plugin_serena_serena__read_file"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "wmic process where \"commandline like '%KotlinLspServerKt%'\" delete 2>/dev/null; cd /c/Users/glm_6/AndroidStudioProjects/HRapp && ./gradlew.bat help --daemon --quiet 2>&1 | tail -1 || true"
+          }
+        ]
+      }
+    ]
+  }
+}

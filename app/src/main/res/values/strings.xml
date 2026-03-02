@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">HR Coach</string>
+    <string name="nav_setup">Setup</string>
+    <string name="nav_progress">Progress</string>
+    <string name="nav_history">History</string>
+    <string name="screen_setup_title">New Run Setup</string>
+    <string name="screen_progress_title">Progress</string>
+    <string name="screen_history_title">History</string>
+    <string name="screen_workout_title">Workout</string>
+    <string name="screen_workout_paused_title">Workout Paused</string>
+    <string name="button_start_workout">Start Workout</string>
+    <string name="button_view_progress">View Progress</string>
+    <string name="button_view_run">View This Run</string>
+    <string name="button_post_run_insights">Post-run Insights</string>
+    <string name="button_open_maps_setup">Open Maps Setup</string>
+    <string name="button_delete_run">Delete Run</string>
+    <string name="button_done">Done</string>
+    <string name="button_pause">PAUSE</string>
+    <string name="button_resume">RESUME</string>
+    <string name="button_stop">STOP</string>
+    <string name="dialog_stop_workout_title">Stop workout?</string>
+    <string name="dialog_stop_workout_message">Your run will end and post-run summary will be generated.</string>
+    <string name="dialog_delete_run_title">Delete this run?</string>
+    <string name="dialog_delete_run_message">This removes the workout, route points, and saved metrics.</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="label_distance">Distance</string>
+    <string name="label_duration">Duration</string>
+    <string name="label_avg_hr">Avg HR</string>
+</resources>
