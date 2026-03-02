@@ -9,7 +9,7 @@ val HrCoachTypography = Typography(
     displayLarge = TextStyle(
         fontWeight = FontWeight.Bold,
         fontSize = 92.sp,
-        letterSpacing = (-1.2).sp
+        letterSpacing = (-2.0).sp
     ),
     headlineMedium = TextStyle(
         fontWeight = FontWeight.SemiBold,
@@ -20,6 +20,11 @@ val HrCoachTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 20.sp,
         letterSpacing = 0.1.sp
+    ),
+    titleMedium = TextStyle(
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        letterSpacing = 0.sp
     ),
     bodyLarge = TextStyle(
         fontWeight = FontWeight.Normal,
@@ -40,6 +45,11 @@ val HrCoachTypography = Typography(
         fontWeight = FontWeight.SemiBold,
         fontSize = 15.sp,
         letterSpacing = 0.6.sp
+    ),
+    labelSmall = TextStyle(
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        letterSpacing = 0.8.sp,
+        color = SubtleText
     )
 )
-
