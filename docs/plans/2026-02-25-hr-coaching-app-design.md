@@ -1,5 +1,8 @@
 # HR Coaching App — Design Document
 
+> **⚠ SUPERSEDED** — UI/UX and navigation sections replaced by `docs/plans/2026-03-02-cardea-ui-ux-design.md`.
+> The app is now branded **Cardea**. Data model, zone engine, and alert behavior sections below remain valid.
+
 **Date:** 2026-02-25
 **Platform:** Android (Kotlin, Jetpack Compose)
 **HR Monitor:** Coospo H808S (BLE + ANT+; app uses BLE)

@@ -1,7 +1,13 @@
 package com.hrcoach.ui.postrun
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,15 +15,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Insights
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,18 +35,32 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
+import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.theme.CardeaBgPrimary
+import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.HrCoachThemeTokens
+import kotlinx.coroutines.delay
 
 private enum class PostRunContentState {
     LOADING,
@@ -56,8 +79,28 @@ fun PostRunSummaryScreen(
     viewModel: PostRunSummaryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showCelebration by remember { mutableStateOf(false) }
 
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading) {
+            delay(120L)
+            showCelebration = true
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
+                    center = Offset(x = 0f, y = 0f),
+                    radius = 1800f
+                )
+            )
+    ) {
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(uiState.titleText) },
@@ -70,7 +113,9 @@ fun PostRunSummaryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
             )
         }
@@ -107,7 +152,7 @@ fun PostRunSummaryScreen(
                         Text(
                             text = uiState.errorMessage ?: "Unable to load summary.",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.outline
+                            color = HrCoachThemeTokens.subtleText
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = onDone) {
@@ -122,97 +167,115 @@ fun PostRunSummaryScreen(
                             .fillMaxSize()
                             .padding(padding)
                             .verticalScroll(rememberScrollState())
-                            .padding(16.dp)
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = "Run Complete!",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
+                        AnimatedVisibility(
+                            visible = showCelebration,
+                            enter = scaleIn(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
+                        ) {
+                            Text(
+                                text = "Run Complete!",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            StatCard(
+                            SummaryStatCard(
                                 title = stringResource(R.string.label_distance),
                                 value = uiState.distanceText,
+                                icon = Icons.AutoMirrored.Filled.DirectionsRun,
                                 modifier = Modifier.weight(1f)
                             )
-                            StatCard(
+                            SummaryStatCard(
                                 title = stringResource(R.string.label_duration),
                                 value = uiState.durationText,
+                                icon = Icons.Default.Timer,
                                 modifier = Modifier.weight(1f)
                             )
-                            StatCard(
+                            SummaryStatCard(
                                 title = stringResource(R.string.label_avg_hr),
                                 value = uiState.avgHrText,
+                                icon = Icons.Default.Favorite,
                                 modifier = Modifier.weight(1f)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        if (uiState.similarRunCount > 0) {
-                            Text(
-                                text = "vs Similar Runs",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
+                        Text(
+                            text = "vs Your Similar Runs",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
 
                         if (uiState.comparisons.isEmpty()) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "No meaningful comparisons yet. Complete a few more similar runs.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    modifier = Modifier.padding(16.dp)
-                                )
+                            GlassCard {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Insights,
+                                        contentDescription = null,
+                                        tint = HrCoachThemeTokens.subtleText
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Not enough data yet - keep running!",
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "Complete a few more similar sessions to unlock comparisons.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = HrCoachThemeTokens.subtleText
+                                        )
+                                    }
+                                }
                             }
                         } else {
+                            Text(
+                                text = "Based on ${uiState.similarRunCount} runs",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HrCoachThemeTokens.subtleText
+                            )
                             uiState.comparisons.forEach { item ->
-                                Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 8.dp)
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text(
-                                            text = item.title,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = item.value,
-                                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        item.delta?.let { deltaText ->
-                                            val deltaColor = when (item.positive) {
-                                                true -> MaterialTheme.colorScheme.tertiary
-                                                false -> MaterialTheme.colorScheme.secondary
-                                                null -> MaterialTheme.colorScheme.outline
-                                            }
-                                            Spacer(modifier = Modifier.height(2.dp))
+                                GlassCard {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = deltaText,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = deltaColor
+                                                text = item.title,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurface
                                             )
-                                        }
-                                        item.insight?.let { insight ->
-                                            Spacer(modifier = Modifier.height(2.dp))
                                             Text(
-                                                text = insight,
+                                                text = item.value,
+                                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            item.insight?.let { insight ->
+                                                Text(
+                                                    text = insight,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = HrCoachThemeTokens.subtleText
+                                                )
+                                            }
+                                        }
+                                        item.delta?.let { delta ->
+                                            Text(
+                                                text = delta,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.outline
+                                                color = when (item.positive) {
+                                                    true -> MaterialTheme.colorScheme.tertiary
+                                                    false -> MaterialTheme.colorScheme.secondary
+                                                    null -> HrCoachThemeTokens.subtleText
+                                                }
                                             )
                                         }
                                     }
@@ -220,65 +283,62 @@ fun PostRunSummaryScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             OutlinedButton(
                                 onClick = onViewHistory,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(stringResource(R.string.button_view_run))
+                                Text("View on Map")
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            OutlinedButton(
-                                onClick = onViewProgress,
-                                modifier = Modifier.weight(1f)
+                            Button(
+                                onClick = onDone,
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                             ) {
-                                Text(stringResource(R.string.button_view_progress))
+                                Text(stringResource(R.string.button_done))
                             }
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Button(
-                            onClick = onDone,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                        TextButton(
+                            onClick = onViewProgress,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
-                            Text(stringResource(R.string.button_done))
+                            Text(stringResource(R.string.button_view_progress))
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
         }
     }
+    } // end Box
 }
 
 @Composable
-private fun StatCard(
+private fun SummaryStatCard(
     title: String,
     value: String,
+    icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
+    GlassCard(modifier = modifier) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = HrCoachThemeTokens.subtleText
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

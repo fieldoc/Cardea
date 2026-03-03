@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-HR Coach — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zone coaching during runs. Connects to BLE heart rate monitors (targeting Coospo H808S), tracks GPS distance, and plays audio alerts when HR drifts outside target zones. Includes an adaptive learning engine that models pace-HR relationships over time.
+Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zone coaching during runs. Connects to BLE heart rate monitors (targeting Coospo H808S), tracks GPS distance, and plays audio alerts when HR drifts outside target zones. Includes an adaptive learning engine that models pace-HR relationships over time.
 
 ## Build & Test Commands
 
@@ -47,7 +47,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 
 - **WorkoutState** (`service/WorkoutState.kt`) is a singleton `StateFlow` container shared between the foreground service and UI. All workout runtime state lives here — HR, zone status, distance, pace, guidance text.
 - **WorkoutForegroundService** is the central orchestrator. It combines BLE HR and GPS flows, evaluates zones, triggers alerts, saves track points every 5s, and persists completed workouts to Room.
-- **Two workout modes:** `STEADY_STATE` (single target HR ± buffer) and `DISTANCE_PROFILE` (ordered distance segments each with a target HR).
+- **Three workout modes:** `STEADY_STATE` (single target HR ± buffer), `DISTANCE_PROFILE` (ordered distance segments each with a target HR), and `FREE_RUN` (no target, data collection only).
 - **Adaptive learning** (`AdaptivePaceController`) tracks HR slope, pace-HR buckets, response lag, and trim offsets across sessions. Profile persists via `AdaptiveProfileRepository`.
 - **Alerts** use `ToneGenerator` on `STREAM_NOTIFICATION` to layer tones over music without requesting audio focus.
 
@@ -58,10 +58,14 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - `domain/model/` — Domain models: `WorkoutConfig`, `WorkoutMode`, `AdaptiveProfile`, `ZoneStatus`
 - `domain/engine/` — `ZoneEngine` (static zone eval), `AdaptivePaceController` (predictive HR-pace modeling)
 - `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `AlertManager`, `WorkoutState`
-- `ui/setup/` — Setup screen + ViewModel (config, BLE scanning)
+- `ui/home/` — Home dashboard screen + ViewModel (new)
+- `ui/setup/` — Workout setup screen + ViewModel (config, BLE scanning); maps to "Workout" nav tab
 - `ui/workout/` — Active workout display
 - `ui/history/` — History list + detail with Google Maps route heatmap
-- `ui/navigation/` — `NavGraph` with routes: `setup`, `workout`, `history`, `history/{workoutId}`
+- `ui/account/` — Account & settings screen + ViewModel (new); includes Maps API key + audio settings
+- `ui/components/` — Shared composables: `CardeaLogo`, `GlassCard`
+- `ui/splash/` — Branded splash screen
+- `ui/navigation/` — `NavGraph.kt` (function: `HrCoachNavGraph`) with routes: `home`, `setup`, `workout`, `progress`, `history`, `history/{workoutId}`, `postrun/{workoutId}`, `account`
 - `di/` — Hilt `AppModule` providing Room database and DAOs
 
 ## DI & Entry Points
@@ -74,8 +78,22 @@ Room database `hr_coach_db` with two tables: `workouts` and `track_points` (FK t
 
 ## Navigation
 
-Bottom bar with Setup and History tabs. Active workout screen hides the bottom bar. Navigation auto-transitions to workout screen when service starts and back to setup when it ends.
+Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, **Account**. Start destination after splash is `home`. Active workout screen hides the bottom bar. Navigation auto-transitions to workout screen when service starts; when workout ends it navigates back to `setup` (or post-run summary). `onDone` from post-run summary returns to `home`.
 
-## Design Document
+## UI & Theme
 
-See `docs/plans/2026-02-25-hr-coaching-app-design.md` for the full design specification including alert behavior, data model details, and scope boundaries.
+- **Cardea design system** — Dark glass-morphic theme. Background `#0B0F17` (radial gradient with `#0F1623`). Cardea gradient: `#FF5A5F→#FF2DA6→#5B5BFF→#00D1FF` at 135°. All design tokens are in `ui/theme/Color.kt` as named constants. See `docs/plans/2026-03-02-cardea-ui-ux-design.md` for the authoritative spec.
+- **`CardeaTheme`** — Primary theme function. `HrCoachTheme` is a backward-compat wrapper. `HrCoachThemeTokens` is a `typealias` for `CardeaThemeTokens`. Dynamic color is `false` — Cardea palette is always enforced.
+- **`CardeaGradient`** — `Brush.linearGradient` with exact 4-stop color stops (do NOT alter). Use for CTAs, active nav icons, ring elements. Access via `HrCoachThemeTokens.gradient` in composables.
+- **Glass surface pattern** — `GlassBorder = Color(0x0FFFFFFF)`, `GlassHighlight = Color(0x14FFFFFF)`. Use `GlassCard` composable from `ui/components/GlassCard.kt` for all card surfaces.
+- **`CardeaLogo`** — Canvas-drawn composable in `ui/components/CardeaLogo.kt`. Heart + ECG line + orbital ring with gradient fill. Two sizes: `LogoSize.LARGE` (splash, 180dp) and `LogoSize.SMALL` (nav badge, 32dp).
+- **Gradient nav icons** — Active nav icons use `CompositingStrategy.Offscreen` + `BlendMode.SrcIn` with `CardeaGradient` to produce pixel-perfect gradient fill on any `ImageVector` icon.
+- **Charts are custom Canvas-drawn** — `ui/charts/` (BarChart, PieChart, ScatterPlot) use `DrawScope` directly; no charting library. Styling changes require Canvas API edits.
+- **`WorkoutSnapshot` has no elapsed time** — compute elapsed seconds in the ViewModel via a ticker flow when `isRunning && !isPaused`.
+- **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
+
+## Design Documents
+
+- **Authoritative spec:** `docs/plans/2026-03-02-cardea-ui-ux-design.md`
+- **Implementation plan:** `docs/plans/2026-03-02-cardea-ui-ux-plan.md`
+- Legacy: `docs/plans/2026-02-25-hr-coaching-app-design.md` — superseded; data model and alert behavior sections still valid, UI/UX sections replaced by the 2026-03-02 spec.

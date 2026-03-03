@@ -1,13 +1,18 @@
 <resources>
-    <string name="app_name">HR Coach</string>
-    <string name="nav_setup">Setup</string>
+    <string name="app_name">Cardea</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_workout">Workout</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_history">History</string>
-    <string name="screen_setup_title">New Run Setup</string>
+    <string name="nav_account">Account</string>
+    <string name="nav_setup">Workout</string>
+    <string name="screen_home_title">Home</string>
+    <string name="screen_setup_title">Start a Run</string>
     <string name="screen_progress_title">Progress</string>
     <string name="screen_history_title">History</string>
     <string name="screen_workout_title">Workout</string>
     <string name="screen_workout_paused_title">Workout Paused</string>
+    <string name="screen_account_title">Account</string>
     <string name="button_start_workout">Start Workout</string>
     <string name="button_view_progress">View Progress</string>
     <string name="button_view_run">View This Run</string>
