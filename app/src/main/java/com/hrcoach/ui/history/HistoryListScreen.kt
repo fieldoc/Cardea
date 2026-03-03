@@ -34,7 +34,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -49,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -59,6 +59,8 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
@@ -71,7 +73,7 @@ private val HistoryBackdrop = Brush.radialGradient(
     )
 )
 
-private val HistoryGlass = Color(0x0AFFFFFF)
+private val HistoryGlass = Color(0x0FFFFFFF)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -184,7 +186,7 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 24.dp),
-        shape = RoundedCornerShape(32.dp),
+        shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         colors = CardDefaults.cardColors(containerColor = HistoryGlass)
     ) {
@@ -204,11 +206,21 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color(0xFFB8C5D3)
             )
-            OutlinedButton(
-                onClick = onStartWorkout,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f))
+            Box(
+                modifier = Modifier
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(CardeaGradient)
+                    .clickable(onClick = onStartWorkout)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(stringResource(R.string.button_start_workout))
+                Text(
+                    text = stringResource(R.string.button_start_workout),
+                    color = CardeaTextPrimary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
@@ -237,7 +249,7 @@ private fun WorkoutCard(
                     onClick = onClick,
                     onLongClick = onLongClick
                 ),
-            shape = RoundedCornerShape(30.dp),
+            shape = RoundedCornerShape(18.dp),
             border = BorderStroke(
                 1.dp,
                 if (isDeleteMode) ZoneRed.copy(alpha = 0.33f) else Color.White.copy(alpha = 0.08f)
