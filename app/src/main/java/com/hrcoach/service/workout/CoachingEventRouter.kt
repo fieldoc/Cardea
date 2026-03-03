@@ -23,6 +23,7 @@ class CoachingEventRouter {
         workoutConfig: WorkoutConfig,
         connected: Boolean,
         distanceMeters: Float,
+        elapsedSeconds: Long,
         zoneStatus: ZoneStatus,
         adaptiveResult: AdaptivePaceController.TickResult?,
         guidance: String,
@@ -35,15 +36,16 @@ class CoachingEventRouter {
             emitEvent(CoachingEvent.SIGNAL_REGAINED, null)
         }
 
-        if (
-            (previousZoneStatus == ZoneStatus.ABOVE_ZONE || previousZoneStatus == ZoneStatus.BELOW_ZONE) &&
-            zoneStatus == ZoneStatus.IN_ZONE
-        ) {
+        if (previousZoneStatus != ZoneStatus.IN_ZONE && zoneStatus == ZoneStatus.IN_ZONE) {
             emitEvent(CoachingEvent.RETURN_TO_ZONE, guidance)
         }
 
         if (workoutConfig.mode == WorkoutMode.DISTANCE_PROFILE) {
-            val segmentIndex = currentSegmentIndex(workoutConfig, distanceMeters)
+            val segmentIndex = if (workoutConfig.isTimeBased()) {
+                segmentIndexByTime(workoutConfig, elapsedSeconds)
+            } else {
+                segmentIndexByDistance(workoutConfig, distanceMeters)
+            }
             if (lastSegmentIndex >= 0 && segmentIndex >= 0 && segmentIndex != lastSegmentIndex) {
                 emitEvent(CoachingEvent.SEGMENT_CHANGE, null)
             }
@@ -54,8 +56,7 @@ class CoachingEventRouter {
 
         val projectedDrift = adaptiveResult?.projectedZoneStatus == ZoneStatus.ABOVE_ZONE ||
             adaptiveResult?.projectedZoneStatus == ZoneStatus.BELOW_ZONE
-        if (
-            zoneStatus == ZoneStatus.IN_ZONE &&
+        if (zoneStatus == ZoneStatus.IN_ZONE &&
             adaptiveResult?.hasProjectionConfidence == true &&
             projectedDrift &&
             nowMs - lastPredictiveWarningTime >= 60_000L
@@ -68,11 +69,22 @@ class CoachingEventRouter {
         previousZoneStatus = zoneStatus
     }
 
-    private fun currentSegmentIndex(config: WorkoutConfig, distanceMeters: Float): Int {
+    private fun segmentIndexByTime(config: WorkoutConfig, elapsedSeconds: Long): Int {
         if (config.segments.isEmpty()) return -1
-        val segment = config.segments.indexOfFirst { seg ->
+        var cumulative = 0L
+        config.segments.forEachIndexed { index, seg ->
+            val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
+            cumulative += dur
+            if (elapsedSeconds < cumulative) return index
+        }
+        return config.segments.lastIndex
+    }
+
+    private fun segmentIndexByDistance(config: WorkoutConfig, distanceMeters: Float): Int {
+        if (config.segments.isEmpty()) return -1
+        val index = config.segments.indexOfFirst { seg ->
             seg.distanceMeters?.let { d -> distanceMeters <= d } == true
         }
-        return if (segment >= 0) segment else config.segments.lastIndex
+        return if (index >= 0) index else config.segments.lastIndex
     }
 }

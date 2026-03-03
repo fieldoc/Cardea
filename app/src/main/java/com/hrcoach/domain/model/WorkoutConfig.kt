@@ -30,4 +30,15 @@ data class WorkoutConfig(
             WorkoutMode.FREE_RUN -> null
         }
     }
+
+    fun targetHrAtElapsedSeconds(elapsedSeconds: Long): Int? {
+        if (segments.isEmpty()) return null
+        var cumulative = 0L
+        for (seg in segments) {
+            val dur = seg.durationSeconds?.toLong() ?: continue
+            cumulative += dur
+            if (elapsedSeconds < cumulative) return seg.targetHr
+        }
+        return segments.lastOrNull()?.targetHr
+    }
 }

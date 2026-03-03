@@ -80,6 +80,7 @@ class WorkoutForegroundService : LifecycleService() {
     private var startupJob: Job? = null
 
     private var workoutId: Long = 0L
+    private var workoutStartMs: Long = 0L
     private var isStopping: Boolean = false
     private var latestTick: WorkoutTick? = null
 
@@ -168,6 +169,7 @@ class WorkoutForegroundService : LifecycleService() {
                         targetConfig = gson.toJson(workoutConfig)
                     )
                 )
+                workoutStartMs = System.currentTimeMillis()
                 gpsTracker?.start()
 
                 val alreadyConnected = bleCoordinator.isConnected.value
@@ -225,7 +227,12 @@ class WorkoutForegroundService : LifecycleService() {
         val adaptive = adaptiveController
         latestTick = tick
         val nowMs = System.currentTimeMillis()
-        val target = workoutConfig.targetHrAtDistance(tick.distanceMeters)
+        val elapsedSeconds = if (workoutStartMs > 0L) (nowMs - workoutStartMs) / 1000L else 0L
+        val target = if (workoutConfig.isTimeBased()) {
+            workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
+        } else {
+            workoutConfig.targetHrAtDistance(tick.distanceMeters)
+        }
         val isPaused = WorkoutState.snapshot.value.isPaused
 
         if (isPaused) {
@@ -247,7 +254,7 @@ class WorkoutForegroundService : LifecycleService() {
         val zoneStatus = if (!tick.connected || tick.hr <= 0 || target == null || target == 0) {
             ZoneStatus.NO_DATA
         } else {
-            engine.evaluate(tick.hr, tick.distanceMeters)
+            engine.evaluate(tick.hr, target ?: 0)
         }
 
         if (tick.connected && tick.hr > 0 && !isPaused) {
@@ -293,6 +300,7 @@ class WorkoutForegroundService : LifecycleService() {
             workoutConfig = workoutConfig,
             connected = tick.connected,
             distanceMeters = tick.distanceMeters,
+            elapsedSeconds = elapsedSeconds,
             zoneStatus = zoneStatus,
             adaptiveResult = adaptiveResult,
             guidance = guidance,

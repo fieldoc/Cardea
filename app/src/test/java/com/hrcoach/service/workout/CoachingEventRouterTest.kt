@@ -28,6 +28,7 @@ class CoachingEventRouterTest {
             workoutConfig = config,
             connected = true,
             distanceMeters = 100f,
+            elapsedSeconds = 0L,
             zoneStatus = ZoneStatus.IN_ZONE,
             adaptiveResult = null,
             guidance = "hold",
@@ -38,6 +39,7 @@ class CoachingEventRouterTest {
             workoutConfig = config,
             connected = false,
             distanceMeters = 1_500f,
+            elapsedSeconds = 0L,
             zoneStatus = ZoneStatus.IN_ZONE,
             adaptiveResult = null,
             guidance = "hold",
@@ -72,6 +74,7 @@ class CoachingEventRouterTest {
             workoutConfig = config,
             connected = true,
             distanceMeters = 100f,
+            elapsedSeconds = 0L,
             zoneStatus = ZoneStatus.IN_ZONE,
             adaptiveResult = adaptiveResult,
             guidance = "ease off",
@@ -80,5 +83,31 @@ class CoachingEventRouterTest {
         )
 
         assertTrue(events.contains(CoachingEvent.PREDICTIVE_WARNING))
+    }
+
+    @Test
+    fun `time-based workout emits SEGMENT_CHANGE on interval transition`() {
+        val router = CoachingEventRouter()
+        val events = mutableListOf<CoachingEvent>()
+        val config = WorkoutConfig(
+            mode = WorkoutMode.DISTANCE_PROFILE,
+            segments = listOf(
+                HrSegment(durationSeconds = 300, targetHr = 120, label = "Warm-up"),
+                HrSegment(durationSeconds = 240, targetHr = 165, label = "Interval 1")
+            )
+        )
+        // elapsed=0: first segment, no change yet
+        router.route(workoutConfig = config, connected = true, distanceMeters = 0f,
+            elapsedSeconds = 0L, zoneStatus = ZoneStatus.IN_ZONE,
+            adaptiveResult = null, guidance = "hold", nowMs = 0L,
+            emitEvent = { e, _ -> events += e })
+        assertTrue(CoachingEvent.SEGMENT_CHANGE !in events)
+
+        // elapsed=300: crosses into segment 1
+        router.route(workoutConfig = config, connected = true, distanceMeters = 0f,
+            elapsedSeconds = 300L, zoneStatus = ZoneStatus.IN_ZONE,
+            adaptiveResult = null, guidance = "hold", nowMs = 300_000L,
+            emitEvent = { e, _ -> events += e })
+        assertTrue(CoachingEvent.SEGMENT_CHANGE in events)
     }
 }
