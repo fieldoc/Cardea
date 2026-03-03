@@ -225,10 +225,10 @@ fun SetupScreen(
         if (state.showHrMaxDialog) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissHrMaxDialog() },
-                title = { Text("Your Max Heart Rate") },
+                title = { Text("Max Heart Rate") },
                 text = {
                     Column {
-                        Text("Presets use % of your max HR to personalise targets.")
+                        Text("Required to personalise preset heart rate targets.")
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
                             value = state.maxHrInput,
@@ -236,10 +236,10 @@ fun SetupScreen(
                             label = { Text("Max HR (bpm)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            placeholder = { Text("e.g. 185") }
+                            placeholder = { Text("185") }
                         )
                         Text(
-                            text = "Tip: 220 - age is a rough guide. A field test gives better results.",
+                            text = "220 − age is a good estimate. A field test is more accurate.",
                             style = MaterialTheme.typography.bodySmall,
                             color = HrCoachThemeTokens.subtleText,
                             modifier = Modifier.padding(top = 4.dp)
@@ -329,7 +329,7 @@ private fun AlertBehaviorCard(
                 value = state.bufferBpm,
                 onValueChange = onBufferChange,
                 singleLine = true,
-                label = { Text("Buffer (+/- bpm)") },
+                label = { Text("HR Buffer (bpm)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 isError = state.validation.bufferBpm != null,
                 supportingText = { state.validation.bufferBpm?.let { Text(it) } }
@@ -339,7 +339,7 @@ private fun AlertBehaviorCard(
                 value = state.alertDelaySec,
                 onValueChange = onAlertDelayChange,
                 singleLine = true,
-                label = { Text("Grace Period (sec)") },
+                label = { Text("Onset Delay (s)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 isError = state.validation.alertDelaySec != null,
                 supportingText = { state.validation.alertDelaySec?.let { Text(it) } }
@@ -349,7 +349,7 @@ private fun AlertBehaviorCard(
                 value = state.alertCooldownSec,
                 onValueChange = onCooldownChange,
                 singleLine = true,
-                label = { Text("Repeat Interval (sec)") },
+                label = { Text("Alert Interval (s)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 isError = state.validation.alertCooldownSec != null,
                 supportingText = { state.validation.alertCooldownSec?.let { Text(it) } }
@@ -363,7 +363,7 @@ private fun AlertBehaviorCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Alert Sound Volume",
+                    text = "Alert Volume",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -444,7 +444,7 @@ private fun AlertBehaviorCard(
             }
         } else {
             Text(
-                text = "Audio alerts & timing options",
+                text = "Audio alerts and timing",
                 style = MaterialTheme.typography.bodySmall,
                 color = HrCoachThemeTokens.subtleText
             )
@@ -524,7 +524,7 @@ private fun TargetCard(
                 TextButton(
                     onClick = onSelectCustom,
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Custom segment editor...") }
+                ) { Text("Custom") }
             }
 
             WorkoutMode.FREE_RUN -> Unit
@@ -809,7 +809,7 @@ private fun HrMonitorCard(
                         modifier = Modifier.scale(hrPulseScale)
                     )
                     Text(
-                        text = if (state.liveHr > 0) "Live HR bpm" else "Waiting for HR signal...",
+                        text = if (state.liveHr > 0) "Live" else "Waiting for signal…",
                         style = MaterialTheme.typography.labelSmall,
                         color = HrCoachThemeTokens.subtleText
                     )
@@ -843,14 +843,14 @@ private fun HrMonitorCard(
                         tint = CardeaTextPrimary
                     )
                     Text(
-                        text = if (state.isScanning) "Scanning..." else "Scan for Devices",
+                        text = if (state.isScanning) "Scanning…" else "Scan for Monitors",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = CardeaTextPrimary
                     )
                 }
             }
             Text(
-                text = "No signal? You can still start - scanning continues during the run.",
+                text = "A monitor is optional — scanning continues during your run.",
                 style = MaterialTheme.typography.bodySmall,
                 color = HrCoachThemeTokens.subtleText
             )
