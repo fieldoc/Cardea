@@ -6,8 +6,17 @@ data class WorkoutConfig(
     val segments: List<HrSegment> = emptyList(),
     val bufferBpm: Int = 5,
     val alertDelaySec: Int = 15,
-    val alertCooldownSec: Int = 30
+    val alertCooldownSec: Int = 30,
+    val presetId: String? = null
 ) {
+    /**
+     * Returns true when every segment is time-based (has [HrSegment.durationSeconds] set and
+     * [HrSegment.distanceMeters] is null). Returns false for distance-based workouts or when
+     * there are no segments.
+     */
+    fun isTimeBased(): Boolean =
+        segments.isNotEmpty() && segments.all { it.durationSeconds != null && it.distanceMeters == null }
+
     fun targetHrAtDistance(distanceMeters: Float): Int? {
         return when (mode) {
             WorkoutMode.STEADY_STATE -> steadyStateTargetHr
