@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +41,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.domain.model.VoiceVerbosity
@@ -132,6 +134,34 @@ fun AccountScreen(
                         color = CardeaTextSecondary
                     )
                     TextButton(onClick = viewModel::saveMapsApiKey) { Text("Save") }
+                }
+
+                // Profile — Max HR
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text("Profile", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Max Heart Rate", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            modifier = Modifier.weight(1f),
+                            value = state.maxHrInput,
+                            onValueChange = viewModel::setMaxHrInput,
+                            singleLine = true,
+                            label = { Text("Max HR (bpm)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            placeholder = { Text("e.g. 185") }
+                        )
+                        TextButton(onClick = viewModel::saveMaxHr) { Text("Save") }
+                    }
+                    Text(
+                        text = if (state.maxHrSaved) "Saved." else "Used to personalise all preset HR targets.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTextSecondary
+                    )
                 }
 
                 // Audio & Alerts
