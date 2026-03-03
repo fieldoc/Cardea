@@ -52,6 +52,10 @@ import com.hrcoach.ui.charts.SectionHeader
 import com.hrcoach.ui.charts.TrendInfo
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.StatItem
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.HrCoachThemeTokens
 import com.hrcoach.ui.theme.SubtleText
 import kotlin.math.abs
@@ -433,7 +437,6 @@ private fun TrendLineChart(
     val chartMin = threshold?.let { minOf(rawMin, it) } ?: rawMin
     val chartMax = threshold?.let { maxOf(rawMax, it) } ?: rawMax
     val range = (chartMax - chartMin).takeIf { it > 0f } ?: 1f
-    val lineColor = MaterialTheme.colorScheme.primary
 
     Column {
         Canvas(
@@ -462,12 +465,37 @@ private fun TrendLineChart(
                 val y = h - ((pt.value - chartMin) / range * h)
                 if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
             }
-            drawPath(path, lineColor, style = Stroke(width = 5f, cap = StrokeCap.Round))
+
+            // Build gradient spanning the chart width
+            val chartGradient = Brush.linearGradient(
+                colorStops = arrayOf(
+                    0.00f to GradientRed,
+                    0.35f to GradientPink,
+                    0.65f to GradientBlue,
+                    1.00f to GradientCyan
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(w, 0f)
+            )
+
+            // Glow pass — drawn first, under the main line
+            drawPath(
+                path = path,
+                brush = chartGradient,
+                alpha = 0.15f,
+                style = Stroke(width = 18f, cap = StrokeCap.Round)
+            )
+            // Main gradient line
+            drawPath(
+                path = path,
+                brush = chartGradient,
+                style = Stroke(width = 5f, cap = StrokeCap.Round)
+            )
 
             series.forEachIndexed { i, pt ->
                 val x = stepX * i
                 val y = h - ((pt.value - chartMin) / range * h)
-                drawCircle(lineColor, radius = 5f, center = Offset(x, y))
+                drawCircle(GradientCyan, radius = 5f, center = Offset(x, y))
             }
         }
         Row(Modifier.fillMaxWidth()) {
