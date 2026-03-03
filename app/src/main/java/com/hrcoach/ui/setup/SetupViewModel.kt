@@ -6,12 +6,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.HrSegment
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
+import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.audio.EarconSynthesizer
 import com.hrcoach.util.JsonCodec
@@ -66,6 +68,11 @@ data class SetupUiState(
     val mapsApiKey: String = "",
     val mapsApiKeySaved: Boolean = false,
     val connectionError: String? = null,
+    val selectedPresetId: String? = null,
+    val showHrMaxDialog: Boolean = false,
+    val maxHrInput: String = "",
+    val maxHr: Int? = null,
+    val pendingPresetId: String? = null,
     val validation: SetupValidationState = SetupValidationState()
 )
 
@@ -73,7 +80,8 @@ data class SetupUiState(
 class SetupViewModel @Inject constructor(
     private val audioSettingsRepository: AudioSettingsRepository,
     private val mapsSettingsRepository: MapsSettingsRepository,
-    private val bleCoordinator: BleConnectionCoordinator
+    private val bleCoordinator: BleConnectionCoordinator,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SetupUiState())
@@ -92,6 +100,8 @@ class SetupViewModel @Inject constructor(
             voiceVerbosity = audioSettings.voiceVerbosity,
             enableVibration = audioSettings.enableVibration
         )
+        val storedMaxHr = userProfileRepository.getMaxHr()
+        _uiState.value = _uiState.value.copy(maxHr = storedMaxHr)
         startBleCollectors()
         recomputeValidation()
     }
@@ -198,6 +208,48 @@ class SetupViewModel @Inject constructor(
     fun toggleAppSettings() {
         _uiState.value = _uiState.value.copy(
             showAppSettings = !_uiState.value.showAppSettings
+        )
+    }
+
+    fun selectPreset(presetId: String) {
+        val maxHr = _uiState.value.maxHr
+        if (maxHr == null) {
+            _uiState.value = _uiState.value.copy(
+                pendingPresetId = presetId,
+                showHrMaxDialog = true,
+                maxHrInput = ""
+            )
+        } else {
+            _uiState.value = _uiState.value.copy(selectedPresetId = presetId)
+            recomputeValidation()
+        }
+    }
+
+    fun setMaxHrInput(value: String) {
+        _uiState.value = _uiState.value.copy(maxHrInput = value)
+    }
+
+    fun confirmMaxHr(): Boolean {
+        val value = _uiState.value.maxHrInput.toIntOrNull() ?: return false
+        if (value !in 100..220) return false
+        userProfileRepository.setMaxHr(value)
+        val pendingId = _uiState.value.pendingPresetId
+        _uiState.value = _uiState.value.copy(
+            maxHr = value,
+            showHrMaxDialog = false,
+            pendingPresetId = null,
+            selectedPresetId = pendingId,
+            maxHrInput = ""
+        )
+        recomputeValidation()
+        return true
+    }
+
+    fun dismissHrMaxDialog() {
+        _uiState.value = _uiState.value.copy(
+            showHrMaxDialog = false,
+            pendingPresetId = null,
+            maxHrInput = ""
         )
     }
 
@@ -330,6 +382,18 @@ class SetupViewModel @Inject constructor(
         val cooldown = state.alertCooldownSec.toIntOrNull() ?: return null
         if (buffer !in 1..30 || delay !in 5..300 || cooldown !in 5..300) return null
 
+        // Fast path: preset is selected
+        val presetId = state.selectedPresetId
+        val maxHr = state.maxHr
+        if (presetId != null && presetId != "custom" && maxHr != null) {
+            val preset = PresetLibrary.ALL.firstOrNull { it.id == presetId } ?: return null
+            return preset.buildConfig(maxHr).copy(
+                bufferBpm = buffer,
+                alertDelaySec = delay,
+                alertCooldownSec = cooldown
+            )
+        }
+
         return when (state.mode) {
             WorkoutMode.STEADY_STATE -> {
                 val hr = state.steadyStateHr.toIntOrNull() ?: return null
@@ -377,6 +441,17 @@ class SetupViewModel @Inject constructor(
 
     private fun recomputeValidation() {
         val state = _uiState.value
+
+        // Preset shortcut: if a valid preset is selected and maxHr is known, always valid
+        val presetId = state.selectedPresetId
+        val maxHr = state.maxHr
+        if (presetId != null && presetId != "custom" && maxHr != null) {
+            _uiState.value = state.copy(
+                validation = SetupValidationState(canStartWorkout = true)
+            )
+            return
+        }
+
         val segmentErrors = MutableList(state.segments.size) { SegmentInputError() }
 
         val bufferError = validateInt(
