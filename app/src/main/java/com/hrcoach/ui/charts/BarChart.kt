@@ -58,6 +58,11 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
         }
     }
 
+    // Measure label widths once per bars/paint change, not inside the draw loop
+    val maxLabelWidth = remember(bars, textPaint) {
+        bars.maxOfOrNull { textPaint.measureText(it.label) } ?: 0f
+    }
+
     Canvas(modifier = modifier) {
         val paddingLeft = 48.dp.toPx()
         val paddingBottom = 32.dp.toPx()
@@ -118,6 +123,11 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
         val halfGap = totalBarSlotWidth * gapFraction / 2f
         val cornerRadius = 4.dp.toPx()
 
+        // Only draw X-axis labels when they won't overlap
+        val labelStep = if (maxLabelWidth > 0f) {
+            kotlin.math.ceil((maxLabelWidth + 4.dp.toPx()) / totalBarSlotWidth).toInt().coerceAtLeast(1)
+        } else 1
+
         bars.forEachIndexed { index, entry ->
             val isLast = index == bars.size - 1
             val barColor = if (isLast) color else color.copy(alpha = 0.55f)
@@ -142,14 +152,16 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
                 alpha = if (isLast) 1f else 0.55f
             )
 
-            // X-axis label centered below each bar
-            drawIntoCanvas { canvas ->
-                canvas.nativeCanvas.drawText(
-                    entry.label,
-                    barCenterX,
-                    chartBottom + 24.dp.toPx(),
-                    textPaint
-                )
+            // X-axis label centered below each bar — skipped when labels would overlap
+            if (index % labelStep == 0) {
+                drawIntoCanvas { canvas ->
+                    canvas.nativeCanvas.drawText(
+                        entry.label,
+                        barCenterX,
+                        chartBottom + 24.dp.toPx(),
+                        textPaint
+                    )
+                }
             }
         }
     }

@@ -61,19 +61,17 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
         // Left column: day-of-week labels
         // Offset by the height of the month label row above
         Column(
-            modifier = Modifier.padding(top = 16.dp, end = 2.dp)
+            // Month label row is lineHeight=12sp tall (= 12dp) + 2dp Spacer = 14dp total
+            modifier = Modifier.padding(top = 14.dp, end = 2.dp)
         ) {
             dowLabels.forEachIndexed { index, label ->
-                Box(
-                    modifier = Modifier
-                        .size(width = 10.dp, height = cellSize)
-                        .padding(bottom = if (index < 6) cellGap else 0.dp)
-                ) {
+                // Box height = cellSize; no inner padding (the external Spacer handles the gap)
+                Box(modifier = Modifier.size(width = 10.dp, height = cellSize)) {
                     if (label.isNotEmpty()) {
                         Text(
                             text = label,
-                            fontSize = 12.sp,
-                            lineHeight = 12.sp,
+                            fontSize = 9.sp,
+                            lineHeight = 9.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
