@@ -60,7 +60,12 @@ fun HrRing(
                     startAngle = -90f,
                     sweepAngle = 360f,
                     useCenter = false,
-                    style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round),
+                    topLeft = androidx.compose.ui.geometry.Offset(strokePx / 2f, strokePx / 2f),
+                    size = androidx.compose.ui.geometry.Size(
+                        size.width - strokePx,
+                        size.height - strokePx
+                    )
                 )
             } else {
                 drawCircle(
