@@ -3,6 +3,7 @@ package com.hrcoach.ui.setup
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TopAppBarDefaults
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
@@ -70,6 +72,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -79,7 +84,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.VoiceVerbosity
+import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
+import com.hrcoach.domain.preset.PresetCategory
+import com.hrcoach.domain.preset.PresetLibrary
+import com.hrcoach.domain.preset.WorkoutPreset
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.HrCoachThemeTokens
 import kotlin.math.roundToInt
@@ -153,6 +162,7 @@ fun SetupScreen(
             if (state.mode != WorkoutMode.FREE_RUN) {
                 TargetCard(
                     state = state,
+                    viewModel = viewModel,
                     onSteadyStateHrChange = viewModel::setSteadyStateHr,
                     onAddSegment = viewModel::addSegment,
                     onUpdateSegmentDistance = viewModel::updateSegmentDistance,
@@ -209,6 +219,46 @@ fun SetupScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
+
+        // HRmax onboarding dialog
+        if (state.showHrMaxDialog) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissHrMaxDialog() },
+                title = { Text("Your Max Heart Rate") },
+                text = {
+                    Column {
+                        Text("Presets use % of your max HR to personalise targets.")
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = state.maxHrInput,
+                            onValueChange = { viewModel.setMaxHrInput(it) },
+                            label = { Text("Max HR (bpm)") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            placeholder = { Text("e.g. 185") }
+                        )
+                        Text(
+                            text = "Tip: 220 - age is a rough guide. A field test gives better results.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = HrCoachThemeTokens.subtleText,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CardeaGradient)
+                            .clickable { viewModel.confirmMaxHr() }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) { Text("Confirm", color = CardeaTextPrimary, fontWeight = FontWeight.SemiBold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { viewModel.dismissHrMaxDialog() }) { Text("Cancel") }
+                }
+            )
+        }
         } // close Box
     }
 
@@ -221,7 +271,7 @@ private fun ModeSelector(
 ) {
     val items = listOf(
         Triple(WorkoutMode.STEADY_STATE, Icons.Default.FavoriteBorder, "Steady"),
-        Triple(WorkoutMode.DISTANCE_PROFILE, Icons.Default.Route, "Distance"),
+        Triple(WorkoutMode.DISTANCE_PROFILE, Icons.Default.Route, "Guided"),
         Triple(WorkoutMode.FREE_RUN, Icons.AutoMirrored.Filled.DirectionsRun, "Free Run")
     )
     Row(
@@ -427,6 +477,7 @@ private fun PreviewSoundButton(
 @Composable
 private fun TargetCard(
     state: SetupUiState,
+    viewModel: SetupViewModel,
     onSteadyStateHrChange: (String) -> Unit,
     onAddSegment: () -> Unit,
     onUpdateSegmentDistance: (Int, String) -> Unit,
@@ -454,79 +505,257 @@ private fun TargetCard(
             }
 
             WorkoutMode.DISTANCE_PROFILE -> {
-                val segmentColors = listOf(
-                    MaterialTheme.colorScheme.primary,
-                    MaterialTheme.colorScheme.tertiary,
-                    MaterialTheme.colorScheme.secondary
+                PresetGrid(
+                    presets = PresetLibrary.ALL,
+                    selectedPresetId = state.selectedPresetId,
+                    onSelectPreset = { viewModel.selectPreset(it.id) }
                 )
-                state.segments.forEachIndexed { index, segment ->
-                    val segmentError = state.validation.segments.getOrNull(index) ?: SegmentInputError()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(
-                                width = 1.dp,
-                                color = HrCoachThemeTokens.glassBorder,
-                                shape = RoundedCornerShape(16.dp)
-                            )
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(4.dp)
-                                .height(88.dp)
-                                .background(segmentColors[index % segmentColors.size], RoundedCornerShape(999.dp))
-                        )
-                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                text = "Segment ${index + 1}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = HrCoachThemeTokens.subtleText
-                            )
-                            OutlinedTextField(
-                                modifier = Modifier.fillMaxWidth(),
-                                value = segment.distanceKm,
-                                onValueChange = { onUpdateSegmentDistance(index, it) },
-                                singleLine = true,
-                                label = { Text("Distance (km)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                isError = segmentError.distanceKm != null,
-                                supportingText = { segmentError.distanceKm?.let { Text(it) } }
-                            )
-                            OutlinedTextField(
-                                modifier = Modifier.fillMaxWidth(),
-                                value = segment.targetHr,
-                                onValueChange = { onUpdateSegmentTarget(index, it) },
-                                singleLine = true,
-                                label = { Text("HR (bpm)") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                isError = segmentError.targetHr != null,
-                                supportingText = { segmentError.targetHr?.let { Text(it) } }
-                            )
-                        }
-                        if (state.segments.size > 1) {
-                            IconButton(onClick = { onRemoveSegment(index) }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Remove segment",
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
+                if (state.selectedPresetId == "custom") {
+                    SegmentEditor(state = state, viewModel = viewModel)
                 }
-                TextButton(onClick = onAddSegment) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Segment")
-                }
+                TextButton(
+                    onClick = { viewModel.selectPreset("custom") },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Custom segment editor...") }
             }
 
             WorkoutMode.FREE_RUN -> Unit
         }
     }
+}
+
+@Composable
+private fun SegmentEditor(state: SetupUiState, viewModel: SetupViewModel) {
+    val segmentColors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.secondary
+    )
+    state.segments.forEachIndexed { index, segment ->
+        val segmentError = state.validation.segments.getOrNull(index) ?: SegmentInputError()
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = HrCoachThemeTokens.glassBorder,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .height(88.dp)
+                    .background(segmentColors[index % segmentColors.size], RoundedCornerShape(999.dp))
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Segment ${index + 1}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HrCoachThemeTokens.subtleText
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = segment.distanceKm,
+                    onValueChange = { viewModel.updateSegmentDistance(index, it) },
+                    singleLine = true,
+                    label = { Text("Distance (km)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = segmentError.distanceKm != null,
+                    supportingText = { segmentError.distanceKm?.let { Text(it) } }
+                )
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = segment.targetHr,
+                    onValueChange = { viewModel.updateSegmentTarget(index, it) },
+                    singleLine = true,
+                    label = { Text("HR (bpm)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = segmentError.targetHr != null,
+                    supportingText = { segmentError.targetHr?.let { Text(it) } }
+                )
+            }
+            if (state.segments.size > 1) {
+                IconButton(onClick = { viewModel.removeSegment(index) }) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Remove segment",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+    TextButton(onClick = { viewModel.addSegment() }) {
+        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+        Spacer(modifier = Modifier.width(4.dp))
+        Text("Add Segment")
+    }
+}
+
+@Composable
+private fun PresetGrid(
+    presets: List<WorkoutPreset>,
+    selectedPresetId: String?,
+    onSelectPreset: (WorkoutPreset) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        PresetCategory.entries.forEach { category ->
+            val catPresets = presets.filter { it.category == category }
+            if (catPresets.isEmpty()) return@forEach
+            Text(
+                text = category.displayName(),
+                style = MaterialTheme.typography.labelSmall,
+                color = HrCoachThemeTokens.subtleText,
+                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+            )
+            catPresets.forEach { preset ->
+                PresetCard(
+                    preset = preset,
+                    isSelected = preset.id == selectedPresetId,
+                    onClick = { onSelectPreset(preset) }
+                )
+            }
+        }
+    }
+}
+
+private fun PresetCategory.displayName() = when (this) {
+    PresetCategory.BASE_AEROBIC -> "BASE AEROBIC"
+    PresetCategory.THRESHOLD    -> "THRESHOLD"
+    PresetCategory.INTERVAL     -> "INTERVALS"
+    PresetCategory.RACE_PREP    -> "RACE PREP"
+}
+
+@Composable
+private fun PresetCard(
+    preset: WorkoutPreset,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val borderModifier = if (isSelected) {
+        Modifier.border(
+            width = 2.dp,
+            brush = CardeaGradient,
+            shape = RoundedCornerShape(18.dp)
+        )
+    } else Modifier
+
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(borderModifier)
+            .clickable(onClick = onClick)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        preset.name,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextPrimary
+                    )
+                    Text(
+                        preset.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HrCoachThemeTokens.subtleText
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(preset.durationLabel, style = MaterialTheme.typography.labelSmall,
+                        color = HrCoachThemeTokens.subtleText)
+                    Text(preset.intensityLabel, style = MaterialTheme.typography.labelSmall,
+                        color = CardeaTextPrimary)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            SegmentTimelineStrip(preset = preset)
+        }
+    }
+}
+
+@Composable
+private fun SegmentTimelineStrip(preset: WorkoutPreset) {
+    val config = remember(preset.id) { preset.buildConfig(180) }
+    val segmentColors = remember(preset.id) { buildSegmentColors(config) }
+    val totalDuration = remember(preset.id) {
+        when {
+            config.isTimeBased() -> config.segments.sumOf { it.durationSeconds?.toLong() ?: 0L }.toFloat()
+            config.segments.isNotEmpty() -> config.segments.last().distanceMeters ?: 1f
+            else -> 1f
+        }
+    }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(6.dp)
+            .clip(RoundedCornerShape(3.dp))
+    ) {
+        if (totalDuration <= 0f) return@Canvas
+        val gap = 2.dp.toPx()
+
+        when {
+            config.mode == WorkoutMode.STEADY_STATE -> {
+                val color = segmentColors.firstOrNull() ?: Color(0xFF2B8C6E)
+                drawRoundRect(color = color, cornerRadius = CornerRadius(3.dp.toPx()))
+            }
+            config.isTimeBased() -> {
+                var x = 0f
+                config.segments.forEachIndexed { i, seg ->
+                    val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
+                    val w = (dur / totalDuration) * size.width - if (i < config.segments.size - 1) gap else 0f
+                    val color = segmentColors.getOrElse(i) { Color(0xFF2B8C6E) }
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(x, 0f),
+                        size = Size(w.coerceAtLeast(2f), size.height),
+                        cornerRadius = CornerRadius(3.dp.toPx())
+                    )
+                    x += w + gap
+                }
+            }
+            else -> {
+                var prevDist = 0f
+                config.segments.forEachIndexed { i, seg ->
+                    val endDist = seg.distanceMeters ?: return@forEachIndexed
+                    val span = endDist - prevDist
+                    val w = (span / totalDuration) * size.width - if (i < config.segments.size - 1) gap else 0f
+                    val x = (prevDist / totalDuration) * size.width
+                    val color = segmentColors.getOrElse(i) { Color(0xFF2B8C6E) }
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(x, 0f),
+                        size = Size(w.coerceAtLeast(2f), size.height),
+                        cornerRadius = CornerRadius(3.dp.toPx())
+                    )
+                    prevDist = endDist
+                }
+            }
+        }
+    }
+}
+
+private fun buildSegmentColors(config: WorkoutConfig): List<Color> {
+    val canonicalMaxHr = 180f
+    return when {
+        config.mode == WorkoutMode.STEADY_STATE ->
+            listOf(hrPercentColor((config.steadyStateTargetHr ?: 120) / canonicalMaxHr))
+        else -> config.segments.map { seg -> hrPercentColor(seg.targetHr / canonicalMaxHr) }
+    }
+}
+
+private fun hrPercentColor(pct: Float) = when {
+    pct >= 0.85f -> Color(0xFFFF5A5F)
+    pct >= 0.75f -> Color(0xFFE8A838)
+    else         -> Color(0xFF2B8C6E)
 }
 
 @SuppressLint("MissingPermission")
@@ -607,7 +836,7 @@ private fun HrMonitorCard(
                 }
             }
             Text(
-                text = "No signal? You can still start — scanning continues during the run.",
+                text = "No signal? You can still start - scanning continues during the run.",
                 style = MaterialTheme.typography.bodySmall,
                 color = HrCoachThemeTokens.subtleText
             )
