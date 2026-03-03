@@ -90,4 +90,17 @@ class ZoneEngineTest {
         assertEquals(ZoneStatus.BELOW_ZONE, engine.evaluate(hr = 139, distanceMeters = 0f))
         assertEquals(ZoneStatus.ABOVE_ZONE, engine.evaluate(hr = 161, distanceMeters = 0f))
     }
+
+    @Test
+    fun `distance profile - segment with null distanceMeters is ignored by distance lookup`() {
+        val config = WorkoutConfig(
+            mode = WorkoutMode.DISTANCE_PROFILE,
+            segments = listOf(
+                HrSegment(durationSeconds = 240, targetHr = 160, label = "Interval 1")
+            ),
+            bufferBpm = 5
+        )
+        // Time-based segment: targetHrAtDistance should return null (no distance milestones)
+        assertEquals(null, config.targetHrAtDistance(500f))
+    }
 }

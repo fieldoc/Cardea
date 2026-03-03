@@ -322,6 +322,9 @@ class SetupViewModel @Inject constructor(
 
     fun buildConfigOrNull(): WorkoutConfig? {
         val state = _uiState.value
+        if (state.mode == WorkoutMode.FREE_RUN) {
+            return WorkoutConfig(mode = WorkoutMode.FREE_RUN)
+        }
         val buffer = state.bufferBpm.toIntOrNull() ?: return null
         val delay = state.alertDelaySec.toIntOrNull() ?: return null
         val cooldown = state.alertCooldownSec.toIntOrNull() ?: return null
@@ -339,6 +342,8 @@ class SetupViewModel @Inject constructor(
                     alertCooldownSec = cooldown
                 )
             }
+
+            WorkoutMode.FREE_RUN -> null
 
             WorkoutMode.DISTANCE_PROFILE -> {
                 val mappedSegments = mutableListOf<HrSegment>()
@@ -360,6 +365,8 @@ class SetupViewModel @Inject constructor(
                     alertCooldownSec = cooldown
                 )
             }
+
+            else -> null // unreachable: FREE_RUN handled by early return above
         }
     }
 
@@ -445,18 +452,21 @@ class SetupViewModel @Inject constructor(
         val hasModeSpecificErrors = when (state.mode) {
             WorkoutMode.STEADY_STATE -> steadyStateError != null
             WorkoutMode.DISTANCE_PROFILE -> segmentErrors.any { it.distanceKm != null || it.targetHr != null }
+            WorkoutMode.FREE_RUN -> false
         }
         val hasGlobalErrors = bufferError != null || delayError != null || cooldownError != null
 
         val hasTarget = when (state.mode) {
             WorkoutMode.STEADY_STATE -> state.steadyStateHr.toIntOrNull() != null
             WorkoutMode.DISTANCE_PROFILE -> state.segments.isNotEmpty()
+            WorkoutMode.FREE_RUN -> true
         }
 
-        val canStartWorkout = !hasModeSpecificErrors &&
-            !hasGlobalErrors &&
-            hasTarget &&
-            buildConfigOrNull() != null
+        val canStartWorkout = if (state.mode == WorkoutMode.FREE_RUN) {
+            true
+        } else {
+            !hasModeSpecificErrors && !hasGlobalErrors && hasTarget && buildConfigOrNull() != null
+        }
 
         val blockedReason = when {
             hasModeSpecificErrors || hasGlobalErrors -> "Fix highlighted fields to continue."

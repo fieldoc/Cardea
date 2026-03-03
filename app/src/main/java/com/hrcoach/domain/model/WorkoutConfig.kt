@@ -12,9 +12,13 @@ data class WorkoutConfig(
         return when (mode) {
             WorkoutMode.STEADY_STATE -> steadyStateTargetHr
             WorkoutMode.DISTANCE_PROFILE -> {
-                segments.firstOrNull { distanceMeters <= it.distanceMeters }?.targetHr
-                    ?: segments.lastOrNull()?.targetHr
+                val distanceSegments = segments.filter { it.distanceMeters != null }
+                if (distanceSegments.isEmpty()) return null  // all time-based, no distance milestones
+                distanceSegments.firstOrNull { seg ->
+                    seg.distanceMeters?.let { d -> distanceMeters <= d } == true
+                }?.targetHr ?: distanceSegments.lastOrNull()?.targetHr
             }
+            WorkoutMode.FREE_RUN -> null
         }
     }
 }

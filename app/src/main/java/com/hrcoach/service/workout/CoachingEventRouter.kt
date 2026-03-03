@@ -70,7 +70,9 @@ class CoachingEventRouter {
 
     private fun currentSegmentIndex(config: WorkoutConfig, distanceMeters: Float): Int {
         if (config.segments.isEmpty()) return -1
-        val segment = config.segments.indexOfFirst { distanceMeters <= it.distanceMeters }
+        val segment = config.segments.indexOfFirst { seg ->
+            seg.distanceMeters?.let { d -> distanceMeters <= d } == true
+        }
         return if (segment >= 0) segment else config.segments.lastIndex
     }
 }

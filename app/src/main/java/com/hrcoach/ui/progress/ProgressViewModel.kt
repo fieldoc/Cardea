@@ -288,8 +288,11 @@ class ProgressViewModel @Inject constructor(
         val totalPts = zoneCounts.values.sum().toFloat().coerceAtLeast(1f)
         val zoneOrder = listOf("Easy", "Moderate", "Target", "Hard", "Max")
         val zoneColors = listOf(
-            Color(0xFF4CAF50), Color(0xFF8BC34A), Color(0xFF2196F3),
-            Color(0xFFFF9800), Color(0xFFF44336)
+            Color(0xFF34D399),
+            Color(0xFF4F8EF7),
+            Color(0xFF34D399),
+            Color(0xFFF59E0B),
+            Color(0xFFEF4444)
         )
         val zoneDistribution = zoneOrder.zip(zoneColors).mapNotNull { (name, color) ->
             val count = zoneCounts.getValue(name)

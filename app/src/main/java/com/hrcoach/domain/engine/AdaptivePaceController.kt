@@ -92,12 +92,24 @@ class AdaptivePaceController(
         nowMs: Long,
         hr: Int,
         connected: Boolean,
-        targetHr: Int,
+        targetHr: Int?,
         distanceMeters: Float,
         actualZone: ZoneStatus
     ): TickResult {
         val pace = updatePace(nowMs, distanceMeters, hr, targetHr)
         updateHrSlope(nowMs, hr)
+
+        // FREE_RUN: no zone target — collect data and return HR trend text
+        if (targetHr == null) {
+            return TickResult(
+                zoneStatus = ZoneStatus.NO_DATA,
+                projectedZoneStatus = ZoneStatus.NO_DATA,
+                predictedHr = 0,
+                currentPaceMinPerKm = pace,
+                guidance = trendGuidance(),
+                hasProjectionConfidence = false
+            )
+        }
 
         if (!connected || hr <= 0 || targetHr <= 0 || actualZone == ZoneStatus.NO_DATA) {
             trackSettling(nowMs, ZoneStatus.NO_DATA)
@@ -203,7 +215,7 @@ class AdaptivePaceController(
         nowMs: Long,
         distanceMeters: Float,
         hr: Int,
-        targetHr: Int
+        targetHr: Int?
     ): Float? {
         if (lastPaceTimeMs == 0L) {
             lastPaceTimeMs = nowMs
@@ -226,12 +238,8 @@ class AdaptivePaceController(
                         (instPace * tuning.paceSmoothingInstantWeight)
                 }
 
-                if (hr > 0 && targetHr > 0) {
+                if (hr > 0) {
                     val weight = deltaSec.coerceAtMost(10f)
-                    weightedDurationSec += weight
-                    weightedHrSum += hr * weight
-                    weightedTargetSum += targetHr * weight
-
                     sampleElapsedSec += deltaSec
                     paceSamples += MetricsCalculator.PaceHrSample(
                         elapsedSec = sampleElapsedSec,
@@ -244,6 +252,12 @@ class AdaptivePaceController(
                     val running = sessionBuckets.getOrPut(bucket) { RunningBucket() }
                     running.hrSum += hr
                     running.sampleCount += 1
+
+                    if (targetHr != null && targetHr > 0) {
+                        weightedDurationSec += weight
+                        weightedHrSum += hr * weight
+                        weightedTargetSum += targetHr * weight
+                    }
                 }
             }
             lastPaceTimeMs = nowMs
@@ -358,6 +372,14 @@ class AdaptivePaceController(
                     }
                 }
             }
+        }
+    }
+
+    private fun trendGuidance(): String {
+        return when {
+            hrSlopeBpmPerMin > 2f -> "HR rising"
+            hrSlopeBpmPerMin < -2f -> "HR easing down"
+            else -> "HR steady"
         }
     }
 

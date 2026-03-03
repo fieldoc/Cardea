@@ -14,6 +14,7 @@ import com.hrcoach.domain.engine.AdaptivePaceController
 import com.hrcoach.domain.engine.MetricsCalculator
 import com.hrcoach.domain.engine.ZoneEngine
 import com.hrcoach.domain.model.WorkoutConfig
+import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
 import com.hrcoach.service.audio.CoachingAudioManager
 import com.hrcoach.service.workout.AlertPolicy
@@ -215,14 +216,14 @@ class WorkoutForegroundService : LifecycleService() {
         val adaptive = adaptiveController
         latestTick = tick
         val nowMs = System.currentTimeMillis()
-        val target = workoutConfig.targetHrAtDistance(tick.distanceMeters) ?: 0
+        val target = workoutConfig.targetHrAtDistance(tick.distanceMeters)
         val isPaused = WorkoutState.snapshot.value.isPaused
 
         if (isPaused) {
             WorkoutState.update { current ->
                 current.copy(
                     currentHr = if (tick.connected) tick.hr else 0,
-                    targetHr = target,
+                    targetHr = target ?: 0,
                     hrConnected = tick.connected,
                     guidanceText = "Workout paused",
                     projectionReady = false,
@@ -233,7 +234,7 @@ class WorkoutForegroundService : LifecycleService() {
             return
         }
 
-        val zoneStatus = if (!tick.connected || tick.hr <= 0 || target == 0) {
+        val zoneStatus = if (!tick.connected || tick.hr <= 0 || target == null || target == 0) {
             ZoneStatus.NO_DATA
         } else {
             engine.evaluate(tick.hr, tick.distanceMeters)
@@ -257,7 +258,7 @@ class WorkoutForegroundService : LifecycleService() {
         WorkoutState.update { current ->
             current.copy(
                 currentHr = if (tick.connected) tick.hr else 0,
-                targetHr = target,
+                targetHr = target ?: 0,
                 zoneStatus = zoneStatus,
                 distanceMeters = tick.distanceMeters,
                 hrConnected = tick.connected,
@@ -265,7 +266,8 @@ class WorkoutForegroundService : LifecycleService() {
                 predictedHr = adaptiveResult?.predictedHr ?: 0,
                 guidanceText = guidance,
                 adaptiveLagSec = adaptive?.currentLagSec() ?: 0f,
-                projectionReady = adaptiveResult?.hasProjectionConfidence ?: false
+                projectionReady = adaptiveResult?.hasProjectionConfidence ?: false,
+                isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN
             )
         }
 
@@ -307,7 +309,7 @@ class WorkoutForegroundService : LifecycleService() {
         val notificationText = when {
             !tick.connected -> "HR monitor disconnected"
             tick.hr <= 0 -> "Connected. Waiting for heart rate..."
-            target > 0 -> "$guidance - HR ${tick.hr} / $target"
+            target != null && target > 0 -> "$guidance - HR ${tick.hr} / $target"
             else -> "HR ${tick.hr} bpm"
         }
         notificationHelper.update(notificationText)

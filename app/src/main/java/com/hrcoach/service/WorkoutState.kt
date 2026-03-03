@@ -19,7 +19,8 @@ data class WorkoutSnapshot(
     val guidanceText: String = "GET HR SIGNAL",
     val adaptiveLagSec: Float = 0f,
     val projectionReady: Boolean = false,
-    val completedWorkoutId: Long? = null
+    val completedWorkoutId: Long? = null,
+    val isFreeRun: Boolean = false
 )
 
 object WorkoutState {
