@@ -21,7 +21,10 @@ import javax.inject.Inject
 data class ActiveWorkoutUiState(
     val snapshot: WorkoutSnapshot = WorkoutSnapshot(),
     val elapsedSeconds: Long = 0L,
-    val workoutConfig: WorkoutConfig? = null
+    val workoutConfig: WorkoutConfig? = null,
+    val segmentLabel: String? = null,
+    val segmentCountdownSeconds: Long? = null,
+    val nextSegmentLabel: String? = null
 )
 
 @HiltViewModel
@@ -54,7 +57,14 @@ class WorkoutViewModel @Inject constructor(
                 val snapshot = _uiState.value.snapshot
                 if (!snapshot.isRunning) continue
                 _uiState.update { current ->
-                    current.copy(elapsedSeconds = computeElapsedSeconds(System.currentTimeMillis()))
+                    val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
+                    val (segLabel, segCountdown, nextLabel) = deriveSegmentInfo(current.workoutConfig, newElapsed)
+                    current.copy(
+                        elapsedSeconds = newElapsed,
+                        segmentLabel = segLabel,
+                        segmentCountdownSeconds = segCountdown,
+                        nextSegmentLabel = nextLabel
+                    )
                 }
             }
         }
@@ -92,10 +102,16 @@ class WorkoutViewModel @Inject constructor(
         }
 
         _uiState.update { current ->
+            val newElapsed = if (snapshot.isRunning) computeElapsedSeconds(nowMs) else 0L
+            val config = if (snapshot.isRunning) current.workoutConfig else null
+            val (segLabel, segCountdown, nextLabel) = deriveSegmentInfo(config, newElapsed)
             current.copy(
                 snapshot = snapshot,
-                elapsedSeconds = if (snapshot.isRunning) computeElapsedSeconds(nowMs) else 0L,
-                workoutConfig = if (snapshot.isRunning) current.workoutConfig else null
+                elapsedSeconds = newElapsed,
+                workoutConfig = config,
+                segmentLabel = segLabel,
+                segmentCountdownSeconds = segCountdown,
+                nextSegmentLabel = nextLabel
             )
         }
     }
@@ -115,9 +131,14 @@ class WorkoutViewModel @Inject constructor(
             }.getOrNull()
 
             _uiState.update { current ->
+                val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
+                val (segLabel, segCountdown, nextLabel) = deriveSegmentInfo(config, newElapsed)
                 current.copy(
                     workoutConfig = config,
-                    elapsedSeconds = computeElapsedSeconds(System.currentTimeMillis())
+                    elapsedSeconds = newElapsed,
+                    segmentLabel = segLabel,
+                    segmentCountdownSeconds = segCountdown,
+                    nextSegmentLabel = nextLabel
                 )
             }
         } finally {
@@ -129,5 +150,22 @@ class WorkoutViewModel @Inject constructor(
         val startTimeMs = workoutStartTimeMs ?: return 0L
         val currentPauseMs = pauseStartedAtMs?.let { nowMs - it } ?: 0L
         return ((nowMs - startTimeMs - pausedAccumulatedMs - currentPauseMs).coerceAtLeast(0L) / 1_000L)
+    }
+
+    private fun deriveSegmentInfo(config: WorkoutConfig?, elapsed: Long): Triple<String?, Long?, String?> {
+        if (config == null || !config.isTimeBased()) return Triple(null, null, null)
+        var cumulative = 0L
+        config.segments.forEachIndexed { index, seg ->
+            val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
+            cumulative += dur
+            if (elapsed < cumulative) {
+                val countdown = cumulative - elapsed
+                val nextLabel = config.segments.drop(index + 1).firstOrNull { it.label != null }?.label
+                return Triple(seg.label, countdown, nextLabel)
+            }
+        }
+        // Past end of all segments — show last segment with 0 countdown
+        val last = config.segments.lastOrNull()
+        return Triple(last?.label, 0L, null)
     }
 }

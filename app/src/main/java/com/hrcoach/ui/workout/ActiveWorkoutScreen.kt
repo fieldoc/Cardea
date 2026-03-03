@@ -23,7 +23,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -188,6 +191,44 @@ fun ActiveWorkoutScreen(
                 zoneColor = zoneColor,
                 isActive = state.guidanceText.isNotBlank() && !state.isPaused
             )
+
+            // Interval countdown panel — only for time-based workouts
+            if (uiState.segmentLabel != null) {
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    val mm = (uiState.segmentCountdownSeconds ?: 0L) / 60
+                    val ss = (uiState.segmentCountdownSeconds ?: 0L) % 60
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = uiState.segmentLabel!!,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = CardeaTextPrimary
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = null,
+                                tint = HrCoachThemeTokens.subtleText,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = "%d:%02d remaining".format(mm, ss),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CardeaTextPrimary
+                            )
+                        }
+                        uiState.nextSegmentLabel?.let { next ->
+                            Text(
+                                text = "next › $next",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = HrCoachThemeTokens.subtleText
+                            )
+                        }
+                    }
+                }
+            }
 
             GlassCard {
                 Row(
