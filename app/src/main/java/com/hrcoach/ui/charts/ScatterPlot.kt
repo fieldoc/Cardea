@@ -10,13 +10,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.GradientRed
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.min
 
 data class ScatterPoint(
@@ -39,6 +48,8 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
 
     // Precompute regression outside Canvas to avoid recomputing every frame
     val regressionResult = remember(points) { computeLinearRegression(points) }
+    val density = LocalDensity.current
+    val axisTextSizePx = with(density) { 12.sp.toPx() }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val leftPadding = 52.dp.toPx()
@@ -71,15 +82,15 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
         fun toScreenY(value: Float): Float =
             plotTop + plotHeight - (value - minY) / rangeY * plotHeight
 
-        val gridColor = onSurfaceColor.copy(alpha = 0.1f)
+        val gridColor = Color(0x0AFFFFFF)
         val textPaint = android.graphics.Paint().apply {
             color = onSurfaceColor.toArgb()
-            textSize = 10.dp.toPx()
+            textSize = axisTextSizePx
             isAntiAlias = true
         }
         val labelPaint = android.graphics.Paint().apply {
             color = onSurfaceColor.toArgb()
-            textSize = 11.dp.toPx()
+            textSize = axisTextSizePx
             isAntiAlias = true
         }
 
@@ -101,12 +112,14 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
             // X-axis tick label
             val label = "%.0f".format(xValue)
             val labelWidth = textPaint.measureText(label)
-            drawContext.canvas.nativeCanvas.drawText(
-                label,
-                gx - labelWidth / 2f,
-                plotBottom + 14.dp.toPx(),
-                textPaint
-            )
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawText(
+                    label,
+                    gx - labelWidth / 2f,
+                    plotBottom + 14.dp.toPx(),
+                    textPaint
+                )
+            }
 
             // Horizontal grid line
             val gy = plotTop + fraction * plotHeight
@@ -122,27 +135,30 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
             // Y-axis tick label
             val yLabel = "%.1f".format(yValue)
             val yLabelWidth = textPaint.measureText(yLabel)
-            drawContext.canvas.nativeCanvas.drawText(
-                yLabel,
-                plotLeft - yLabelWidth - 4.dp.toPx(),
-                gy + textPaint.textSize / 3f,
-                textPaint
-            )
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawText(
+                    yLabel,
+                    plotLeft - yLabelWidth - 4.dp.toPx(),
+                    gy + textPaint.textSize / 3f,
+                    textPaint
+                )
+            }
         }
 
-        // Draw scatter points
+        // Draw scatter points with gradient colors
+        val scatterGradientColors = listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
         for (point in points) {
             val cx = toScreenX(point.x)
             val cy = toScreenY(point.y)
             val color = lerp(
                 Color.Gray.copy(alpha = 0.3f),
-                primaryColor,
+                scatterGradientColors[(point.ageFraction * (scatterGradientColors.size - 1)).toInt().coerceIn(0, scatterGradientColors.size - 1)],
                 point.ageFraction
             )
             drawCircle(color = color, radius = pointRadius, center = Offset(cx, cy))
         }
 
-        // Draw dashed linear regression line
+        // Draw dashed linear regression line with gradient color
         val (slope, intercept) = regressionResult
         val yAtLeft = slope * minX + intercept
         val yAtRight = slope * maxX + intercept
@@ -153,7 +169,7 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
         drawDashedLine(
             start = Offset(regStartX, regStartY),
             end = Offset(regEndX, regEndY),
-            color = primaryColor,
+            color = GradientCyan,
             dashOn = dashOn,
             dashOff = dashOff
         )
@@ -161,30 +177,34 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
         // X-axis label: "Heart Rate (bpm)" centered below the chart
         val xAxisLabel = "Heart Rate (bpm)"
         val xAxisLabelWidth = labelPaint.measureText(xAxisLabel)
-        drawContext.canvas.nativeCanvas.drawText(
-            xAxisLabel,
-            plotLeft + plotWidth / 2f - xAxisLabelWidth / 2f,
-            size.height - 4.dp.toPx(),
-            labelPaint
-        )
+        drawIntoCanvas { canvas ->
+            canvas.nativeCanvas.drawText(
+                xAxisLabel,
+                plotLeft + plotWidth / 2f - xAxisLabelWidth / 2f,
+                size.height - 4.dp.toPx(),
+                labelPaint
+            )
+        }
 
         // Y-axis label: "Pace" rotated 90° on the left side
         val yAxisLabel = "Pace"
         val yAxisLabelWidth = labelPaint.measureText(yAxisLabel)
-        drawContext.canvas.nativeCanvas.apply {
-            save()
-            rotate(
-                -90f,
-                labelPaint.textSize,
-                plotTop + plotHeight / 2f
-            )
-            drawText(
-                yAxisLabel,
-                labelPaint.textSize - yAxisLabelWidth / 2f,
-                plotTop + plotHeight / 2f + labelPaint.textSize / 3f,
-                labelPaint
-            )
-            restore()
+        drawIntoCanvas { canvas ->
+            canvas.nativeCanvas.apply {
+                save()
+                rotate(
+                    -90f,
+                    labelPaint.textSize,
+                    plotTop + plotHeight / 2f
+                )
+                drawText(
+                    yAxisLabel,
+                    labelPaint.textSize - yAxisLabelWidth / 2f,
+                    plotTop + plotHeight / 2f + labelPaint.textSize / 3f,
+                    labelPaint
+                )
+                restore()
+            }
         }
     }
 }

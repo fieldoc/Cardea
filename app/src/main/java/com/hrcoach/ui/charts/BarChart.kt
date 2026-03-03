@@ -6,20 +6,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import kotlin.math.max
+import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
+import com.hrcoach.ui.theme.GradientPink
 
 data class BarEntry(val label: String, val value: Float)
 
@@ -34,20 +37,22 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
         return
     }
 
-    val gridColor = MaterialTheme.colorScheme.surfaceVariant
+    val gridColor = Color(0x0AFFFFFF)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val density = LocalDensity.current
+    val axisTextSizePx = with(density) { 12.sp.toPx() }
 
-    val textPaint = remember {
+    val textPaint = remember(axisTextSizePx) {
         android.graphics.Paint().apply {
-            textSize = 28f
+            textSize = axisTextSizePx
             isAntiAlias = true
             textAlign = android.graphics.Paint.Align.CENTER
         }
     }
 
-    val yLabelPaint = remember {
+    val yLabelPaint = remember(axisTextSizePx) {
         android.graphics.Paint().apply {
-            textSize = 28f
+            textSize = axisTextSizePx
             isAntiAlias = true
             textAlign = android.graphics.Paint.Align.RIGHT
         }
@@ -96,12 +101,14 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
 
             // Y-axis label
             val labelText = "%.0f".format(gridValue)
-            drawContext.canvas.nativeCanvas.drawText(
-                labelText,
-                chartLeft - 6.dp.toPx(),
-                y + (yLabelPaint.textSize / 3f),
-                yLabelPaint
-            )
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawText(
+                    labelText,
+                    chartLeft - 6.dp.toPx(),
+                    y + (yLabelPaint.textSize / 3f),
+                    yLabelPaint
+                )
+            }
         }
 
         // Draw bars
@@ -122,31 +129,28 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
             val barTop = chartBottom - barHeight
             val barCenterX = barLeft + barWidth / 2f
 
-            // Draw bar with rounded top corners only using Path
-            val path = Path()
-            path.addRoundRect(
-                RoundRect(
-                    rect = Rect(
-                        left = barLeft,
-                        top = barTop,
-                        right = barRight,
-                        bottom = chartBottom
-                    ),
-                    topLeft = CornerRadius(cornerRadius, cornerRadius),
-                    topRight = CornerRadius(cornerRadius, cornerRadius),
-                    bottomLeft = CornerRadius(0f, 0f),
-                    bottomRight = CornerRadius(0f, 0f)
-                )
+            val barGradient = Brush.verticalGradient(
+                colors = listOf(GradientCyan, GradientBlue, GradientPink),
+                startY = barTop,
+                endY = chartBottom
             )
-            drawPath(path = path, color = barColor)
+            drawRoundRect(
+                brush = barGradient,
+                topLeft = Offset(barLeft, barTop),
+                size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                cornerRadius = CornerRadius(cornerRadius, cornerRadius),
+                alpha = if (isLast) 1f else 0.55f
+            )
 
             // X-axis label centered below each bar
-            drawContext.canvas.nativeCanvas.drawText(
-                entry.label,
-                barCenterX,
-                chartBottom + 24.dp.toPx(),
-                textPaint
-            )
+            drawIntoCanvas { canvas ->
+                canvas.nativeCanvas.drawText(
+                    entry.label,
+                    barCenterX,
+                    chartBottom + 24.dp.toPx(),
+                    textPaint
+                )
+            }
         }
     }
 }

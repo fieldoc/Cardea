@@ -10,12 +10,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
 import java.util.Locale
 
 data class CalendarDay(val epochDay: Int, val distanceKm: Float)
@@ -48,7 +51,8 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
     }
 
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
-    val primary = MaterialTheme.colorScheme.primary
+    val heatLow = GradientBlue.copy(alpha = 0.4f)
+    val heatHigh = GradientCyan
 
     // Day-of-week label strings: show text only at rows 0 (Mon), 2 (Wed), 4 (Fri)
     val dowLabels = listOf("M", "", "W", "", "F", "", "")
@@ -68,8 +72,8 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
                     if (label.isNotEmpty()) {
                         Text(
                             text = label,
-                            fontSize = 8.sp,
-                            lineHeight = 8.sp,
+                            fontSize = 12.sp,
+                            lineHeight = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -94,8 +98,8 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
                             if (showMonth) {
                                 Text(
                                     text = monday.month.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                                    fontSize = 8.sp,
-                                    lineHeight = 8.sp,
+                                    fontSize = 12.sp,
+                                    lineHeight = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -114,7 +118,7 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
                                 val distanceKm = dayMap[epochDay]
                                 val color = if (distanceKm != null && distanceKm > 0f) {
                                     val intensity = (distanceKm / 10f).coerceIn(0f, 1f)
-                                    lerp(surfaceVariant, primary, intensity)
+                                    lerp(heatLow, heatHigh, intensity)
                                 } else {
                                     surfaceVariant
                                 }

@@ -1,45 +1,64 @@
 package com.hrcoach.ui.charts
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.theme.HrCoachThemeTokens
 
 data class TrendInfo(val label: String, val positive: Boolean?)
 
 @Composable
 fun TrendBadge(trendInfo: TrendInfo, modifier: Modifier = Modifier) {
     val backgroundColor = when (trendInfo.positive) {
-        true -> Color(0xFF2E7D32)
-        false -> MaterialTheme.colorScheme.error
+        true -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f)
+        false -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
         null -> MaterialTheme.colorScheme.surfaceVariant
     }
     val textColor = when (trendInfo.positive) {
-        true -> Color.White
-        false -> MaterialTheme.colorScheme.onError
-        null -> MaterialTheme.colorScheme.onSurfaceVariant
+        true -> MaterialTheme.colorScheme.tertiary
+        false -> MaterialTheme.colorScheme.secondary
+        null -> HrCoachThemeTokens.subtleText
     }
 
-    Surface(
-        modifier = modifier.height(24.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = backgroundColor
+    Box(
+        modifier = modifier
+            .height(24.dp)
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+        Surface(
+            color = backgroundColor,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp)
         ) {
-            Text(
-                text = trendInfo.label,
-                color = textColor,
-                fontSize = 11.sp
-            )
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.height(24.dp)
+            ) {
+                Text(
+                    text = trendInfo.label,
+                    color = textColor,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(24.dp)
+                        .wrapContentHeight(Alignment.CenterVertically)
+                        .padding(horizontal = 10.dp)
+                )
+            }
         }
     }
 }
@@ -52,61 +71,49 @@ fun ProgressChartCard(
     trendInfo: TrendInfo? = null,
     content: @Composable () -> Unit
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+    GlassCard(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                if (trendInfo != null) {
-                    TrendBadge(trendInfo = trendInfo)
-                }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            if (trendInfo != null) {
+                TrendBadge(trendInfo = trendInfo)
             }
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            content()
         }
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = HrCoachThemeTokens.subtleText
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        content()
     }
 }
 
 @Composable
 fun SectionHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        if (subtitle != null) {
             Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = HrCoachThemeTokens.subtleText
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
