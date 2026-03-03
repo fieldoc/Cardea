@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.hrcoach.ui.theme.CardeaBgPrimary
@@ -80,7 +81,9 @@ private enum class HistoryDetailContentState {
 }
 
 private val DetailBackdrop = Brush.radialGradient(
-    colors = listOf(CardeaBgSecondary, CardeaBgPrimary)
+    colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
+    center = Offset.Zero,
+    radius = 1800f
 )
 
 private val DetailGlass = Color(0xCC0D1824)
