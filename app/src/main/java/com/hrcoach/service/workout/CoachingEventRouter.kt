@@ -54,8 +54,8 @@ class CoachingEventRouter {
             lastSegmentIndex = -1
         }
 
-        val projectedDrift = adaptiveResult?.projectedZoneStatus == ZoneStatus.ABOVE_ZONE ||
-            adaptiveResult?.projectedZoneStatus == ZoneStatus.BELOW_ZONE
+        val projectedDrift = adaptiveResult?.projectedZoneStatus in
+            setOf(ZoneStatus.ABOVE_ZONE, ZoneStatus.BELOW_ZONE)
         if (zoneStatus == ZoneStatus.IN_ZONE &&
             adaptiveResult?.hasProjectionConfidence == true &&
             projectedDrift &&

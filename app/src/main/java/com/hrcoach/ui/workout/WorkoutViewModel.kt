@@ -18,6 +18,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private data class SegmentInfo(
+    val label: String? = null,
+    val countdownSeconds: Long? = null,
+    val nextLabel: String? = null
+)
+
 data class ActiveWorkoutUiState(
     val snapshot: WorkoutSnapshot = WorkoutSnapshot(),
     val elapsedSeconds: Long = 0L,
@@ -58,12 +64,12 @@ class WorkoutViewModel @Inject constructor(
                 if (!snapshot.isRunning) continue
                 _uiState.update { current ->
                     val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
-                    val (segLabel, segCountdown, nextLabel) = deriveSegmentInfo(current.workoutConfig, newElapsed)
+                    val seg = deriveSegmentInfo(current.workoutConfig, newElapsed)
                     current.copy(
                         elapsedSeconds = newElapsed,
-                        segmentLabel = segLabel,
-                        segmentCountdownSeconds = segCountdown,
-                        nextSegmentLabel = nextLabel
+                        segmentLabel = seg.label,
+                        segmentCountdownSeconds = seg.countdownSeconds,
+                        nextSegmentLabel = seg.nextLabel
                     )
                 }
             }
@@ -104,14 +110,14 @@ class WorkoutViewModel @Inject constructor(
         _uiState.update { current ->
             val newElapsed = if (snapshot.isRunning) computeElapsedSeconds(nowMs) else 0L
             val config = if (snapshot.isRunning) current.workoutConfig else null
-            val (segLabel, segCountdown, nextLabel) = deriveSegmentInfo(config, newElapsed)
+            val seg = deriveSegmentInfo(config, newElapsed)
             current.copy(
                 snapshot = snapshot,
                 elapsedSeconds = newElapsed,
                 workoutConfig = config,
-                segmentLabel = segLabel,
-                segmentCountdownSeconds = segCountdown,
-                nextSegmentLabel = nextLabel
+                segmentLabel = seg.label,
+                segmentCountdownSeconds = seg.countdownSeconds,
+                nextSegmentLabel = seg.nextLabel
             )
         }
     }
@@ -132,13 +138,13 @@ class WorkoutViewModel @Inject constructor(
 
             _uiState.update { current ->
                 val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
-                val (segLabel, segCountdown, nextLabel) = deriveSegmentInfo(config, newElapsed)
+                val seg = deriveSegmentInfo(config, newElapsed)
                 current.copy(
                     workoutConfig = config,
                     elapsedSeconds = newElapsed,
-                    segmentLabel = segLabel,
-                    segmentCountdownSeconds = segCountdown,
-                    nextSegmentLabel = nextLabel
+                    segmentLabel = seg.label,
+                    segmentCountdownSeconds = seg.countdownSeconds,
+                    nextSegmentLabel = seg.nextLabel
                 )
             }
         } finally {
@@ -152,20 +158,18 @@ class WorkoutViewModel @Inject constructor(
         return ((nowMs - startTimeMs - pausedAccumulatedMs - currentPauseMs).coerceAtLeast(0L) / 1_000L)
     }
 
-    private fun deriveSegmentInfo(config: WorkoutConfig?, elapsed: Long): Triple<String?, Long?, String?> {
-        if (config == null || !config.isTimeBased()) return Triple(null, null, null)
+    private fun deriveSegmentInfo(config: WorkoutConfig?, elapsed: Long): SegmentInfo {
+        if (config == null || !config.isTimeBased()) return SegmentInfo()
         var cumulative = 0L
         config.segments.forEachIndexed { index, seg ->
             val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
             cumulative += dur
             if (elapsed < cumulative) {
-                val countdown = cumulative - elapsed
                 val nextLabel = config.segments.drop(index + 1).firstOrNull { it.label != null }?.label
-                return Triple(seg.label, countdown, nextLabel)
+                return SegmentInfo(seg.label, cumulative - elapsed, nextLabel)
             }
         }
-        // Past end of all segments — show last segment with 0 countdown
         val last = config.segments.lastOrNull()
-        return Triple(last?.label, 0L, null)
+        return SegmentInfo(last?.label, 0L, null)
     }
 }

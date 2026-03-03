@@ -254,7 +254,7 @@ class WorkoutForegroundService : LifecycleService() {
         val zoneStatus = if (!tick.connected || tick.hr <= 0 || target == null || target == 0) {
             ZoneStatus.NO_DATA
         } else {
-            engine.evaluate(tick.hr, target ?: 0)
+            engine.evaluate(tick.hr, target)
         }
 
         if (tick.connected && tick.hr > 0 && !isPaused) {

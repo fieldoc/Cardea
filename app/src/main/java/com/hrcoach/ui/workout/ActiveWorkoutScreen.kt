@@ -192,14 +192,12 @@ fun ActiveWorkoutScreen(
                 isActive = state.guidanceText.isNotBlank() && !state.isPaused
             )
 
-            // Interval countdown panel — only for time-based workouts
-            if (uiState.segmentLabel != null) {
+            uiState.segmentLabel?.let { label ->
+                val countdown = uiState.segmentCountdownSeconds ?: 0L
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
-                    val mm = (uiState.segmentCountdownSeconds ?: 0L) / 60
-                    val ss = (uiState.segmentCountdownSeconds ?: 0L) % 60
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = uiState.segmentLabel!!,
+                            text = label,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = CardeaTextPrimary
                         )
@@ -214,7 +212,7 @@ fun ActiveWorkoutScreen(
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = "%d:%02d remaining".format(mm, ss),
+                                text = "%d:%02d remaining".format(countdown / 60, countdown % 60),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = CardeaTextPrimary
                             )

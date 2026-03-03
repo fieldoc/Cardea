@@ -76,17 +76,17 @@ object PresetLibrary {
         durationLabel = "~35 min",
         intensityLabel = "Very High",
         buildConfig = { maxHr ->
-            val intervalHr  = (maxHr * 0.92).roundToInt()
-            val recoveryHr  = (maxHr * 0.65).roundToInt()
-            val warmupHr    = (maxHr * 0.65).roundToInt()
-            val cooldownHr  = (maxHr * 0.60).roundToInt()
-            val segs = mutableListOf<HrSegment>()
-            segs += HrSegment(durationSeconds = 600, targetHr = warmupHr,  label = "Warm-up")
-            repeat(4) { i ->
-                segs += HrSegment(durationSeconds = 240, targetHr = intervalHr, label = "Interval ${i+1} of 4")
-                if (i < 3) segs += HrSegment(durationSeconds = 180, targetHr = recoveryHr, label = "Recovery ${i+1}")
+            val intervalHr = (maxHr * 0.92).roundToInt()
+            val recoveryHr = (maxHr * 0.65).roundToInt()
+            val cooldownHr = (maxHr * 0.60).roundToInt()
+            val segs = buildList {
+                add(HrSegment(durationSeconds = 600, targetHr = recoveryHr, label = "Warm-up"))
+                repeat(4) { i ->
+                    add(HrSegment(durationSeconds = 240, targetHr = intervalHr, label = "Interval ${i+1} of 4"))
+                    if (i < 3) add(HrSegment(durationSeconds = 180, targetHr = recoveryHr, label = "Recovery ${i+1}"))
+                }
+                add(HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down"))
             }
-            segs += HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
             WorkoutConfig(mode = WorkoutMode.DISTANCE_PROFILE, segments = segs, bufferBpm = 5, presetId = "norwegian_4x4")
         }
     )
@@ -104,13 +104,14 @@ object PresetLibrary {
             val recoveryHr = (maxHr * 0.62).roundToInt()
             val warmupHr   = (maxHr * 0.65).roundToInt()
             val cooldownHr = (maxHr * 0.60).roundToInt()
-            val segs = mutableListOf<HrSegment>()
-            segs += HrSegment(durationSeconds = 300, targetHr = warmupHr,  label = "Warm-up")
-            repeat(10) { i ->
-                segs += HrSegment(durationSeconds = 30, targetHr = sprintHr,   label = "Sprint ${i+1} of 10")
-                segs += HrSegment(durationSeconds = 30, targetHr = recoveryHr, label = "Recover")
+            val segs = buildList {
+                add(HrSegment(durationSeconds = 300, targetHr = warmupHr, label = "Warm-up"))
+                repeat(10) { i ->
+                    add(HrSegment(durationSeconds = 30, targetHr = sprintHr, label = "Sprint ${i+1} of 10"))
+                    add(HrSegment(durationSeconds = 30, targetHr = recoveryHr, label = "Recover"))
+                }
+                add(HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down"))
             }
-            segs += HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
             WorkoutConfig(mode = WorkoutMode.DISTANCE_PROFILE, segments = segs, bufferBpm = 5, presetId = "hiit_30_30")
         }
     )
@@ -128,13 +129,14 @@ object PresetLibrary {
             val recoveryHr = (maxHr * 0.63).roundToInt()
             val warmupHr   = (maxHr * 0.65).roundToInt()
             val cooldownHr = (maxHr * 0.60).roundToInt()
-            val segs = mutableListOf<HrSegment>()
-            segs += HrSegment(durationSeconds = 300, targetHr = warmupHr,  label = "Warm-up")
-            repeat(6) { i ->
-                segs += HrSegment(durationSeconds = 90, targetHr = climbHr,    label = "Hill ${i+1} of 6")
-                segs += HrSegment(durationSeconds = 90, targetHr = recoveryHr, label = "Recover")
+            val segs = buildList {
+                add(HrSegment(durationSeconds = 300, targetHr = warmupHr, label = "Warm-up"))
+                repeat(6) { i ->
+                    add(HrSegment(durationSeconds = 90, targetHr = climbHr, label = "Hill ${i+1} of 6"))
+                    add(HrSegment(durationSeconds = 90, targetHr = recoveryHr, label = "Recover"))
+                }
+                add(HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down"))
             }
-            segs += HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
             WorkoutConfig(mode = WorkoutMode.DISTANCE_PROFILE, segments = segs, bufferBpm = 5, presetId = "hill_repeats")
         }
     )

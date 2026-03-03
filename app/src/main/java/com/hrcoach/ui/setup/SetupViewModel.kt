@@ -98,10 +98,9 @@ class SetupViewModel @Inject constructor(
             mapsApiKey = savedKey,
             earconVolume = audioSettings.earconVolume,
             voiceVerbosity = audioSettings.voiceVerbosity,
-            enableVibration = audioSettings.enableVibration
+            enableVibration = audioSettings.enableVibration,
+            maxHr = userProfileRepository.getMaxHr()
         )
-        val storedMaxHr = userProfileRepository.getMaxHr()
-        _uiState.value = _uiState.value.copy(maxHr = storedMaxHr)
         startBleCollectors()
         recomputeValidation()
     }
@@ -163,18 +162,18 @@ class SetupViewModel @Inject constructor(
 
     fun setEarconVolume(value: Int) {
         _uiState.value = _uiState.value.copy(earconVolume = value.coerceIn(0, 100))
-        persistAudioSettingsSnapshot()
+        saveAudioSettings()
         previewSynthesizer?.setVolume(_uiState.value.earconVolume)
     }
 
     fun setVoiceVerbosity(value: VoiceVerbosity) {
         _uiState.value = _uiState.value.copy(voiceVerbosity = value)
-        persistAudioSettingsSnapshot()
+        saveAudioSettings()
     }
 
     fun setEnableVibration(value: Boolean) {
         _uiState.value = _uiState.value.copy(enableVibration = value)
-        persistAudioSettingsSnapshot()
+        saveAudioSettings()
     }
 
     fun setMapsApiKey(value: String) {
@@ -407,18 +406,15 @@ class SetupViewModel @Inject constructor(
                 )
             }
 
-            WorkoutMode.FREE_RUN -> null
-
             WorkoutMode.DISTANCE_PROFILE -> {
-                val mappedSegments = mutableListOf<HrSegment>()
                 var previousDistanceMeters = 0f
-                state.segments.forEach { segment ->
+                val mappedSegments = state.segments.map { segment ->
                     val km = segment.distanceKm.toFloatOrNull() ?: return null
                     val hr = segment.targetHr.toIntOrNull() ?: return null
                     val meters = km * 1000f
                     if (km <= 0f || hr !in 60..230 || meters <= previousDistanceMeters) return null
                     previousDistanceMeters = meters
-                    mappedSegments += HrSegment(distanceMeters = meters, targetHr = hr)
+                    HrSegment(distanceMeters = meters, targetHr = hr)
                 }
                 if (mappedSegments.isEmpty()) return null
                 WorkoutConfig(
@@ -430,7 +426,7 @@ class SetupViewModel @Inject constructor(
                 )
             }
 
-            else -> null // unreachable: FREE_RUN handled by early return above
+            WorkoutMode.FREE_RUN -> null // unreachable: handled by early return above
         }
     }
 
@@ -560,10 +556,6 @@ class SetupViewModel @Inject constructor(
                 startBlockedReason = blockedReason
             )
         )
-    }
-
-    private fun persistAudioSettingsSnapshot() {
-        saveAudioSettings()
     }
 
     private fun validateInt(

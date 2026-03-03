@@ -162,8 +162,9 @@ fun SetupScreen(
             if (state.mode != WorkoutMode.FREE_RUN) {
                 TargetCard(
                     state = state,
-                    viewModel = viewModel,
                     onSteadyStateHrChange = viewModel::setSteadyStateHr,
+                    onSelectPreset = { viewModel.selectPreset(it.id) },
+                    onSelectCustom = { viewModel.selectPreset("custom") },
                     onAddSegment = viewModel::addSegment,
                     onUpdateSegmentDistance = viewModel::updateSegmentDistance,
                     onUpdateSegmentTarget = viewModel::updateSegmentTarget,
@@ -477,8 +478,9 @@ private fun PreviewSoundButton(
 @Composable
 private fun TargetCard(
     state: SetupUiState,
-    viewModel: SetupViewModel,
     onSteadyStateHrChange: (String) -> Unit,
+    onSelectPreset: (WorkoutPreset) -> Unit,
+    onSelectCustom: () -> Unit,
     onAddSegment: () -> Unit,
     onUpdateSegmentDistance: (Int, String) -> Unit,
     onUpdateSegmentTarget: (Int, String) -> Unit,
@@ -508,13 +510,19 @@ private fun TargetCard(
                 PresetGrid(
                     presets = PresetLibrary.ALL,
                     selectedPresetId = state.selectedPresetId,
-                    onSelectPreset = { viewModel.selectPreset(it.id) }
+                    onSelectPreset = onSelectPreset
                 )
                 if (state.selectedPresetId == "custom") {
-                    SegmentEditor(state = state, viewModel = viewModel)
+                    SegmentEditor(
+                        state = state,
+                        onAddSegment = onAddSegment,
+                        onUpdateSegmentDistance = onUpdateSegmentDistance,
+                        onUpdateSegmentTarget = onUpdateSegmentTarget,
+                        onRemoveSegment = onRemoveSegment
+                    )
                 }
                 TextButton(
-                    onClick = { viewModel.selectPreset("custom") },
+                    onClick = onSelectCustom,
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Custom segment editor...") }
             }
@@ -525,7 +533,13 @@ private fun TargetCard(
 }
 
 @Composable
-private fun SegmentEditor(state: SetupUiState, viewModel: SetupViewModel) {
+private fun SegmentEditor(
+    state: SetupUiState,
+    onAddSegment: () -> Unit,
+    onUpdateSegmentDistance: (Int, String) -> Unit,
+    onUpdateSegmentTarget: (Int, String) -> Unit,
+    onRemoveSegment: (Int) -> Unit
+) {
     val segmentColors = listOf(
         MaterialTheme.colorScheme.primary,
         MaterialTheme.colorScheme.tertiary,
@@ -560,7 +574,7 @@ private fun SegmentEditor(state: SetupUiState, viewModel: SetupViewModel) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = segment.distanceKm,
-                    onValueChange = { viewModel.updateSegmentDistance(index, it) },
+                    onValueChange = { onUpdateSegmentDistance(index, it) },
                     singleLine = true,
                     label = { Text("Distance (km)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -570,7 +584,7 @@ private fun SegmentEditor(state: SetupUiState, viewModel: SetupViewModel) {
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
                     value = segment.targetHr,
-                    onValueChange = { viewModel.updateSegmentTarget(index, it) },
+                    onValueChange = { onUpdateSegmentTarget(index, it) },
                     singleLine = true,
                     label = { Text("HR (bpm)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -579,7 +593,7 @@ private fun SegmentEditor(state: SetupUiState, viewModel: SetupViewModel) {
                 )
             }
             if (state.segments.size > 1) {
-                IconButton(onClick = { viewModel.removeSegment(index) }) {
+                IconButton(onClick = { onRemoveSegment(index) }) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Remove segment",
@@ -589,7 +603,7 @@ private fun SegmentEditor(state: SetupUiState, viewModel: SetupViewModel) {
             }
         }
     }
-    TextButton(onClick = { viewModel.addSegment() }) {
+    TextButton(onClick = onAddSegment) {
         Icon(imageVector = Icons.Default.Add, contentDescription = null)
         Spacer(modifier = Modifier.width(4.dp))
         Text("Add Segment")

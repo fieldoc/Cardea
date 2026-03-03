@@ -87,7 +87,10 @@ class AccountViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
-    fun setMapsApiKey(key: String) { _mapsKey.value = key; _mapsKeySaved.value = false }
+    fun setMapsApiKey(key: String) {
+        _mapsKey.value = key
+        _mapsKeySaved.value = false
+    }
     fun saveMapsApiKey() {
         viewModelScope.launch {
             mapsRepo.setMapsApiKey(_mapsKey.value)
