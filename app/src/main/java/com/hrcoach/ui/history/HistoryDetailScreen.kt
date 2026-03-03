@@ -4,6 +4,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -21,7 +22,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,11 +45,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.GlassBorder
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
@@ -259,16 +262,16 @@ private fun DetailMapCard(
     Box(
         modifier = modifier
             .border(
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-                shape = RoundedCornerShape(32.dp)
+                border = BorderStroke(1.dp, GlassBorder),
+                shape = RoundedCornerShape(18.dp)
             )
-            .background(DetailGlass, RoundedCornerShape(32.dp))
+            .background(DetailGlass, RoundedCornerShape(18.dp))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(1.dp)
-                .background(CardeaBgPrimary, RoundedCornerShape(31.dp))
+                .background(CardeaBgPrimary, RoundedCornerShape(17.dp))
         ) {
             when {
                 trackPoints.size >= 2 && isMapsEnabled -> {
@@ -513,7 +516,7 @@ private fun StatsCard(
 
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         colors = CardDefaults.cardColors(containerColor = DetailGlass)
     ) {
@@ -624,7 +627,7 @@ private fun MoreActionsCard(
     onDelete: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         colors = CardDefaults.cardColors(containerColor = DetailGlass)
     ) {
@@ -643,11 +646,21 @@ private fun MoreActionsCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFB6C2D1)
             )
-            Button(
-                onClick = onViewPostRunSummary,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(CardeaGradient)
+                    .clickable(onClick = onViewPostRunSummary),
+                contentAlignment = Alignment.Center
             ) {
-                Text(stringResource(R.string.button_post_run_insights))
+                Text(
+                    text = stringResource(R.string.button_post_run_insights),
+                    color = CardeaTextPrimary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
