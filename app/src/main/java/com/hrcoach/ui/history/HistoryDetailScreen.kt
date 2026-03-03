@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.GlassBorder
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -86,7 +87,7 @@ private val DetailBackdrop = Brush.radialGradient(
     radius = 1800f
 )
 
-private val DetailGlass = Color(0xCC0D1824)
+private val DetailGlass = Color(0x0FFFFFFF)   // 6% white — spec glass fill
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -267,7 +268,7 @@ private fun DetailMapCard(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(1.dp)
-                .background(Color(0xFF08111A), RoundedCornerShape(31.dp))
+                .background(CardeaBgPrimary, RoundedCornerShape(31.dp))
         ) {
             when {
                 trackPoints.size >= 2 && isMapsEnabled -> {
@@ -344,7 +345,7 @@ private fun BoxScope.MapHeaderOverlay(hasWorkoutTarget: Boolean) {
             .align(Alignment.TopStart),
         shape = RoundedCornerShape(20.dp),
         color = DetailGlass,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+        border = BorderStroke(1.dp, GlassBorder)
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
             Text(
@@ -374,7 +375,7 @@ private fun BoxScope.MapLegendOverlay(hasWorkoutTarget: Boolean) {
             .padding(16.dp),
         shape = RoundedCornerShape(22.dp),
         color = DetailGlass,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f))
+        border = BorderStroke(1.dp, GlassBorder)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
