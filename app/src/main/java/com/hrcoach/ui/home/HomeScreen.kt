@@ -125,7 +125,7 @@ fun HomeScreen(
                                 color = Color.White
                             )
                             Text(
-                                text = "${state.workoutsThisWeek} of ${state.weeklyTarget} runs",
+                                text = "${state.workoutsThisWeek} of ${state.weeklyTarget} this week",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = CardeaTextSecondary
                             )
@@ -144,7 +144,7 @@ fun HomeScreen(
                     val workout = state.lastWorkout
                     if (workout == null) {
                         Text(
-                            text = "No runs yet -- start your first run below.",
+                            text = "No sessions recorded yet.",
                             style = MaterialTheme.typography.bodySmall,
                             color = CardeaTextSecondary
                         )
