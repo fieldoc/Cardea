@@ -92,6 +92,20 @@ class ZoneEngineTest {
     }
 
     @Test
+    fun `evaluate with explicit targetHr respects buffer`() {
+        val config = WorkoutConfig(
+            mode = WorkoutMode.STEADY_STATE,
+            steadyStateTargetHr = 160,
+            bufferBpm = 5
+        )
+        val engine = ZoneEngine(config)
+        assertEquals(ZoneStatus.IN_ZONE,    engine.evaluate(hr = 155, targetHr = 160))
+        assertEquals(ZoneStatus.IN_ZONE,    engine.evaluate(hr = 165, targetHr = 160))
+        assertEquals(ZoneStatus.BELOW_ZONE, engine.evaluate(hr = 154, targetHr = 160))
+        assertEquals(ZoneStatus.ABOVE_ZONE, engine.evaluate(hr = 166, targetHr = 160))
+    }
+
+    @Test
     fun `distance profile - segment with null distanceMeters is ignored by distance lookup`() {
         val config = WorkoutConfig(
             mode = WorkoutMode.DISTANCE_PROFILE,
