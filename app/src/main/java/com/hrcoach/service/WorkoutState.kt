@@ -20,7 +20,8 @@ data class WorkoutSnapshot(
     val adaptiveLagSec: Float = 0f,
     val projectionReady: Boolean = false,
     val completedWorkoutId: Long? = null,
-    val isFreeRun: Boolean = false
+    val isFreeRun: Boolean = false,
+    val avgHr: Int = 0          // NEW — running average HR for the session
 )
 
 object WorkoutState {

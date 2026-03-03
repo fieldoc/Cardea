@@ -82,6 +82,9 @@ class WorkoutForegroundService : LifecycleService() {
     private var isStopping: Boolean = false
     private var latestTick: WorkoutTick? = null
 
+    private var hrSampleSum: Long = 0L
+    private var hrSampleCount: Int = 0
+
     override fun onCreate() {
         super.onCreate()
         notificationHelper = WorkoutNotificationHelper(this, CHANNEL_ID, NOTIFICATION_ID)
@@ -227,7 +230,8 @@ class WorkoutForegroundService : LifecycleService() {
                     hrConnected = tick.connected,
                     guidanceText = "Workout paused",
                     projectionReady = false,
-                    predictedHr = 0
+                    predictedHr = 0,
+                    avgHr = WorkoutState.snapshot.value.avgHr
                 )
             }
             notificationHelper.update("Workout paused")
@@ -239,6 +243,13 @@ class WorkoutForegroundService : LifecycleService() {
         } else {
             engine.evaluate(tick.hr, tick.distanceMeters)
         }
+
+        if (tick.connected && tick.hr > 0 && !isPaused) {
+            hrSampleSum += tick.hr
+            hrSampleCount++
+        }
+        val sessionAvgHr = if (hrSampleCount > 0) (hrSampleSum / hrSampleCount).toInt() else 0
+
         val adaptiveResult = adaptive?.evaluateTick(
             nowMs = nowMs,
             hr = tick.hr,
@@ -267,7 +278,8 @@ class WorkoutForegroundService : LifecycleService() {
                 guidanceText = guidance,
                 adaptiveLagSec = adaptive?.currentLagSec() ?: 0f,
                 projectionReady = adaptiveResult?.hasProjectionConfidence ?: false,
-                isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN
+                isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN,
+                avgHr = sessionAvgHr
             )
         }
 
@@ -334,6 +346,8 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun stopWorkout() {
+        hrSampleSum = 0L
+        hrSampleCount = 0
         if (isStopping) return
         isStopping = true
 
