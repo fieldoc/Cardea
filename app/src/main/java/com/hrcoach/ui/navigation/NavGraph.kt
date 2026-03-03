@@ -307,6 +307,12 @@ fun HrCoachNavGraph(
                             action = WorkoutForegroundService.ACTION_STOP
                         }
                         context.startService(stopIntent)
+                    },
+                    onConnectHr = {
+                        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+                            action = WorkoutForegroundService.ACTION_RESCAN_BLE
+                        }
+                        context.startService(intent)
                     }
                 )
             }

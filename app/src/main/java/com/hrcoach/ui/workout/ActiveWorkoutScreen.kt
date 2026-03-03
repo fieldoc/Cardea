@@ -61,9 +61,6 @@ import com.hrcoach.ui.theme.CardeaTextTertiary
 import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GlassHighlight
 import com.hrcoach.ui.theme.GradientBlue
-import com.hrcoach.ui.theme.GradientCyan
-import com.hrcoach.ui.theme.GradientPink
-import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.HrCoachThemeTokens
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
@@ -87,9 +84,12 @@ fun ActiveWorkoutScreen(
 
     LaunchedEffect(state.currentHr, state.hrConnected) {
         if (state.currentHr > 0 && state.hrConnected) {
-            pulseOn = true
-            delay(130L)
-            pulseOn = false
+            try {
+                pulseOn = true
+                delay(130L)
+            } finally {
+                pulseOn = false
+            }
         }
     }
 
@@ -130,9 +130,7 @@ fun ActiveWorkoutScreen(
                 Text(
                     text = "Cardea",
                     style = MaterialTheme.typography.titleMedium.copy(
-                        brush = Brush.linearGradient(
-                            colors = listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
-                        )
+                        brush = CardeaGradient
                     )
                 )
                 Text(
@@ -423,5 +421,5 @@ private fun formatElapsedHms(totalSeconds: Long): String {
     val hours = totalSeconds / 3_600L
     val minutes = (totalSeconds % 3_600L) / 60L
     val seconds = totalSeconds % 60L
-    return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+    return String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
 }

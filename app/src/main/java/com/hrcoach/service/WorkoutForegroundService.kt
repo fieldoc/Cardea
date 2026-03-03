@@ -39,6 +39,7 @@ class WorkoutForegroundService : LifecycleService() {
         const val ACTION_STOP = "com.hrcoach.ACTION_STOP"
         const val ACTION_PAUSE = "com.hrcoach.ACTION_PAUSE"
         const val ACTION_RESUME = "com.hrcoach.ACTION_RESUME"
+        const val ACTION_RESCAN_BLE = "com.hrcoach.ACTION_RESCAN_BLE"
         const val EXTRA_CONFIG_JSON = "config_json"
         const val EXTRA_DEVICE_ADDRESS = "device_address"
 
@@ -128,6 +129,11 @@ class WorkoutForegroundService : LifecycleService() {
 
             ACTION_STOP -> {
                 stopWorkout()
+                return START_NOT_STICKY
+            }
+
+            ACTION_RESCAN_BLE -> {
+                bleCoordinator.startScan()
                 return START_NOT_STICKY
             }
         }
