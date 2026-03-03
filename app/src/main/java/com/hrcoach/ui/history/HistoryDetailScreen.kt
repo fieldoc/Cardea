@@ -47,6 +47,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.hrcoach.ui.theme.CardeaBgPrimary
+import com.hrcoach.ui.theme.CardeaBgSecondary
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -77,12 +79,8 @@ private enum class HistoryDetailContentState {
     CONTENT
 }
 
-private val DetailBackdrop = Brush.verticalGradient(
-    colors = listOf(
-        Color(0xFF061019),
-        Color(0xFF0D1623),
-        Color(0xFF162739)
-    )
+private val DetailBackdrop = Brush.radialGradient(
+    colors = listOf(CardeaBgSecondary, CardeaBgPrimary)
 )
 
 private val DetailGlass = Color(0xCC0D1824)
@@ -111,7 +109,7 @@ fun HistoryDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = Color(0xFF061019),
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = {
@@ -126,7 +124,7 @@ fun HistoryDetailScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF061019),
+                    containerColor = Color.Transparent,
                     titleContentColor = Color(0xFFF4F7FB),
                     navigationIconContentColor = Color(0xFFF4F7FB)
                 )
