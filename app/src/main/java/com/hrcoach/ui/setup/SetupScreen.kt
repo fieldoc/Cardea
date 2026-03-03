@@ -41,11 +41,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.CardeaTextTertiary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -394,7 +393,7 @@ private fun AlertBehaviorCard(
             }
         } else {
             Text(
-                text = "Buffer, timing, voice, and vibration options are tucked here.",
+                text = "Audio alerts & timing options",
                 style = MaterialTheme.typography.bodySmall,
                 color = HrCoachThemeTokens.subtleText
             )
@@ -577,22 +576,38 @@ private fun HrMonitorCard(
                 }
             }
         } else {
-            Button(
-                onClick = onStartScan,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !state.isScanning
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .then(
+                        if (!state.isScanning)
+                            Modifier.background(CardeaGradient)
+                        else
+                            Modifier.background(CardeaTextTertiary)
+                    )
+                    .clickable(enabled = !state.isScanning, onClick = onStartScan),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(if (state.isScanning) "Scanning..." else "Scan for Devices")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = CardeaTextPrimary
+                    )
+                    Text(
+                        text = if (state.isScanning) "Scanning..." else "Scan for Devices",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = CardeaTextPrimary
+                    )
+                }
             }
             Text(
-                text = "COOSPO H808S usually appears as \"H808...\" or \"COOSPO...\".",
-                style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
-            )
-            Text(
-                text = "You can still start without a live connection; scanning continues during the run.",
+                text = "No signal? You can still start — scanning continues during the run.",
                 style = MaterialTheme.typography.bodySmall,
                 color = HrCoachThemeTokens.subtleText
             )
