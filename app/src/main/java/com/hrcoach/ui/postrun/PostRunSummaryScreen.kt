@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,16 +52,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.theme.HrCoachThemeTokens
 import kotlinx.coroutines.delay
 
@@ -297,21 +293,12 @@ fun PostRunSummaryScreen(
                             ) {
                                 Text("View on Map")
                             }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(40.dp)
-                                    .clip(RoundedCornerShape(50.dp))
-                                    .background(CardeaGradient)
-                                    .clickable(onClick = onDone),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.button_done),
-                                    color = CardeaTextPrimary,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
+                            CardeaButton(
+                                text = stringResource(R.string.button_done),
+                                onClick = onDone,
+                                modifier = Modifier.weight(1f).height(40.dp),
+                                cornerRadius = 50.dp
+                            )
                         }
                         TextButton(
                             onClick = onViewProgress,

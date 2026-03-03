@@ -1,6 +1,6 @@
 package com.hrcoach.ui.progress
 
-import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -439,65 +439,68 @@ private fun TrendLineChart(
     val range = (chartMax - chartMin).takeIf { it > 0f } ?: 1f
 
     Column {
-        Canvas(
+        Spacer(
             modifier = modifier
                 .fillMaxWidth()
                 .height(160.dp)
-        ) {
-            val w = size.width
-            val h = size.height
-            val stepX = if (series.size > 1) w / (series.size - 1) else w
+                .drawWithCache {
+                    val w = size.width
+                    val h = size.height
+                    val stepX = if (series.size > 1) w / (series.size - 1) else w
 
-            threshold?.let { tv ->
-                val ty = h - ((tv - chartMin) / range * h)
-                drawLine(
-                    color = SubtleText,
-                    start = Offset(0f, ty),
-                    end = Offset(w, ty),
-                    strokeWidth = 2f,
-                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
-                )
-            }
+                    val path = Path()
+                    series.forEachIndexed { i, pt ->
+                        val x = stepX * i
+                        val y = h - ((pt.value - chartMin) / range * h)
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
 
-            val path = Path()
-            series.forEachIndexed { i, pt ->
-                val x = stepX * i
-                val y = h - ((pt.value - chartMin) / range * h)
-                if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-            }
+                    // Build gradient spanning the chart width — cached until size or series changes
+                    val chartGradient = Brush.linearGradient(
+                        colorStops = arrayOf(
+                            0.00f to GradientRed,
+                            0.35f to GradientPink,
+                            0.65f to GradientBlue,
+                            1.00f to GradientCyan
+                        ),
+                        start = Offset(0f, 0f),
+                        end = Offset(w, 0f)
+                    )
 
-            // Build gradient spanning the chart width
-            val chartGradient = Brush.linearGradient(
-                colorStops = arrayOf(
-                    0.00f to GradientRed,
-                    0.35f to GradientPink,
-                    0.65f to GradientBlue,
-                    1.00f to GradientCyan
-                ),
-                start = Offset(0f, 0f),
-                end = Offset(w, 0f)
-            )
+                    onDrawBehind {
+                        threshold?.let { tv ->
+                            val ty = h - ((tv - chartMin) / range * h)
+                            drawLine(
+                                color = SubtleText,
+                                start = Offset(0f, ty),
+                                end = Offset(w, ty),
+                                strokeWidth = 2f,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f))
+                            )
+                        }
 
-            // Glow pass — drawn first, under the main line
-            drawPath(
-                path = path,
-                brush = chartGradient,
-                alpha = 0.15f,
-                style = Stroke(width = 18f, cap = StrokeCap.Round)
-            )
-            // Main gradient line
-            drawPath(
-                path = path,
-                brush = chartGradient,
-                style = Stroke(width = 5f, cap = StrokeCap.Round)
-            )
+                        // Glow pass — drawn first, under the main line
+                        drawPath(
+                            path = path,
+                            brush = chartGradient,
+                            alpha = 0.15f,
+                            style = Stroke(width = 18f, cap = StrokeCap.Round)
+                        )
+                        // Main gradient line
+                        drawPath(
+                            path = path,
+                            brush = chartGradient,
+                            style = Stroke(width = 5f, cap = StrokeCap.Round)
+                        )
 
-            series.forEachIndexed { i, pt ->
-                val x = stepX * i
-                val y = h - ((pt.value - chartMin) / range * h)
-                drawCircle(GradientCyan, radius = 5f, center = Offset(x, y))
-            }
-        }
+                        series.forEachIndexed { i, pt ->
+                            val x = stepX * i
+                            val y = h - ((pt.value - chartMin) / range * h)
+                            drawCircle(GradientCyan, radius = 5f, center = Offset(x, y))
+                        }
+                    }
+                }
+        )
         Row(Modifier.fillMaxWidth()) {
             Text(
                 text = yFormatter(values.first()),

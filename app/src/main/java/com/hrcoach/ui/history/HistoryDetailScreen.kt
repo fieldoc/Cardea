@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -45,14 +44,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.theme.GlassBorder
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
@@ -646,22 +643,11 @@ private fun MoreActionsCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFFB6C2D1)
             )
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CardeaGradient)
-                    .clickable(onClick = onViewPostRunSummary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.button_post_run_insights),
-                    color = CardeaTextPrimary,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            CardeaButton(
+                text = stringResource(R.string.button_post_run_insights),
+                onClick = onViewPostRunSummary,
+                modifier = Modifier.fillMaxWidth().height(52.dp)
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedButton(
                     onClick = onViewProgress,

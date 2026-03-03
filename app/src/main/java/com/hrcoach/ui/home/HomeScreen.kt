@@ -36,11 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.GlassHighlight
 import com.hrcoach.ui.theme.GradientBlue
@@ -166,21 +166,11 @@ fun HomeScreen(
                 }
 
                 // Start Run CTA
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(CardeaGradient)
-                        .clickable(onClick = onStartRun),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Start a Run",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
-                    )
-                }
+                CardeaButton(
+                    text = "Start a Run",
+                    onClick = onStartRun,
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                )
 
                 // Quick Links
                 Row(

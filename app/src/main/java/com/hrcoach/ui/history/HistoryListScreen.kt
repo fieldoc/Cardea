@@ -1,15 +1,8 @@
 package com.hrcoach.ui.history
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,49 +12,35 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.data.db.WorkoutEntity
-import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
 import kotlin.math.floor
@@ -83,9 +62,6 @@ fun HistoryListScreen(
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val workouts by viewModel.workouts.collectAsState()
-    var deleteModeId by remember { mutableStateOf<Long?>(null) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    val dismissDelete: () -> Unit = { showDeleteDialog = false; deleteModeId = null }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -133,46 +109,9 @@ fun HistoryListScreen(
                         items(workouts, key = { it.id }) { workout ->
                             WorkoutCard(
                                 workout = workout,
-                                isDeleteMode = deleteModeId == workout.id,
-                                onClick = {
-                                    if (deleteModeId != null) {
-                                        val wasThisCard = deleteModeId == workout.id
-                                        deleteModeId = null
-                                        if (!wasThisCard) onWorkoutClick(workout.id)
-                                    } else {
-                                        onWorkoutClick(workout.id)
-                                    }
-                                },
-                                onLongClick = { deleteModeId = workout.id },
-                                onDeleteClick = {
-                                    deleteModeId = workout.id
-                                    showDeleteDialog = true
-                                }
+                                onClick = { onWorkoutClick(workout.id) }
                             )
                         }
-                    }
-                    if (showDeleteDialog) {
-                        AlertDialog(
-                            onDismissRequest = dismissDelete,
-                            title = { Text("Delete this run?") },
-                            text = { Text("This will permanently remove all route data and stats.") },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        deleteModeId?.let { viewModel.deleteWorkout(it) }
-                                        dismissDelete()
-                                    }
-                                ) {
-                                    Text("Delete", color = ZoneRed)
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = dismissDelete) { Text("Cancel") }
-                            },
-                            containerColor = Color(0xFF141B27),
-                            titleContentColor = Color(0xFFF5F7FB),
-                            textContentColor = Color(0xFFB6C2D1)
-                        )
                     }
                 }
             }
@@ -206,34 +145,20 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color(0xFFB8C5D3)
             )
-            Box(
-                modifier = Modifier
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CardeaGradient)
-                    .clickable(onClick = onStartWorkout)
-                    .padding(horizontal = 24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.button_start_workout),
-                    color = CardeaTextPrimary,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            CardeaButton(
+                text = stringResource(R.string.button_start_workout),
+                onClick = onStartWorkout,
+                modifier = Modifier.height(44.dp),
+                innerPadding = PaddingValues(horizontal = 24.dp)
+            )
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WorkoutCard(
     workout: WorkoutEntity,
-    isDeleteMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onClick: () -> Unit
 ) {
     val date = formatWorkoutDate(workout.startTime)
     val duration = formatDuration(workout.startTime, workout.endTime)
@@ -241,106 +166,72 @@ private fun WorkoutCard(
     val distanceLabel = String.format("%.2f km", distanceKm)
     val paceLabel = averagePaceLabel(workout, distanceKm)
 
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick
-                ),
-            shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(
-                1.dp,
-                if (isDeleteMode) ZoneRed.copy(alpha = 0.33f) else Color.White.copy(alpha = 0.08f)
-            ),
-            colors = CardDefaults.cardColors(containerColor = HistoryGlass)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        colors = CardDefaults.cardColors(containerColor = HistoryGlass)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = date,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFFF5F7FB),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                    ) {
                         Text(
-                            text = date,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color(0xFFF5F7FB),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                        ) {
-                            Text(
-                                text = workout.mode.asModeLabel(),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFFD8E8FF)
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = distanceLabel,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Color(0xFFFDFEFF),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Tap for route and stats",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF8FA4B7)
+                            text = workout.mode.asModeLabel(),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFFD8E8FF)
                         )
                     }
                 }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    HistoryMetricChip(
-                        label = "Duration",
-                        value = duration,
-                        modifier = Modifier.weight(1f)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = distanceLabel,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = Color(0xFFFDFEFF),
+                        fontWeight = FontWeight.SemiBold
                     )
-                    HistoryMetricChip(
-                        label = "Avg pace",
-                        value = paceLabel,
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = "Tap for route and stats",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF8FA4B7)
                     )
                 }
             }
-        }
 
-        // X badge — bleeds past top-right corner
-        AnimatedVisibility(
-            visible = isDeleteMode,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 6.dp, y = (-6).dp)
-                .zIndex(1f),
-            enter = fadeIn() + scaleIn(initialScale = 0.6f),
-            exit = fadeOut() + scaleOut(targetScale = 0.6f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .background(color = ZoneRed, shape = androidx.compose.foundation.shape.CircleShape)
-                    .clickable(onClick = onDeleteClick),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = "Delete workout",
-                    tint = Color.White,
-                    modifier = Modifier.size(14.dp)
+                HistoryMetricChip(
+                    label = "Duration",
+                    value = duration,
+                    modifier = Modifier.weight(1f)
+                )
+                HistoryMetricChip(
+                    label = "Avg pace",
+                    value = paceLabel,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
