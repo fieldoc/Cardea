@@ -1,17 +1,17 @@
 package com.hrcoach.ui.workout
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,22 +20,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,15 +36,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.domain.model.WorkoutMode
@@ -64,17 +56,28 @@ import com.hrcoach.ui.components.StatItem
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaTextPrimary
+import com.hrcoach.ui.theme.CardeaTextTertiary
+import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.HrCoachThemeTokens
+import com.hrcoach.ui.theme.ZoneAmber
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.formatDistanceKm
 import com.hrcoach.util.formatPaceMinPerKm
 import kotlinx.coroutines.delay
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActiveWorkoutScreen(
     onPauseResume: () -> Unit,
     onStopConfirmed: () -> Unit,
+    onConnectHr: () -> Unit,
     viewModel: WorkoutViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -97,181 +100,147 @@ fun ActiveWorkoutScreen(
 
     val zoneColor = zoneColorFor(state)
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("HR Coach") },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                actions = {
-                    Text(
-                        text = formatElapsedHms(uiState.elapsedSeconds),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = HrCoachThemeTokens.subtleText
-                    )
-                }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
+                    center = Offset.Zero,
+                    radius = 1800f
+                )
             )
-        }
-    ) { paddingValues ->
-        Box(
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
-                        center = Offset.Zero,
-                        radius = 1800f
-                    )
-                )
-                .padding(paddingValues)
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 88.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (showDistanceProfileProgress(state, uiState)) {
-                    LinearProgressIndicator(
-                        progress = {
-                            (state.distanceMeters / (uiState.workoutConfig?.segments?.lastOrNull()?.distanceMeters
-                                ?: state.distanceMeters.coerceAtLeast(1f))).coerceIn(0f, 1f)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                }
-
-                if (!state.hrConnected) {
-                    OutlinedCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(
-                            text = "HR monitor disconnected. Guidance and projections will resume when the signal returns.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(14.dp)
-                        )
-                    }
-                }
-
-                ZoneStatusPill(state = state, zoneColor = zoneColor)
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                BoxWithConstraints(contentAlignment = Alignment.Center) {
-                    val hrFontSize = if (maxWidth < 360.dp) 72.sp else 92.sp
-                    AnimatedContent(
-                        targetState = if (state.currentHr > 0) state.currentHr.toString() else "---",
-                        label = "hr-number"
-                    ) { hrText ->
-                        Text(
-                            text = hrText,
-                            style = MaterialTheme.typography.displayLarge.copy(fontSize = hrFontSize),
-                            color = zoneColor,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.scale(pulseScale)
-                        )
-                    }
-                }
-                Text(
-                    text = "bpm",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = HrCoachThemeTokens.subtleText
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    InlineMetric(
-                        label = "Target",
-                        value = when {
-                            state.isFreeRun -> "Free run"
-                            state.targetHr > 0 -> "${state.targetHr} bpm"
-                            else -> "--"
-                        }
-                    )
-                    InlineMetric(
-                        label = "Projected",
-                        value = when {
-                            !state.hrConnected || state.currentHr <= 0 -> "--"
-                            state.projectionReady && state.predictedHr > 0 -> "${state.predictedHr} bpm"
-                            else -> "Learning"
-                        }
-                    )
-                }
-
-                GuidanceCard(
-                    guidance = if (state.isPaused) "Workout Paused" else state.guidanceText,
-                    zoneColor = zoneColor,
-                    isActive = state.guidanceText.isNotBlank() && !state.isPaused
-                )
-
-                GlassCard {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        StatItem(
-                            label = "Distance",
-                            value = formatDistanceKm(state.distanceMeters),
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        )
-                        StatItem(
-                            label = "Pace",
-                            value = formatPaceMinPerKm(state.paceMinPerKm),
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        )
-                        StatItem(
-                            label = "Lag",
-                            value = if (state.adaptiveLagSec > 0f) "${state.adaptiveLagSec.toInt()}s" else "--",
-                            modifier = Modifier.weight(1f),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-            }
-
             Row(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedButton(
-                    onClick = onPauseResume,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp)
-                ) {
-                    Text(
-                        text = if (state.isPaused) stringResource(R.string.button_resume) else stringResource(R.string.button_pause),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Cardea",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        brush = Brush.linearGradient(
+                            colors = listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
+                        )
                     )
-                }
-                Button(
-                    onClick = { stopConfirmationVisible = true },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                )
+                Text(
+                    text = formatElapsedHms(uiState.elapsedSeconds),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = HrCoachThemeTokens.subtleText
+                )
+            }
+
+            if (showDistanceProfileProgress(state, uiState)) {
+                GradientProgressBar(
+                    progress = (state.distanceMeters / (
+                        uiState.workoutConfig?.segments?.lastOrNull()?.distanceMeters
+                            ?: state.distanceMeters.coerceAtLeast(1f)
+                        )).coerceIn(0f, 1f)
+                )
+            }
+
+            ZoneStatusPill(state = state, zoneColor = zoneColor)
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            HrRing(
+                hr = state.currentHr,
+                isConnected = state.hrConnected,
+                zoneColor = zoneColor,
+                pulseScale = pulseScale,
+                onConnectHr = onConnectHr
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                InlineMetric(
+                    label = "Target",
+                    value = when {
+                        state.isFreeRun -> "—"
+                        state.targetHr > 0 -> "${state.targetHr} bpm"
+                        else -> "--"
+                    }
+                )
+                InlineMetric(
+                    label = "Projected",
+                    value = when {
+                        !state.hrConnected || state.currentHr <= 0 -> "--"
+                        state.projectionReady && state.predictedHr > 0 -> "${state.predictedHr} bpm"
+                        else -> "Learning"
+                    }
+                )
+            }
+
+            GuidanceCard(
+                guidance = if (state.isPaused) "Workout Paused" else state.guidanceText,
+                zoneColor = zoneColor,
+                isActive = state.guidanceText.isNotBlank() && !state.isPaused
+            )
+
+            GlassCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = stringResource(R.string.button_stop),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                    StatItem(
+                        label = "Distance",
+                        value = formatDistanceKm(state.distanceMeters),
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    )
+                    StatItem(
+                        label = "Pace",
+                        value = formatPaceMinPerKm(state.paceMinPerKm),
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    )
+                    StatItem(
+                        label = "Avg HR",
+                        value = if (state.avgHr > 0) "${state.avgHr}" else "--",
+                        modifier = Modifier.weight(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            WorkoutButton(
+                text = if (state.isPaused) stringResource(R.string.button_resume) else stringResource(R.string.button_pause),
+                onClick = onPauseResume,
+                modifier = Modifier.weight(1f),
+                borderColor = GlassBorder,
+                backgroundColor = Color.Transparent
+            )
+            WorkoutButton(
+                text = stringResource(R.string.button_stop),
+                onClick = { stopConfirmationVisible = true },
+                modifier = Modifier.weight(1f),
+                borderColor = ZoneRed,
+                backgroundColor = ZoneRed.copy(alpha = 0.15f)
+            )
         }
     }
 
@@ -298,6 +267,50 @@ fun ActiveWorkoutScreen(
 }
 
 @Composable
+private fun WorkoutButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    borderColor: Color = GlassBorder,
+    backgroundColor: Color = Color.Transparent
+) {
+    Box(
+        modifier = modifier
+            .height(56.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(backgroundColor)
+            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            color = CardeaTextPrimary
+        )
+    }
+}
+
+@Composable
+private fun GradientProgressBar(progress: Float, modifier: Modifier = Modifier) {
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(4.dp)
+    ) {
+        val cornerRadius = CornerRadius(2.dp.toPx())
+        drawRoundRect(color = GlassHighlight, cornerRadius = cornerRadius)
+        if (progress > 0f) {
+            drawRoundRect(
+                brush = CardeaGradient,
+                size = Size(size.width * progress.coerceIn(0f, 1f), size.height),
+                cornerRadius = cornerRadius
+            )
+        }
+    }
+}
+
+@Composable
 private fun GuidanceCard(
     guidance: String,
     zoneColor: Color,
@@ -318,9 +331,7 @@ private fun GuidanceCard(
         0.3f
     }
 
-    GlassCard(
-        borderColor = zoneColor.copy(alpha = borderAlpha)
-    ) {
+    GlassCard(borderColor = zoneColor.copy(alpha = borderAlpha)) {
         Text(
             text = "Guidance",
             style = MaterialTheme.typography.labelSmall,
@@ -329,7 +340,7 @@ private fun GuidanceCard(
         Text(
             text = guidance.ifBlank { "Stay ready" },
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = CardeaTextPrimary
         )
     }
 }
@@ -337,6 +348,7 @@ private fun GuidanceCard(
 @Composable
 private fun ZoneStatusPill(state: WorkoutSnapshot, zoneColor: Color) {
     val label = when {
+        state.isFreeRun && state.hrConnected -> "FREE RUN"
         !state.hrConnected || state.zoneStatus == ZoneStatus.NO_DATA -> "NO SIGNAL"
         state.zoneStatus == ZoneStatus.IN_ZONE -> "IN ZONE"
         state.zoneStatus == ZoneStatus.ABOVE_ZONE -> "ABOVE ZONE"
@@ -359,7 +371,9 @@ private fun ZoneStatusPill(state: WorkoutSnapshot, zoneColor: Color) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelLarge,
-            color = zoneColor
+            color = zoneColor,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -375,7 +389,7 @@ private fun InlineMetric(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = CardeaTextPrimary
         )
     }
 }
@@ -383,13 +397,13 @@ private fun InlineMetric(label: String, value: String) {
 @Composable
 private fun zoneColorFor(state: WorkoutSnapshot): Color {
     return if (state.isFreeRun) {
-        MaterialTheme.colorScheme.primary
+        GradientBlue
     } else {
         when (state.zoneStatus) {
-            ZoneStatus.IN_ZONE -> MaterialTheme.colorScheme.tertiary
-            ZoneStatus.BELOW_ZONE -> MaterialTheme.colorScheme.secondary
-            ZoneStatus.ABOVE_ZONE -> MaterialTheme.colorScheme.error
-            ZoneStatus.NO_DATA -> HrCoachThemeTokens.subtleText
+            ZoneStatus.IN_ZONE -> ZoneGreen
+            ZoneStatus.BELOW_ZONE -> ZoneAmber
+            ZoneStatus.ABOVE_ZONE -> ZoneRed
+            ZoneStatus.NO_DATA -> CardeaTextTertiary
         }
     }
 }
