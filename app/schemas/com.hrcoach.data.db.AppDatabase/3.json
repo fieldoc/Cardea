@@ -1,0 +1,268 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "d4c3398148673991c340d979ef2ed82d",
+    "entities": [
+      {
+        "tableName": "workouts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startTime` INTEGER NOT NULL, `endTime` INTEGER NOT NULL, `totalDistanceMeters` REAL NOT NULL, `mode` TEXT NOT NULL, `targetConfig` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startTime",
+            "columnName": "startTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endTime",
+            "columnName": "endTime",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalDistanceMeters",
+            "columnName": "totalDistanceMeters",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetConfig",
+            "columnName": "targetConfig",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "track_points",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `workoutId` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `heartRate` INTEGER NOT NULL, `distanceMeters` REAL NOT NULL, FOREIGN KEY(`workoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "workoutId",
+            "columnName": "workoutId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "heartRate",
+            "columnName": "heartRate",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "distanceMeters",
+            "columnName": "distanceMeters",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_track_points_workoutId",
+            "unique": false,
+            "columnNames": [
+              "workoutId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_track_points_workoutId` ON `${TABLE_NAME}` (`workoutId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workouts",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "workout_metrics",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`workoutId` INTEGER NOT NULL, `recordedAtMs` INTEGER NOT NULL, `avgPaceMinPerKm` REAL, `avgHr` REAL, `hrAtSixMinPerKm` REAL, `settleDownSec` REAL, `settleUpSec` REAL, `longTermHrTrimBpm` REAL NOT NULL, `responseLagSec` REAL NOT NULL, `efficiencyFactor` REAL, `aerobicDecoupling` REAL, `efFirstHalf` REAL, `efSecondHalf` REAL, `heartbeatsPerKm` REAL, `paceAtRefHrMinPerKm` REAL, PRIMARY KEY(`workoutId`), FOREIGN KEY(`workoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "workoutId",
+            "columnName": "workoutId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "recordedAtMs",
+            "columnName": "recordedAtMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "avgPaceMinPerKm",
+            "columnName": "avgPaceMinPerKm",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "avgHr",
+            "columnName": "avgHr",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "hrAtSixMinPerKm",
+            "columnName": "hrAtSixMinPerKm",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "settleDownSec",
+            "columnName": "settleDownSec",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "settleUpSec",
+            "columnName": "settleUpSec",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "longTermHrTrimBpm",
+            "columnName": "longTermHrTrimBpm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "responseLagSec",
+            "columnName": "responseLagSec",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "efficiencyFactor",
+            "columnName": "efficiencyFactor",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "aerobicDecoupling",
+            "columnName": "aerobicDecoupling",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "efFirstHalf",
+            "columnName": "efFirstHalf",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "efSecondHalf",
+            "columnName": "efSecondHalf",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "heartbeatsPerKm",
+            "columnName": "heartbeatsPerKm",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "paceAtRefHrMinPerKm",
+            "columnName": "paceAtRefHrMinPerKm",
+            "affinity": "REAL",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "workoutId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_workout_metrics_workoutId",
+            "unique": true,
+            "columnNames": [
+              "workoutId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_workout_metrics_workoutId` ON `${TABLE_NAME}` (`workoutId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "workouts",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "workoutId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd4c3398148673991c340d979ef2ed82d')"
+    ]
+  }
+}
