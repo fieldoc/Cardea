@@ -1,0 +1,46 @@
+package com.hrcoach.data.db
+
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface BootcampDao {
+    @Insert
+    suspend fun insertEnrollment(enrollment: BootcampEnrollmentEntity): Long
+
+    @Update
+    suspend fun updateEnrollment(enrollment: BootcampEnrollmentEntity)
+
+    @Query("SELECT * FROM bootcamp_enrollments WHERE status = 'ACTIVE' LIMIT 1")
+    fun getActiveEnrollment(): Flow<BootcampEnrollmentEntity?>
+
+    @Query("SELECT * FROM bootcamp_enrollments WHERE status = 'ACTIVE' LIMIT 1")
+    suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity?
+
+    @Query("SELECT * FROM bootcamp_enrollments WHERE id = :id")
+    suspend fun getEnrollment(id: Long): BootcampEnrollmentEntity?
+
+    @Insert
+    suspend fun insertSession(session: BootcampSessionEntity): Long
+
+    @Insert
+    suspend fun insertSessions(sessions: List<BootcampSessionEntity>)
+
+    @Update
+    suspend fun updateSession(session: BootcampSessionEntity)
+
+    @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId ORDER BY weekNumber, dayOfWeek")
+    fun getSessionsForEnrollment(enrollmentId: Long): Flow<List<BootcampSessionEntity>>
+
+    @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND weekNumber = :week ORDER BY dayOfWeek")
+    suspend fun getSessionsForWeek(enrollmentId: Long, week: Int): List<BootcampSessionEntity>
+
+    @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND status = 'SCHEDULED' ORDER BY weekNumber, dayOfWeek LIMIT 1")
+    suspend fun getNextScheduledSession(enrollmentId: Long): BootcampSessionEntity?
+
+    @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND status = 'COMPLETED' ORDER BY weekNumber DESC, dayOfWeek DESC LIMIT 1")
+    suspend fun getLastCompletedSession(enrollmentId: Long): BootcampSessionEntity?
+
+    @Query("DELETE FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND weekNumber > :weekNumber")
+    suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int)
+}

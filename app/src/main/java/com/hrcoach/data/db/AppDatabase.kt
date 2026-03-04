@@ -6,12 +6,45 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class],
-    version = 3,
+    entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
+                BootcampEnrollmentEntity::class, BootcampSessionEntity::class],
+    version = 4,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS bootcamp_enrollments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        goalType TEXT NOT NULL,
+                        targetMinutesPerRun INTEGER NOT NULL,
+                        runsPerWeek INTEGER NOT NULL,
+                        preferredDays TEXT NOT NULL,
+                        startDate INTEGER NOT NULL,
+                        currentPhaseIndex INTEGER NOT NULL DEFAULT 0,
+                        currentWeekInPhase INTEGER NOT NULL DEFAULT 0,
+                        status TEXT NOT NULL DEFAULT 'ACTIVE'
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS bootcamp_sessions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        enrollmentId INTEGER NOT NULL,
+                        weekNumber INTEGER NOT NULL,
+                        dayOfWeek INTEGER NOT NULL,
+                        sessionType TEXT NOT NULL,
+                        targetMinutes INTEGER NOT NULL,
+                        presetId TEXT,
+                        status TEXT NOT NULL DEFAULT 'SCHEDULED',
+                        completedWorkoutId INTEGER,
+                        FOREIGN KEY (enrollmentId) REFERENCES bootcamp_enrollments(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_bootcamp_sessions_enrollmentId ON bootcamp_sessions(enrollmentId)")
+            }
+        }
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE workout_metrics ADD COLUMN heartbeatsPerKm REAL")
@@ -54,4 +87,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutDao(): WorkoutDao
     abstract fun trackPointDao(): TrackPointDao
     abstract fun workoutMetricsDao(): WorkoutMetricsDao
+    abstract fun bootcampDao(): BootcampDao
 }

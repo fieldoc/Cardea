@@ -3,6 +3,7 @@ package com.hrcoach.di
 import android.content.Context
 import androidx.room.Room
 import com.hrcoach.data.db.AppDatabase
+import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.TrackPointDao
 import com.hrcoach.data.db.WorkoutMetricsDao
 import com.hrcoach.data.db.WorkoutDao
@@ -25,7 +26,7 @@ object AppModule {
             AppDatabase::class.java,
             "hr_coach_db"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .build()
     }
 
@@ -40,4 +41,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideWorkoutMetricsDao(db: AppDatabase): WorkoutMetricsDao = db.workoutMetricsDao()
+
+    @Provides
+    @Singleton
+    fun provideBootcampDao(db: AppDatabase): BootcampDao = db.bootcampDao()
 }
