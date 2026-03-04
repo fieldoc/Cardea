@@ -3,6 +3,7 @@ package com.hrcoach.ui.bootcamp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.BootcampEnrollmentEntity
+import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
@@ -42,6 +43,13 @@ class BootcampViewModel @Inject constructor(
 
     private fun loadBootcampState() {
         viewModelScope.launch {
+            // Apply gap adjustment once at startup (prevents write-inside-collect re-emission)
+            val initial = bootcampRepository.getActiveEnrollmentOnce()
+            if (initial != null) {
+                applyGapAdjustmentIfNeeded(initial)
+            }
+
+            // Then observe the Flow for ongoing UI updates
             bootcampRepository.getActiveEnrollment().collect { enrollment ->
                 if (enrollment == null) {
                     _uiState.value = BootcampUiState(isLoading = false, hasActiveEnrollment = false)
@@ -52,42 +60,36 @@ class BootcampViewModel @Inject constructor(
         }
     }
 
+    private suspend fun applyGapAdjustmentIfNeeded(enrollment: BootcampEnrollmentEntity) {
+        val lastSession = bootcampRepository.getLastCompletedSession(enrollment.id)
+        val daysSinceLastRun = computeDaysSinceLastRun(enrollment, lastSession)
+        val gapStrategy = GapAdvisor.assess(daysSinceLastRun)
+        val gapAction = GapAdvisor.action(gapStrategy, enrollment.currentPhaseIndex, enrollment.currentWeekInPhase)
+        if (gapAction.phaseIndex != enrollment.currentPhaseIndex || gapAction.weekInPhase != enrollment.currentWeekInPhase) {
+            bootcampRepository.updateEnrollment(
+                enrollment.copy(
+                    currentPhaseIndex = gapAction.phaseIndex,
+                    currentWeekInPhase = gapAction.weekInPhase
+                )
+            )
+        }
+    }
+
     private suspend fun refreshFromEnrollment(enrollment: BootcampEnrollmentEntity) {
         val goal = BootcampGoal.valueOf(enrollment.goalType)
         val profile = adaptiveProfileRepository.getProfile()
         val fitnessLevel = FitnessEvaluator.assess(profile, emptyList<WorkoutAdaptiveMetrics>())
 
-        // Gap check
         val lastSession = bootcampRepository.getLastCompletedSession(enrollment.id)
-        val daysSinceLastRun = if (lastSession?.completedWorkoutId != null) {
-            val now = System.currentTimeMillis()
-            val lastDate = enrollment.startDate + TimeUnit.DAYS.toMillis(
-                ((lastSession.weekNumber - 1) * 7 + lastSession.dayOfWeek).toLong()
-            )
-            ((now - lastDate) / TimeUnit.DAYS.toMillis(1)).toInt()
-        } else {
-            0
-        }
-
+        val daysSinceLastRun = computeDaysSinceLastRun(enrollment, lastSession)
         val gapStrategy = GapAdvisor.assess(daysSinceLastRun)
         val gapAction = GapAdvisor.action(gapStrategy, enrollment.currentPhaseIndex, enrollment.currentWeekInPhase)
 
-        // Apply gap action if needed
-        val effectivePhaseIndex = gapAction.phaseIndex
-        val effectiveWeekInPhase = gapAction.weekInPhase
-        if (effectivePhaseIndex != enrollment.currentPhaseIndex || effectiveWeekInPhase != enrollment.currentWeekInPhase) {
-            bootcampRepository.updateEnrollment(
-                enrollment.copy(
-                    currentPhaseIndex = effectivePhaseIndex,
-                    currentWeekInPhase = effectiveWeekInPhase
-                )
-            )
-        }
-
+        // Use the already-adjusted phase/week from the entity (gap adjustment was applied at init)
         val engine = PhaseEngine(
             goal = goal,
-            phaseIndex = effectivePhaseIndex,
-            weekInPhase = effectiveWeekInPhase,
+            phaseIndex = enrollment.currentPhaseIndex,
+            weekInPhase = enrollment.currentWeekInPhase,
             runsPerWeek = enrollment.runsPerWeek,
             targetMinutes = enrollment.targetMinutesPerRun
         )
@@ -103,11 +105,18 @@ class BootcampViewModel @Inject constructor(
                 typeName = session.type.name.lowercase().replaceFirstChar { it.uppercase() },
                 minutes = session.minutes,
                 isCompleted = false,
-                isToday = dayOfWeek == today
+                isToday = dayOfWeek == today,
+                sessionId = null
             )
         }
 
-        val nextSessionDayLabel = sessionItems.firstOrNull()?.dayLabel
+        // Find next session: first session with dayOfWeek >= today, fallback to first
+        val nextSessionIndex = sessionItems.indices.firstOrNull { index ->
+            val dayOfWeek = preferredDays.getOrElse(index) { index + 1 }
+            dayOfWeek >= today
+        } ?: 0
+
+        val nextSessionItem = sessionItems.getOrNull(nextSessionIndex)
 
         _uiState.value = BootcampUiState(
             isLoading = false,
@@ -116,15 +125,27 @@ class BootcampViewModel @Inject constructor(
             currentPhase = engine.currentPhase,
             absoluteWeek = engine.absoluteWeek,
             totalWeeks = engine.totalWeeks,
-            weekInPhase = effectiveWeekInPhase,
+            weekInPhase = enrollment.currentWeekInPhase,
             isRecoveryWeek = engine.isRecoveryWeek,
-            nextSession = weekSessions.firstOrNull(),
-            nextSessionDayLabel = nextSessionDayLabel,
+            nextSession = weekSessions.getOrNull(nextSessionIndex),
+            nextSessionDayLabel = nextSessionItem?.dayLabel,
             currentWeekSessions = sessionItems,
             welcomeBackMessage = gapAction.welcomeMessage,
             needsCalibration = gapAction.requiresCalibration,
             fitnessLevel = fitnessLevel
         )
+    }
+
+    private fun computeDaysSinceLastRun(
+        enrollment: BootcampEnrollmentEntity,
+        lastSession: BootcampSessionEntity?
+    ): Int {
+        if (lastSession?.completedWorkoutId == null) return 0
+        val now = System.currentTimeMillis()
+        val lastDate = enrollment.startDate + TimeUnit.DAYS.toMillis(
+            ((lastSession.weekNumber - 1) * 7 + (lastSession.dayOfWeek - 1)).toLong()
+        )
+        return ((now - lastDate) / TimeUnit.DAYS.toMillis(1)).toInt().coerceAtLeast(0)
     }
 
     // --- Onboarding ---
