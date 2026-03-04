@@ -37,6 +37,8 @@ class BootcampViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(BootcampUiState())
     val uiState: StateFlow<BootcampUiState> = _uiState.asStateFlow()
 
+    private var welcomeBackDismissed = false
+
     init {
         loadBootcampState()
     }
@@ -130,7 +132,7 @@ class BootcampViewModel @Inject constructor(
             nextSession = weekSessions.getOrNull(nextSessionIndex),
             nextSessionDayLabel = nextSessionItem?.dayLabel,
             currentWeekSessions = sessionItems,
-            welcomeBackMessage = gapAction.welcomeMessage,
+            welcomeBackMessage = if (welcomeBackDismissed) null else gapAction.welcomeMessage,
             needsCalibration = gapAction.requiresCalibration,
             fitnessLevel = fitnessLevel
         )
@@ -196,6 +198,7 @@ class BootcampViewModel @Inject constructor(
     }
 
     fun dismissWelcomeBack() {
+        welcomeBackDismissed = true
         _uiState.update { it.copy(welcomeBackMessage = null) }
     }
 
