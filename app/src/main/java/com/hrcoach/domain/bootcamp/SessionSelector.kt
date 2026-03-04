@@ -1,0 +1,104 @@
+package com.hrcoach.domain.bootcamp
+
+import com.hrcoach.domain.model.BootcampGoal
+import com.hrcoach.domain.model.TrainingPhase
+
+object SessionSelector {
+
+    fun weekSessions(
+        phase: TrainingPhase,
+        goal: BootcampGoal,
+        runsPerWeek: Int,
+        targetMinutes: Int
+    ): List<PlannedSession> {
+        val effectiveMinutes = if (phase == TrainingPhase.TAPER) {
+            (targetMinutes * 0.7f).toInt()
+        } else {
+            targetMinutes
+        }
+        val longMinutes = (effectiveMinutes * 1.3f).toInt().coerceAtMost(effectiveMinutes + 20)
+
+        return when {
+            goal.tier <= 1 -> baseAerobicWeek(phase, runsPerWeek, effectiveMinutes, longMinutes)
+            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, longMinutes)
+        }
+    }
+
+    private fun baseAerobicWeek(
+        phase: TrainingPhase,
+        runsPerWeek: Int,
+        minutes: Int,
+        longMinutes: Int
+    ): List<PlannedSession> {
+        val sessions = mutableListOf<PlannedSession>()
+        val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.BASE
+        val easyCount = if (hasLong) runsPerWeek - 1 else runsPerWeek
+        repeat(easyCount) {
+            sessions.add(PlannedSession(SessionType.EASY, minutes, "zone2_base"))
+        }
+        if (hasLong) {
+            sessions.add(PlannedSession(SessionType.LONG, longMinutes, "zone2_base"))
+        }
+        return sessions
+    }
+
+    private fun periodizedWeek(
+        phase: TrainingPhase,
+        goal: BootcampGoal,
+        runsPerWeek: Int,
+        minutes: Int,
+        longMinutes: Int
+    ): List<PlannedSession> {
+        val sessions = mutableListOf<PlannedSession>()
+
+        val qualitySessions = when (phase) {
+            TrainingPhase.BASE -> 0
+            TrainingPhase.BUILD -> 1
+            TrainingPhase.PEAK -> if (goal.tier >= 3) 2 else 1
+            TrainingPhase.TAPER -> 1
+        }
+
+        val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.TAPER
+        val easyCount = (runsPerWeek - qualitySessions - (if (hasLong) 1 else 0)).coerceAtLeast(1)
+
+        // Easy runs
+        repeat(easyCount) {
+            sessions.add(PlannedSession(SessionType.EASY, minutes, "zone2_base"))
+        }
+
+        // Quality sessions based on phase
+        when (phase) {
+            TrainingPhase.BASE -> {} // No quality sessions
+            TrainingPhase.BUILD -> {
+                sessions.add(PlannedSession(SessionType.TEMPO, minutes, "aerobic_tempo"))
+            }
+            TrainingPhase.PEAK -> {
+                if (goal.tier >= 4) {
+                    sessions.add(PlannedSession(SessionType.INTERVAL, minutes, "norwegian_4x4"))
+                    if (qualitySessions >= 2) {
+                        sessions.add(PlannedSession(SessionType.TEMPO, minutes, "lactate_threshold"))
+                    }
+                } else if (goal.tier >= 3) {
+                    sessions.add(PlannedSession(SessionType.TEMPO, minutes, "lactate_threshold"))
+                    if (qualitySessions >= 2) {
+                        sessions.add(PlannedSession(SessionType.INTERVAL, minutes, "norwegian_4x4"))
+                    }
+                } else {
+                    sessions.add(PlannedSession(SessionType.TEMPO, minutes, "aerobic_tempo"))
+                }
+            }
+            TrainingPhase.TAPER -> {
+                sessions.add(PlannedSession(SessionType.TEMPO, (minutes * 0.8f).toInt(), "aerobic_tempo"))
+            }
+        }
+
+        // Long run
+        if (hasLong) {
+            val longPreset = if (phase == TrainingPhase.PEAK && goal.tier >= 3) null else "zone2_base"
+            val longType = if (phase == TrainingPhase.PEAK && goal.tier >= 3) SessionType.RACE_SIM else SessionType.LONG
+            sessions.add(PlannedSession(longType, longMinutes, longPreset))
+        }
+
+        return sessions
+    }
+}
