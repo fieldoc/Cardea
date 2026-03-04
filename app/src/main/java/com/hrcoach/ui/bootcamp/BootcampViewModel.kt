@@ -107,6 +107,8 @@ class BootcampViewModel @Inject constructor(
             )
         }
 
+        val nextSessionDayLabel = sessionItems.firstOrNull()?.dayLabel
+
         _uiState.value = BootcampUiState(
             isLoading = false,
             hasActiveEnrollment = true,
@@ -117,6 +119,7 @@ class BootcampViewModel @Inject constructor(
             weekInPhase = effectiveWeekInPhase,
             isRecoveryWeek = engine.isRecoveryWeek,
             nextSession = weekSessions.firstOrNull(),
+            nextSessionDayLabel = nextSessionDayLabel,
             currentWeekSessions = sessionItems,
             welcomeBackMessage = gapAction.welcomeMessage,
             needsCalibration = gapAction.requiresCalibration,
