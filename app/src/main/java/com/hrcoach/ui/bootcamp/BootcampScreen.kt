@@ -6,7 +6,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,16 +13,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -33,7 +39,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,8 +52,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.domain.bootcamp.PlannedSession
+import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.model.BootcampGoal
-import com.hrcoach.domain.model.TrainingPhase
+import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
@@ -60,7 +66,6 @@ import com.hrcoach.ui.theme.CardeaTextTertiary
 import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GlassHighlight
 import com.hrcoach.ui.theme.GradientBlue
-import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
@@ -73,56 +78,82 @@ fun BootcampScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
-                    center = Offset.Zero,
-                    radius = 1800f
+    Scaffold(containerColor = Color.Transparent) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
+                        center = Offset.Zero,
+                        radius = 1800f
+                    )
                 )
-            )
-    ) {
-        when {
-            uiState.isLoading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = GradientPink)
+                .padding(padding)
+        ) {
+            when {
+                uiState.loadError != null -> {
+                    LoadErrorContent(
+                        errorMessage = uiState.loadError!!,
+                        onRetry = viewModel::retryLoad
+                    )
+                }
+
+                uiState.isLoading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = GradientPink)
+                    }
+                }
+
+                uiState.showOnboarding -> {
+                    OnboardingWizard(
+                        uiState = uiState,
+                        step = uiState.onboardingStep,
+                        onStepChange = viewModel::setOnboardingStep,
+                        onGoalSelected = { viewModel.setOnboardingGoal(it) },
+                        onMinutesChanged = { viewModel.setOnboardingMinutes(it) },
+                        onRunsPerWeekChanged = { viewModel.setOnboardingRunsPerWeek(it) },
+                        onComplete = { viewModel.completeOnboarding() },
+                        onBack = onBack
+                    )
+                }
+
+                !uiState.hasActiveEnrollment -> {
+                    NoEnrollmentContent(
+                        onStartBootcamp = { viewModel.startOnboarding() }
+                    )
+                }
+
+                else -> {
+                    ActiveBootcampDashboard(
+                        uiState = uiState,
+                        onStartWorkout = onStartWorkout,
+                        onPause = { viewModel.pauseBootcamp() },
+                        onResume = { viewModel.resumeBootcamp() },
+                        onEndProgram = { viewModel.showDeleteConfirmDialog() },
+                        onBootcampWorkoutStarting = viewModel::onBootcampWorkoutStarting,
+                        onDismissTierPrompt = viewModel::dismissTierPrompt,
+                        onAcceptTierChange = viewModel::acceptTierChange,
+                        onConfirmIllness = viewModel::confirmIllness,
+                        onDismissIllness = viewModel::dismissIllness
+                    )
                 }
             }
 
-            uiState.showOnboarding -> {
-                OnboardingWizard(
-                    uiState = uiState,
-                    onGoalSelected = { viewModel.setOnboardingGoal(it) },
-                    onMinutesChanged = { viewModel.setOnboardingMinutes(it) },
-                    onRunsPerWeekChanged = { viewModel.setOnboardingRunsPerWeek(it) },
-                    onComplete = { viewModel.completeOnboarding(listOf(1, 3, 6)) },
-                    onBack = onBack
+            // Welcome-back dialog shown on top of any state
+            if (uiState.welcomeBackMessage != null) {
+                WelcomeBackDialog(
+                    message = uiState.welcomeBackMessage!!,
+                    onDismiss = { viewModel.dismissWelcomeBack() }
                 )
             }
 
-            !uiState.hasActiveEnrollment -> {
-                NoEnrollmentContent(
-                    onStartBootcamp = { viewModel.startOnboarding() }
+            if (uiState.showDeleteConfirmDialog) {
+                DeleteConfirmDialog(
+                    onConfirm = { viewModel.deleteBootcamp() },
+                    onDismiss = { viewModel.dismissDeleteConfirmDialog() }
                 )
             }
-
-            else -> {
-                ActiveBootcampDashboard(
-                    uiState = uiState,
-                    onStartWorkout = onStartWorkout,
-                    onPause = { viewModel.pauseBootcamp() }
-                )
-            }
-        }
-
-        // Welcome-back dialog shown on top of any state
-        if (uiState.welcomeBackMessage != null) {
-            WelcomeBackDialog(
-                message = uiState.welcomeBackMessage!!,
-                onDismiss = { viewModel.dismissWelcomeBack() }
-            )
         }
     }
 }
@@ -139,7 +170,7 @@ private fun NoEnrollmentContent(onStartBootcamp: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
             text = "Bootcamp",
@@ -147,33 +178,36 @@ private fun NoEnrollmentContent(onStartBootcamp: () -> Unit) {
             color = CardeaTextPrimary
         )
         Text(
-            text = "A structured training program that adapts to your fitness level and goals.",
+            text = "A program that adapts to your goal, your schedule, and your life.",
             style = MaterialTheme.typography.bodyMedium,
-            color = CardeaTextSecondary
+            color = CardeaTextSecondary,
+            textAlign = TextAlign.Center
         )
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "Adaptive periodization — Base, Build, Peak, Taper phases",
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+            FeatureBullet(
+                icon = Icons.Default.TrendingUp,
+                title = "Periodized phases",
+                detail = "Base, Build, Peak, and Taper — structured like real coach plans."
             )
-            Text(
-                text = "Heart-rate guided sessions with real-time coaching",
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+            Spacer(modifier = Modifier.height(12.dp))
+            FeatureBullet(
+                icon = Icons.Default.FavoriteBorder,
+                title = "Heart-rate guided sessions",
+                detail = "Every run has a purpose — zone targets and real-time coaching."
             )
-            Text(
-                text = "Gap detection and smart re-entry when life happens",
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+            Spacer(modifier = Modifier.height(12.dp))
+            FeatureBullet(
+                icon = Icons.Default.EventRepeat,
+                title = "Life-aware scheduling",
+                detail = "Missed a week? The plan adjusts, not you."
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         CardeaButton(
-            text = "Start Bootcamp",
+            text = "Start my program",
             onClick = onStartBootcamp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,19 +216,86 @@ private fun NoEnrollmentContent(onStartBootcamp: () -> Unit) {
     }
 }
 
+@Composable
+private fun LoadErrorContent(
+    errorMessage: String,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Unable to load Bootcamp",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTextPrimary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTextSecondary
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            CardeaButton(
+                text = "Retry",
+                onClick = onRetry,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeatureBullet(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    detail: String
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = GradientPink,
+            modifier = Modifier.size(20.dp)
+        )
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTextPrimary
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTextSecondary
+            )
+        }
+    }
+}
+
 // ─── Onboarding Wizard ─────────────────────────────────────────────────────
 
 @Composable
 private fun OnboardingWizard(
     uiState: BootcampUiState,
+    step: Int,
+    onStepChange: (Int) -> Unit,
     onGoalSelected: (BootcampGoal) -> Unit,
     onMinutesChanged: (Int) -> Unit,
     onRunsPerWeekChanged: (Int) -> Unit,
     onComplete: () -> Unit,
     onBack: () -> Unit
 ) {
-    var step by remember { mutableIntStateOf(0) }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -213,8 +314,9 @@ private fun OnboardingWizard(
                         .weight(1f)
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(
-                            if (index <= step) GradientPink else GlassBorder
+                        .then(
+                            if (index <= step) Modifier.background(CardeaGradient)
+                            else Modifier.background(GlassBorder)
                         )
                 )
             }
@@ -223,24 +325,22 @@ private fun OnboardingWizard(
         when (step) {
             0 -> OnboardingStep1Goal(
                 selectedGoal = uiState.onboardingGoal,
-                onGoalSelected = {
-                    onGoalSelected(it)
-                },
-                onNext = { if (uiState.onboardingGoal != null) step = 1 },
+                onGoalSelected = { onGoalSelected(it) },
+                onNext = { if (uiState.onboardingGoal != null) onStepChange(1) },
                 onBack = onBack
             )
             1 -> OnboardingStep2Time(
                 minutes = uiState.onboardingMinutes,
                 warning = uiState.onboardingTimeWarning,
                 onMinutesChanged = onMinutesChanged,
-                onNext = { step = 2 },
-                onBack = { step = 0 }
+                onNext = { onStepChange(2) },
+                onBack = { onStepChange(0) }
             )
             2 -> OnboardingStep3Frequency(
                 runsPerWeek = uiState.onboardingRunsPerWeek,
                 onRunsPerWeekChanged = onRunsPerWeekChanged,
                 onComplete = onComplete,
-                onBack = { step = 1 }
+                onBack = { onStepChange(1) }
             )
         }
     }
@@ -273,7 +373,6 @@ private fun OnboardingStep1Goal(
 
     goals.forEach { (goal, description) ->
         val isSelected = selectedGoal == goal
-        val borderBrush = if (isSelected) CardeaGradient else Brush.linearGradient(listOf(GlassBorder, GlassBorder))
         GlassCard(
             modifier = Modifier
                 .fillMaxWidth()
@@ -476,7 +575,14 @@ private fun OnboardingStep3Frequency(
 private fun ActiveBootcampDashboard(
     uiState: BootcampUiState,
     onStartWorkout: (configJson: String) -> Unit,
-    onPause: () -> Unit
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onEndProgram: () -> Unit,
+    onBootcampWorkoutStarting: () -> Unit,
+    onDismissTierPrompt: () -> Unit,
+    onAcceptTierChange: (TierPromptDirection) -> Unit,
+    onConfirmIllness: () -> Unit,
+    onDismissIllness: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -485,42 +591,124 @@ private fun ActiveBootcampDashboard(
             .padding(horizontal = 16.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Phase header
-        PhaseHeader(uiState = uiState)
+        // Phase header with overflow menu
+        PhaseHeader(
+            uiState = uiState,
+            onPause = onPause,
+            onResume = onResume,
+            onEndProgram = onEndProgram
+        )
+
+        // Paused state - shows resume button instead of a dead status message
+        if (uiState.isPaused) {
+            PausedCard(onResume = onResume)
+        }
+        if (uiState.missedSession) {
+            StatusCard(
+                title = "Missed session detected",
+                detail = "You have at least one earlier session this week that is still incomplete."
+            )
+        }
+        if (uiState.scheduledRestDay) {
+            StatusCard(
+                title = "Scheduled rest day",
+                detail = "No run is scheduled for today. Recovery supports adaptation."
+            )
+        }
+
+        if (uiState.tierPromptDirection != TierPromptDirection.NONE) {
+            TierPromptCard(
+                direction = uiState.tierPromptDirection,
+                evidence = uiState.tierPromptEvidence,
+                onAccept = onAcceptTierChange,
+                onDismiss = onDismissTierPrompt
+            )
+        } else if (uiState.illnessFlag) {
+            IllnessPromptCard(
+                onConfirm = onConfirmIllness,
+                onDismiss = onDismissIllness
+            )
+        }
 
         // Week sessions list
         WeekSessionList(sessions = uiState.currentWeekSessions)
 
-        // Next session CTA
+        // Next session CTA - hidden when paused (no point starting a run)
         val nextSession = uiState.nextSession
-        if (nextSession != null) {
+        if (nextSession != null && !uiState.isPaused) {
             NextSessionCard(
                 session = nextSession,
                 dayLabel = uiState.nextSessionDayLabel,
-                onStartWorkout = onStartWorkout
+                onStartWorkout = { configJson ->
+                    onBootcampWorkoutStarting()
+                    onStartWorkout(configJson)
+                }
             )
-        }
-
-        // Pause option
-        Spacer(modifier = Modifier.height(4.dp))
-        TextButton(
-            onClick = onPause,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        ) {
-            Text("Pause Bootcamp", color = CardeaTextTertiary)
         }
     }
 }
 
 @Composable
-private fun PhaseHeader(uiState: BootcampUiState) {
+private fun StatusCard(
+    title: String,
+    detail: String
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = detail,
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTextSecondary
+        )
+    }
+}
+
+@Composable
+private fun PausedCard(onResume: () -> Unit) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Program paused",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Your schedule is on hold. Resume whenever you're ready.",
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTextSecondary
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        CardeaButton(
+            text = "Resume Program",
+            onClick = onResume,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+        )
+    }
+}
+
+@Composable
+private fun PhaseHeader(
+    uiState: BootcampUiState,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onEndProgram: () -> Unit
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 val goal = uiState.goal
                 if (goal != null) {
                     Text(
@@ -532,7 +720,7 @@ private fun PhaseHeader(uiState: BootcampUiState) {
                 val phase = uiState.currentPhase
                 Text(
                     text = if (phase != null) {
-                        "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks} — ${phaseDisplayName(phase)}"
+                        "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks} — ${phase.displayName}"
                     } else {
                         "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks}"
                     },
@@ -540,18 +728,65 @@ private fun PhaseHeader(uiState: BootcampUiState) {
                     color = CardeaTextPrimary
                 )
             }
-            if (uiState.isRecoveryWeek) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(GlassHighlight)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Recovery",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = ZoneGreen
-                    )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (uiState.isRecoveryWeek) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(GlassHighlight)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Recovery",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = ZoneGreen
+                        )
+                    }
+                }
+
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "Program options",
+                            tint = CardeaTextSecondary
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        if (uiState.isPaused) {
+                            DropdownMenuItem(
+                                text = { Text("Resume program") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onResume()
+                                }
+                            )
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text("Pause program") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onPause()
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "End program...",
+                                    color = GradientRed
+                                )
+                            },
+                            onClick = {
+                                menuExpanded = false
+                                onEndProgram()
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -572,6 +807,96 @@ private fun PhaseHeader(uiState: BootcampUiState) {
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(CardeaGradient)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TierPromptCard(
+    direction: TierPromptDirection,
+    evidence: String?,
+    onAccept: (TierPromptDirection) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val title = if (direction == TierPromptDirection.UP) "Progression available" else "Step-back recommended"
+    val body = if (direction == TierPromptDirection.UP) {
+        "Your recent load has remained high enough to support a tier increase."
+    } else {
+        "Your recent load has stayed below your current tier's target range."
+    }
+    val actionLabel = if (direction == TierPromptDirection.UP) "Increase Tier" else "Lower Tier"
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTextSecondary
+        )
+        if (!evidence.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = evidence,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTextTertiary
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                Text("Not now", color = CardeaTextSecondary)
+            }
+            CardeaButton(
+                text = actionLabel,
+                onClick = { onAccept(direction) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun IllnessPromptCard(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Check in with your body",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Recent signals look atypical. If you're getting sick, keep today's effort easy.",
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTextSecondary
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
+                Text("Dismiss", color = CardeaTextSecondary)
+            }
+            CardeaButton(
+                text = "I'm unwell",
+                onClick = onConfirm,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
             )
         }
     }
@@ -761,6 +1086,42 @@ private fun WelcomeBackDialog(
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+@Composable
+private fun DeleteConfirmDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "End this program?",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTextPrimary
+            )
+        },
+        text = {
+            Text(
+                text = "Your schedule and progress will be permanently deleted. Your completed run history stays in the app.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = CardeaTextSecondary
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("End Program", color = GradientRed)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Keep it", color = CardeaTextSecondary)
+            }
+        },
+        containerColor = CardeaBgSecondary,
+        shape = RoundedCornerShape(18.dp)
+    )
+}
+
 private fun goalDisplayName(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.CARDIO_HEALTH -> "Cardio Health"
     BootcampGoal.RACE_5K_10K -> "5K / 10K"
@@ -768,18 +1129,16 @@ private fun goalDisplayName(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.MARATHON -> "Marathon"
 }
 
-private fun phaseDisplayName(phase: TrainingPhase): String = when (phase) {
-    TrainingPhase.BASE -> "Base"
-    TrainingPhase.BUILD -> "Build"
-    TrainingPhase.PEAK -> "Peak"
-    TrainingPhase.TAPER -> "Taper"
-}
-
 private fun buildConfigJson(session: PlannedSession): String {
     val presetId = session.presetId
     return if (presetId != null) {
-        """{"mode":"DISTANCE_PROFILE","presetId":"$presetId"}"""
+        org.json.JSONObject().apply {
+            put("mode", WorkoutMode.DISTANCE_PROFILE.name)
+            put("presetId", presetId)
+        }.toString()
     } else {
-        """{"mode":"FREE_RUN"}"""
+        org.json.JSONObject().apply {
+            put("mode", WorkoutMode.FREE_RUN.name)
+        }.toString()
     }
 }
