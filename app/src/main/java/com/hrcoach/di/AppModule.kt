@@ -2,6 +2,8 @@ package com.hrcoach.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.hrcoach.data.db.AppDatabase
 import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.TrackPointDao
@@ -26,7 +28,18 @@ object AppModule {
             AppDatabase::class.java,
             "hr_coach_db"
         )
-            .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
+            .addMigrations(
+                AppDatabase.MIGRATION_1_2,
+                AppDatabase.MIGRATION_2_3,
+                AppDatabase.MIGRATION_3_4,
+                AppDatabase.MIGRATION_4_5,
+                AppDatabase.MIGRATION_5_6
+            )
+            .addCallback(object : RoomDatabase.Callback() {
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    db.execSQL("PRAGMA foreign_keys = ON")
+                }
+            })
             .build()
     }
 
