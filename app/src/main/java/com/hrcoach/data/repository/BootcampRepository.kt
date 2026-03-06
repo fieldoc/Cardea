@@ -34,7 +34,18 @@ class BootcampRepository @Inject constructor(
 
     suspend fun pauseEnrollment(enrollmentId: Long) {
         val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
-        bootcampDao.updateEnrollment(enrollment.copy(status = "PAUSED"))
+        bootcampDao.updateEnrollment(enrollment.copy(status = BootcampEnrollmentEntity.STATUS_PAUSED))
+    }
+
+    suspend fun resumeEnrollment(enrollmentId: Long) {
+        val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
+        bootcampDao.updateEnrollment(enrollment.copy(status = BootcampEnrollmentEntity.STATUS_ACTIVE))
+    }
+
+    suspend fun deleteEnrollment(enrollmentId: Long) {
+        val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
+        // CASCADE foreign key on bootcamp_sessions deletes all sessions automatically
+        bootcampDao.deleteEnrollment(enrollment)
     }
 
     suspend fun insertSessions(sessions: List<BootcampSessionEntity>) =
