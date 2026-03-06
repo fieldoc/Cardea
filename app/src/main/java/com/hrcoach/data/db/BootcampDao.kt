@@ -15,10 +15,10 @@ interface BootcampDao {
     suspend fun deleteEnrollment(enrollment: BootcampEnrollmentEntity)
 
     // Changed: was status = 'ACTIVE', now includes PAUSED so paused dashboards stay visible
-    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') LIMIT 1")
+    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') ORDER BY id DESC LIMIT 1")
     fun getActiveEnrollment(): Flow<BootcampEnrollmentEntity?>
 
-    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') LIMIT 1")
+    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') ORDER BY id DESC LIMIT 1")
     suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity?
 
     @Query("SELECT * FROM bootcamp_enrollments WHERE id = :id")
