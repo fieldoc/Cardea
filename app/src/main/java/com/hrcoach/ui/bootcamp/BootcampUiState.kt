@@ -2,12 +2,16 @@ package com.hrcoach.ui.bootcamp
 
 import com.hrcoach.domain.bootcamp.FitnessLevel
 import com.hrcoach.domain.bootcamp.PlannedSession
+import com.hrcoach.domain.engine.TierPromptDirection
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 
 data class BootcampUiState(
     val isLoading: Boolean = true,
+    val loadError: String? = null,
     val hasActiveEnrollment: Boolean = false,
+    val isPaused: Boolean = false,
     // Enrollment details
     val goal: BootcampGoal? = null,
     val currentPhase: TrainingPhase? = null,
@@ -22,6 +26,7 @@ data class BootcampUiState(
     val currentWeekSessions: List<SessionUiItem> = emptyList(),
     // Onboarding
     val showOnboarding: Boolean = false,
+    val onboardingStep: Int = 0,
     val onboardingGoal: BootcampGoal? = null,
     val onboardingMinutes: Int = 30,
     val onboardingRunsPerWeek: Int = 3,
@@ -30,7 +35,14 @@ data class BootcampUiState(
     val welcomeBackMessage: String? = null,
     val needsCalibration: Boolean = false,
     // Fitness
-    val fitnessLevel: FitnessLevel = FitnessLevel.UNKNOWN
+    val fitnessLevel: FitnessLevel = FitnessLevel.UNKNOWN,
+    val tuningDirection: TuningDirection = TuningDirection.HOLD,
+    val illnessFlag: Boolean = false,
+    val tierPromptDirection: TierPromptDirection = TierPromptDirection.NONE,
+    val tierPromptEvidence: String? = null,
+    val scheduledRestDay: Boolean = false,
+    val missedSession: Boolean = false,
+    val showDeleteConfirmDialog: Boolean = false
 )
 
 data class SessionUiItem(
