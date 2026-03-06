@@ -303,8 +303,19 @@ class BootcampViewModel @Inject constructor(
         viewModelScope.launch {
             val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
             WorkoutState.setPendingBootcampSessionId(null)
-            bootcampRepository.deleteEnrollment(enrollment.id)
-            _uiState.update { it.copy(showDeleteConfirmDialog = false) }
+            try {
+                bootcampRepository.deleteEnrollment(enrollment.id)
+                _uiState.update { it.copy(showDeleteConfirmDialog = false) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                _uiState.update {
+                    it.copy(
+                        showDeleteConfirmDialog = false,
+                        loadError = t.message ?: "Failed to delete program."
+                    )
+                }
+            }
         }
     }
 
