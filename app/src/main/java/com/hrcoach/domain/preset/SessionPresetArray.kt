@@ -90,5 +90,23 @@ data class SessionPresetArray(
                 PresetConfig("lactate_threshold", 50, "50-min continuous Z4 (T3 cap)")
             )
         )
+
+        fun stridesTier2() = SessionPresetArray(
+            sessionTypeName = "strides",
+            presets = listOf(
+                PresetConfig("strides_20s", 20, "4x20s strides after easy run"),
+                PresetConfig("strides_20s", 22, "6x20s strides after easy run"),
+                PresetConfig("strides_20s", 24, "8x20s strides after easy run")
+            )
+        )
+
+        fun stridesTier3() = SessionPresetArray(
+            sessionTypeName = "strides",
+            presets = listOf(
+                PresetConfig("strides_20s", 22, "6x20s strides after easy run"),
+                PresetConfig("strides_20s", 24, "8x20s strides after easy run"),
+                PresetConfig("strides_20s", 26, "10x20s strides after easy run")
+            )
+        )
     }
 }

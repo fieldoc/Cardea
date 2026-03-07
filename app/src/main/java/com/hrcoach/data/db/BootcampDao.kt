@@ -33,6 +33,9 @@ interface BootcampDao {
     @Update
     suspend fun updateSession(session: BootcampSessionEntity)
 
+    @Query("SELECT * FROM bootcamp_sessions WHERE id = :sessionId LIMIT 1")
+    suspend fun getSessionById(sessionId: Long): BootcampSessionEntity?
+
     @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId ORDER BY weekNumber, dayOfWeek")
     fun getSessionsForEnrollment(enrollmentId: Long): Flow<List<BootcampSessionEntity>>
 

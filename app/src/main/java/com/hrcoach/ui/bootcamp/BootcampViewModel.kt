@@ -12,6 +12,7 @@ import com.hrcoach.domain.bootcamp.FitnessEvaluator
 import com.hrcoach.domain.bootcamp.GapAdvisor
 import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.bootcamp.PlannedSession
+import com.hrcoach.domain.bootcamp.CoachingCopyGenerator
 import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.bootcamp.TierCtlRanges
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
@@ -155,6 +156,7 @@ class BootcampViewModel @Inject constructor(
 
         val today = LocalDate.now().dayOfWeek.value
         val preferredDays = BootcampEnrollmentEntity.parseDayPreferences(enrollment.preferredDays)
+        val activePreferredDays = preferredDays.filter { it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.NONE }
         val scheduledSessions = ensureCurrentWeekSessions(
             enrollment = enrollment,
             engine = engine,
@@ -165,17 +167,36 @@ class BootcampViewModel @Inject constructor(
         val sessionItems = scheduledSessions.map { session ->
             SessionUiItem(
                 dayLabel = dayLabelFor(session.dayOfWeek),
-                typeName = sessionTypeDisplayName(session.sessionType),
+                typeName = sessionTypeDisplayName(session.sessionType, session.presetId),
                 minutes = session.targetMinutes,
-                isCompleted = session.status == BootcampSessionEntity.STATUS_COMPLETED,
+                isCompleted = session.status != BootcampSessionEntity.STATUS_SCHEDULED,
                 isToday = session.dayOfWeek == today,
                 sessionId = session.id
             )
         }
 
         val nextScheduledSession = scheduledSessions.firstOrNull { it.status == BootcampSessionEntity.STATUS_SCHEDULED }
-        val missedSession = scheduledSessions.any { it.dayOfWeek < today && it.status != BootcampSessionEntity.STATUS_COMPLETED }
+        val missedSession = scheduledSessions.any {
+            it.dayOfWeek < today &&
+                it.status != BootcampSessionEntity.STATUS_COMPLETED &&
+                it.status != BootcampSessionEntity.STATUS_SKIPPED
+        }
         val scheduledRestDay = scheduledSessions.none { it.dayOfWeek == today }
+        val upcomingWeeks = engine.lookaheadWeeks(2).map { lookahead ->
+            UpcomingWeekItem(
+                weekNumber = lookahead.weekNumber,
+                isRecoveryWeek = lookahead.isRecovery,
+                sessions = lookahead.sessions.map { session ->
+                    SessionUiItem(
+                        dayLabel = "",
+                        typeName = sessionTypeDisplayName(session.type.name, session.presetId),
+                        minutes = session.minutes,
+                        isCompleted = false,
+                        isToday = false
+                    )
+                }
+            )
+        }
 
         _uiState.value = BootcampUiState(
             isLoading = false,
@@ -188,9 +209,13 @@ class BootcampViewModel @Inject constructor(
             totalWeeks = engine.totalWeeks,
             weekInPhase = enrollment.currentWeekInPhase,
             isRecoveryWeek = engine.isRecoveryWeek,
+            weeksUntilNextRecovery = engine.weeksUntilNextRecovery,
+            showGraduationCta = engine.absoluteWeek >= engine.totalWeeks,
             nextSession = nextScheduledSession?.toPlannedSession(),
             nextSessionDayLabel = nextScheduledSession?.let { dayLabelFor(it.dayOfWeek) },
             currentWeekSessions = sessionItems,
+            activePreferredDays = activePreferredDays,
+            upcomingWeeks = upcomingWeeks,
             welcomeBackMessage = if (welcomeBackDismissed) null else gapAction.welcomeMessage,
             needsCalibration = gapAction.requiresCalibration,
             fitnessLevel = fitnessLevel,
@@ -199,7 +224,8 @@ class BootcampViewModel @Inject constructor(
             tierPromptDirection = tierPromptDirection,
             tierPromptEvidence = tierPromptEvidence,
             scheduledRestDay = scheduledRestDay,
-            missedSession = missedSession
+            missedSession = missedSession,
+            swapRestMessage = null
         )
     }
 
@@ -367,7 +393,7 @@ class BootcampViewModel @Inject constructor(
     }
 
     fun confirmIllness() {
-        illnessPromptSnoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(3)
+        illnessPromptSnoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(ILLNESS_CONFIRM_SNOOZE_DAYS)
         _uiState.update {
             it.copy(
                 illnessFlag = false,
@@ -377,8 +403,28 @@ class BootcampViewModel @Inject constructor(
     }
 
     fun dismissIllness() {
-        illnessPromptSnoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1)
+        illnessPromptSnoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(ILLNESS_DISMISS_SNOOZE_DAYS)
         _uiState.update { it.copy(illnessFlag = false) }
+    }
+
+    fun swapTodayForRest() {
+        viewModelScope.launch {
+            val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
+            val session = bootcampRepository.getNextScheduledSession(enrollment.id) ?: return@launch
+            val sessionId = session.id
+            bootcampRepository.swapSessionToRestDay(sessionId)
+            refreshFromEnrollment(enrollment)
+            _uiState.update {
+                it.copy(swapRestMessage = "Rest day saved. Today's run was swapped out.")
+            }
+        }
+    }
+
+    fun graduateCurrentGoal() {
+        viewModelScope.launch {
+            val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
+            bootcampRepository.graduateEnrollment(enrollment.id)
+        }
     }
 
     suspend fun onWorkoutCompleted(workoutId: Long): Boolean {
@@ -515,7 +561,12 @@ class BootcampViewModel @Inject constructor(
             val ctlTrend = ctlTrendAcrossWeeks(snapshots, aboveWeeks)
             return TierPromptDecision(
                 direction = TierPromptDirection.UP,
-                evidence = "CTL ${formatOneDecimal(profileCtl)} above ${range.last} for $aboveWeeks weeks, trend ${formatSigned(ctlTrend)}, TSB ${formatSigned(tsb)}."
+                evidence = CoachingCopyGenerator.tierPromptCopy(
+                    direction = TierPromptDirection.UP,
+                    aboveOrBelowWeeks = aboveWeeks,
+                    ctlTrend = ctlTrend,
+                    tsb = tsb
+                )
             )
         }
 
@@ -534,7 +585,12 @@ class BootcampViewModel @Inject constructor(
             val ctlTrend = ctlTrendAcrossWeeks(snapshots, belowWeeks)
             return TierPromptDecision(
                 direction = TierPromptDirection.DOWN,
-                evidence = "CTL ${formatOneDecimal(profileCtl)} below ${range.first} for $belowWeeks weeks, trend ${formatSigned(ctlTrend)}."
+                evidence = CoachingCopyGenerator.tierPromptCopy(
+                    direction = TierPromptDirection.DOWN,
+                    aboveOrBelowWeeks = belowWeeks,
+                    ctlTrend = ctlTrend,
+                    tsb = tsb
+                )
             )
         }
 
@@ -587,12 +643,6 @@ class BootcampViewModel @Inject constructor(
         return latest - prior
     }
 
-    private fun formatSigned(value: Float): String =
-        if (value >= 0f) "+${formatOneDecimal(value)}" else formatOneDecimal(value)
-
-    private fun formatOneDecimal(value: Float): String =
-        String.format(Locale.US, "%.1f", value)
-
     private data class WeeklyLoadSnapshot(
         val totalLoad: Float,
         val ctlProxy: Float,
@@ -627,6 +677,7 @@ class BootcampViewModel @Inject constructor(
             SessionType.EASY -> "easy"
             SessionType.TEMPO -> "tempo"
             SessionType.INTERVAL -> "interval"
+            SessionType.STRIDES -> "strides"
             SessionType.LONG -> "long"
             SessionType.RACE_SIM,
             SessionType.DISCOVERY,
@@ -637,19 +688,25 @@ class BootcampViewModel @Inject constructor(
     private fun dayLabelFor(dayOfWeek: Int): String =
         DayOfWeek.of(dayOfWeek.coerceIn(1, 7)).getDisplayName(TextStyle.SHORT, Locale.getDefault())
 
-    private fun sessionTypeDisplayName(rawType: String): String = runCatching {
-        SessionType.valueOf(rawType)
-    }.getOrNull()?.let { sessionType ->
-        when (sessionType) {
-            SessionType.EASY -> "Easy"
-            SessionType.LONG -> "Long"
-            SessionType.TEMPO -> "Tempo"
-            SessionType.INTERVAL -> "Interval"
-            SessionType.RACE_SIM -> "Race Sim"
-            SessionType.DISCOVERY -> "Discovery"
-            SessionType.CHECK_IN -> "Check In"
-        }
-    } ?: rawType.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+    private fun sessionTypeDisplayName(rawType: String, presetId: String? = null): String {
+        val presetLabel = SessionType.displayLabelForPreset(presetId)
+        if (presetLabel != null) return presetLabel
+
+        return runCatching {
+            SessionType.valueOf(rawType)
+        }.getOrNull()?.let { sessionType ->
+            when (sessionType) {
+                SessionType.EASY -> "Easy"
+                SessionType.LONG -> "Long"
+                SessionType.TEMPO -> "Tempo (Z3)"
+                SessionType.INTERVAL -> "Intervals (Z5)"
+                SessionType.STRIDES -> "Strides"
+                SessionType.RACE_SIM -> "Race Sim"
+                SessionType.DISCOVERY -> "Discovery"
+                SessionType.CHECK_IN -> "Check In"
+            }
+        } ?: rawType.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
+    }
 
     private fun BootcampSessionEntity.toPlannedSession(): PlannedSession = PlannedSession(
         type = runCatching { SessionType.valueOf(sessionType) }.getOrDefault(SessionType.EASY),
@@ -659,6 +716,8 @@ class BootcampViewModel @Inject constructor(
 
     companion object {
         private const val RECENT_METRICS_DAYS = 42
+        const val ILLNESS_CONFIRM_SNOOZE_DAYS = 10L
+        const val ILLNESS_DISMISS_SNOOZE_DAYS = 1L
     }
 
 }

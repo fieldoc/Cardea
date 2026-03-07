@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EventRepeat
@@ -51,7 +52,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.PlannedSession
+import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.WorkoutMode
@@ -135,7 +138,9 @@ fun BootcampScreen(
                         onDismissTierPrompt = viewModel::dismissTierPrompt,
                         onAcceptTierChange = viewModel::acceptTierChange,
                         onConfirmIllness = viewModel::confirmIllness,
-                        onDismissIllness = viewModel::dismissIllness
+                        onDismissIllness = viewModel::dismissIllness,
+                        onSwapTodayForRest = viewModel::swapTodayForRest,
+                        onGraduateGoal = viewModel::graduateCurrentGoal
                     )
                 }
             }
@@ -582,7 +587,9 @@ private fun ActiveBootcampDashboard(
     onDismissTierPrompt: () -> Unit,
     onAcceptTierChange: (TierPromptDirection) -> Unit,
     onConfirmIllness: () -> Unit,
-    onDismissIllness: () -> Unit
+    onDismissIllness: () -> Unit,
+    onSwapTodayForRest: () -> Unit,
+    onGraduateGoal: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -632,6 +639,13 @@ private fun ActiveBootcampDashboard(
 
         // Week sessions list
         WeekSessionList(sessions = uiState.currentWeekSessions)
+        if (uiState.upcomingWeeks.isNotEmpty()) {
+            ComingUpCard(weeks = uiState.upcomingWeeks)
+        }
+
+        if (uiState.showGraduationCta) {
+            GraduationCard(onGraduateGoal = onGraduateGoal)
+        }
 
         // Next session CTA - hidden when paused (no point starting a run)
         val nextSession = uiState.nextSession
@@ -639,6 +653,8 @@ private fun ActiveBootcampDashboard(
             NextSessionCard(
                 session = nextSession,
                 dayLabel = uiState.nextSessionDayLabel,
+                swapMessage = uiState.swapRestMessage,
+                onSwapToRest = onSwapTodayForRest,
                 onStartWorkout = { configJson ->
                     onBootcampWorkoutStarting()
                     onStartWorkout(configJson)
@@ -694,6 +710,96 @@ private fun PausedCard(onResume: () -> Unit) {
 }
 
 @Composable
+private fun PreferredDaysStrip(
+    preferredDays: List<DayPreference>,
+    modifier: Modifier = Modifier
+) {
+    val labels = listOf("M", "T", "W", "T", "F", "S", "S")
+    val selected = preferredDays.map { it.day }.toSet()
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        labels.forEachIndexed { index, label ->
+            val day = index + 1
+            val enabled = selected.contains(day)
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .then(
+                        if (enabled) Modifier.background(CardeaGradient)
+                        else Modifier.background(GlassHighlight)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (enabled) Color.White else CardeaTextTertiary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Coming Up",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        weeks.forEachIndexed { weekIndex, week ->
+            if (weekIndex > 0) {
+                HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 6.dp))
+            }
+            Text(
+                text = "Week ${week.weekNumber}${if (week.isRecoveryWeek) " · Recovery" else ""}",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (week.isRecoveryWeek) ZoneGreen else CardeaTextSecondary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            week.sessions.forEach { session ->
+                Text(
+                    text = "${session.typeName} · ${session.minutes} min",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTextTertiary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GraduationCard(onGraduateGoal: () -> Unit) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "You finished!",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTextPrimary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "You've completed this goal. Graduate to unlock your next training block.",
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTextSecondary
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        CardeaButton(
+            text = "Graduate Goal",
+            onClick = onGraduateGoal,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+        )
+    }
+}
+
+@Composable
 private fun PhaseHeader(
     uiState: BootcampUiState,
     onPause: () -> Unit,
@@ -727,6 +833,27 @@ private fun PhaseHeader(
                     style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = CardeaTextPrimary
                 )
+                val recoveryLabel = when (uiState.weeksUntilNextRecovery) {
+                    0 -> "This is your recovery week."
+                    1 -> "Recovery week coming up next week."
+                    2 -> "Recovery week in 2 weeks."
+                    null -> null
+                    else -> "Recovery week in ${uiState.weeksUntilNextRecovery} weeks."
+                }
+                recoveryLabel?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTextSecondary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                if (uiState.activePreferredDays.isNotEmpty()) {
+                    PreferredDaysStrip(
+                        preferredDays = uiState.activePreferredDays,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1019,8 +1146,13 @@ private fun SessionRow(session: SessionUiItem) {
 private fun NextSessionCard(
     session: PlannedSession,
     dayLabel: String?,
+    swapMessage: String?,
+    onSwapToRest: () -> Unit,
     onStartWorkout: (configJson: String) -> Unit
 ) {
+    val sessionLabel = SessionType.displayLabelForPreset(session.presetId)
+        ?: session.type.name.lowercase().replaceFirstChar { it.uppercase() }
+
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "Next Session${if (dayLabel != null) " — $dayLabel" else ""}",
@@ -1028,7 +1160,7 @@ private fun NextSessionCard(
             color = CardeaTextSecondary
         )
         Text(
-            text = session.type.name.lowercase().replaceFirstChar { it.uppercase() },
+            text = sessionLabel,
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = CardeaTextPrimary
         )
@@ -1048,6 +1180,23 @@ private fun NextSessionCard(
                 .fillMaxWidth()
                 .height(48.dp)
         )
+        TextButton(
+            onClick = onSwapToRest,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text(
+                text = "Rest today instead",
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTextSecondary
+            )
+        }
+        swapMessage?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTextTertiary
+            )
+        }
     }
 }
 

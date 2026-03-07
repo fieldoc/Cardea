@@ -96,4 +96,24 @@ class PhaseEngineTest {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 0)
         assertFalse(engine.isRecoveryWeek)
     }
+
+    @Test
+    fun `weeksUntilNextRecovery returns zero during recovery week`() {
+        val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 2)
+        assertEquals(0, engine.weeksUntilNextRecovery)
+    }
+
+    @Test
+    fun `weeksUntilNextRecovery counts down to next recovery week`() {
+        val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 0)
+        assertEquals(2, engine.weeksUntilNextRecovery)
+    }
+
+    @Test
+    fun `lookaheadWeeks returns requested number of projected weeks`() {
+        val engine = PhaseEngine(goal = BootcampGoal.CARDIO_HEALTH, phaseIndex = 0, weekInPhase = 0)
+        val lookahead = engine.lookaheadWeeks(2)
+        assertEquals(2, lookahead.size)
+        assertTrue(lookahead.all { it.sessions.isNotEmpty() })
+    }
 }

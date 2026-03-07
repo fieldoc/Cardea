@@ -182,7 +182,9 @@ fun PostRunSummaryScreen(
                             )
                         }
 
-                        HrrCooldownCard()
+                        if (uiState.isHrrActive) {
+                            HrrCooldownCard()
+                        }
 
                         uiState.bootcampProgressLabel
                             ?.takeIf { it.isNotBlank() }

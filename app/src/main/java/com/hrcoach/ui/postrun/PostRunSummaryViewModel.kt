@@ -38,6 +38,7 @@ data class PostRunSummaryUiState(
     val comparisons: List<PostRunComparison> = emptyList(),
     val bootcampProgressLabel: String? = null,
     val bootcampWeekComplete: Boolean = false,
+    val isHrrActive: Boolean = false
 )
 
 @HiltViewModel
@@ -51,6 +52,7 @@ class PostRunSummaryViewModel @Inject constructor(
     val uiState: StateFlow<PostRunSummaryUiState> = _uiState.asStateFlow()
 
     private val workoutId: Long? = savedStateHandle.get<Long>("workoutId")
+    private val isFreshWorkout: Boolean = savedStateHandle.get<Boolean>("fresh") ?: false
 
     init {
         load()
@@ -91,7 +93,8 @@ class PostRunSummaryViewModel @Inject constructor(
                     durationText = formatDuration(workout.startTime, workout.endTime),
                     avgHrText = avgHr?.let { "${it.toInt()} bpm" } ?: "--",
                     similarRunCount = similar.size,
-                    comparisons = comparisons
+                    comparisons = comparisons,
+                    isHrrActive = isFreshWorkout
                 )
             }.onFailure {
                 _uiState.value = _uiState.value.copy(

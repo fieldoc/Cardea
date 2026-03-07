@@ -25,6 +25,7 @@ data class BootcampEnrollmentEntity(
     companion object {
         const val STATUS_ACTIVE = "ACTIVE"
         const val STATUS_PAUSED = "PAUSED"
+        const val STATUS_GRADUATED = "GRADUATED"
 
         /**
          * Serializes a list of DayPreference objects to a string.

@@ -1,6 +1,7 @@
 package com.hrcoach.ui.bootcamp
 
 import com.hrcoach.domain.bootcamp.FitnessLevel
+import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.engine.TuningDirection
@@ -19,11 +20,16 @@ data class BootcampUiState(
     val totalWeeks: Int = 0,
     val weekInPhase: Int = 0,
     val isRecoveryWeek: Boolean = false,
+    val weeksUntilNextRecovery: Int? = null,
+    val showGraduationCta: Boolean = false,
     // Next session
     val nextSession: PlannedSession? = null,
     val nextSessionDayLabel: String? = null,
     // Week view
     val currentWeekSessions: List<SessionUiItem> = emptyList(),
+    val activePreferredDays: List<DayPreference> = emptyList(),
+    val upcomingWeeks: List<UpcomingWeekItem> = emptyList(),
+    val swapRestMessage: String? = null,
     // Onboarding
     val showOnboarding: Boolean = false,
     val onboardingStep: Int = 0,
@@ -52,4 +58,10 @@ data class SessionUiItem(
     val isCompleted: Boolean,
     val isToday: Boolean,
     val sessionId: Long? = null
+)
+
+data class UpcomingWeekItem(
+    val weekNumber: Int,
+    val isRecoveryWeek: Boolean,
+    val sessions: List<SessionUiItem>
 )

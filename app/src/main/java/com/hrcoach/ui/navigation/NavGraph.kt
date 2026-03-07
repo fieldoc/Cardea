@@ -84,10 +84,10 @@ object Routes {
     const val HISTORY          = "history"
     const val ACCOUNT          = "account"
     const val HISTORY_DETAIL   = "history/{workoutId}"
-    const val POST_RUN_SUMMARY = "postrun/{workoutId}"
+    const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
 
     fun historyDetail(workoutId: Long): String = "history/$workoutId"
-    fun postRunSummary(workoutId: Long): String = "postrun/$workoutId"
+    fun postRunSummary(workoutId: Long, fresh: Boolean = false): String = "postrun/$workoutId?fresh=$fresh"
 }
 
 @Composable
@@ -116,7 +116,7 @@ fun HrCoachNavGraph(
         if (!isWorkoutRunning && routeNow == Routes.WORKOUT) {
             val finishedWorkoutId = completedWorkoutId
             if (finishedWorkoutId != null) {
-                navController.navigate(Routes.postRunSummary(finishedWorkoutId)) {
+                navController.navigate(Routes.postRunSummary(finishedWorkoutId, fresh = true)) {
                     popUpTo(Routes.HOME) { inclusive = false }
                     launchSingleTop = true
                 }
@@ -381,7 +381,7 @@ fun HrCoachNavGraph(
                         }
                     },
                     onViewPostRunSummary = {
-                        navController.navigate(Routes.postRunSummary(workoutId)) {
+                        navController.navigate(Routes.postRunSummary(workoutId, fresh = false)) {
                             launchSingleTop = true
                         }
                     },
@@ -391,7 +391,13 @@ fun HrCoachNavGraph(
 
             composable(
                 route = Routes.POST_RUN_SUMMARY,
-                arguments = listOf(navArgument("workoutId") { type = NavType.LongType }),
+                arguments = listOf(
+                    navArgument("workoutId") { type = NavType.LongType },
+                    navArgument("fresh") {
+                        type = NavType.BoolType
+                        defaultValue = false
+                    }
+                ),
                 enterTransition = { defaultEnter(1) },
                 exitTransition = { defaultExit(1) }
             ) { backStackEntry ->

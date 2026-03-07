@@ -81,4 +81,21 @@ class SessionSelectorTest {
         assertEquals(2, sessions.size)
         assertTrue(sessions.any { it.type == SessionType.LONG || it.type == SessionType.TEMPO })
     }
+
+    @Test
+    fun `build phase with four runs injects strides for tier two and above`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K_10K,
+            runsPerWeek = 4,
+            targetMinutes = 35
+        )
+        assertTrue(sessions.any { it.type == SessionType.STRIDES })
+    }
+
+    @Test
+    fun `lactate threshold preset uses threshold display label`() {
+        assertEquals("Threshold (Z4)", SessionType.displayLabelForPreset("lactate_threshold"))
+        assertEquals("Tempo (Z3)", SessionType.displayLabelForPreset("aerobic_tempo"))
+    }
 }

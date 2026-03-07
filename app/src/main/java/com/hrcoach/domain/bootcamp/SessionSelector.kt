@@ -2,6 +2,7 @@ package com.hrcoach.domain.bootcamp
 
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
+import com.hrcoach.domain.preset.SessionPresetArray
 
 object SessionSelector {
 
@@ -50,6 +51,7 @@ object SessionSelector {
         longMinutes: Int
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
+        val includeStrides = phase == TrainingPhase.BUILD && goal.tier >= 2 && runsPerWeek >= 4
 
         val qualitySessions = when (phase) {
             TrainingPhase.BASE -> 0
@@ -59,7 +61,12 @@ object SessionSelector {
         }
 
         val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.TAPER
-        val easyCount = (runsPerWeek - qualitySessions - (if (hasLong) 1 else 0)).coerceAtLeast(1)
+        val easyCount = (
+            runsPerWeek -
+                qualitySessions -
+                (if (hasLong) 1 else 0) -
+                (if (includeStrides) 1 else 0)
+            ).coerceAtLeast(1)
 
         // Easy runs
         repeat(easyCount) {
@@ -71,6 +78,20 @@ object SessionSelector {
             TrainingPhase.BASE -> {} // No quality sessions
             TrainingPhase.BUILD -> {
                 sessions.add(PlannedSession(SessionType.TEMPO, minutes, "aerobic_tempo"))
+                if (includeStrides) {
+                    val stridesPreset = if (goal.tier >= 3) {
+                        SessionPresetArray.stridesTier3().presetAt(0)
+                    } else {
+                        SessionPresetArray.stridesTier2().presetAt(0)
+                    }
+                    sessions.add(
+                        PlannedSession(
+                            type = SessionType.STRIDES,
+                            minutes = stridesPreset.durationMinutes,
+                            presetId = stridesPreset.presetId
+                        )
+                    )
+                }
             }
             TrainingPhase.PEAK -> {
                 if (goal.tier >= 4) {

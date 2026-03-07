@@ -28,6 +28,19 @@ data class PhaseEngine(
     val isRecoveryWeek: Boolean
         get() = weekInPhase > 0 && (weekInPhase + 1) % 3 == 0
 
+    val weeksUntilNextRecovery: Int
+        get() {
+            if (isRecoveryWeek) return 0
+            var w = weekInPhase + 1
+            var steps = 0
+            while (steps < 10) {
+                if (w > 0 && (w + 1) % 3 == 0) return steps + 1
+                w++
+                steps++
+            }
+            return steps
+        }
+
     fun planCurrentWeek(
         tierIndex: Int = 0,
         tuningDirection: com.hrcoach.domain.engine.TuningDirection = com.hrcoach.domain.engine.TuningDirection.HOLD,
@@ -54,6 +67,27 @@ data class PhaseEngine(
         return copy(phaseIndex = nextIndex, weekInPhase = 0)
     }
 
+    fun lookaheadWeeks(count: Int): List<WeekLookahead> {
+        if (count <= 0) return emptyList()
+        val result = mutableListOf<WeekLookahead>()
+        var cursor = this
+        repeat(count) {
+            cursor = if (cursor.shouldAdvancePhase()) {
+                cursor.advancePhase()
+            } else {
+                cursor.copy(weekInPhase = cursor.weekInPhase + 1)
+            }
+            result.add(
+                WeekLookahead(
+                    weekNumber = cursor.absoluteWeek,
+                    isRecovery = cursor.isRecoveryWeek,
+                    sessions = cursor.planCurrentWeek()
+                )
+            )
+        }
+        return result
+    }
+
     companion object {
         fun phaseMidpointWeeks(phase: TrainingPhase): Int {
             val range = phase.weeksRange
@@ -61,3 +95,9 @@ data class PhaseEngine(
         }
     }
 }
+
+data class WeekLookahead(
+    val weekNumber: Int,
+    val isRecovery: Boolean,
+    val sessions: List<PlannedSession>
+)
