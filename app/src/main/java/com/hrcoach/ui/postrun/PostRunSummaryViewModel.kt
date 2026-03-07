@@ -35,7 +35,9 @@ data class PostRunSummaryUiState(
     val durationText: String = "--",
     val avgHrText: String = "--",
     val similarRunCount: Int = 0,
-    val comparisons: List<PostRunComparison> = emptyList()
+    val comparisons: List<PostRunComparison> = emptyList(),
+    val bootcampProgressLabel: String? = null,
+    val bootcampWeekComplete: Boolean = false,
 )
 
 @HiltViewModel

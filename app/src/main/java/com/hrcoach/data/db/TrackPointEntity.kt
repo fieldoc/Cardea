@@ -24,5 +24,6 @@ data class TrackPointEntity(
     val latitude: Double,
     val longitude: Double,
     val heartRate: Int,
-    val distanceMeters: Float
+    val distanceMeters: Float,
+    val altitudeMeters: Double? = null
 )

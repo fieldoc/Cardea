@@ -154,7 +154,7 @@ class BootcampViewModel @Inject constructor(
         val gapAction = GapAdvisor.action(gapStrategy, enrollment.currentPhaseIndex, enrollment.currentWeekInPhase)
 
         val today = LocalDate.now().dayOfWeek.value
-        val preferredDays = BootcampEnrollmentEntity.parsePreferredDays(enrollment.preferredDays)
+        val preferredDays = BootcampEnrollmentEntity.parseDayPreferences(enrollment.preferredDays)
         val scheduledSessions = ensureCurrentWeekSessions(
             enrollment = enrollment,
             engine = engine,
@@ -386,7 +386,7 @@ class BootcampViewModel @Inject constructor(
         WorkoutState.setPendingBootcampSessionId(null)
         val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return false
         val goal = BootcampGoal.valueOf(enrollment.goalType)
-        val preferredDays = BootcampEnrollmentEntity.parsePreferredDays(enrollment.preferredDays)
+        val preferredDays = BootcampEnrollmentEntity.parseDayPreferences(enrollment.preferredDays)
         val engine = PhaseEngine(
             goal = goal,
             phaseIndex = enrollment.currentPhaseIndex,
@@ -435,7 +435,7 @@ class BootcampViewModel @Inject constructor(
     private suspend fun ensureCurrentWeekSessions(
         enrollment: BootcampEnrollmentEntity,
         engine: PhaseEngine,
-        preferredDays: List<Int>,
+        preferredDays: List<com.hrcoach.domain.bootcamp.DayPreference>,
         tuningDirection: TuningDirection = TuningDirection.HOLD
     ): List<BootcampSessionEntity> {
         val weekNumber = engine.absoluteWeek
@@ -450,11 +450,14 @@ class BootcampViewModel @Inject constructor(
         )
         if (plannedSessions.isEmpty()) return emptyList()
 
+        val availableDays = preferredDays
+            .filter { it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.NONE }
+            .map { it.day }
         val entities = plannedSessions.mapIndexed { index, session ->
             BootcampRepository.buildSessionEntity(
                 enrollmentId = enrollment.id,
                 weekNumber = weekNumber,
-                dayOfWeek = preferredDays.getOrElse(index) { index + 1 }.coerceIn(1, 7),
+                dayOfWeek = availableDays.getOrElse(index) { index + 1 }.coerceIn(1, 7),
                 sessionType = session.type.name,
                 targetMinutes = session.minutes,
                 presetId = session.presetId

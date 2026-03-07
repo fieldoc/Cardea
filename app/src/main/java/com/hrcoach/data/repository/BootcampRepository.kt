@@ -69,6 +69,24 @@ class BootcampRepository @Inject constructor(
     suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int) =
         bootcampDao.deleteSessionsAfterWeek(enrollmentId, weekNumber)
 
+    suspend fun updatePreferredDays(
+        enrollmentId: Long,
+        newDays: List<com.hrcoach.domain.bootcamp.DayPreference>,
+        currentWeekNumber: Int
+    ) {
+        val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
+        bootcampDao.updateEnrollment(
+            enrollment.copy(
+                preferredDays = BootcampEnrollmentEntity.serializeDayPreferences(newDays)
+            )
+        )
+    }
+
+    suspend fun deleteScheduledSessionsFromWeek(enrollmentId: Long, weekNumber: Int) {
+        // deleteSessionsAfterWeek deletes WHERE weekNumber > N, so pass weekNumber - 1
+        bootcampDao.deleteSessionsAfterWeek(enrollmentId, weekNumber - 1)
+    }
+
     companion object {
         fun buildEnrollmentEntity(
             goal: BootcampGoal,
@@ -99,5 +117,35 @@ class BootcampRepository @Inject constructor(
             targetMinutes = targetMinutes,
             presetId = presetId
         )
+
+        /**
+         * Computes reslotted day assignments for SCHEDULED sessions given a new ordered list of
+         * preferred days.  Completed sessions are left in place; their days are excluded from
+         * the available pool so scheduled sessions don't collide with them.
+         *
+         * Returns a list of (session, newDayOfWeek) pairs — one entry per SCHEDULED session.
+         * When [newDays] has fewer entries than the number of scheduled sessions, the original
+         * day is preserved as a fallback.
+         */
+        fun computeReslottedDays(
+            sessions: List<BootcampSessionEntity>,
+            newDays: List<com.hrcoach.domain.bootcamp.DayPreference>
+        ): List<Pair<BootcampSessionEntity, Int>> {
+            val completedDays = sessions
+                .filter { it.status == BootcampSessionEntity.STATUS_COMPLETED }
+                .map { it.dayOfWeek }
+                .toSet()
+
+            val availableNewDays = newDays
+                .map { it.day }
+                .filter { it !in completedDays }
+
+            val scheduledSessions = sessions.filter { it.status == BootcampSessionEntity.STATUS_SCHEDULED }
+
+            return scheduledSessions.mapIndexed { index, session ->
+                val newDay = availableNewDays.getOrElse(index) { session.dayOfWeek }
+                session to newDay
+            }
+        }
     }
 }

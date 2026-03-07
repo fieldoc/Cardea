@@ -8,11 +8,40 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
                 BootcampEnrollmentEntity::class, BootcampSessionEntity::class],
-    version = 4,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // No schema changes between 7 and 8 (identity hash matches)
+            }
+        }
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN pausedAtMs INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE track_points ADD COLUMN altitudeMeters REAL")
+                db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN illnessPromptSnoozedUntilMs INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE bootcamp_sessions ADD COLUMN presetIndex INTEGER")
+                db.execSQL("ALTER TABLE bootcamp_sessions ADD COLUMN completedAtMs INTEGER")
+            }
+        }
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workout_metrics ADD COLUMN hrr1Bpm REAL")
+                db.execSQL("ALTER TABLE workout_metrics ADD COLUMN trimpScore REAL")
+                db.execSQL("ALTER TABLE workout_metrics ADD COLUMN trimpReliable INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE workout_metrics ADD COLUMN environmentAffected INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN tierIndex INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN tierPromptSnoozedUntilMs INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN tierPromptDismissCount INTEGER NOT NULL DEFAULT 0")
+            }
+        }
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""

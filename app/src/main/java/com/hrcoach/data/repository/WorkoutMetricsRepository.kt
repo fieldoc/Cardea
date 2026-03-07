@@ -3,6 +3,7 @@ package com.hrcoach.data.repository
 import com.hrcoach.data.db.WorkoutMetricsDao
 import com.hrcoach.data.db.WorkoutMetricsEntity
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +36,15 @@ class WorkoutMetricsRepository @Inject constructor(
         }
         workoutMetricsDao.deleteAllExcept(validWorkoutIds.toList())
     }
+
+    /**
+     * Returns all workout metrics recorded within the last [limitDays] days,
+     * ordered by recordedAtMs descending (most recent first).
+     */
+    suspend fun getRecentMetrics(limitDays: Int): List<WorkoutAdaptiveMetrics> {
+        val cutoffMs = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(limitDays.toLong())
+        return workoutMetricsDao.getMetricsSince(cutoffMs).map { it.toDomain() }
+    }
 }
 
 private fun WorkoutAdaptiveMetrics.toEntity(): WorkoutMetricsEntity {
@@ -53,7 +63,11 @@ private fun WorkoutAdaptiveMetrics.toEntity(): WorkoutMetricsEntity {
         efFirstHalf = efFirstHalf,
         efSecondHalf = efSecondHalf,
         heartbeatsPerKm = heartbeatsPerKm,
-        paceAtRefHrMinPerKm = paceAtRefHrMinPerKm
+        paceAtRefHrMinPerKm = paceAtRefHrMinPerKm,
+        hrr1Bpm = hrr1Bpm,
+        trimpScore = trimpScore,
+        trimpReliable = trimpReliable,
+        environmentAffected = environmentAffected,
     )
 }
 
@@ -73,6 +87,10 @@ private fun WorkoutMetricsEntity.toDomain(): WorkoutAdaptiveMetrics {
         efFirstHalf = efFirstHalf,
         efSecondHalf = efSecondHalf,
         heartbeatsPerKm = heartbeatsPerKm,
-        paceAtRefHrMinPerKm = paceAtRefHrMinPerKm
+        paceAtRefHrMinPerKm = paceAtRefHrMinPerKm,
+        hrr1Bpm = hrr1Bpm,
+        trimpScore = trimpScore,
+        trimpReliable = trimpReliable,
+        environmentAffected = environmentAffected,
     )
 }

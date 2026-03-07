@@ -9,6 +9,10 @@ data class AdaptiveProfile(
     val longTermHrTrimBpm: Float = 0f,
     val responseLagSec: Float = 25f,
     val paceHrBuckets: Map<Int, PaceHrBucket> = emptyMap(),
-    val totalSessions: Int = 0
+    val totalSessions: Int = 0,
+    val ctl: Float = 0f,
+    val atl: Float = 0f,
+    val hrMax: Int? = null,
+    val hrMaxIsCalibrated: Boolean = false,
 )
 

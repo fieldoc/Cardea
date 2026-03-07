@@ -4,7 +4,9 @@ enum class TrainingPhase(val weeksRange: IntRange) {
     BASE(3..6),
     BUILD(4..6),
     PEAK(2..3),
-    TAPER(1..2)
+    TAPER(1..2);
+
+    val displayName: String get() = name.lowercase().replaceFirstChar { it.uppercase() }
 }
 
 enum class BootcampGoal(

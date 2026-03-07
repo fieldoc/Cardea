@@ -28,6 +28,19 @@ object WorkoutState {
     private val _snapshot = MutableStateFlow(WorkoutSnapshot())
     val snapshot: StateFlow<WorkoutSnapshot> = _snapshot.asStateFlow()
 
+    /**
+     * Holds the session ID of the bootcamp session the user is currently running.
+     * Written by BootcampViewModel before navigating to the active workout screen,
+     * cleared when the workout completes or is discarded.
+     */
+    @Volatile
+    var pendingBootcampSessionId: Long? = null
+        private set
+
+    fun setPendingBootcampSessionId(id: Long?) {
+        pendingBootcampSessionId = id
+    }
+
     fun update(transform: (WorkoutSnapshot) -> WorkoutSnapshot) {
         _snapshot.update(transform)
     }

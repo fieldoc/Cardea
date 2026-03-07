@@ -25,6 +25,14 @@ data class BootcampSessionEntity(
     val sessionType: String,
     val targetMinutes: Int,
     val presetId: String? = null,
-    val status: String = "SCHEDULED",
-    val completedWorkoutId: Long? = null
-)
+    val status: String = STATUS_SCHEDULED,
+    val completedWorkoutId: Long? = null,
+    val presetIndex: Int? = null,
+    val completedAtMs: Long? = null,
+) {
+    companion object {
+        const val STATUS_SCHEDULED = "SCHEDULED"
+        const val STATUS_COMPLETED = "COMPLETED"
+        const val STATUS_SKIPPED = "SKIPPED"
+    }
+}
