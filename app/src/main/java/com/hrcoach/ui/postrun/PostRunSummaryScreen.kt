@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -175,11 +176,22 @@ fun PostRunSummaryScreen(
                             enter = scaleIn(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
                         ) {
                             Text(
-                                text = "Run Complete!",
+                                text = "Run Complete",
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+
+                        HrrCooldownCard()
+
+                        uiState.bootcampProgressLabel
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { progressLabel ->
+                                BootcampContextCard(
+                                    progressLabel = progressLabel,
+                                    weekComplete = uiState.bootcampWeekComplete
+                                )
+                            }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -206,7 +218,7 @@ fun PostRunSummaryScreen(
                         }
 
                         Text(
-                            text = "vs Your Similar Runs",
+                            text = "Compared to Similar Runs",
                             style = MaterialTheme.typography.titleLarge,
                             color = MaterialTheme.colorScheme.onBackground
                         )
@@ -224,12 +236,12 @@ fun PostRunSummaryScreen(
                                     )
                                     Column {
                                         Text(
-                                            text = "Not enough data yet - keep running!",
+                                            text = "Not enough data yet.",
                                             style = MaterialTheme.typography.bodyLarge,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Text(
-                                            text = "Complete a few more similar sessions to unlock comparisons.",
+                                            text = "Complete a few similar sessions to unlock this view.",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = HrCoachThemeTokens.subtleText
                                         )
@@ -238,7 +250,7 @@ fun PostRunSummaryScreen(
                             }
                         } else {
                             Text(
-                                text = "Based on ${uiState.similarRunCount} runs",
+                                text = "Based on ${uiState.similarRunCount} similar sessions",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = HrCoachThemeTokens.subtleText
                             )
@@ -291,7 +303,7 @@ fun PostRunSummaryScreen(
                                 onClick = onViewHistory,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("View on Map")
+                                Text("View Route")
                             }
                             CardeaButton(
                                 text = stringResource(R.string.button_done),
@@ -339,5 +351,78 @@ private fun SummaryStatCard(
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onSurface
         )
+    }
+}
+
+@Composable
+private fun HrrCooldownCard() {
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.DirectionsWalk,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Column {
+                Text(
+                    text = "Calculating your 30-day recovery index\u2026",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Walk slowly for 120 seconds. This single measurement tells us more about your adaptation than any individual workout.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HrCoachThemeTokens.subtleText
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BootcampContextCard(
+    progressLabel: String,
+    weekComplete: Boolean
+) {
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Insights,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (weekComplete) "Bootcamp Week Complete" else "Bootcamp Progress",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = progressLabel,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = if (weekComplete) {
+                        "Strong finish. Next week will adapt from this session."
+                    } else {
+                        "This run has been applied to your current bootcamp week."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HrCoachThemeTokens.subtleText
+                )
+            }
+        }
     }
 }
