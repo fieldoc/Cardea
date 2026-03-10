@@ -30,7 +30,7 @@ data class BootcampSettingsUiState(
                 it.level == DaySelectionLevel.AVAILABLE || it.level == DaySelectionLevel.LONG_RUN_BIAS
             }
             return if (runDays == editRunsPerWeek) null
-            else "Select exactly $editRunsPerWeek days \u00b7 $runDays selected"
+            else "Select exactly $editRunsPerWeek days - your program is set to $editRunsPerWeek runs/week. To change your frequency, edit it above."
         }
 
     val hasGoalChanges: Boolean

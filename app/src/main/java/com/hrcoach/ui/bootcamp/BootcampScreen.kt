@@ -32,11 +32,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -140,7 +143,8 @@ fun BootcampScreen(
                         onConfirmIllness = viewModel::confirmIllness,
                         onDismissIllness = viewModel::dismissIllness,
                         onSwapTodayForRest = viewModel::swapTodayForRest,
-                        onGraduateGoal = viewModel::graduateCurrentGoal
+                        onGraduateGoal = viewModel::graduateCurrentGoal,
+                        onReschedule = { sessionId -> viewModel.requestReschedule(sessionId) }
                     )
                 }
             }
@@ -157,6 +161,16 @@ fun BootcampScreen(
                 DeleteConfirmDialog(
                     onConfirm = { viewModel.deleteBootcamp() },
                     onDismiss = { viewModel.dismissDeleteConfirmDialog() }
+                )
+            }
+
+            if (uiState.rescheduleSheetSessionId != null) {
+                RescheduleBottomSheet(
+                    autoTargetLabel = uiState.rescheduleAutoTargetLabel,
+                    onConfirm   = { viewModel.confirmReschedule() },
+                    onChooseDay = { viewModel.deferReschedule() },
+                    onDefer     = { viewModel.deferReschedule() },
+                    onDismiss   = { viewModel.dismissRescheduleSheet() }
                 )
             }
         }
@@ -589,7 +603,8 @@ private fun ActiveBootcampDashboard(
     onConfirmIllness: () -> Unit,
     onDismissIllness: () -> Unit,
     onSwapTodayForRest: () -> Unit,
-    onGraduateGoal: () -> Unit
+    onGraduateGoal: () -> Unit,
+    onReschedule: (Long) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -650,6 +665,8 @@ private fun ActiveBootcampDashboard(
         // Next session CTA - hidden when paused (no point starting a run)
         val nextSession = uiState.nextSession
         if (nextSession != null && !uiState.isPaused) {
+            val todaySessionId = uiState.currentWeekSessions
+                .firstOrNull { it.isToday && !it.isCompleted }?.sessionId
             NextSessionCard(
                 session = nextSession,
                 dayLabel = uiState.nextSessionDayLabel,
@@ -658,7 +675,10 @@ private fun ActiveBootcampDashboard(
                 onStartWorkout = { configJson ->
                     onBootcampWorkoutStarting()
                     onStartWorkout(configJson)
-                }
+                },
+                onReschedule = if (todaySessionId != null) {
+                    { onReschedule(todaySessionId) }
+                } else null
             )
         }
     }
@@ -1148,7 +1168,8 @@ private fun NextSessionCard(
     dayLabel: String?,
     swapMessage: String?,
     onSwapToRest: () -> Unit,
-    onStartWorkout: (configJson: String) -> Unit
+    onStartWorkout: (configJson: String) -> Unit,
+    onReschedule: (() -> Unit)? = null
 ) {
     val sessionLabel = SessionType.displayLabelForPreset(session.presetId)
         ?: session.type.name.lowercase().replaceFirstChar { it.uppercase() }
@@ -1180,6 +1201,17 @@ private fun NextSessionCard(
                 .fillMaxWidth()
                 .height(48.dp)
         )
+        if (onReschedule != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "can't make it today?",
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTextTertiary,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .clickable { onReschedule() }
+            )
+        }
         TextButton(
             onClick = onSwapToRest,
             modifier = Modifier.align(Alignment.End)
@@ -1195,6 +1227,69 @@ private fun NextSessionCard(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
                 color = CardeaTextTertiary
+            )
+        }
+    }
+}
+
+// ─── Reschedule Bottom Sheet ─────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RescheduleBottomSheet(
+    autoTargetLabel: String?,
+    onConfirm: () -> Unit,
+    onChooseDay: () -> Unit,
+    onDefer: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF12161F),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = if (autoTargetLabel != null) "Move to $autoTargetLabel"
+                       else "No slots left this week",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = Color.White
+            )
+            if (autoTargetLabel != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CardeaGradient)
+                        .clickable { onConfirm() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Sounds good",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            Text(
+                text = "Choose a different day",
+                style = MaterialTheme.typography.labelMedium,
+                color = CardeaTextTertiary,
+                modifier = Modifier.clickable { onChooseDay() }
+            )
+            Text(
+                text = "I'm not sure yet",
+                style = MaterialTheme.typography.labelMedium,
+                color = CardeaTextTertiary,
+                modifier = Modifier.clickable { onDefer() }
             )
         }
     }
