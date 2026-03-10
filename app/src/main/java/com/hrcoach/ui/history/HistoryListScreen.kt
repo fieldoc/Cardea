@@ -1,7 +1,15 @@
 package com.hrcoach.ui.history
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +19,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -24,15 +39,20 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -65,6 +85,8 @@ fun HistoryListScreen(
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val workouts by viewModel.workouts.collectAsState()
+    var deleteModeId by remember { mutableStateOf<Long?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -130,9 +152,52 @@ fun HistoryListScreen(
                         items(workouts, key = { it.id }) { workout ->
                             WorkoutCard(
                                 workout = workout,
-                                onClick = { onWorkoutClick(workout.id) }
+                                isDeleteMode = deleteModeId == workout.id,
+                                onClick = {
+                                    if (deleteModeId != null) {
+                                        deleteModeId = null  // dismiss delete mode on any tap
+                                    } else {
+                                        onWorkoutClick(workout.id)
+                                    }
+                                },
+                                onLongClick = { deleteModeId = workout.id },
+                                onDeleteClick = {
+                                    deleteModeId = workout.id
+                                    showDeleteDialog = true
+                                }
                             )
                         }
+                    }
+
+                    if (showDeleteDialog) {
+                        AlertDialog(
+                            onDismissRequest = {
+                                showDeleteDialog = false
+                                deleteModeId = null
+                            },
+                            title = { Text("Delete this run?") },
+                            text = { Text("This will permanently remove all route data and stats.") },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        deleteModeId?.let { viewModel.deleteWorkout(it) }
+                                        showDeleteDialog = false
+                                        deleteModeId = null
+                                    }
+                                ) {
+                                    Text("Delete", color = Color(0xFFEF4444))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = {
+                                    showDeleteDialog = false
+                                    deleteModeId = null
+                                }) { Text("Cancel") }
+                            },
+                            containerColor = Color(0xFF141B27),
+                            titleContentColor = Color.White,
+                            textContentColor = CardeaTextSecondary
+                        )
                     }
                 }
             }
@@ -170,10 +235,14 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WorkoutCard(
     workout: WorkoutEntity,
-    onClick: () -> Unit
+    isDeleteMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val date = formatWorkoutDate(workout.startTime)
     val duration = formatDuration(workout.startTime, workout.endTime)
@@ -181,10 +250,16 @@ private fun WorkoutCard(
     val distanceLabel = String.format("%.2f km", distanceKm)
     val paceLabel = averagePaceLabel(workout, distanceKm)
 
+    Box(modifier = Modifier.fillMaxWidth()) {
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)
     ) {
         Row(
@@ -243,6 +318,32 @@ private fun WorkoutCard(
             )
         }
     }
+
+    // X badge — floats outside the card at top-right when delete mode is active
+    AnimatedVisibility(
+        visible = isDeleteMode,
+        modifier = Modifier
+            .align(Alignment.TopEnd)
+            .offset(x = 6.dp, y = (-6).dp)
+            .zIndex(1f),
+        enter = fadeIn() + scaleIn(initialScale = 0.6f),
+        exit = fadeOut() + scaleOut(targetScale = 0.6f)
+    ) {
+        IconButton(
+            onClick = onDeleteClick,
+            modifier = Modifier
+                .size(26.dp)
+                .background(color = Color(0xFFEF4444), shape = androidx.compose.foundation.shape.CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Close,
+                contentDescription = "Delete workout",
+                tint = Color.White,
+                modifier = Modifier.size(14.dp)
+            )
+        }
+    }
+    } // end Box
 }
 
 private fun averagePaceLabel(workout: WorkoutEntity, distanceKm: Float): String {
