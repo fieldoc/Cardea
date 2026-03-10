@@ -11,6 +11,11 @@ import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.engine.AdaptivePaceController
+import com.hrcoach.domain.engine.EnvironmentFlagDetector
+import com.hrcoach.domain.engine.FitnessLoadCalculator
+import com.hrcoach.domain.engine.FitnessSignalEvaluator
+import com.hrcoach.domain.engine.HrArtifactDetector
+import com.hrcoach.domain.engine.HrCalibrator
 import com.hrcoach.domain.engine.MetricsCalculator
 import com.hrcoach.domain.engine.ZoneEngine
 import com.hrcoach.domain.model.WorkoutConfig
@@ -87,6 +92,10 @@ class WorkoutForegroundService : LifecycleService() {
     private var hrSampleSum: Long = 0L
     private var hrSampleCount: Int = 0
 
+    private val hrSampleBuffer = ArrayDeque<Int>()      // rolling 120-sample window for artifact detection
+    private val hrSessionSamples = mutableListOf<Int>() // full session for hrMax detection
+    private var cadenceLockSuspected: Boolean = false
+
     override fun onCreate() {
         super.onCreate()
         notificationHelper = WorkoutNotificationHelper(this, CHANNEL_ID, NOTIFICATION_ID)
@@ -148,6 +157,9 @@ class WorkoutForegroundService : LifecycleService() {
         alertPolicy.reset()
         coachingEventRouter.reset()
         trackPointRecorder.reset()
+        hrSampleBuffer.clear()
+        hrSessionSamples.clear()
+        cadenceLockSuspected = false
 
         notificationHelper.startForeground(this, "Starting workout...")
 
@@ -260,6 +272,13 @@ class WorkoutForegroundService : LifecycleService() {
         if (tick.connected && tick.hr > 0 && !isPaused) {
             hrSampleSum += tick.hr
             hrSampleCount++
+            hrSampleBuffer.addLast(tick.hr)
+            if (hrSampleBuffer.size > 120) hrSampleBuffer.removeFirst()
+            hrSessionSamples.add(tick.hr)
+            // Check for cadence lock every 10 new samples once buffer is 30+
+            if (hrSampleBuffer.size >= 30 && hrSampleBuffer.size % 10 == 0) {
+                cadenceLockSuspected = HrArtifactDetector.isArtifactSuspected(hrSampleBuffer.toList())
+            }
         }
         val sessionAvgHr = if (hrSampleCount > 0) (hrSampleSum / hrSampleCount).toInt() else 0
 
@@ -394,9 +413,35 @@ class WorkoutForegroundService : LifecycleService() {
             if (workoutId > 0L) {
                 val now = System.currentTimeMillis()
                 val session = adaptiveController?.finishSession(workoutId = workoutId, endedAtMs = now)
-                session?.let {
-                    adaptiveProfileRepository.saveProfile(session.updatedProfile)
+
+                // --- Calibration pass ---
+                var currentProfile = session?.updatedProfile ?: adaptiveProfileRepository.getProfile()
+
+                // hrMax: only update if cadence lock was NOT suspected
+                val newHrMax = HrCalibrator.detectNewHrMax(
+                    currentHrMax = currentProfile.hrMax ?: 180,
+                    recentSamples = hrSessionSamples.toList(),
+                    cadenceLockSuspected = cadenceLockSuspected
+                )
+                if (newHrMax != null) {
+                    currentProfile = currentProfile.copy(hrMax = newHrMax, hrMaxIsCalibrated = true)
                 }
+
+                // Load track points once — shared by metrics calculation and hrRest calibration
+                val trackPoints = repository.getTrackPoints(workoutId)
+
+                // hrRest: lower only when a plausible early-session proxy is found
+                val restingProxy = MetricsCalculator.computeRestingHrProxy(trackPoints)
+                if (restingProxy != null) {
+                    val updatedRest = HrCalibrator.updateHrRest(
+                        currentHrRest = currentProfile.hrRest ?: restingProxy,
+                        candidate = restingProxy
+                    )
+                    currentProfile = currentProfile.copy(hrRest = updatedRest)
+                }
+
+                adaptiveProfileRepository.saveProfile(currentProfile)
+                // --------------------------------
 
                 val currentWorkout = repository.getWorkoutById(workoutId)
                 if (currentWorkout != null) {
@@ -411,7 +456,7 @@ class WorkoutForegroundService : LifecycleService() {
                 val canonicalMetrics = MetricsCalculator.deriveFullMetrics(
                     workoutId = workoutId,
                     recordedAtMs = now,
-                    trackPoints = repository.getTrackPoints(workoutId)
+                    trackPoints = trackPoints
                 )
                 val metricsToSave = when {
                     canonicalMetrics != null && session != null -> canonicalMetrics.copy(
@@ -420,12 +465,13 @@ class WorkoutForegroundService : LifecycleService() {
                         longTermHrTrimBpm = session.metrics.longTermHrTrimBpm,
                         responseLagSec = session.metrics.responseLagSec
                     )
-
                     canonicalMetrics != null -> canonicalMetrics
                     session != null -> session.metrics
                     else -> null
                 }
-                metricsToSave?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
+                // Mark unreliable if cadence lock was detected during the session
+                val reliableMetrics = metricsToSave?.copy(trimpReliable = !cadenceLockSuspected)
+                reliableMetrics?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
 
                 WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
             }

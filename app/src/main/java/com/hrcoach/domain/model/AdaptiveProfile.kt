@@ -14,5 +14,6 @@ data class AdaptiveProfile(
     val atl: Float = 0f,
     val hrMax: Int? = null,
     val hrMaxIsCalibrated: Boolean = false,
+    val hrRest: Float? = null,
 )
 
