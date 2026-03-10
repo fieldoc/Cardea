@@ -1,0 +1,75 @@
+package com.hrcoach.domain.bootcamp
+
+import com.hrcoach.data.db.BootcampEnrollmentEntity
+import com.hrcoach.data.db.BootcampSessionEntity
+
+data class RescheduleRequest(
+    val session: BootcampSessionEntity,
+    val enrollment: BootcampEnrollmentEntity,
+    /** ISO day-of-week: 1=Mon … 7=Sun */
+    val todayDayOfWeek: Int,
+    val occupiedDaysThisWeek: Set<Int>,
+    val allSessionsThisWeek: List<BootcampSessionEntity>
+)
+
+sealed class RescheduleResult {
+    data class Moved(val newDayOfWeek: Int) : RescheduleResult()
+    data class Dropped(val droppedSessionId: Long) : RescheduleResult()
+    object Deferred : RescheduleResult()
+}
+
+object SessionRescheduler {
+
+    private val hardTypes = setOf("TEMPO", "INTERVALS")
+
+    fun reschedule(req: RescheduleRequest): RescheduleResult {
+        val prefs = BootcampEnrollmentEntity.parseDayPreferences(req.enrollment.preferredDays)
+        val validDays = findValidDays(req, prefs)
+        if (validDays.isNotEmpty()) return RescheduleResult.Moved(validDays.first())
+        val toDrop = lowestPrioritySession(req.allSessionsThisWeek, req.session)
+        return RescheduleResult.Dropped(toDrop.id)
+    }
+
+    fun defer(@Suppress("UNUSED_PARAMETER") req: RescheduleRequest): RescheduleResult =
+        RescheduleResult.Deferred
+
+    private fun findValidDays(req: RescheduleRequest, prefs: List<DayPreference>): List<Int> {
+        val hardDaysOtherThanThis = req.allSessionsThisWeek
+            .filter { it.sessionType in hardTypes && it.dayOfWeek != req.session.dayOfWeek }
+            .map { it.dayOfWeek }
+            .toSet()
+
+        return (req.todayDayOfWeek + 1..7).filter { candidate ->
+            val pref = prefs.find { it.day == candidate }
+            val isRunnable = pref != null &&
+                pref.level != DaySelectionLevel.NONE &&
+                pref.level != DaySelectionLevel.BLACKOUT
+            val isOccupied = candidate in req.occupiedDaysThisWeek
+            val violatesRecovery = hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 } ||
+                (req.session.sessionType in hardTypes &&
+                    hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 })
+            isRunnable && !isOccupied && !violatesRecovery
+        }
+    }
+
+    private fun lowestPrioritySession(
+        sessions: List<BootcampSessionEntity>,
+        current: BootcampSessionEntity
+    ): BootcampSessionEntity {
+        val candidates = sessions.filter {
+            it.id != current.id && it.status == BootcampSessionEntity.STATUS_SCHEDULED
+        }
+        return candidates
+            .minByOrNull { dropPriority(it.sessionType) }
+            ?: current
+    }
+
+    /** Lower number = drop first */
+    private fun dropPriority(type: String): Int = when (type) {
+        "EASY"      -> 0
+        "TEMPO"     -> 1
+        "INTERVALS" -> 2
+        "LONG_RUN"  -> 3
+        else        -> 1
+    }
+}
