@@ -14,6 +14,9 @@ import com.hrcoach.domain.bootcamp.GapAdvisor
 import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.CoachingCopyGenerator
+import com.hrcoach.domain.bootcamp.RescheduleRequest
+import com.hrcoach.domain.bootcamp.RescheduleResult
+import com.hrcoach.domain.bootcamp.SessionRescheduler
 import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.bootcamp.TierCtlRanges
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
@@ -422,6 +425,70 @@ class BootcampViewModel @Inject constructor(
             _uiState.update {
                 it.copy(swapRestMessage = "Rest day saved. Today's run was swapped out.")
             }
+        }
+    }
+
+    fun requestReschedule(sessionId: Long) {
+        viewModelScope.launch {
+            val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
+            val sessions = bootcampRepository.getSessionsForWeek(enrollment.id, _uiState.value.absoluteWeek)
+            val session = sessions.find { it.id == sessionId } ?: return@launch
+            val today = LocalDate.now().dayOfWeek.value
+            val occupied = sessions.map { it.dayOfWeek }.toSet()
+            val req = RescheduleRequest(
+                session = session,
+                enrollment = enrollment,
+                todayDayOfWeek = today,
+                occupiedDaysThisWeek = occupied,
+                allSessionsThisWeek = sessions
+            )
+            val result = SessionRescheduler.reschedule(req)
+            val (targetDay, targetLabel) = when (result) {
+                is RescheduleResult.Moved -> result.newDayOfWeek to dayLabelFor(result.newDayOfWeek)
+                else -> null to null
+            }
+            _uiState.update {
+                it.copy(
+                    rescheduleSheetSessionId = sessionId,
+                    rescheduleAutoTargetDay = targetDay,
+                    rescheduleAutoTargetLabel = targetLabel
+                )
+            }
+        }
+    }
+
+    fun confirmReschedule() {
+        val sessionId = _uiState.value.rescheduleSheetSessionId ?: return
+        val newDay = _uiState.value.rescheduleAutoTargetDay
+        viewModelScope.launch {
+            if (newDay != null) {
+                bootcampRepository.rescheduleSession(sessionId, newDay)
+            } else {
+                bootcampRepository.dropSession(sessionId)
+            }
+            clearRescheduleSheet()
+            loadBootcampState()
+        }
+    }
+
+    fun deferReschedule() {
+        val sessionId = _uiState.value.rescheduleSheetSessionId ?: return
+        viewModelScope.launch {
+            bootcampRepository.deferSession(sessionId)
+            clearRescheduleSheet()
+            loadBootcampState()
+        }
+    }
+
+    fun dismissRescheduleSheet() = clearRescheduleSheet()
+
+    private fun clearRescheduleSheet() {
+        _uiState.update {
+            it.copy(
+                rescheduleSheetSessionId = null,
+                rescheduleAutoTargetDay = null,
+                rescheduleAutoTargetLabel = null
+            )
         }
     }
 
