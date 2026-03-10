@@ -60,14 +60,7 @@ class SessionReschedulerTest {
     }
 
     @Test fun defer_returns_deferred() {
-        val req = RescheduleRequest(
-            session = session(day = 1),
-            enrollment = enrollment(),
-            todayDayOfWeek = 1,
-            occupiedDaysThisWeek = setOf(1),
-            allSessionsThisWeek = listOf(session(1))
-        )
-        val result = SessionRescheduler.defer(req)
+        val result = SessionRescheduler.defer()
         assertTrue(result is RescheduleResult.Deferred)
     }
 

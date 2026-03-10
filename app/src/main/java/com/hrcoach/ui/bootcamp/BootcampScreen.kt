@@ -168,7 +168,7 @@ fun BootcampScreen(
                 RescheduleBottomSheet(
                     autoTargetLabel = uiState.rescheduleAutoTargetLabel,
                     onConfirm   = { viewModel.confirmReschedule() },
-                    onChooseDay = { viewModel.deferReschedule() },
+                    onChooseDay = { viewModel.dismissRescheduleSheet() },
                     onDefer     = { viewModel.deferReschedule() },
                     onDismiss   = { viewModel.dismissRescheduleSheet() }
                 )
@@ -1263,21 +1263,14 @@ private fun RescheduleBottomSheet(
                 color = Color.White
             )
             if (autoTargetLabel != null) {
-                Box(
+                CardeaButton(
+                    text = "Sounds good",
+                    onClick = onConfirm,
+                    cornerRadius = 12.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(CardeaGradient)
-                        .clickable { onConfirm() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Sounds good",
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
+                )
             }
             Text(
                 text = "Choose a different day",

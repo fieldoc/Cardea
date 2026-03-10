@@ -6,7 +6,7 @@ import com.hrcoach.data.db.BootcampSessionEntity
 data class RescheduleRequest(
     val session: BootcampSessionEntity,
     val enrollment: BootcampEnrollmentEntity,
-    /** ISO day-of-week: 1=Mon … 7=Sun */
+    /** ISO day-of-week: 1=Mon ï¿½ 7=Sun */
     val todayDayOfWeek: Int,
     val occupiedDaysThisWeek: Set<Int>,
     val allSessionsThisWeek: List<BootcampSessionEntity>
@@ -30,8 +30,7 @@ object SessionRescheduler {
         return RescheduleResult.Dropped(toDrop.id)
     }
 
-    fun defer(@Suppress("UNUSED_PARAMETER") req: RescheduleRequest): RescheduleResult =
-        RescheduleResult.Deferred
+    fun defer(): RescheduleResult = RescheduleResult.Deferred
 
     private fun findValidDays(req: RescheduleRequest, prefs: List<DayPreference>): List<Int> {
         val hardDaysOtherThanThis = req.allSessionsThisWeek
@@ -45,9 +44,7 @@ object SessionRescheduler {
                 pref.level != DaySelectionLevel.NONE &&
                 pref.level != DaySelectionLevel.BLACKOUT
             val isOccupied = candidate in req.occupiedDaysThisWeek
-            val violatesRecovery = hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 } ||
-                (req.session.sessionType in hardTypes &&
-                    hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 })
+            val violatesRecovery = hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 }
             isRunnable && !isOccupied && !violatesRecovery
         }
     }

@@ -484,11 +484,11 @@ private fun DayChipRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(
+                    .then(
                         when {
-                            isBlackout -> Brush.linearGradient(listOf(Color(0xFF1C1F26), Color(0xFF1C1F26)))
-                            isSelected -> CardeaGradient
-                            else       -> Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                            isBlackout -> Modifier.background(Color(0xFF1C1F26))
+                            isSelected -> Modifier.background(CardeaGradient)
+                            else       -> Modifier
                         }
                     )
                     .border(
@@ -551,11 +551,11 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
         modifier = Modifier
             .height(22.dp)
             .clip(CircleShape)
-            .background(
+            .then(
                 when {
-                    isBlackout -> Brush.linearGradient(listOf(Color(0xFF1C1F26), Color(0xFF1C1F26)))
-                    isSelected -> CardeaGradient
-                    else       -> Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                    isBlackout -> Modifier.background(Color(0xFF1C1F26))
+                    isSelected -> Modifier.background(CardeaGradient)
+                    else       -> Modifier
                 }
             )
             .border(1.dp, if (isSelected) Color.Transparent else GlassBorder, CircleShape)
