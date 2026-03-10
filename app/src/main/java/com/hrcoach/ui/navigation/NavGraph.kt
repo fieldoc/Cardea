@@ -285,6 +285,11 @@ fun HrCoachNavGraph(
                         navController.navigate(Routes.BOOTCAMP) {
                             launchSingleTop = true
                         }
+                    },
+                    onGoToWorkout = {
+                        navController.navigate(Routes.WORKOUT) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

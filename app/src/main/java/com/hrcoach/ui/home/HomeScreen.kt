@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.components.GlassCard
@@ -61,6 +62,7 @@ fun HomeScreen(
     onGoToHistory: () -> Unit,
     onGoToAccount: () -> Unit,
     onGoToBootcamp: () -> Unit,
+    onGoToWorkout: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -85,6 +87,11 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                // Active session banner — shows when workout is in progress
+                if (state.isSessionRunning) {
+                    ActiveSessionCard(onClick = onGoToWorkout)
+                }
+
                 // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
