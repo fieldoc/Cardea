@@ -1,7 +1,6 @@
 package com.hrcoach.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -183,13 +181,6 @@ fun HomeScreen(
                     }
                 }
 
-                // Start Run CTA
-                CardeaButton(
-                    text = "Start a Run",
-                    onClick = onStartRun,
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
-                )
-
                 // Bootcamp Card — elevated entry point for structured training
                 GlassCard(
                     modifier = Modifier
@@ -231,15 +222,6 @@ fun HomeScreen(
                             cornerRadius = 10.dp
                         )
                     }
-                }
-
-                // Secondary quick links
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickLinkChip("Progress", Modifier.weight(1f), onGoToProgress)
-                    QuickLinkChip("History", Modifier.weight(1f), onGoToHistory)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -311,28 +293,3 @@ private fun EfficiencyRing(percent: Int) {
     }
 }
 
-@Composable
-private fun QuickLinkChip(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Box(
-        modifier = modifier
-            .height(48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0x08FFFFFF))
-            .border(
-                width = 1.dp,
-                color = Color.White.copy(alpha = 0.05f),
-                shape = RoundedCornerShape(14.dp)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = label.uppercase(), 
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
-            ), 
-            color = Color.White.copy(alpha = 0.7f)
-        )
-    }
-}

@@ -154,19 +154,27 @@ private fun DashboardContent(uiState: ProgressUiState) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item { KeyMetricsStrip(uiState) }
-        item { SectionHeader("Performance", "Your highest-signal trends, surfaced first.", Modifier.padding(horizontal = 16.dp)) }
+
+        // Efficiency — how much effort each kilometer costs
+        item { SectionHeader("Efficiency", "How economically you convert effort into speed.", Modifier.padding(horizontal = 16.dp)) }
         item { HeartbeatsPerKmCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { Vo2MaxCard(uiState, Modifier.padding(horizontal = 16.dp)) }
-        item { WeeklyDistanceCard(uiState, Modifier.padding(horizontal = 16.dp)) }
-        item { SectionHeader("Details", "Fingerprint, load, and consistency charts.", Modifier.padding(horizontal = 16.dp)) }
         item { PaceAtFixedHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
-        item { SpeedVsHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { AerobicEfficiencyCard(uiState, Modifier.padding(horizontal = 16.dp)) }
-        item { RestingHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
-        item { HrRecoveryCard(uiState, Modifier.padding(horizontal = 16.dp)) }
+
+        // Load — volume, intensity, and speed profile
+        item { SectionHeader("Load", "Volume, intensity distribution, and pace fingerprint.", Modifier.padding(horizontal = 16.dp)) }
+        item { WeeklyDistanceCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { WeeklyLoadCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { ZoneDistributionCard(uiState, Modifier.padding(horizontal = 16.dp)) }
+        item { SpeedVsHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
+
+        // Health — recovery markers and consistency
+        item { SectionHeader("Health", "Recovery quality and training consistency.", Modifier.padding(horizontal = 16.dp)) }
+        item { RestingHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
+        item { HrRecoveryCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { ConsistencyCalendarCard(uiState, Modifier.padding(horizontal = 16.dp)) }
+
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }

@@ -148,13 +148,29 @@ fun SetupScreen(
                 .padding(horizontal = if (isWideLayout) 24.dp else 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Bootcamp is the primary training path — shown first
+            BootcampEntryCard(
+                onClick = onGoToBootcamp
+            )
+
+            // Manual run is the alternative
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                HorizontalDivider(modifier = Modifier.weight(1f), color = CardeaTextTertiary.copy(alpha = 0.3f))
+                Text(
+                    text = "OR SET UP MANUALLY",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTextTertiary
+                )
+                HorizontalDivider(modifier = Modifier.weight(1f), color = CardeaTextTertiary.copy(alpha = 0.3f))
+            }
+
             ModeSelector(
                 selectedMode = state.mode,
                 onModeSelected = viewModel::setMode
-            )
-
-            BootcampEntryCard(
-                onClick = onGoToBootcamp
             )
 
             HrMonitorCard(

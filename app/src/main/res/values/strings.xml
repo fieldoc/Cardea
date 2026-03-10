@@ -1,11 +1,11 @@
 <resources>
     <string name="app_name">Cardea</string>
     <string name="nav_home">Home</string>
-    <string name="nav_workout">Workout</string>
+    <string name="nav_workout">Training</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_history">History</string>
-    <string name="nav_account">Account</string>
-    <string name="nav_setup">Workout</string>
+    <string name="nav_account">Profile</string>
+    <string name="nav_setup">Training</string>
     <string name="screen_home_title">Home</string>
     <string name="screen_setup_title">New Run</string>
     <string name="screen_progress_title">Progress</string>

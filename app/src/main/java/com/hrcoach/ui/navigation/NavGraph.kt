@@ -58,6 +58,7 @@ import com.hrcoach.R
 import com.hrcoach.service.WorkoutForegroundService
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.ui.account.AccountScreen
+import com.hrcoach.ui.bootcamp.BootcampScreen
 import com.hrcoach.ui.history.HistoryDetailScreen
 import com.hrcoach.ui.history.HistoryListScreen
 import com.hrcoach.ui.home.HomeScreen
@@ -67,9 +68,11 @@ import com.hrcoach.ui.setup.SetupScreen
 import com.hrcoach.ui.splash.SplashScreen
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaNavGradient
 import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.workout.ActiveWorkoutScreen
 import com.hrcoach.util.PermissionGate
 
@@ -83,6 +86,7 @@ object Routes {
     const val PROGRESS         = "progress"
     const val HISTORY          = "history"
     const val ACCOUNT          = "account"
+    const val BOOTCAMP         = "bootcamp"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
 
@@ -251,6 +255,11 @@ fun HrCoachNavGraph(
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
                         }
+                    },
+                    onGoToBootcamp = {
+                        navController.navigate(Routes.BOOTCAMP) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -280,6 +289,11 @@ fun HrCoachNavGraph(
                             }.onFailure {
                                 Toast.makeText(context, "Unable to start workout.", Toast.LENGTH_LONG).show()
                             }
+                        }
+                    },
+                    onGoToBootcamp = {
+                        navController.navigate(Routes.BOOTCAMP) {
+                            launchSingleTop = true
                         }
                     }
                 )
@@ -359,6 +373,35 @@ fun HrCoachNavGraph(
             }
 
             composable(
+                route = Routes.BOOTCAMP,
+                enterTransition = { defaultEnter(1) },
+                exitTransition = { defaultExit(1) }
+            ) {
+                BootcampScreen(
+                    onStartWorkout = { configJson ->
+                        if (!PermissionGate.hasAllRuntimePermissions(context)) {
+                            Toast.makeText(
+                                context,
+                                "Grant required permissions before starting workout.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+                                action = WorkoutForegroundService.ACTION_START
+                                putExtra(WorkoutForegroundService.EXTRA_CONFIG_JSON, configJson)
+                            }
+                            runCatching {
+                                context.startForegroundService(intent)
+                            }.onFailure {
+                                Toast.makeText(context, "Unable to start workout.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
                 route = Routes.HISTORY_DETAIL,
                 arguments = listOf(navArgument("workoutId") { type = NavType.LongType }),
                 enterTransition = { defaultEnter(1) },
@@ -417,8 +460,9 @@ fun HrCoachNavGraph(
                         }
                     },
                     onDone = {
-                        navController.navigate(Routes.HOME) {
-                            popUpTo(Routes.HOME) { inclusive = true }
+                        // Send user directly to their run detail — encourages review momentum
+                        navController.navigate(Routes.historyDetail(workoutId)) {
+                            popUpTo(Routes.HISTORY) { inclusive = false }
                             launchSingleTop = true
                         }
                     },
@@ -450,7 +494,7 @@ private fun GradientNavIcon(
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawWithContent {
                     drawContent()
-                    drawRect(brush = CardeaGradient, blendMode = BlendMode.SrcIn)
+                    drawRect(brush = CardeaNavGradient, blendMode = BlendMode.SrcIn)
                 }
         ) {
             Icon(
