@@ -1,5 +1,6 @@
 package com.hrcoach.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -25,7 +26,7 @@ data class BootcampSessionEntity(
     val sessionType: String,
     val targetMinutes: Int,
     val presetId: String? = null,
-    val status: String = STATUS_SCHEDULED,
+    @ColumnInfo(defaultValue = "SCHEDULED") val status: String = STATUS_SCHEDULED,
     val completedWorkoutId: Long? = null,
     val presetIndex: Int? = null,
     val completedAtMs: Long? = null,
@@ -34,5 +35,6 @@ data class BootcampSessionEntity(
         const val STATUS_SCHEDULED = "SCHEDULED"
         const val STATUS_COMPLETED = "COMPLETED"
         const val STATUS_SKIPPED = "SKIPPED"
+        const val STATUS_DEFERRED = "DEFERRED"
     }
 }

@@ -158,7 +158,10 @@ class BootcampRepository @Inject constructor(
                 .map { it.day }
                 .filter { it !in completedDays }
 
-            val scheduledSessions = sessions.filter { it.status == BootcampSessionEntity.STATUS_SCHEDULED }
+            val scheduledSessions = sessions.filter {
+                it.status == BootcampSessionEntity.STATUS_SCHEDULED ||
+                it.status == BootcampSessionEntity.STATUS_DEFERRED
+            }
 
             return scheduledSessions.mapIndexed { index, session ->
                 val newDay = availableNewDays.getOrElse(index) { session.dayOfWeek }

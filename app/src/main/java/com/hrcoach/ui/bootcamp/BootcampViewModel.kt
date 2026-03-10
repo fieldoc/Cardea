@@ -69,9 +69,12 @@ class BootcampViewModel @Inject constructor(
 
                 // Then observe the Flow for ongoing UI updates.
                 // Track last-seen enrollment to avoid redundant refreshes from our own writes.
+                // Use a boolean guard so the first emission (which may be null) is never skipped.
                 var lastSeen: BootcampEnrollmentEntity? = null
+                var initialized = false
                 bootcampRepository.getActiveEnrollment().collect { enrollment ->
-                    if (enrollment == lastSeen) return@collect
+                    if (initialized && enrollment == lastSeen) return@collect
+                    initialized = true
                     lastSeen = enrollment
                     if (enrollment == null) {
                         _uiState.value = BootcampUiState(
@@ -179,7 +182,8 @@ class BootcampViewModel @Inject constructor(
         val missedSession = scheduledSessions.any {
             it.dayOfWeek < today &&
                 it.status != BootcampSessionEntity.STATUS_COMPLETED &&
-                it.status != BootcampSessionEntity.STATUS_SKIPPED
+                it.status != BootcampSessionEntity.STATUS_SKIPPED &&
+                it.status != BootcampSessionEntity.STATUS_DEFERRED
         }
         val scheduledRestDay = scheduledSessions.none { it.dayOfWeek == today }
         val upcomingWeeks = engine.lookaheadWeeks(2).map { lookahead ->
