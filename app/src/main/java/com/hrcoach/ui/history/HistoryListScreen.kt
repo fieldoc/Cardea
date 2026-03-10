@@ -19,6 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -40,6 +43,7 @@ import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.StatItem
+import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
@@ -57,6 +61,7 @@ private val HistoryBackdrop = Brush.radialGradient(
 fun HistoryListScreen(
     onWorkoutClick: (Long) -> Unit,
     onStartWorkout: () -> Unit,
+    onGoToTrends: (() -> Unit)? = null,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val workouts by viewModel.workouts.collectAsState()
@@ -84,7 +89,25 @@ fun HistoryListScreen(
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp)
             ) {
-                Spacer(modifier = Modifier.height(12.dp))
+                // Activity sub-tab selector (shown only when Activity tab is active)
+                if (onGoToTrends != null) {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            selected = true,
+                            onClick = {},
+                            colors = cardeaSegmentedButtonColors()
+                        ) { Text("Log") }
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            selected = false,
+                            onClick = onGoToTrends,
+                            colors = cardeaSegmentedButtonColors()
+                        ) { Text("Trends") }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (workouts.isEmpty()) {
                         "Every workout you save shows up here."

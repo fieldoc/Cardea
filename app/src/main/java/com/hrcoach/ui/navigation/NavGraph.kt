@@ -54,11 +54,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.service.WorkoutForegroundService
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.ui.account.AccountScreen
 import com.hrcoach.ui.bootcamp.BootcampScreen
+import com.hrcoach.ui.bootcamp.BootcampStatusViewModel
 import com.hrcoach.ui.history.HistoryDetailScreen
 import com.hrcoach.ui.history.HistoryListScreen
 import com.hrcoach.ui.home.HomeScreen
@@ -107,6 +109,10 @@ fun HrCoachNavGraph(
     val completedWorkoutId = workoutSnapshot.completedWorkoutId
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
 
+    // Lightweight enrollment check — drives Training tab adaptive routing
+    val enrollmentVm: BootcampStatusViewModel = hiltViewModel()
+    val isBootcampEnrolled by enrollmentVm.hasActiveEnrollment.collectAsState()
+
     LaunchedEffect(isWorkoutRunning, completedWorkoutId) {
         val routeNow = navController.currentBackStackEntry?.destination?.route
         if (isWorkoutRunning && routeNow != Routes.WORKOUT) {
@@ -134,7 +140,8 @@ fun HrCoachNavGraph(
         }
     }
 
-    val tabRoutes = setOf(Routes.HOME, Routes.SETUP, Routes.PROGRESS, Routes.HISTORY, Routes.ACCOUNT)
+    // Activity tab covers both History and Progress routes
+    val tabRoutes = setOf(Routes.HOME, Routes.SETUP, Routes.BOOTCAMP, Routes.PROGRESS, Routes.HISTORY, Routes.ACCOUNT)
     val showBottomBar = !isWorkoutRunning && currentRoute in tabRoutes
 
     Scaffold(
@@ -163,20 +170,38 @@ fun HrCoachNavGraph(
                         )
                     }
                 ) {
-                    data class NavItem(val route: String, val icon: ImageVector, val labelRes: Int)
-                    val navItems = listOf(
-                        NavItem(Routes.HOME,     Icons.Default.Home,                  R.string.nav_home),
-                        NavItem(Routes.SETUP,    Icons.Default.FavoriteBorder,        R.string.nav_workout),
-                        NavItem(Routes.HISTORY,  Icons.AutoMirrored.Filled.List,      R.string.nav_history),
-                        NavItem(Routes.PROGRESS, Icons.AutoMirrored.Filled.ShowChart, R.string.nav_progress),
-                        NavItem(Routes.ACCOUNT,  Icons.Default.Person,               R.string.nav_account)
+                    data class NavItem(
+                        val route: String,
+                        val icon: ImageVector,
+                        val labelRes: Int,
+                        val isSelected: (String?) -> Boolean = { it == route }
                     )
-                    navItems.forEach { (route, icon, labelRes) ->
-                        val selected = currentRoute == route
+
+                    // Training tab target depends on enrollment state
+                    val trainingRoute = if (isBootcampEnrolled) Routes.BOOTCAMP else Routes.SETUP
+
+                    val navItems = listOf(
+                        NavItem(Routes.HOME,    Icons.Default.Home,                  R.string.nav_home),
+                        NavItem(
+                            route = trainingRoute,
+                            icon = Icons.Default.FavoriteBorder,
+                            labelRes = R.string.nav_workout,
+                            isSelected = { it == Routes.SETUP || it == Routes.BOOTCAMP }
+                        ),
+                        NavItem(
+                            route = Routes.HISTORY,
+                            icon = Icons.AutoMirrored.Filled.List,
+                            labelRes = R.string.nav_history,
+                            isSelected = { it == Routes.HISTORY || it == Routes.PROGRESS }
+                        ),
+                        NavItem(Routes.ACCOUNT, Icons.Default.Person, R.string.nav_account)
+                    )
+                    navItems.forEach { navItem ->
+                        val selected = navItem.isSelected(currentRoute)
                         NavigationBarItem(
                             selected = selected,
                             onClick = {
-                                navController.navigate(route) {
+                                navController.navigate(navItem.route) {
                                     popUpTo(Routes.HOME) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
@@ -184,12 +209,12 @@ fun HrCoachNavGraph(
                             },
                             icon = {
                                 GradientNavIcon(
-                                    imageVector = icon,
+                                    imageVector = navItem.icon,
                                     isSelected = selected,
-                                    contentDescription = stringResource(labelRes)
+                                    contentDescription = stringResource(navItem.labelRes)
                                 )
                             },
-                            label = { Text(stringResource(labelRes)) },
+                            label = { Text(stringResource(navItem.labelRes)) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor   = Color.Unspecified,
                                 unselectedIconColor = CardeaTextSecondary,
@@ -342,6 +367,12 @@ fun HrCoachNavGraph(
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
                         }
+                    },
+                    onGoToLog = {
+                        navController.navigate(Routes.HISTORY) {
+                            popUpTo(Routes.HISTORY) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -360,6 +391,11 @@ fun HrCoachNavGraph(
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
                         }
+                    },
+                    onGoToTrends = {
+                        navController.navigate(Routes.PROGRESS) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -376,7 +412,9 @@ fun HrCoachNavGraph(
                 route = Routes.BOOTCAMP,
                 enterTransition = { defaultEnter(1) },
                 exitTransition = { defaultExit(1) }
-            ) {
+            ) { backStackEntry ->
+                val isTabRoot = navController.previousBackStackEntry?.destination?.route == null ||
+                    navController.previousBackStackEntry?.destination?.route == Routes.HOME
                 BootcampScreen(
                     onStartWorkout = { configJson ->
                         if (!PermissionGate.hasAllRuntimePermissions(context)) {
@@ -397,7 +435,10 @@ fun HrCoachNavGraph(
                             }
                         }
                     },
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onGoToManualSetup = {
+                        navController.navigate(Routes.SETUP) { launchSingleTop = true }
+                    }
                 )
             }
 

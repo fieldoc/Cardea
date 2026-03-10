@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.ui.charts.BarChart
@@ -55,6 +56,7 @@ import com.hrcoach.ui.charts.SectionHeader
 import com.hrcoach.ui.charts.TrendInfo
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.StatItem
+import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
@@ -67,6 +69,7 @@ import kotlin.math.abs
 @Composable
 fun ProgressScreen(
     onStartWorkout: () -> Unit,
+    onGoToLog: (() -> Unit)? = null,
     viewModel: ProgressViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -92,6 +95,27 @@ fun ProgressScreen(
                 )
                 .padding(paddingValues)
         ) {
+            // Activity sub-tab selector (shown only when Activity tab is active)
+            if (onGoToLog != null) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        selected = false,
+                        onClick = onGoToLog,
+                        colors = cardeaSegmentedButtonColors()
+                    ) { Text("Log") }
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        selected = true,
+                        onClick = {},
+                        colors = cardeaSegmentedButtonColors()
+                    ) { Text("Trends") }
+                }
+            }
             FilterRow(
                 selected = uiState.filter,
                 onFilterSelected = viewModel::setFilter,
@@ -153,6 +177,7 @@ private fun DashboardContent(uiState: ProgressUiState) {
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { CoachTakeCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { KeyMetricsStrip(uiState) }
 
         // Efficiency — how much effort each kilometer costs
@@ -177,6 +202,66 @@ private fun DashboardContent(uiState: ProgressUiState) {
 
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
+}
+
+/**
+ * Coach's Take — a plain-language insight at the top of the dashboard.
+ * Computes from existing [ProgressUiState] without any extra ViewModel logic.
+ */
+@Composable
+private fun CoachTakeCard(uiState: ProgressUiState, modifier: Modifier = Modifier) {
+    val lines = buildCoachTakeLines(uiState)
+    if (lines.isEmpty()) return
+
+    GlassCard(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = "COACH'S TAKE",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                letterSpacing = 1.sp
+            ),
+            color = GradientPink
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        lines.forEach { line ->
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodyMedium,
+                color = androidx.compose.ui.graphics.Color.White
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+private fun buildCoachTakeLines(uiState: ProgressUiState): List<String> {
+    val lines = mutableListOf<String>()
+
+    // Efficiency trend: TrendInfo.positive == true means improving (lower hbkm = positive for this metric)
+    val hbkmTrend = uiState.heartbeatsPerKmTrend
+    if (hbkmTrend?.positive != null) {
+        lines += if (hbkmTrend.positive == true)
+            "Your aerobic efficiency is trending in the right direction — keep your next runs at a comfortable effort."
+        else
+            "Your heart is working harder per km lately. A few easy Zone 2 runs will help rebuild your aerobic base."
+    }
+
+    // Resting HR trend
+    val restingHrRecent = uiState.restingHrSeries.takeLast(4)
+    if (restingHrRecent.size >= 2) {
+        val delta = restingHrRecent.last().value - restingHrRecent.first().value
+        if (delta < -2f) lines += "Resting HR is dropping — a strong sign of improving cardiovascular fitness."
+        else if (delta > 3f) lines += "Resting HR has crept up slightly. Prioritise sleep and an easy week."
+    }
+
+    // Consistency check — calendarDays has distanceKm; > 0 means a workout happened
+    val recentDays = uiState.calendarDays.takeLast(7)
+    val recentConsistency = recentDays.count { it.distanceKm > 0f }
+    if (recentConsistency >= 3) lines += "Strong week — $recentConsistency sessions in the last 7 days."
+    else if (recentConsistency == 0 && uiState.calendarDays.isNotEmpty())
+        lines += "No sessions detected this week. Getting back out, even briefly, resets your recovery clock."
+
+    return lines.take(2) // limit to 2 insights to keep it scannable
 }
 
 @Composable
@@ -572,7 +657,8 @@ private fun FilterRow(
             SegmentedButton(
                 shape = SegmentedButtonDefaults.itemShape(index = index, count = filters.size),
                 selected = selected == filter,
-                onClick = { onFilterSelected(filter) }
+                onClick = { onFilterSelected(filter) },
+                colors = cardeaSegmentedButtonColors()
             ) { Text(label) }
         }
     }

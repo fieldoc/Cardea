@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -103,15 +106,36 @@ fun HomeScreen(
                             color = Color.White
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(GlassHighlight)
-                            .clickable(onClick = onGoToAccount),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        CardeaLogo(size = 28.dp, animate = false)
+                        // Sensor status shortcut — tap to go to Training tab for device setup
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(GlassHighlight)
+                                .clickable(onClick = onStartRun),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bluetooth,
+                                contentDescription = "Sensor setup",
+                                tint = CardeaTextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(GlassHighlight)
+                                .clickable(onClick = onGoToAccount),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CardeaLogo(size = 28.dp, animate = false)
+                        }
                     }
                 }
 

@@ -1,5 +1,7 @@
 package com.hrcoach.ui.components
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
@@ -7,7 +9,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.CardeaTextTertiary
+import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GlassHighlight
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
@@ -41,6 +45,23 @@ fun CardeaSlider(
         )
     )
 }
+
+/**
+ * Cardea-styled SegmentedButton colors provider.
+ * Selected state uses GlassHighlight container + GradientBlue label;
+ * unselected uses transparent container + secondary text.
+ * Replaces M3 lavender/purple defaults in all [SingleChoiceSegmentedButtonRow] usages.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun cardeaSegmentedButtonColors() = SegmentedButtonDefaults.colors(
+    activeContainerColor = GlassHighlight,
+    activeContentColor = GradientBlue,
+    activeBorderColor = GradientBlue,
+    inactiveContainerColor = Color.Transparent,
+    inactiveContentColor = CardeaTextSecondary,
+    inactiveBorderColor = GlassBorder
+)
 
 /**
  * Cardea-styled switch. Checked state uses GradientPink track; unchecked uses GlassHighlight.

@@ -82,6 +82,7 @@ import com.hrcoach.ui.theme.ZoneGreen
 fun BootcampScreen(
     onStartWorkout: (configJson: String) -> Unit,
     onBack: () -> Unit,
+    onGoToManualSetup: (() -> Unit)? = null,
     viewModel: BootcampViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -146,7 +147,8 @@ fun BootcampScreen(
                         onDismissIllness = viewModel::dismissIllness,
                         onSwapTodayForRest = viewModel::swapTodayForRest,
                         onGraduateGoal = viewModel::graduateCurrentGoal,
-                        onReschedule = { sessionId -> viewModel.requestReschedule(sessionId) }
+                        onReschedule = { sessionId -> viewModel.requestReschedule(sessionId) },
+                        onGoToManualSetup = onGoToManualSetup
                     )
                 }
             }
@@ -607,7 +609,8 @@ private fun ActiveBootcampDashboard(
     onDismissIllness: () -> Unit,
     onSwapTodayForRest: () -> Unit,
     onGraduateGoal: () -> Unit,
-    onReschedule: (Long) -> Unit
+    onReschedule: (Long) -> Unit,
+    onGoToManualSetup: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
@@ -683,6 +686,20 @@ private fun ActiveBootcampDashboard(
                     { onReschedule(todaySessionId) }
                 } else null
             )
+        }
+
+        // Manual run escape hatch — only shown when Bootcamp is the Training tab root
+        if (onGoToManualSetup != null) {
+            TextButton(
+                onClick = onGoToManualSetup,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) {
+                Text(
+                    text = "Set up a manual run →",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTextTertiary
+                )
+            }
         }
     }
 }

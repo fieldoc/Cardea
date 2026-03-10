@@ -26,6 +26,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
+import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -199,7 +200,8 @@ fun AccountScreen(
                             SegmentedButton(
                                 shape = SegmentedButtonDefaults.itemShape(i, 3),
                                 selected = state.voiceVerbosity == v,
-                                onClick = { viewModel.setVerbosity(v); viewModel.saveAudioSettings() }
+                                onClick = { viewModel.setVerbosity(v); viewModel.saveAudioSettings() },
+                                colors = cardeaSegmentedButtonColors()
                             ) { Text(label) }
                         }
                     }
