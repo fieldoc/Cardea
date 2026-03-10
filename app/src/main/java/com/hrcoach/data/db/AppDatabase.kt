@@ -8,11 +8,32 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
                 BootcampEnrollmentEntity::class, BootcampSessionEntity::class],
-    version = 8,
+    version = 11,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // No schema change. BLACKOUT is a new DaySelectionLevel value
+                // stored in the existing preferredDays TEXT column.
+            }
+        }
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Fix missing columns that might have been skipped in dev versions 5-9
+                runCatching { db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN illnessPromptSnoozedUntilMs INTEGER NOT NULL DEFAULT 0") }
+                runCatching { db.execSQL("ALTER TABLE bootcamp_sessions ADD COLUMN presetIndex INTEGER") }
+                runCatching { db.execSQL("ALTER TABLE bootcamp_sessions ADD COLUMN completedAtMs INTEGER") }
+                runCatching { db.execSQL("ALTER TABLE track_points ADD COLUMN altitudeMeters REAL") }
+            }
+        }
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Already partially run on some devices, move logic to 9_10
+                runCatching { db.execSQL("ALTER TABLE bootcamp_enrollments ADD COLUMN illnessPromptSnoozedUntilMs INTEGER NOT NULL DEFAULT 0") }
+            }
+        }
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // No schema changes between 7 and 8 (identity hash matches)
