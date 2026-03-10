@@ -48,7 +48,11 @@ data class BootcampUiState(
     val tierPromptEvidence: String? = null,
     val scheduledRestDay: Boolean = false,
     val missedSession: Boolean = false,
-    val showDeleteConfirmDialog: Boolean = false
+    val showDeleteConfirmDialog: Boolean = false,
+    // Reschedule bottom sheet
+    val rescheduleSheetSessionId: Long? = null,
+    val rescheduleAutoTargetDay: Int? = null,
+    val rescheduleAutoTargetLabel: String? = null,
 )
 
 data class SessionUiItem(

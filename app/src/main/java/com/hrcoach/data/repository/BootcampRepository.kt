@@ -75,6 +75,26 @@ class BootcampRepository @Inject constructor(
         bootcampDao.updateSession(updated)
     }
 
+    suspend fun rescheduleSession(sessionId: Long, newDayOfWeek: Int) {
+        val session = bootcampDao.getSessionById(sessionId) ?: return
+        bootcampDao.updateSession(session.copy(dayOfWeek = newDayOfWeek))
+    }
+
+    suspend fun deferSession(sessionId: Long) {
+        val session = bootcampDao.getSessionById(sessionId) ?: return
+        bootcampDao.updateSession(session.copy(status = BootcampSessionEntity.STATUS_DEFERRED))
+    }
+
+    suspend fun dropSession(sessionId: Long) {
+        val session = bootcampDao.getSessionById(sessionId) ?: return
+        bootcampDao.updateSession(
+            session.copy(
+                status = BootcampSessionEntity.STATUS_SKIPPED,
+                completedAtMs = System.currentTimeMillis()
+            )
+        )
+    }
+
     suspend fun graduateEnrollment(enrollmentId: Long) {
         val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
         bootcampDao.updateEnrollment(
