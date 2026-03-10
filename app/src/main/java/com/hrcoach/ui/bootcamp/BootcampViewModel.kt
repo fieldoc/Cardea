@@ -8,6 +8,7 @@ import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.domain.bootcamp.firstPreferredDayAfterMs
 import com.hrcoach.domain.bootcamp.FitnessEvaluator
 import com.hrcoach.domain.bootcamp.GapAdvisor
 import com.hrcoach.domain.bootcamp.PhaseEngine
@@ -286,7 +287,7 @@ class BootcampViewModel @Inject constructor(
         val goal = state.onboardingGoal ?: return
         val preferredDays = defaultPreferredDays(state.onboardingRunsPerWeek)
         viewModelScope.launch {
-            val startDate = System.currentTimeMillis()
+            val startDate = firstPreferredDayAfterMs(preferredDays)
             bootcampRepository.createEnrollment(
                 goal = goal,
                 targetMinutesPerRun = state.onboardingMinutes,
