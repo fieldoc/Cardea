@@ -1,5 +1,7 @@
 package com.hrcoach.domain.model
 
+import com.hrcoach.domain.engine.TuningDirection
+
 data class PaceHrBucket(
     val avgHr: Float = 0f,
     val sampleCount: Int = 0
@@ -15,5 +17,6 @@ data class AdaptiveProfile(
     val hrMax: Int? = null,
     val hrMaxIsCalibrated: Boolean = false,
     val hrRest: Float? = null,
+    val lastTuningDirection: TuningDirection? = null,
 )
 

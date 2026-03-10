@@ -471,7 +471,69 @@ class WorkoutForegroundService : LifecycleService() {
                 }
                 // Mark unreliable if cadence lock was detected during the session
                 val reliableMetrics = metricsToSave?.copy(trimpReliable = !cadenceLockSuspected)
-                reliableMetrics?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
+
+                // --- TRIMP score ---
+                val durationMin = (now - workoutStartMs) / 60_000f
+                val sessionAvgHr = reliableMetrics?.avgHr
+                    ?: if (hrSampleCount > 0) (hrSampleSum.toFloat() / hrSampleCount) else null
+                val hrMaxEst = currentProfile.hrMax?.toFloat() ?: 180f
+                val trimpScore = reliableMetrics?.trimpScore
+                    ?: if (sessionAvgHr != null && durationMin > 0f) {
+                        val intensity = sessionAvgHr / hrMaxEst
+                        durationMin * sessionAvgHr * intensity * intensity
+                    } else null
+
+                // --- Environment flag — compares session pace to recent baseline at similar HR ---
+                val recentMetricsForEnv = workoutMetricsRepository.getRecentMetrics(42)
+                val baselinePace: Float? = if (sessionAvgHr != null) {
+                    recentMetricsForEnv
+                        .filter { m ->
+                            m.workoutId != workoutId &&
+                            m.avgHr != null &&
+                            kotlin.math.abs(m.avgHr!! - sessionAvgHr) < 10f &&
+                            m.avgPaceMinPerKm != null
+                        }
+                        .mapNotNull { it.avgPaceMinPerKm }
+                        .sorted()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let { paces -> paces[paces.size / 2] }
+                } else null
+
+                val environmentAffected = EnvironmentFlagDetector.isEnvironmentAffected(
+                    aerobicDecoupling = reliableMetrics?.aerobicDecoupling,
+                    sessionAvgGapPace = reliableMetrics?.avgPaceMinPerKm,
+                    baselineGapPaceAtEquivalentHr = baselinePace
+                )
+
+                // Save complete metrics
+                val completeMetrics = reliableMetrics?.copy(
+                    trimpScore = trimpScore,
+                    environmentAffected = environmentAffected
+                )
+                completeMetrics?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
+
+                // --- Update CTL / ATL ---
+                if (trimpScore != null) {
+                    val prevWorkout = repository.getAllWorkoutsOnce()
+                        .sortedByDescending { it.startTime }
+                        .firstOrNull { it.id != workoutId }
+                    val daysSinceLast = if (prevWorkout != null) {
+                        ((now - prevWorkout.startTime) / 86_400_000L).toInt().coerceAtLeast(1)
+                    } else 1
+                    val loadResult = FitnessLoadCalculator.updateLoads(
+                        currentCtl = currentProfile.ctl,
+                        currentAtl = currentProfile.atl,
+                        trimpScore = trimpScore,
+                        daysSinceLast = daysSinceLast
+                    )
+                    currentProfile = currentProfile.copy(ctl = loadResult.ctl, atl = loadResult.atl)
+                }
+
+                // --- Fitness signal evaluation → store tuning direction for next Bootcamp session ---
+                val updatedRecentMetrics = workoutMetricsRepository.getRecentMetrics(42)
+                val fitnessEval = FitnessSignalEvaluator.evaluate(currentProfile, updatedRecentMetrics)
+                currentProfile = currentProfile.copy(lastTuningDirection = fitnessEval.tuningDirection)
+                adaptiveProfileRepository.saveProfile(currentProfile)
 
                 WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
             }
