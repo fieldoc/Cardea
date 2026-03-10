@@ -403,7 +403,7 @@ private fun ZoneStatusPill(state: WorkoutSnapshot, zoneColor: Color) {
         Box(
             modifier = Modifier
                 .size(8.dp)
-                .background(CardeaGradient, CircleShape)
+                .background(zoneColor, CircleShape)
         )
         Text(
             text = label,

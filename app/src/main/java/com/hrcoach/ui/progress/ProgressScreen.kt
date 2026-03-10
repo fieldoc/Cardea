@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import android.graphics.BlurMaskFilter
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -45,6 +47,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.ui.charts.BarChart
 import com.hrcoach.ui.charts.CalendarHeatmap
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.charts.PieChart
 import com.hrcoach.ui.charts.ProgressChartCard
 import com.hrcoach.ui.charts.ScatterPlot
@@ -126,9 +129,14 @@ fun ProgressScreen(
                                 textAlign = TextAlign.Center
                             )
                             Spacer(Modifier.height(16.dp))
-                            OutlinedButton(onClick = onStartWorkout) {
-                                Text(stringResource(R.string.button_start_workout))
-                            }
+                            CardeaButton(
+                                text = stringResource(R.string.button_start_workout),
+                                onClick = onStartWorkout,
+                                modifier = Modifier
+                                    .height(48.dp)
+                                    .fillMaxWidth(0.7f),
+                                innerPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
+                            )
                         }
                     }
                 }
@@ -479,13 +487,20 @@ private fun TrendLineChart(
                             )
                         }
 
-                        // Glow pass — drawn first, under the main line
-                        drawPath(
-                            path = path,
-                            brush = chartGradient,
-                            alpha = 0.15f,
-                            style = Stroke(width = 18f, cap = StrokeCap.Round)
-                        )
+                        // Glow pass — true neon glow via BlurMaskFilter
+                        drawIntoCanvas { canvas ->
+                            val glowPaint = Paint().apply {
+                                asFrameworkPaint().apply {
+                                    isAntiAlias = true
+                                    style = android.graphics.Paint.Style.STROKE
+                                    strokeWidth = 5f
+                                    strokeCap = android.graphics.Paint.Cap.ROUND
+                                    maskFilter = BlurMaskFilter(16f, BlurMaskFilter.Blur.NORMAL)
+                                    color = android.graphics.Color.argb(100, 0xFF, 0x2D, 0xA6)
+                                }
+                            }
+                            canvas.drawPath(path, glowPaint)
+                        }
                         // Main gradient line
                         drawPath(
                             path = path,

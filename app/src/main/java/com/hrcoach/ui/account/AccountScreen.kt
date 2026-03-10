@@ -24,9 +24,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import com.hrcoach.ui.components.CardeaSlider
+import com.hrcoach.ui.components.CardeaSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -52,7 +51,6 @@ import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GradientPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,8 +87,15 @@ fun AccountScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Profile card
+                // Profile card with gradient accent
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .background(CardeaGradient)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -173,7 +178,7 @@ fun AccountScreen(
                         Text("Alert Sound Volume", style = MaterialTheme.typography.bodyMedium, color = Color.White)
                         Text("${state.earconVolume}%", color = CardeaTextSecondary)
                     }
-                    Slider(
+                    CardeaSlider(
                         value = state.earconVolume.toFloat(),
                         onValueChange = viewModel::setVolume,
                         valueRange = 0f..100f,
@@ -208,10 +213,9 @@ fun AccountScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Vibration Alerts", style = MaterialTheme.typography.bodyMedium, color = Color.White)
-                        Switch(
+                        CardeaSwitch(
                             checked = state.enableVibration,
-                            onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() },
-                            colors = SwitchDefaults.colors(checkedTrackColor = GradientPink)
+                            onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() }
                         )
                     }
                 }

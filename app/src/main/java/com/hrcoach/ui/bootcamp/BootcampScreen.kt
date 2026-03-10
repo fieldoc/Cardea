@@ -3,6 +3,8 @@ package com.hrcoach.ui.bootcamp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +24,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -167,8 +169,9 @@ fun BootcampScreen(
             if (uiState.rescheduleSheetSessionId != null) {
                 RescheduleBottomSheet(
                     autoTargetLabel = uiState.rescheduleAutoTargetLabel,
-                    onConfirm   = { viewModel.confirmReschedule() },
-                    onChooseDay = { viewModel.dismissRescheduleSheet() },
+                    availableDays = uiState.rescheduleAvailableDays,
+                    availableLabels = uiState.rescheduleAvailableLabels,
+                    onConfirm   = { day -> viewModel.confirmReschedule(day) },
                     onDefer     = { viewModel.deferReschedule() },
                     onDismiss   = { viewModel.dismissRescheduleSheet() }
                 )
@@ -205,7 +208,7 @@ private fun NoEnrollmentContent(onStartBootcamp: () -> Unit) {
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             FeatureBullet(
-                icon = Icons.Default.TrendingUp,
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
                 title = "Periodized phases",
                 detail = "Base, Build, Peak, and Taper — structured like real coach plans."
             )
@@ -284,7 +287,7 @@ private fun FeatureBullet(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = GradientPink,
+            tint = CardeaTextPrimary,
             modifier = Modifier.size(20.dp)
         )
         Column {
@@ -1190,7 +1193,9 @@ private fun NextSessionCard(
             style = MaterialTheme.typography.bodyMedium,
             color = CardeaTextSecondary
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
         CardeaButton(
             text = "Start Run",
             onClick = {
@@ -1199,34 +1204,49 @@ private fun NextSessionCard(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(52.dp)
         )
-        if (onReschedule != null) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "can't make it today?",
-                style = MaterialTheme.typography.labelSmall,
-                color = CardeaTextTertiary,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .clickable { onReschedule() }
-            )
-        }
-        TextButton(
-            onClick = onSwapToRest,
-            modifier = Modifier.align(Alignment.End)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Rest today instead",
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
-            )
+            if (onReschedule != null) {
+                TextButton(
+                    onClick = onReschedule,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Text(
+                        text = "Reschedule",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTextSecondary
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.width(1.dp))
+            }
+
+            TextButton(
+                onClick = onSwapToRest,
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = "Rest today",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTextTertiary
+                )
+            }
         }
+
         swapMessage?.let {
             Text(
                 text = it,
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextTertiary
+                color = CardeaTextTertiary,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
@@ -1238,52 +1258,114 @@ private fun NextSessionCard(
 @Composable
 private fun RescheduleBottomSheet(
     autoTargetLabel: String?,
-    onConfirm: () -> Unit,
-    onChooseDay: () -> Unit,
+    availableDays: List<Int>,
+    availableLabels: List<String>,
+    onConfirm: (Int?) -> Unit,
     onDefer: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF12161F),
+        containerColor = CardeaBgSecondary,
+        dragHandle = null,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(24.dp)
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = if (autoTargetLabel != null) "Move to $autoTargetLabel"
-                       else "No slots left this week",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
+                text = "Reschedule Run",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTextPrimary
             )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
             if (autoTargetLabel != null) {
+                Text(
+                    text = "Recommended for $autoTargetLabel",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CardeaTextSecondary
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
                 CardeaButton(
                     text = "Sounds good",
-                    onClick = onConfirm,
-                    cornerRadius = 12.dp,
+                    onClick = { onConfirm(null) }, // Use auto target
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(52.dp)
+                )
+            } else {
+                Text(
+                    text = "No other preferred slots this week.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CardeaTextSecondary
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+
+                CardeaButton(
+                    text = "Drop for this week",
+                    onClick = { onConfirm(null) }, // Drops the session
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
                 )
             }
-            Text(
-                text = "Choose a different day",
-                style = MaterialTheme.typography.labelMedium,
-                color = CardeaTextTertiary,
-                modifier = Modifier.clickable { onChooseDay() }
-            )
-            Text(
-                text = "I'm not sure yet",
-                style = MaterialTheme.typography.labelMedium,
-                color = CardeaTextTertiary,
-                modifier = Modifier.clickable { onDefer() }
-            )
+            
+            if (availableDays.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "Or pick another day",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTextTertiary
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    availableDays.forEachIndexed { index, day ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(GlassHighlight)
+                                .clickable { onConfirm(day) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = availableLabels[index],
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                                color = CardeaTextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+
+            TextButton(
+                onClick = onDefer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "I'm not sure yet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTextTertiary
+                )
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -56,8 +57,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
+import com.hrcoach.ui.components.CardeaSlider
+import com.hrcoach.ui.components.CardeaSwitch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -99,6 +100,7 @@ import kotlin.math.roundToInt
 fun SetupScreen(
     isWideLayout: Boolean,
     onStartWorkout: (configJson: String, deviceAddress: String?) -> Unit,
+    onGoToBootcamp: () -> Unit,
     viewModel: SetupViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -149,6 +151,10 @@ fun SetupScreen(
             ModeSelector(
                 selectedMode = state.mode,
                 onModeSelected = viewModel::setMode
+            )
+
+            BootcampEntryCard(
+                onClick = onGoToBootcamp
             )
 
             HrMonitorCard(
@@ -266,6 +272,74 @@ fun SetupScreen(
 }
 
 @Composable
+private fun BootcampEntryCard(
+    onClick: () -> Unit
+) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.06f))
+                    .border(1.dp, HrCoachThemeTokens.glassBorder, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = "STRUCTURED TRAINING",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = HrCoachThemeTokens.subtleText
+                )
+                Text(
+                    text = "Use Bootcamp instead",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = Color.White
+                )
+                Text(
+                    text = "Skip manual setup and follow an adaptive weekly running plan.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = HrCoachThemeTokens.subtleText
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(CardeaGradient)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "OPEN BOOTCAMP",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTextPrimary
+            )
+        }
+    }
+}
+
+@Composable
 private fun ModeSelector(
     selectedMode: WorkoutMode,
     onModeSelected: (WorkoutMode) -> Unit
@@ -373,7 +447,7 @@ private fun AlertBehaviorCard(
                     color = HrCoachThemeTokens.subtleText
                 )
             }
-            Slider(
+            CardeaSlider(
                 value = state.earconVolume.toFloat(),
                 onValueChange = onVolumeChange,
                 valueRange = 0f..100f,
@@ -411,7 +485,7 @@ private fun AlertBehaviorCard(
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Switch(
+                CardeaSwitch(
                     checked = state.enableVibration,
                     onCheckedChange = onVibrationChange
                 )

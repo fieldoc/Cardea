@@ -1,6 +1,7 @@
 package com.hrcoach.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,6 +40,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.components.StatItem
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaTextSecondary
@@ -57,6 +59,7 @@ fun HomeScreen(
     onGoToProgress: () -> Unit,
     onGoToHistory: () -> Unit,
     onGoToAccount: () -> Unit,
+    onGoToBootcamp: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -78,8 +81,8 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 // Header
                 Row(
@@ -89,44 +92,59 @@ fun HomeScreen(
                 ) {
                     Column {
                         Text(
-                            text = "Cardea",
-                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = GradientPink
+                            text = "CARDEA",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 3.sp
+                            ),
+                            color = Color.White.copy(alpha = 0.9f)
                         )
                         Text(
                             text = state.greeting,
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Medium),
+                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
                     }
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
                             .background(GlassHighlight)
                             .clickable(onClick = onGoToAccount),
                         contentAlignment = Alignment.Center
                     ) {
-                        CardeaLogo(size = 24.dp)
+                        CardeaLogo(size = 28.dp, animate = false)
                     }
                 }
 
-                // Efficiency Ring Card
-                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                // Efficiency Ring Card (Athletic Refinement)
+                GlassCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp)
+                ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Weekly Activity",
-                                style = MaterialTheme.typography.titleMedium,
+                                text = "WEEKLY ACTIVITY",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                ),
+                                color = CardeaTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${state.workoutsThisWeek} of ${state.weeklyTarget}",
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                                 color = Color.White
                             )
                             Text(
-                                text = "${state.workoutsThisWeek} of ${state.weeklyTarget} this week",
-                                style = MaterialTheme.typography.bodySmall,
+                                text = "SESSIONS COMPLETED",
+                                style = MaterialTheme.typography.labelSmall,
                                 color = CardeaTextSecondary
                             )
                         }
@@ -158,9 +176,9 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            LastRunStat("Date", dateStr)
-                            LastRunStat("Distance", "%.2f km".format(distKm))
-                            LastRunStat("Duration", "${durationMin}m")
+                            StatItem("Date", dateStr)
+                            StatItem("Distance", "%.2f km".format(distKm))
+                            StatItem("Duration", "${durationMin}m")
                         }
                     }
                 }
@@ -172,7 +190,50 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().height(56.dp)
                 )
 
-                // Quick Links
+                // Bootcamp Card — elevated entry point for structured training
+                GlassCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onGoToBootcamp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "STRUCTURED TRAINING",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                ),
+                                color = CardeaTextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Bootcamp",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Adaptive program — phases, HR zones, life-aware",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTextSecondary
+                            )
+                        }
+                        CardeaButton(
+                            text = "Jump back in",
+                            onClick = onGoToBootcamp,
+                            modifier = Modifier.height(36.dp),
+                            innerPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp),
+                            cornerRadius = 10.dp
+                        )
+                    }
+                }
+
+                // Secondary quick links
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -201,22 +262,35 @@ private fun EfficiencyRing(percent: Int) {
         modifier = Modifier
             .size(90.dp)
             .drawWithCache {
-                val stroke = 6.dp.toPx()
+                val stroke = 4.dp.toPx()
+                val segments = 40
+                val sweep = 360f / segments
                 val inset = stroke / 2f
                 val arcSize = Size(size.width - stroke, size.height - stroke)
-                val sweepAngle = (percent / 100f) * 360f
+                val targetSweep = (percent / 100f) * 360f
+
                 onDrawWithContent {
-                    drawArc(
-                        color = Color(0x14FFFFFF),
-                        startAngle = -90f, sweepAngle = 360f, useCenter = false,
-                        style = Stroke(width = stroke, cap = StrokeCap.Round),
-                        topLeft = Offset(inset, inset), size = arcSize
-                    )
-                    if (sweepAngle > 0f) {
+                    // Background segments
+                    for (i in 0 until segments) {
+                        drawArc(
+                            color = Color.White.copy(alpha = 0.05f),
+                            startAngle = i * sweep - 90f + 1f,
+                            sweepAngle = sweep - 2f,
+                            useCenter = false,
+                            style = Stroke(width = stroke, cap = StrokeCap.Butt),
+                            topLeft = Offset(inset, inset), size = arcSize
+                        )
+                    }
+                    
+                    // Progress segments
+                    val activeSegments = (percent / 100f * segments).toInt()
+                    for (i in 0 until activeSegments) {
                         drawArc(
                             brush = gradientBrush,
-                            startAngle = -90f, sweepAngle = sweepAngle, useCenter = false,
-                            style = Stroke(width = stroke, cap = StrokeCap.Round),
+                            startAngle = i * sweep - 90f + 1f,
+                            sweepAngle = sweep - 2f,
+                            useCenter = false,
+                            style = Stroke(width = stroke, cap = StrokeCap.Butt),
                             topLeft = Offset(inset, inset), size = arcSize
                         )
                     }
@@ -228,21 +302,10 @@ private fun EfficiencyRing(percent: Int) {
         Text(
             text = "$percent%",
             style = MaterialTheme.typography.titleLarge.copy(
-                fontWeight = FontWeight.Medium,
-                fontSize = 22.sp
+                fontWeight = FontWeight.Black,
+                fontSize = 18.sp,
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
             ),
-            color = Color.White
-        )
-    }
-}
-
-@Composable
-private fun LastRunStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
             color = Color.White
         )
     }
@@ -252,12 +315,24 @@ private fun LastRunStat(label: String, value: String) {
 private fun QuickLinkChip(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
         modifier = modifier
-            .height(44.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0x14FFFFFF))
+            .height(48.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0x08FFFFFF))
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(14.dp)
+            )
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = CardeaTextSecondary)
+        Text(
+            text = label.uppercase(), 
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            ), 
+            color = Color.White.copy(alpha = 0.7f)
+        )
     }
 }

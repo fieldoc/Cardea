@@ -1,6 +1,5 @@
 package com.hrcoach.ui.history
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,8 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -41,6 +38,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.ui.components.CardeaButton
+import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.components.StatItem
+import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
 import kotlin.math.floor
@@ -51,8 +51,6 @@ private val HistoryBackdrop = Brush.radialGradient(
         Color(0xFF0B0F17)
     )
 )
-
-private val HistoryGlass = Color(0x0FFFFFFF)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,7 +92,7 @@ fun HistoryListScreen(
                         "${workouts.size} recorded sessions ready to review."
                     },
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFB6C2D1)
+                    color = CardeaTextSecondary
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -121,37 +119,31 @@ fun HistoryListScreen(
 
 @Composable
 private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 24.dp),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-        colors = CardDefaults.cardColors(containerColor = HistoryGlass)
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 28.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-            Text(
-                text = "Your run archive is still empty",
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color(0xFFF5F7FB),
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "Start a workout to unlock route replay, post-run insights, and long-term progress trends.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFFB8C5D3)
-            )
-            CardeaButton(
-                text = stringResource(R.string.button_start_workout),
-                onClick = onStartWorkout,
-                modifier = Modifier.height(44.dp),
-                innerPadding = PaddingValues(horizontal = 24.dp)
-            )
-        }
+        Text(
+            text = "Your run archive is still empty",
+            style = MaterialTheme.typography.headlineSmall,
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Start a workout to unlock route replay, post-run insights, and long-term progress trends.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = CardeaTextSecondary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        CardeaButton(
+            text = stringResource(R.string.button_start_workout),
+            onClick = onStartWorkout,
+            modifier = Modifier.height(44.dp),
+            innerPadding = PaddingValues(horizontal = 24.dp)
+        )
     }
 }
 
@@ -166,102 +158,65 @@ private fun WorkoutCard(
     val distanceLabel = String.format("%.2f km", distanceKm)
     val paceLabel = averagePaceLabel(workout, distanceKm)
 
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-        colors = CardDefaults.cardColors(containerColor = HistoryGlass)
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Top
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                ) {
                     Text(
-                        text = date,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color(0xFFF5F7FB),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(999.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                    ) {
-                        Text(
-                            text = workout.mode.asModeLabel(),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(0xFFD8E8FF)
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = distanceLabel,
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color(0xFFFDFEFF),
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Tap for route and stats",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF8FA4B7)
+                        text = workout.mode.asModeLabel(),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                HistoryMetricChip(
-                    label = "Duration",
-                    value = duration,
-                    modifier = Modifier.weight(1f)
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = distanceLabel,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold
                 )
-                HistoryMetricChip(
-                    label = "Avg pace",
-                    value = paceLabel,
-                    modifier = Modifier.weight(1f)
+                Text(
+                    text = "Tap for route and stats",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTextSecondary
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun HistoryMetricChip(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White.copy(alpha = 0.04f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF8EA4B8)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            StatItem(
+                label = "Duration",
+                value = duration,
+                modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFFF4F7FB),
-                fontWeight = FontWeight.Medium
+            StatItem(
+                label = "Avg pace",
+                value = paceLabel,
+                modifier = Modifier.weight(1f)
             )
         }
     }
