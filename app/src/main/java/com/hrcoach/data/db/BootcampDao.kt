@@ -45,9 +45,48 @@ interface BootcampDao {
     @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND status = 'SCHEDULED' ORDER BY weekNumber, dayOfWeek LIMIT 1")
     suspend fun getNextScheduledSession(enrollmentId: Long): BootcampSessionEntity?
 
+    @Query("""
+        SELECT * FROM bootcamp_sessions
+        WHERE enrollmentId = :enrollmentId
+          AND status IN ('SCHEDULED', 'DEFERRED')
+        ORDER BY weekNumber, dayOfWeek
+        LIMIT 1
+    """)
+    suspend fun getNextSession(enrollmentId: Long): BootcampSessionEntity?
+
+    @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId ORDER BY weekNumber, dayOfWeek")
+    suspend fun getSessionsForEnrollmentOnce(enrollmentId: Long): List<BootcampSessionEntity>
+
     @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND status = 'COMPLETED' ORDER BY weekNumber DESC, dayOfWeek DESC LIMIT 1")
     suspend fun getLastCompletedSession(enrollmentId: Long): BootcampSessionEntity?
 
     @Query("DELETE FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND weekNumber > :weekNumber")
     suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int)
+
+    /**
+     * Atomically marks a session as completed, advances the enrollment phase/week pointer,
+     * and inserts the pre-built sessions for the next week.
+     * [newSessions] may be empty when the week advance does not yet require seeding.
+     */
+    @Transaction
+    suspend fun completeSessionAndAdvanceWeek(
+        completedSession: BootcampSessionEntity,
+        updatedEnrollment: BootcampEnrollmentEntity,
+        newSessions: List<BootcampSessionEntity>
+    ) {
+        updateSession(completedSession)
+        updateEnrollment(updatedEnrollment)
+        if (newSessions.isNotEmpty()) {
+            insertSessions(newSessions)
+        }
+    }
+
+    /**
+     * Atomically marks a session as completed without advancing the enrollment.
+     * Used when the week is not yet fully finished.
+     */
+    @Transaction
+    suspend fun completeSessionOnly(completedSession: BootcampSessionEntity) {
+        updateSession(completedSession)
+    }
 }

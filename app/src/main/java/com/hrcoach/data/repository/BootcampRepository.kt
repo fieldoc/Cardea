@@ -60,11 +60,35 @@ class BootcampRepository @Inject constructor(
     suspend fun getNextScheduledSession(enrollmentId: Long): BootcampSessionEntity? =
         bootcampDao.getNextScheduledSession(enrollmentId)
 
+    suspend fun getNextSession(enrollmentId: Long): BootcampSessionEntity? =
+        bootcampDao.getNextSession(enrollmentId)
+
+    suspend fun getSessionsForEnrollmentOnce(enrollmentId: Long): List<BootcampSessionEntity> =
+        bootcampDao.getSessionsForEnrollmentOnce(enrollmentId)
+
     suspend fun getLastCompletedSession(enrollmentId: Long): BootcampSessionEntity? =
         bootcampDao.getLastCompletedSession(enrollmentId)
 
     suspend fun updateSession(session: BootcampSessionEntity) =
         bootcampDao.updateSession(session)
+
+    /**
+     * Atomically marks [completedSession] as completed, updates [updatedEnrollment] to reflect
+     * the new phase/week, and inserts [newSessions] for the upcoming week.
+     * All three writes happen inside a single SQLite transaction.
+     */
+    suspend fun completeSessionAndAdvanceWeek(
+        completedSession: BootcampSessionEntity,
+        updatedEnrollment: BootcampEnrollmentEntity,
+        newSessions: List<BootcampSessionEntity>
+    ) = bootcampDao.completeSessionAndAdvanceWeek(completedSession, updatedEnrollment, newSessions)
+
+    /**
+     * Atomically marks [completedSession] as completed without advancing enrollment.
+     * Used when the current week still has uncompleted sessions.
+     */
+    suspend fun completeSessionOnly(completedSession: BootcampSessionEntity) =
+        bootcampDao.completeSessionOnly(completedSession)
 
     suspend fun swapSessionToRestDay(sessionId: Long) {
         val session = bootcampDao.getSessionById(sessionId) ?: return
@@ -115,7 +139,7 @@ class BootcampRepository @Inject constructor(
         val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
         bootcampDao.updateEnrollment(
             enrollment.copy(
-                preferredDays = BootcampEnrollmentEntity.serializeDayPreferences(newDays)
+                preferredDays = newDays
             )
         )
     }
@@ -136,7 +160,7 @@ class BootcampRepository @Inject constructor(
             goalType = goal.name,
             targetMinutesPerRun = targetMinutesPerRun,
             runsPerWeek = runsPerWeek,
-            preferredDays = preferredDays.joinToString(",", "[", "]"),
+            preferredDays = preferredDays.map { com.hrcoach.domain.bootcamp.DayPreference(it, com.hrcoach.domain.bootcamp.DaySelectionLevel.AVAILABLE) },
             startDate = startDate
         )
 
