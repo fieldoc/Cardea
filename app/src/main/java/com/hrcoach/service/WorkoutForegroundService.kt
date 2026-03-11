@@ -10,7 +10,10 @@ import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.WorkoutRepository
+import com.hrcoach.data.repository.AutoPauseSettingsRepository
 import com.hrcoach.domain.engine.AdaptivePaceController
+import com.hrcoach.domain.engine.AutoPauseDetector
+import com.hrcoach.domain.engine.AutoPauseEvent
 import com.hrcoach.domain.engine.EnvironmentFlagDetector
 import com.hrcoach.domain.engine.FitnessLoadCalculator
 import com.hrcoach.domain.engine.FitnessSignalEvaluator
@@ -45,6 +48,7 @@ class WorkoutForegroundService : LifecycleService() {
         const val ACTION_PAUSE = "com.hrcoach.ACTION_PAUSE"
         const val ACTION_RESUME = "com.hrcoach.ACTION_RESUME"
         const val ACTION_RESCAN_BLE = "com.hrcoach.ACTION_RESCAN_BLE"
+        const val ACTION_TOGGLE_AUTO_PAUSE = "com.hrcoach.ACTION_TOGGLE_AUTO_PAUSE"
         const val EXTRA_CONFIG_JSON = "config_json"
         const val EXTRA_DEVICE_ADDRESS = "device_address"
 
@@ -66,6 +70,9 @@ class WorkoutForegroundService : LifecycleService() {
     lateinit var audioSettingsRepository: AudioSettingsRepository
 
     @Inject
+    lateinit var autoPauseSettingsRepository: AutoPauseSettingsRepository
+
+    @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
 
     private val gson = JsonCodec.gson
@@ -84,8 +91,15 @@ class WorkoutForegroundService : LifecycleService() {
     private var stopJob: Job? = null
     private var startupJob: Job? = null
 
+    private var autoPauseDetector: AutoPauseDetector? = null
+    private var sessionAutoPauseEnabled: Boolean = true
+    private var autoPauseStartMs: Long = 0L
+    private var totalAutoPausedMs: Long = 0L
+
     private var workoutId: Long = 0L
     private var workoutStartMs: Long = 0L
+    private var totalPausedMs: Long = 0L
+    private var pauseStartMs: Long = 0L
     private var isStopping: Boolean = false
     private var latestTick: WorkoutTick? = null
 
@@ -146,6 +160,23 @@ class WorkoutForegroundService : LifecycleService() {
                 bleCoordinator.startScan()
                 return START_NOT_STICKY
             }
+
+            ACTION_TOGGLE_AUTO_PAUSE -> {
+                sessionAutoPauseEnabled = !sessionAutoPauseEnabled
+                if (!sessionAutoPauseEnabled) {
+                    // If currently auto-paused when toggled off, resume everything cleanly
+                    if (WorkoutState.snapshot.value.isAutoPaused) {
+                        totalAutoPausedMs += System.currentTimeMillis() - autoPauseStartMs
+                        autoPauseStartMs = 0L
+                        gpsTracker?.setMoving(true)
+                    }
+                    autoPauseDetector?.reset()
+                    WorkoutState.update { it.copy(isAutoPaused = false, autoPauseEnabled = false) }
+                } else {
+                    WorkoutState.update { it.copy(autoPauseEnabled = true) }
+                }
+                return START_NOT_STICKY
+            }
         }
         return START_NOT_STICKY
     }
@@ -154,6 +185,12 @@ class WorkoutForegroundService : LifecycleService() {
         isStopping = false
         workoutId = 0L
         latestTick = null
+        totalPausedMs = 0L
+        pauseStartMs = 0L
+        autoPauseDetector = AutoPauseDetector()
+        sessionAutoPauseEnabled = autoPauseSettingsRepository.isAutoPauseEnabled()
+        autoPauseStartMs = 0L
+        totalAutoPausedMs = 0L
         alertPolicy.reset()
         coachingEventRouter.reset()
         trackPointRecorder.reset()
@@ -200,7 +237,8 @@ class WorkoutForegroundService : LifecycleService() {
                         isPaused = false,
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
                         guidanceText = "GET HR SIGNAL",
-                        adaptiveLagSec = adaptiveController?.currentLagSec() ?: 0f
+                        adaptiveLagSec = adaptiveController?.currentLagSec() ?: 0f,
+                        autoPauseEnabled = sessionAutoPauseEnabled,
                     )
                 )
                 observeWorkoutTicks(workoutConfig)
@@ -220,13 +258,16 @@ class WorkoutForegroundService : LifecycleService() {
                 hrManager.heartRate,
                 hrManager.isConnected,
                 tracker.distanceMeters,
-                tracker.currentLocation
-            ) { hr, connected, distance, location ->
+                tracker.currentLocation,
+                tracker.currentSpeed
+            ) { values ->
+                @Suppress("UNCHECKED_CAST")
                 WorkoutTick(
-                    hr = hr,
-                    connected = connected,
-                    distanceMeters = distance,
-                    location = location
+                    hr = values[0] as Int,
+                    connected = values[1] as Boolean,
+                    distanceMeters = values[2] as Float,
+                    location = values[3] as Location?,
+                    speed = values[4] as Float?
                 )
             }.collect { tick ->
                 processTick(workoutConfig, tick)
@@ -239,7 +280,32 @@ class WorkoutForegroundService : LifecycleService() {
         val adaptive = adaptiveController
         latestTick = tick
         val nowMs = System.currentTimeMillis()
-        val elapsedSeconds = if (workoutStartMs > 0L) (nowMs - workoutStartMs) / 1000L else 0L
+
+        // Auto-pause detection: run before elapsed-time math so state is fresh this tick
+        if (sessionAutoPauseEnabled) {
+            when (autoPauseDetector?.update(tick.speed, nowMs)) {
+                AutoPauseEvent.PAUSED -> {
+                    autoPauseStartMs = nowMs
+                    gpsTracker?.setMoving(false)
+                    WorkoutState.update { it.copy(isAutoPaused = true) }
+                }
+                AutoPauseEvent.RESUMED -> {
+                    totalAutoPausedMs += nowMs - autoPauseStartMs
+                    autoPauseStartMs = 0L
+                    gpsTracker?.setMoving(true)
+                    WorkoutState.update { it.copy(isAutoPaused = false) }
+                }
+                else -> Unit
+            }
+        }
+
+        val isAutoPaused = WorkoutState.snapshot.value.isAutoPaused
+        val currentAutoPauseMs = if (isAutoPaused && autoPauseStartMs > 0L) nowMs - autoPauseStartMs else 0L
+        val elapsedSeconds = if (workoutStartMs > 0L) {
+            ((nowMs - workoutStartMs - totalPausedMs - totalAutoPausedMs - currentAutoPauseMs).coerceAtLeast(0L)) / 1000L
+        } else {
+            0L
+        }
         val target = if (workoutConfig.isTimeBased()) {
             workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
         } else {
@@ -291,11 +357,15 @@ class WorkoutForegroundService : LifecycleService() {
             actualZone = zoneStatus
         )
 
-        val guidance = adaptiveResult?.guidance ?: when (zoneStatus) {
-            ZoneStatus.ABOVE_ZONE -> "SLOW DOWN NOW"
-            ZoneStatus.BELOW_ZONE -> "SPEED UP NOW"
-            ZoneStatus.IN_ZONE -> "HOLD THIS PACE"
-            ZoneStatus.NO_DATA -> "GET HR SIGNAL"
+        val guidance = when {
+            isAutoPaused -> "STOPPED \u2022 ALERTS PAUSED"
+            adaptiveResult?.guidance != null -> adaptiveResult.guidance
+            else -> when (zoneStatus) {
+                ZoneStatus.ABOVE_ZONE -> "SLOW DOWN NOW"
+                ZoneStatus.BELOW_ZONE -> "SPEED UP NOW"
+                ZoneStatus.IN_ZONE -> "HOLD THIS PACE"
+                ZoneStatus.NO_DATA -> "GET HR SIGNAL"
+            }
         }
 
         WorkoutState.update { current ->
@@ -315,41 +385,45 @@ class WorkoutForegroundService : LifecycleService() {
             )
         }
 
-        coachingEventRouter.route(
-            workoutConfig = workoutConfig,
-            connected = tick.connected,
-            distanceMeters = tick.distanceMeters,
-            elapsedSeconds = elapsedSeconds,
-            zoneStatus = zoneStatus,
-            adaptiveResult = adaptiveResult,
-            guidance = guidance,
-            nowMs = nowMs,
-            emitEvent = { event, eventGuidance ->
-                coachingAudioManager?.fireEvent(event, eventGuidance)
-            }
-        )
-        alertPolicy.handle(
-            status = zoneStatus,
-            nowMs = nowMs,
-            alertDelaySec = workoutConfig.alertDelaySec,
-            alertCooldownSec = workoutConfig.alertCooldownSec,
-            guidanceText = guidance,
-            onResetEscalation = { coachingAudioManager?.resetEscalation() },
-            onAlert = { event, eventGuidance ->
-                coachingAudioManager?.fireEvent(event, eventGuidance)
-            }
-        )
+        if (!isAutoPaused) {
+            coachingEventRouter.route(
+                workoutConfig = workoutConfig,
+                connected = tick.connected,
+                distanceMeters = tick.distanceMeters,
+                elapsedSeconds = elapsedSeconds,
+                zoneStatus = zoneStatus,
+                adaptiveResult = adaptiveResult,
+                guidance = guidance,
+                nowMs = nowMs,
+                emitEvent = { event, eventGuidance ->
+                    coachingAudioManager?.fireEvent(event, eventGuidance)
+                }
+            )
+            alertPolicy.handle(
+                status = zoneStatus,
+                nowMs = nowMs,
+                alertDelaySec = workoutConfig.alertDelaySec,
+                alertCooldownSec = workoutConfig.alertCooldownSec,
+                guidanceText = guidance,
+                onResetEscalation = { coachingAudioManager?.resetEscalation() },
+                onAlert = { event, eventGuidance ->
+                    coachingAudioManager?.fireEvent(event, eventGuidance)
+                }
+            )
+        }
 
-        trackPointRecorder.saveIfNeeded(
-            workoutId = workoutId,
-            timestampMs = nowMs,
-            latitude = tick.location?.latitude,
-            longitude = tick.location?.longitude,
-            heartRate = tick.hr,
-            distanceMeters = tick.distanceMeters,
-            force = false,
-            save = repository::addTrackPoint
-        )
+        if (workoutId > 0L) {
+            trackPointRecorder.saveIfNeeded(
+                workoutId = workoutId,
+                timestampMs = nowMs,
+                latitude = tick.location?.latitude,
+                longitude = tick.location?.longitude,
+                heartRate = tick.hr,
+                distanceMeters = tick.distanceMeters,
+                force = false,
+                save = repository::addTrackPoint
+            )
+        }
 
         val notificationText = when {
             !tick.connected -> "HR monitor disconnected"
@@ -361,19 +435,31 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun pauseWorkout() {
+        var didPause = false
         WorkoutState.update { current ->
             if (!current.isRunning || current.isPaused) current else {
+                didPause = true
                 current.copy(isPaused = true, guidanceText = "Workout paused")
             }
+        }
+        if (didPause) {
+            pauseStartMs = System.currentTimeMillis()
         }
         notificationHelper.update("Workout paused")
     }
 
     private fun resumeWorkout() {
+        val nowMs = System.currentTimeMillis()
+        var didResume = false
         WorkoutState.update { current ->
             if (!current.isRunning || !current.isPaused) current else {
+                didResume = true
                 current.copy(isPaused = false)
             }
+        }
+        if (didResume && pauseStartMs > 0L) {
+            totalPausedMs += nowMs - pauseStartMs
+            pauseStartMs = 0L
         }
         notificationHelper.update("Workout resumed")
     }
@@ -564,6 +650,10 @@ class WorkoutForegroundService : LifecycleService() {
         coachingAudioManager = null
         zoneEngine = null
         adaptiveController = null
+        autoPauseDetector?.reset()
+        autoPauseDetector = null
+        autoPauseStartMs = 0L
+        totalAutoPausedMs = 0L
         alertPolicy.reset()
         coachingEventRouter.reset()
         trackPointRecorder.reset()
@@ -581,6 +671,7 @@ class WorkoutForegroundService : LifecycleService() {
         val hr: Int,
         val connected: Boolean,
         val distanceMeters: Float,
-        val location: Location?
+        val location: Location?,
+        val speed: Float?
     )
 }
