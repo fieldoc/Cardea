@@ -21,7 +21,10 @@ data class WorkoutSnapshot(
     val projectionReady: Boolean = false,
     val completedWorkoutId: Long? = null,
     val isFreeRun: Boolean = false,
-    val avgHr: Int = 0          // NEW — running average HR for the session
+    val avgHr: Int = 0,
+    val pendingBootcampSessionId: Long? = null,
+    val isAutoPaused: Boolean = false,
+    val autoPauseEnabled: Boolean = true,
 )
 
 object WorkoutState {
@@ -29,16 +32,13 @@ object WorkoutState {
     val snapshot: StateFlow<WorkoutSnapshot> = _snapshot.asStateFlow()
 
     /**
-     * Holds the session ID of the bootcamp session the user is currently running.
+     * Sets the session ID of the bootcamp session the user is about to run.
      * Written by BootcampViewModel before navigating to the active workout screen,
      * cleared when the workout completes or is discarded.
+     * Stored inside [WorkoutSnapshot] so all observers receive the change reactively.
      */
-    @Volatile
-    var pendingBootcampSessionId: Long? = null
-        private set
-
     fun setPendingBootcampSessionId(id: Long?) {
-        pendingBootcampSessionId = id
+        _snapshot.update { it.copy(pendingBootcampSessionId = id) }
     }
 
     fun update(transform: (WorkoutSnapshot) -> WorkoutSnapshot) {
@@ -51,7 +51,10 @@ object WorkoutState {
 
     fun reset() {
         _snapshot.update { current ->
-            WorkoutSnapshot(completedWorkoutId = current.completedWorkoutId)
+            WorkoutSnapshot(
+                completedWorkoutId = current.completedWorkoutId,
+                pendingBootcampSessionId = current.pendingBootcampSessionId
+            )
         }
     }
 
