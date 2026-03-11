@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.*
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.hrcoach.ui.theme.GradientBlue
@@ -63,6 +64,18 @@ fun CardeaLogo(
         remember { mutableStateOf(0.18f) }
     }
 
+    val showHairpin = size >= 40.dp
+    val density = LocalDensity.current
+    val sizePx = with(density) { size.toPx() }
+
+    val pathCache = remember(sizePx, showHairpin) {
+        val oh = buildOuterHeartPath(sizePx, sizePx)
+        val hp = if (showHairpin) buildHairpinPath(sizePx, sizePx) else null
+        val ol = PathMeasure().apply { setPath(oh, false) }.length
+        val hl = hp?.let { PathMeasure().apply { setPath(it, false) }.length } ?: 0f
+        PathCache(oh, hp, ol, hl, ol + hl)
+    }
+
     Canvas(modifier = modifier.size(size)) {
         val w = this.size.width
         val h = this.size.height
@@ -74,16 +87,12 @@ fun CardeaLogo(
         )
 
         val strokeW = w * 0.082f
-        val showHairpin = size >= 40.dp
 
-        val outerHeart = buildOuterHeartPath(w, h)
-        val hairpin = if (showHairpin) buildHairpinPath(w, h) else null
-
-        val outerLength = PathMeasure().apply { setPath(outerHeart, false) }.length
-        val hairpinLength = hairpin?.let {
-            PathMeasure().apply { setPath(it, false) }.length
-        } ?: 0f
-        val totalLength = outerLength + hairpinLength
+        val outerHeart = pathCache.outerHeart
+        val hairpin = pathCache.hairpin
+        val outerLength = pathCache.outerLength
+        val hairpinLength = pathCache.hairpinLength
+        val totalLength = pathCache.totalLength
 
         // Glow layer — BlurMaskFilter soft bloom, drawn underneath stroke
         val blurRadius = w * 0.15f
@@ -154,6 +163,14 @@ fun CardeaLogo(
         }
     }
 }
+
+private data class PathCache(
+    val outerHeart: Path,
+    val hairpin: Path?,
+    val outerLength: Float,
+    val hairpinLength: Float,
+    val totalLength: Float
+)
 
 /**
  * Smooth rounded heart — two symmetric bezier lobes meeting at the bottom point.

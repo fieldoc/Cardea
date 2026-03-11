@@ -32,8 +32,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,13 +52,14 @@ import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.ZoneRed
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     viewModel: AccountViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -105,7 +106,7 @@ fun AccountScreen(
                                 .background(CardeaGradient),
                             contentAlignment = Alignment.Center
                         ) {
-                            CardeaLogo(size = 36.dp)
+                            CardeaLogo(size = 36.dp, animate = false)
                         }
                         Spacer(modifier = Modifier.width(16.dp))
                         Column {
@@ -159,15 +160,25 @@ fun AccountScreen(
                             singleLine = true,
                             label = { Text("Max HR (bpm)") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            placeholder = { Text("e.g. 185") }
+                            placeholder = { Text("e.g. 185") },
+                            isError = state.maxHrError != null
                         )
                         TextButton(onClick = viewModel::saveMaxHr) { Text("Save") }
                     }
-                    Text(
-                        text = if (state.maxHrSaved) "Saved." else "Used to personalise all preset HR targets.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextSecondary
-                    )
+                    val maxHrErrorMsg = state.maxHrError
+                    if (maxHrErrorMsg != null) {
+                        Text(
+                            text = maxHrErrorMsg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ZoneRed
+                        )
+                    } else {
+                        Text(
+                            text = if (state.maxHrSaved) "Saved." else "Used to personalise all preset HR targets.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTextSecondary
+                        )
+                    }
                 }
 
                 // Audio & Alerts
@@ -219,6 +230,37 @@ fun AccountScreen(
                             checked = state.enableVibration,
                             onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() }
                         )
+                    }
+                }
+
+                // Workout settings
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Workout", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                        HorizontalDivider(color = GlassBorder)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "Auto-pause when stopped",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color.White
+                                )
+                                Text(
+                                    "Silences alerts and pauses the timer at red lights or breaks",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CardeaTextSecondary
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            CardeaSwitch(
+                                checked = state.autoPauseEnabled,
+                                onCheckedChange = { viewModel.setAutoPauseEnabled(it) }
+                            )
+                        }
                     }
                 }
 
