@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -137,7 +138,7 @@ private fun StatChipsRow(state: HomeUiState, modifier: Modifier = Modifier) {
             )
             StatChip(
                 value = lastMin,
-                label = "LAST RUN",
+                label = "DURATION",
                 modifier = Modifier.weight(1f)
             )
         }
@@ -161,6 +162,7 @@ private fun BootcampHeroCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
             .background(
                 brush = Brush.linearGradient(
                     colorStops = arrayOf(
@@ -323,18 +325,19 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val backgroundBrush = remember {
+        Brush.radialGradient(
+            colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
+            center = Offset.Zero,
+            radius = 1800f
+        )
+    }
 
     Scaffold(containerColor = Color.Transparent) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
-                        center = Offset.Zero,
-                        radius = 1800f
-                    )
-                )
+                .background(backgroundBrush)
         ) {
             Column(
                 modifier = Modifier
