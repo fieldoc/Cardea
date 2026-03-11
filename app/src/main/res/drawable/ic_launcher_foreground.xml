@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Subtle glow ring — drawn first (underneath) -->
+    <path
+        android:pathData="M54,90 C54,90 14,66 14,42 C14,26 26,16 38,22 C44,26 50,34 54,42 C58,34 64,26 70,22 C82,16 94,26 94,42 C94,66 54,90 54,90 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="14"
+        android:strokeAlpha="0.18"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="14"
+                android:startY="16"
+                android:endX="94"
+                android:endY="90">
+                <item android:offset="0.00" android:color="#FFFF4D5A"/>
+                <item android:offset="0.35" android:color="#FFFF2DA6"/>
+                <item android:offset="0.65" android:color="#FF4D61FF"/>
+                <item android:offset="1.00" android:color="#FF00E5FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Outer heart path -->
+    <path
+        android:pathData="M54,90 C54,90 14,66 14,42 C14,26 26,16 38,22 C44,26 50,34 54,42 C58,34 64,26 70,22 C82,16 94,26 94,42 C94,66 54,90 54,90 Z"
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="14"
+                android:startY="16"
+                android:endX="94"
+                android:endY="90">
+                <item android:offset="0.00" android:color="#FFFF4D5A"/>
+                <item android:offset="0.35" android:color="#FFFF2DA6"/>
+                <item android:offset="0.65" android:color="#FF4D61FF"/>
+                <item android:offset="1.00" android:color="#FF00E5FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Hairpin path — left lobe road crossover -->
+    <path
+        android:pathData="M54,42 C48,28 30,20 26,34 C22,46 34,56 44,50 C50,46 54,42 54,42"
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="7"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="14"
+                android:startY="16"
+                android:endX="94"
+                android:endY="90">
+                <item android:offset="0.00" android:color="#FFFF4D5A"/>
+                <item android:offset="0.35" android:color="#FFFF2DA6"/>
+                <item android:offset="0.65" android:color="#FF4D61FF"/>
+                <item android:offset="1.00" android:color="#FF00E5FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+</vector>
