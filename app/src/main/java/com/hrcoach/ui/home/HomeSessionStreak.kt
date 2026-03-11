@@ -12,13 +12,14 @@ import java.time.ZoneId
  * @param sessions All sessions for the enrollment, any order (function sorts them).
  * @param enrollmentStartMs Epoch ms of the Monday that begins week 1 of the program.
  * @param today  LocalDate to compare against (injectable for testing).
+ * @param zone   Time zone used to convert epoch ms to local dates (injectable for testing).
  */
 fun computeSessionStreak(
     sessions: List<BootcampSessionEntity>,
     enrollmentStartMs: Long,
-    today: LocalDate = LocalDate.now()
+    today: LocalDate = LocalDate.now(),
+    zone: ZoneId = ZoneId.systemDefault()
 ): Int {
-    val zone = ZoneId.systemDefault()
     val startDate = Instant.ofEpochMilli(enrollmentStartMs).atZone(zone).toLocalDate()
 
     val sorted = sessions.sortedWith(
@@ -38,7 +39,10 @@ fun computeSessionStreak(
                 if (sessionDate.isBefore(today)) return streak // effectively missed
                 // future session — ignore and continue
             }
-            BootcampSessionEntity.STATUS_DEFERRED -> { /* skip, does not break streak */ }
+            BootcampSessionEntity.STATUS_DEFERRED -> {
+                // Deferred sessions are rescheduled, not abandoned — they do not break the streak.
+                // The user will complete them later; treat as pending, not missed.
+            }
         }
     }
     return streak

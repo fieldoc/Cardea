@@ -84,4 +84,13 @@ class HomeSessionStreakTest {
         )
         assertEquals(0, computeSessionStreak(sessions, startMs, today))
     }
+
+    @Test fun `skipped most recent session returns 0`() {
+        val sessions = listOf(
+            session(3, 1, BootcampSessionEntity.STATUS_SKIPPED), // most recent, immediately breaks
+            session(2, 3, BootcampSessionEntity.STATUS_COMPLETED),
+            session(2, 1, BootcampSessionEntity.STATUS_COMPLETED),
+        )
+        assertEquals(0, computeSessionStreak(sessions, startMs, today))
+    }
 }
