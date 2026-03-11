@@ -46,6 +46,8 @@ class WorkoutViewModel @Inject constructor(
     private var workoutStartTimeMs: Long? = null
     private var pausedAccumulatedMs: Long = 0L
     private var pauseStartedAtMs: Long? = null
+    private var autoPausedAccumulatedMs: Long = 0L
+    private var autoPauseStartedAtMs: Long? = null
     private var loadingWorkoutMetadata: Boolean = false
 
     init {
@@ -93,17 +95,24 @@ class WorkoutViewModel @Inject constructor(
                 workoutStartTimeMs = null
                 pausedAccumulatedMs = 0L
                 pauseStartedAtMs = null
+                autoPausedAccumulatedMs = 0L
+                autoPauseStartedAtMs = null
             }
         }
 
         if (snapshot.isRunning) {
             if (snapshot.isPaused) {
-                if (pauseStartedAtMs == null) {
-                    pauseStartedAtMs = nowMs
-                }
+                if (pauseStartedAtMs == null) pauseStartedAtMs = nowMs
             } else if (pauseStartedAtMs != null) {
                 pausedAccumulatedMs += nowMs - (pauseStartedAtMs ?: nowMs)
                 pauseStartedAtMs = null
+            }
+
+            if (snapshot.isAutoPaused) {
+                if (autoPauseStartedAtMs == null) autoPauseStartedAtMs = nowMs
+            } else if (autoPauseStartedAtMs != null) {
+                autoPausedAccumulatedMs += nowMs - (autoPauseStartedAtMs ?: nowMs)
+                autoPauseStartedAtMs = null
             }
         }
 
@@ -155,7 +164,9 @@ class WorkoutViewModel @Inject constructor(
     private fun computeElapsedSeconds(nowMs: Long): Long {
         val startTimeMs = workoutStartTimeMs ?: return 0L
         val currentPauseMs = pauseStartedAtMs?.let { nowMs - it } ?: 0L
-        return ((nowMs - startTimeMs - pausedAccumulatedMs - currentPauseMs).coerceAtLeast(0L) / 1_000L)
+        val currentAutoPauseMs = autoPauseStartedAtMs?.let { nowMs - it } ?: 0L
+        return ((nowMs - startTimeMs - pausedAccumulatedMs - currentPauseMs
+                - autoPausedAccumulatedMs - currentAutoPauseMs).coerceAtLeast(0L) / 1_000L)
     }
 
     private fun deriveSegmentInfo(config: WorkoutConfig?, elapsed: Long): SegmentInfo {
