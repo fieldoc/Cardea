@@ -8,6 +8,7 @@ import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
@@ -51,7 +52,8 @@ class BootcampViewModel @Inject constructor(
     private val adaptiveProfileRepository: AdaptiveProfileRepository,
     private val userProfileRepository: UserProfileRepository,
     private val workoutMetricsRepository: WorkoutMetricsRepository,
-    private val bootcampSessionCompleter: BootcampSessionCompleter
+    private val bootcampSessionCompleter: BootcampSessionCompleter,
+    private val achievementEvaluator: AchievementEvaluator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -513,6 +515,12 @@ class BootcampViewModel @Inject constructor(
                     tierPromptSnoozedUntilMs = 0L
                 )
             )
+            if (direction == TierPromptDirection.UP) {
+                achievementEvaluator.evaluateTierGraduation(
+                    newTierIndex = updatedTierIndex,
+                    goal = enrollment.goalType
+                )
+            }
             _uiState.update {
                 it.copy(
                     tierPromptDirection = TierPromptDirection.NONE,
@@ -633,6 +641,11 @@ class BootcampViewModel @Inject constructor(
         viewModelScope.launch {
             val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
             bootcampRepository.graduateEnrollment(enrollment.id)
+            achievementEvaluator.evaluateBootcampGraduation(
+                enrollmentId = enrollment.id,
+                goal = enrollment.goalType,
+                tierIndex = enrollment.tierIndex
+            )
         }
     }
 
