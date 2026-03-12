@@ -1,7 +1,7 @@
 package com.hrcoach.ui.home
 
 import com.hrcoach.data.db.BootcampSessionEntity
-import java.time.Instant
+import com.hrcoach.domain.achievement.StreakCalculator
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -19,31 +19,4 @@ fun computeSessionStreak(
     enrollmentStartMs: Long,
     today: LocalDate = LocalDate.now(),
     zone: ZoneId = ZoneId.systemDefault()
-): Int {
-    val startDate = Instant.ofEpochMilli(enrollmentStartMs).atZone(zone).toLocalDate()
-
-    val sorted = sessions.sortedWith(
-        compareByDescending<BootcampSessionEntity> { it.weekNumber }
-            .thenByDescending { it.dayOfWeek }
-    )
-
-    var streak = 0
-    for (session in sorted) {
-        when (session.status) {
-            BootcampSessionEntity.STATUS_COMPLETED -> streak++
-            BootcampSessionEntity.STATUS_SKIPPED -> return streak
-            BootcampSessionEntity.STATUS_SCHEDULED -> {
-                val sessionDate = startDate.plusDays(
-                    ((session.weekNumber - 1L) * 7L) + (session.dayOfWeek - 1L)
-                )
-                if (sessionDate.isBefore(today)) return streak // effectively missed
-                // future session — ignore and continue
-            }
-            BootcampSessionEntity.STATUS_DEFERRED -> {
-                // Deferred sessions are rescheduled, not abandoned — they do not break the streak.
-                // The user will complete them later; treat as pending, not missed.
-            }
-        }
-    }
-    return streak
-}
+): Int = StreakCalculator.computeSessionStreak(sessions, enrollmentStartMs, today, zone)
