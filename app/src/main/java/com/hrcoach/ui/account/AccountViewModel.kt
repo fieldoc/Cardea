@@ -3,6 +3,7 @@ package com.hrcoach.ui.account
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.repository.AudioSettingsRepository
+import com.hrcoach.data.repository.AutoPauseSettingsRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
@@ -19,6 +20,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class AccountUiState(
+    val displayName: String = "Runner",
+    val avatarSymbol: String = "\u2665", // ♥
     val totalWorkouts: Int = 0,
     val mapsApiKey: String = "",
     val mapsApiKeySaved: Boolean = false,
@@ -27,7 +30,9 @@ data class AccountUiState(
     val enableVibration: Boolean = true,
     val maxHr: Int? = null,
     val maxHrInput: String = "",
-    val maxHrSaved: Boolean = false
+    val maxHrSaved: Boolean = false,
+    val maxHrError: String? = null,
+    val autoPauseEnabled: Boolean = true,
 )
 
 @HiltViewModel
@@ -35,7 +40,8 @@ class AccountViewModel @Inject constructor(
     private val audioRepo: AudioSettingsRepository,
     private val mapsRepo: MapsSettingsRepository,
     private val workoutRepo: WorkoutRepository,
-    private val userProfileRepo: UserProfileRepository
+    private val userProfileRepo: UserProfileRepository,
+    private val autoPauseRepo: AutoPauseSettingsRepository,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -47,6 +53,12 @@ class AccountViewModel @Inject constructor(
     private val _maxHr      = MutableStateFlow<Int?>(null)
     private val _maxHrInput = MutableStateFlow("")
     private val _maxHrSaved = MutableStateFlow(false)
+    private val _maxHrError = MutableStateFlow<String?>(null)
+
+    private val _autoPauseEnabled = MutableStateFlow(true)
+
+    private val _displayName = MutableStateFlow("Runner")
+    private val _avatarSymbol = MutableStateFlow("\u2665")
 
     init {
         viewModelScope.launch {
@@ -55,6 +67,9 @@ class AccountViewModel @Inject constructor(
             _volume.value    = settings.earconVolume
             _verbosity.value = settings.voiceVerbosity
             _vibration.value = settings.enableVibration
+            _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
+            _displayName.value = userProfileRepo.getDisplayName()
+            _avatarSymbol.value = userProfileRepo.getAvatarSymbol()
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
@@ -76,15 +91,22 @@ class AccountViewModel @Inject constructor(
             enableVibration = _vibration.value
         )
     }.combine(
-        combine(_maxHr, _maxHrInput, _maxHrSaved) { hr, hrInput, hrSaved ->
-            Triple(hr, hrInput, hrSaved)
+        combine(_maxHr, _maxHrInput, _maxHrSaved, _maxHrError) { hr, hrInput, hrSaved, hrError ->
+            listOf<Any?>(hr, hrInput, hrSaved, hrError)
         }
-    ) { base, (hr, hrInput, hrSaved) ->
+    ) { base, parts ->
         base.copy(
-            maxHr      = hr,
-            maxHrInput = hrInput,
-            maxHrSaved = hrSaved
+            maxHr      = parts[0] as Int?,
+            maxHrInput = parts[1] as String,
+            maxHrSaved = parts[2] as Boolean,
+            maxHrError = parts[3] as String?
         )
+    }.combine(_autoPauseEnabled) { base, autoPause ->
+        base.copy(autoPauseEnabled = autoPause)
+    }.combine(
+        combine(_displayName, _avatarSymbol) { name, avatar -> name to avatar }
+    ) { base, (name, avatar) ->
+        base.copy(displayName = name, avatarSymbol = avatar)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
     fun setMapsApiKey(key: String) {
@@ -102,6 +124,11 @@ class AccountViewModel @Inject constructor(
     fun setVerbosity(v: VoiceVerbosity) { _verbosity.value = v }
     fun setVibration(v: Boolean) { _vibration.value = v }
 
+    fun setAutoPauseEnabled(enabled: Boolean) {
+        _autoPauseEnabled.value = enabled
+        autoPauseRepo.setAutoPauseEnabled(enabled)
+    }
+
     fun saveAudioSettings() {
         viewModelScope.launch {
             audioRepo.saveAudioSettings(
@@ -117,11 +144,33 @@ class AccountViewModel @Inject constructor(
     fun setMaxHrInput(value: String) {
         _maxHrInput.value = value
         _maxHrSaved.value = false
+        _maxHrError.value = null
+    }
+
+    fun setDisplayName(name: String) {
+        _displayName.value = name.trim().take(20).ifBlank { "Runner" }
+    }
+
+    fun setAvatarSymbol(symbol: String) {
+        _avatarSymbol.value = symbol
+    }
+
+    fun saveProfile() {
+        userProfileRepo.setDisplayName(_displayName.value)
+        userProfileRepo.setAvatarSymbol(_avatarSymbol.value)
     }
 
     fun saveMaxHr() {
-        val value = _maxHrInput.value.toIntOrNull() ?: return
-        if (value !in 100..220) return
+        val value = _maxHrInput.value.toIntOrNull()
+        if (value == null) {
+            _maxHrError.value = "Please enter a valid number"
+            return
+        }
+        if (value !in 100..220) {
+            _maxHrError.value = "Max HR must be between 100 and 220"
+            return
+        }
+        _maxHrError.value = null
         userProfileRepo.setMaxHr(value)
         _maxHr.value = value
         _maxHrSaved.value = true

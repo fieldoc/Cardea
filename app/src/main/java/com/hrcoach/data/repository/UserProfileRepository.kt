@@ -12,7 +12,12 @@ class UserProfileRepository @Inject constructor(
     companion object {
         private const val PREFS_NAME = "hr_coach_user_profile"
         private const val PREF_MAX_HR = "max_hr"
+        private const val PREF_DISPLAY_NAME = "display_name"
+        private const val PREF_AVATAR_SYMBOL = "avatar_symbol"
+        private const val PREF_USER_ID = "user_id"
         private const val UNSET = -1
+        private const val DEFAULT_NAME = "Runner"
+        private const val DEFAULT_AVATAR = "\u2665" // ♥
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -28,4 +33,38 @@ class UserProfileRepository @Inject constructor(
         require(maxHr in 100..220) { "maxHr must be in 100..220" }
         prefs.edit().putInt(PREF_MAX_HR, maxHr).apply()
     }
+
+    @Synchronized
+    fun getDisplayName(): String {
+        return prefs.getString(PREF_DISPLAY_NAME, DEFAULT_NAME) ?: DEFAULT_NAME
+    }
+
+    @Synchronized
+    fun setDisplayName(name: String) {
+        prefs.edit().putString(PREF_DISPLAY_NAME, sanitizeDisplayName(name)).apply()
+    }
+
+    @Synchronized
+    fun getAvatarSymbol(): String {
+        return prefs.getString(PREF_AVATAR_SYMBOL, DEFAULT_AVATAR) ?: DEFAULT_AVATAR
+    }
+
+    @Synchronized
+    fun setAvatarSymbol(symbol: String) {
+        prefs.edit().putString(PREF_AVATAR_SYMBOL, symbol).apply()
+    }
+
+    @Synchronized
+    fun getUserId(): String {
+        val existing = prefs.getString(PREF_USER_ID, null)
+        if (existing != null) return existing
+        val newId = java.util.UUID.randomUUID().toString()
+        prefs.edit().putString(PREF_USER_ID, newId).apply()
+        return newId
+    }
+}
+
+internal fun sanitizeDisplayName(name: String): String {
+    val trimmed = name.trim().take(20)
+    return trimmed.ifBlank { "Runner" }
 }
