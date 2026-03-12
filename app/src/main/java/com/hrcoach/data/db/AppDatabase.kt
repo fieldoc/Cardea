@@ -2,17 +2,71 @@ package com.hrcoach.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+@TypeConverters(Converters::class)
 @Database(
     entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
-                BootcampEnrollmentEntity::class, BootcampSessionEntity::class],
-    version = 11,
+                BootcampEnrollmentEntity::class, BootcampSessionEntity::class,
+                AchievementEntity::class],
+    version = 13,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `achievements` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `milestone` TEXT NOT NULL,
+                        `goal` TEXT,
+                        `tier` INTEGER,
+                        `prestigeLevel` INTEGER NOT NULL,
+                        `earnedAtMs` INTEGER NOT NULL,
+                        `triggerWorkoutId` INTEGER,
+                        `shown` INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+            }
+        }
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add FK: bootcamp_sessions.completedWorkoutId -> workouts.id ON DELETE SET NULL
+                // SQLite cannot ALTER TABLE to add a FK; must rebuild the table.
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `bootcamp_sessions_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `enrollmentId` INTEGER NOT NULL,
+                        `weekNumber` INTEGER NOT NULL,
+                        `dayOfWeek` INTEGER NOT NULL,
+                        `sessionType` TEXT NOT NULL,
+                        `targetMinutes` INTEGER NOT NULL,
+                        `presetId` TEXT,
+                        `status` TEXT NOT NULL DEFAULT 'SCHEDULED',
+                        `completedWorkoutId` INTEGER,
+                        `presetIndex` INTEGER,
+                        `completedAtMs` INTEGER,
+                        FOREIGN KEY(`enrollmentId`) REFERENCES `bootcamp_enrollments`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`completedWorkoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO `bootcamp_sessions_new`
+                    SELECT `id`, `enrollmentId`, `weekNumber`, `dayOfWeek`, `sessionType`,
+                           `targetMinutes`, `presetId`, `status`, `completedWorkoutId`,
+                           `presetIndex`, `completedAtMs`
+                    FROM `bootcamp_sessions`
+                """.trimIndent())
+                db.execSQL("DROP TABLE `bootcamp_sessions`")
+                db.execSQL("ALTER TABLE `bootcamp_sessions_new` RENAME TO `bootcamp_sessions`")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_bootcamp_sessions_enrollmentId` ON `bootcamp_sessions` (`enrollmentId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_bootcamp_sessions_completedWorkoutId` ON `bootcamp_sessions` (`completedWorkoutId`)")
+            }
+        }
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // No schema change. BLACKOUT is a new DaySelectionLevel value
@@ -138,4 +192,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun trackPointDao(): TrackPointDao
     abstract fun workoutMetricsDao(): WorkoutMetricsDao
     abstract fun bootcampDao(): BootcampDao
+    abstract fun achievementDao(): AchievementDao
 }
