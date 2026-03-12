@@ -17,11 +17,12 @@ object SessionSelector {
         } else {
             targetMinutes
         }
-        val longMinutes = (effectiveMinutes * 1.3f).toInt().coerceAtMost(effectiveMinutes + 20)
+        val durations = DurationScaler.compute(runsPerWeek, effectiveMinutes)
+        val longMinutes = durations.longMinutes
 
         return when {
-            goal.tier <= 1 -> baseAerobicWeek(phase, runsPerWeek, effectiveMinutes, longMinutes)
-            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, longMinutes)
+            goal.tier <= 1 -> baseAerobicWeek(phase, runsPerWeek, effectiveMinutes, longMinutes, durations)
+            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, longMinutes, durations)
         }
     }
 
@@ -29,13 +30,14 @@ object SessionSelector {
         phase: TrainingPhase,
         runsPerWeek: Int,
         minutes: Int,
-        longMinutes: Int
+        longMinutes: Int,
+        durations: DurationScaler.WeekDurations
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
         val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.BASE
         val easyCount = if (hasLong) runsPerWeek - 1 else runsPerWeek
         repeat(easyCount) {
-            sessions.add(PlannedSession(SessionType.EASY, minutes, "zone2_base"))
+            sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
         }
         if (hasLong) {
             sessions.add(PlannedSession(SessionType.LONG, longMinutes, "zone2_base"))
@@ -48,7 +50,8 @@ object SessionSelector {
         goal: BootcampGoal,
         runsPerWeek: Int,
         minutes: Int,
-        longMinutes: Int
+        longMinutes: Int,
+        durations: DurationScaler.WeekDurations
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
         val includeStrides = phase == TrainingPhase.BUILD && goal.tier >= 2 && runsPerWeek >= 4
@@ -70,14 +73,14 @@ object SessionSelector {
 
         // Easy runs
         repeat(easyCount) {
-            sessions.add(PlannedSession(SessionType.EASY, minutes, "zone2_base"))
+            sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
         }
 
         // Quality sessions based on phase
         when (phase) {
             TrainingPhase.BASE -> {} // No quality sessions
             TrainingPhase.BUILD -> {
-                sessions.add(PlannedSession(SessionType.TEMPO, minutes, "aerobic_tempo"))
+                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 if (includeStrides) {
                     val stridesPreset = if (goal.tier >= 3) {
                         SessionPresetArray.stridesTier3().presetAt(0)
@@ -95,21 +98,21 @@ object SessionSelector {
             }
             TrainingPhase.PEAK -> {
                 if (goal.tier >= 4) {
-                    sessions.add(PlannedSession(SessionType.INTERVAL, minutes, "norwegian_4x4"))
+                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
                     if (qualitySessions >= 2) {
-                        sessions.add(PlannedSession(SessionType.TEMPO, minutes, "lactate_threshold"))
+                        sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                     }
                 } else if (goal.tier >= 3) {
-                    sessions.add(PlannedSession(SessionType.TEMPO, minutes, "lactate_threshold"))
+                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                     if (qualitySessions >= 2) {
-                        sessions.add(PlannedSession(SessionType.INTERVAL, minutes, "norwegian_4x4"))
+                        sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
                     }
                 } else {
-                    sessions.add(PlannedSession(SessionType.TEMPO, minutes, "aerobic_tempo"))
+                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 }
             }
             TrainingPhase.TAPER -> {
-                sessions.add(PlannedSession(SessionType.TEMPO, (minutes * 0.8f).toInt(), "aerobic_tempo"))
+                sessions.add(PlannedSession(SessionType.TEMPO, (durations.tempoMinutes * 0.8f).toInt(), "aerobic_tempo"))
             }
         }
 
