@@ -3,19 +3,29 @@ package com.hrcoach.ui.postrun
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.db.AchievementDao
+import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.domain.achievement.AchievementEvaluator
+import com.hrcoach.domain.achievement.StreakCalculator
+import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.domain.engine.MetricsCalculator
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
+import com.hrcoach.service.WorkoutState
+import com.hrcoach.ui.common.MetricLabels
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
-import com.hrcoach.ui.common.MetricLabels
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -38,14 +48,21 @@ data class PostRunSummaryUiState(
     val comparisons: List<PostRunComparison> = emptyList(),
     val bootcampProgressLabel: String? = null,
     val bootcampWeekComplete: Boolean = false,
-    val isHrrActive: Boolean = false
+    val isHrrActive: Boolean = false,
+    val hrrSecondsRemaining: Int = 120,
+    val isBootcampRun: Boolean = false,
+    val achievements: List<AchievementEntity> = emptyList()
 )
 
 @HiltViewModel
 class PostRunSummaryViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val workoutRepository: WorkoutRepository,
-    private val workoutMetricsRepository: WorkoutMetricsRepository
+    private val workoutMetricsRepository: WorkoutMetricsRepository,
+    private val bootcampSessionCompleter: BootcampSessionCompleter,
+    private val achievementEvaluator: AchievementEvaluator,
+    private val achievementDao: AchievementDao,
+    private val bootcampRepository: BootcampRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostRunSummaryUiState())
@@ -56,6 +73,27 @@ class PostRunSummaryViewModel @Inject constructor(
 
     init {
         load()
+        startHrrCountdownIfNeeded()
+    }
+
+    private fun startHrrCountdownIfNeeded() {
+        viewModelScope.launch {
+            // Wait for load to settle
+            _uiState.collect { state ->
+                if (state.isHrrActive && !state.isLoading) {
+                    // Start the countdown
+                    runCatching {
+                        for (remaining in 119 downTo 0) {
+                            kotlinx.coroutines.delay(1_000L)
+                            _uiState.update { it.copy(hrrSecondsRemaining = remaining) }
+                        }
+                        // Countdown finished — close the HRR window
+                        _uiState.update { it.copy(isHrrActive = false) }
+                    }
+                    return@collect  // stop observing after countdown starts
+                }
+            }
+        }
     }
 
     private fun load() {
@@ -96,11 +134,69 @@ class PostRunSummaryViewModel @Inject constructor(
                     comparisons = comparisons,
                     isHrrActive = isFreshWorkout
                 )
+
+                if (isFreshWorkout) {
+                    runCatching {
+                        bootcampSessionCompleter.complete(
+                            workoutId = id,
+                            pendingSessionId = WorkoutState.snapshot.value.pendingBootcampSessionId
+                        )
+                    }.getOrNull()?.let { result ->
+                        if (result.completed) {
+                            WorkoutState.setPendingBootcampSessionId(null)
+                            _uiState.update {
+                                it.copy(
+                                    bootcampProgressLabel = result.progressLabel,
+                                    bootcampWeekComplete = result.weekComplete,
+                                    isBootcampRun = true
+                                )
+                            }
+                        }
+                    }
+
+                    // Achievement evaluation — runs after workout is fully persisted
+                    try {
+                        val workoutId = id
+                        // Distance milestone
+                        val totalKm = workoutRepository.sumAllDistanceKm()
+                        achievementEvaluator.evaluateDistance(totalKm, workoutId)
+
+                        // Streak + weekly goal (only if bootcamp enrollment exists)
+                        bootcampRepository.getActiveEnrollmentOnce()?.let { enrollment ->
+                            val sessions = bootcampRepository.getSessionsForEnrollmentOnce(enrollment.id)
+                            val streak = StreakCalculator.computeSessionStreak(sessions, enrollment.startDate)
+                            achievementEvaluator.evaluateStreak(streak, workoutId)
+
+                            val weeklyStreak = StreakCalculator.computeWeeklyGoalStreak(
+                                sessions, enrollment.runsPerWeek, enrollment.startDate
+                            )
+                            achievementEvaluator.evaluateWeeklyGoalStreak(weeklyStreak, workoutId)
+                        }
+
+                        // Load unshown achievements for display
+                        val unshown = achievementDao.getUnshownAchievements()
+                        _uiState.update { it.copy(achievements = unshown) }
+                    } catch (e: Exception) {
+                        // Achievement evaluation is non-critical — don't break post-run flow
+                    }
+                }
             }.onFailure {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     errorMessage = "Unable to load post-run summary."
                 )
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        val ids = _uiState.value.achievements.map { it.id }
+        if (ids.isNotEmpty()) {
+            viewModelScope.launch {
+                withContext(NonCancellable) {
+                    try { achievementDao.markShown(ids) } catch (_: Exception) {}
+                }
             }
         }
     }
