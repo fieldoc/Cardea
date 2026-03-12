@@ -3,11 +3,15 @@ package com.hrcoach.domain.bootcamp
 /**
  * Computes per-session-type durations from weekly training context.
  *
- * Based on Jack Daniels' Running Formula rules:
- * - Long run: 25% of weekly total, clamped [easyMinutes, 150]
+ * Long run uses a graduated multiplier: fewer runs/week -> bigger spike,
+ * since there is less volume spread across the week. Capped at 150 min
+ * (Daniels' absolute ceiling for L runs).
+ *
+ * Quality sessions (tempo, interval) use Daniels' Running Formula ratios:
  * - Tempo: 10% of weekly total, clamped [15, 40]
  * - Interval: 8% of weekly total, clamped [12, 35]
- * - Easy runs absorb the remainder to keep weekly total constant.
+ *
+ * Easy runs absorb the remainder to keep weekly total constant.
  */
 object DurationScaler {
 
@@ -24,11 +28,20 @@ object DurationScaler {
      */
     fun compute(runsPerWeek: Int, easyMinutes: Int): WeekDurations {
         val weeklyTotal = runsPerWeek * easyMinutes
-
-        // Long run: 25% of weekly total, at least as long as easy, max 150
         val hasLong = runsPerWeek >= 3
-        val rawLong = (weeklyTotal * 0.25f).toInt()
-        val longMinutes = if (hasLong) rawLong.coerceIn(easyMinutes, 150) else easyMinutes
+
+        // Graduated multiplier: fewer runs -> bigger long-run spike.
+        // At 5+ runs, 1.25x aligns with Daniels' 25%-of-weekly rule naturally.
+        val longMinutes = if (hasLong) {
+            val multiplier = when {
+                runsPerWeek <= 3 -> 1.5f
+                runsPerWeek == 4 -> 1.35f
+                else -> 1.25f
+            }
+            (easyMinutes * multiplier).toInt().coerceAtMost(150)
+        } else {
+            easyMinutes
+        }
 
         // Easy runs absorb the difference to keep weekly total ~constant
         val adjustedEasy = if (hasLong && runsPerWeek > 1) {
