@@ -131,7 +131,13 @@ fun AccountScreen(
                 onClick = { showProfileSheet = true }
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            if (state.achievements.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                AchievementGallery(achievements = state.achievements)
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                Spacer(modifier = Modifier.height(24.dp))
+            }
 
             // ── Configuration ────────────────────────────────────────────────
             SectionLabel("Configuration")

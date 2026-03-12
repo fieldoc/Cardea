@@ -2,6 +2,8 @@ package com.hrcoach.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.db.AchievementDao
+import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.AutoPauseSettingsRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
@@ -33,6 +35,7 @@ data class AccountUiState(
     val maxHrSaved: Boolean = false,
     val maxHrError: String? = null,
     val autoPauseEnabled: Boolean = true,
+    val achievements: List<AchievementEntity> = emptyList(),
 )
 
 @HiltViewModel
@@ -42,6 +45,7 @@ class AccountViewModel @Inject constructor(
     private val workoutRepo: WorkoutRepository,
     private val userProfileRepo: UserProfileRepository,
     private val autoPauseRepo: AutoPauseSettingsRepository,
+    private val achievementDao: AchievementDao,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -107,6 +111,8 @@ class AccountViewModel @Inject constructor(
         combine(_displayName, _avatarSymbol) { name, avatar -> name to avatar }
     ) { base, (name, avatar) ->
         base.copy(displayName = name, avatarSymbol = avatar)
+    }.combine(achievementDao.getAllAchievements()) { base, achievements ->
+        base.copy(achievements = achievements)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
     fun setMapsApiKey(key: String) {
