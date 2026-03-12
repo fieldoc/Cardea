@@ -28,4 +28,9 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun getTrackPoints(workoutId: Long): List<TrackPointEntity> =
         trackPointDao.getPointsForWorkout(workoutId)
+
+    suspend fun getTrackPointsForWorkouts(workoutIds: List<Long>): Map<Long, List<TrackPointEntity>> =
+        trackPointDao.getTrackPointsForWorkouts(workoutIds).groupBy { it.workoutId }
+
+    suspend fun sumAllDistanceKm(): Double = workoutDao.sumAllDistanceKm()
 }

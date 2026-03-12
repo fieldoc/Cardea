@@ -25,4 +25,7 @@ interface WorkoutDao {
 
     @Query("DELETE FROM workouts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("SELECT COALESCE(SUM(totalDistanceMeters), 0) / 1000.0 FROM workouts")
+    suspend fun sumAllDistanceKm(): Double
 }
