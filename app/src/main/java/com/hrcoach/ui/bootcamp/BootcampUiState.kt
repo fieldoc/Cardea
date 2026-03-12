@@ -8,6 +8,35 @@ import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 
+sealed class TodayState {
+    /** Today has a session that has not yet been started. */
+    data class RunUpcoming(
+        val session: PlannedSession
+    ) : TodayState()
+
+    /** Today had a session that is now completed. */
+    data class RunDone(
+        val nextSession: PlannedSession?,
+        val nextSessionDayLabel: String?,       // e.g. "Wed"
+        val nextSessionRelativeLabel: String?   // e.g. "in 2 days"
+    ) : TodayState()
+
+    /** Today has no session scheduled (rest day or all sessions done). */
+    data class RestDay(
+        val nextSession: PlannedSession?,
+        val nextSessionDayLabel: String?,
+        val nextSessionRelativeLabel: String?
+    ) : TodayState()
+}
+
+/** One slot in the 7-day week strip. `session` is null for rest days. */
+data class WeekDayItem(
+    val dayOfWeek: Int,       // 1=Mon … 7=Sun
+    val dayLabel: String,     // single-letter narrow format: "M" "T" "W" …
+    val isToday: Boolean,
+    val session: SessionUiItem? // null = rest day
+)
+
 data class BootcampUiState(
     val isLoading: Boolean = true,
     val loadError: String? = null,
@@ -22,11 +51,10 @@ data class BootcampUiState(
     val isRecoveryWeek: Boolean = false,
     val weeksUntilNextRecovery: Int? = null,
     val showGraduationCta: Boolean = false,
-    // Next session
-    val nextSession: PlannedSession? = null,
-    val nextSessionDayLabel: String? = null,
     // Week view
-    val currentWeekSessions: List<SessionUiItem> = emptyList(),
+    val currentWeekDays: List<WeekDayItem> = emptyList(),
+    val currentWeekDateRange: String = "",
+    val todayState: TodayState = TodayState.RestDay(null, null, null),
     val activePreferredDays: List<DayPreference> = emptyList(),
     val upcomingWeeks: List<UpcomingWeekItem> = emptyList(),
     val swapRestMessage: String? = null,
@@ -37,6 +65,9 @@ data class BootcampUiState(
     val onboardingMinutes: Int = 30,
     val onboardingRunsPerWeek: Int = 3,
     val onboardingTimeWarning: String? = null,
+    val onboardingLongRunMinutes: Int = 0,
+    val onboardingWeeklyTotal: Int = 0,
+    val onboardingLongRunWarning: String? = null,
     // Gap return
     val welcomeBackMessage: String? = null,
     val needsCalibration: Boolean = false,
@@ -46,22 +77,32 @@ data class BootcampUiState(
     val illnessFlag: Boolean = false,
     val tierPromptDirection: TierPromptDirection = TierPromptDirection.NONE,
     val tierPromptEvidence: String? = null,
-    val scheduledRestDay: Boolean = false,
     val missedSession: Boolean = false,
     val showDeleteConfirmDialog: Boolean = false,
     // Reschedule bottom sheet
     val rescheduleSheetSessionId: Long? = null,
     val rescheduleAutoTargetDay: Int? = null,
     val rescheduleAutoTargetLabel: String? = null,
+    val rescheduleDropSessionId: Long? = null,
+    val rescheduleAvailableDays: List<Int> = emptyList(),
+    val rescheduleAvailableLabels: List<String> = emptyList(),
+    // Session detail sheet
+    val showSessionDetail: Boolean = false,
+    val sessionDetailItem: SessionUiItem? = null,
+    // Goal detail sheet
+    val showGoalDetail: Boolean = false,
+    val goalProgressPercentage: Int = 0
 )
 
 data class SessionUiItem(
     val dayLabel: String,
     val typeName: String,
+    val rawTypeName: String = "",
     val minutes: Int,
     val isCompleted: Boolean,
     val isToday: Boolean,
-    val sessionId: Long? = null
+    val sessionId: Long? = null,
+    val presetId: String? = null
 )
 
 data class UpcomingWeekItem(

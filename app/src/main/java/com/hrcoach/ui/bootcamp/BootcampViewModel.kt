@@ -8,6 +8,9 @@ import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
+import com.hrcoach.domain.bootcamp.DayPreference
+import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.firstPreferredDayAfterMs
 import com.hrcoach.domain.bootcamp.FitnessEvaluator
 import com.hrcoach.domain.bootcamp.GapAdvisor
@@ -18,6 +21,7 @@ import com.hrcoach.domain.bootcamp.RescheduleRequest
 import com.hrcoach.domain.bootcamp.RescheduleResult
 import com.hrcoach.domain.bootcamp.SessionRescheduler
 import com.hrcoach.domain.bootcamp.SessionType
+import com.hrcoach.domain.bootcamp.DurationScaler
 import com.hrcoach.domain.bootcamp.TierCtlRanges
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.domain.engine.FitnessSignalEvaluator
@@ -46,7 +50,8 @@ class BootcampViewModel @Inject constructor(
     private val bootcampRepository: BootcampRepository,
     private val adaptiveProfileRepository: AdaptiveProfileRepository,
     private val userProfileRepository: UserProfileRepository,
-    private val workoutMetricsRepository: WorkoutMetricsRepository
+    private val workoutMetricsRepository: WorkoutMetricsRepository,
+    private val bootcampSessionCompleter: BootcampSessionCompleter
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -162,7 +167,7 @@ class BootcampViewModel @Inject constructor(
         val gapAction = GapAdvisor.action(gapStrategy, enrollment.currentPhaseIndex, enrollment.currentWeekInPhase)
 
         val today = LocalDate.now().dayOfWeek.value
-        val preferredDays = BootcampEnrollmentEntity.parseDayPreferences(enrollment.preferredDays)
+        val preferredDays = enrollment.preferredDays
         val activePreferredDays = preferredDays.filter { it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.NONE }
         val scheduledSessions = ensureCurrentWeekSessions(
             enrollment = enrollment,
@@ -171,25 +176,64 @@ class BootcampViewModel @Inject constructor(
             tuningDirection = fitnessSignals.tuningDirection
         )
 
-        val sessionItems = scheduledSessions.map { session ->
-            SessionUiItem(
-                dayLabel = dayLabelFor(session.dayOfWeek),
-                typeName = sessionTypeDisplayName(session.sessionType, session.presetId),
-                minutes = session.targetMinutes,
-                isCompleted = session.status != BootcampSessionEntity.STATUS_SCHEDULED,
-                isToday = session.dayOfWeek == today,
-                sessionId = session.id
-            )
+        // Next incomplete session (may be in a future week via repository lookahead)
+        val nextScheduledSession = scheduledSessions.firstOrNull {
+            it.status == BootcampSessionEntity.STATUS_SCHEDULED
         }
 
-        val nextScheduledSession = scheduledSessions.firstOrNull { it.status == BootcampSessionEntity.STATUS_SCHEDULED }
         val missedSession = scheduledSessions.any {
             it.dayOfWeek < today &&
                 it.status != BootcampSessionEntity.STATUS_COMPLETED &&
                 it.status != BootcampSessionEntity.STATUS_SKIPPED &&
                 it.status != BootcampSessionEntity.STATUS_DEFERRED
         }
-        val scheduledRestDay = scheduledSessions.none { it.dayOfWeek == today }
+
+        // Build 7-day strip items: one WeekDayItem per day M–S
+        val weekStart = LocalDate.now().with(DayOfWeek.MONDAY)
+        val weekDays = (1..7).map { dow ->
+            val session = scheduledSessions.find { it.dayOfWeek == dow }
+            WeekDayItem(
+                dayOfWeek = dow,
+                dayLabel = DayOfWeek.of(dow)
+                    .getDisplayName(TextStyle.NARROW, Locale.getDefault()),
+                isToday = dow == today,
+                session = session?.let {
+                    SessionUiItem(
+                        dayLabel = dayLabelFor(it.dayOfWeek),
+                        typeName = sessionTypeDisplayName(it.sessionType, it.presetId),
+                        rawTypeName = it.sessionType,
+                        minutes = it.targetMinutes,
+                        isCompleted = it.status != BootcampSessionEntity.STATUS_SCHEDULED,
+                        isToday = it.dayOfWeek == today,
+                        sessionId = it.id,
+                        presetId = it.presetId
+                    )
+                }
+            )
+        }
+
+        // Compute today's context state
+        val dayKind = computeDayKind(scheduledSessions, today)
+        val nextDayLabel = nextScheduledSession?.let { dayLabelFor(it.dayOfWeek) }
+        val nextRelLabel = nextScheduledSession?.let {
+            computeRelativeLabel(it.dayOfWeek, today)
+        }
+        val todayState: TodayState = when (dayKind) {
+            DayKind.RUN_UPCOMING -> TodayState.RunUpcoming(
+                session = scheduledSessions.first { it.dayOfWeek == today }.toPlannedSession()
+            )
+            DayKind.RUN_DONE -> TodayState.RunDone(
+                nextSession = nextScheduledSession?.toPlannedSession(),
+                nextSessionDayLabel = nextDayLabel,
+                nextSessionRelativeLabel = nextRelLabel
+            )
+            DayKind.REST -> TodayState.RestDay(
+                nextSession = nextScheduledSession?.toPlannedSession(),
+                nextSessionDayLabel = nextDayLabel,
+                nextSessionRelativeLabel = nextRelLabel
+            )
+        }
+
         val upcomingWeeks = engine.lookaheadWeeks(2).map { lookahead ->
             UpcomingWeekItem(
                 weekNumber = lookahead.weekNumber,
@@ -198,13 +242,19 @@ class BootcampViewModel @Inject constructor(
                     SessionUiItem(
                         dayLabel = "",
                         typeName = sessionTypeDisplayName(session.type.name, session.presetId),
+                        rawTypeName = session.type.name,
                         minutes = session.minutes,
                         isCompleted = false,
-                        isToday = false
+                        isToday = false,
+                        presetId = session.presetId
                     )
                 }
             )
         }
+
+        val progressPercentage = if (engine.totalWeeks > 0) {
+            (engine.absoluteWeek.toFloat() / engine.totalWeeks * 100).toInt().coerceIn(0, 100)
+        } else 0
 
         _uiState.value = BootcampUiState(
             isLoading = false,
@@ -219,9 +269,9 @@ class BootcampViewModel @Inject constructor(
             isRecoveryWeek = engine.isRecoveryWeek,
             weeksUntilNextRecovery = engine.weeksUntilNextRecovery,
             showGraduationCta = engine.absoluteWeek >= engine.totalWeeks,
-            nextSession = nextScheduledSession?.toPlannedSession(),
-            nextSessionDayLabel = nextScheduledSession?.let { dayLabelFor(it.dayOfWeek) },
-            currentWeekSessions = sessionItems,
+            currentWeekDays = weekDays,
+            currentWeekDateRange = computeWeekDateRange(weekStart),
+            todayState = todayState,
             activePreferredDays = activePreferredDays,
             upcomingWeeks = upcomingWeeks,
             welcomeBackMessage = if (welcomeBackDismissed) null else gapAction.welcomeMessage,
@@ -231,9 +281,9 @@ class BootcampViewModel @Inject constructor(
             illnessFlag = illnessFlag,
             tierPromptDirection = tierPromptDirection,
             tierPromptEvidence = tierPromptEvidence,
-            scheduledRestDay = scheduledRestDay,
             missedSession = missedSession,
-            swapRestMessage = null
+            swapRestMessage = null,
+            goalProgressPercentage = progressPercentage
         )
     }
 
@@ -241,11 +291,14 @@ class BootcampViewModel @Inject constructor(
         enrollment: BootcampEnrollmentEntity,
         lastSession: BootcampSessionEntity?
     ): Int {
-        if (lastSession?.completedWorkoutId == null) return 0
         val now = System.currentTimeMillis()
-        val lastDate = enrollment.startDate + TimeUnit.DAYS.toMillis(
+        if (lastSession?.completedWorkoutId == null) {
+            // No completed session — compute days since enrollment start
+            return ((now - enrollment.startDate) / TimeUnit.DAYS.toMillis(1)).toInt().coerceAtLeast(0)
+        }
+        val lastDate = lastSession.completedAtMs ?: (enrollment.startDate + TimeUnit.DAYS.toMillis(
             ((lastSession.weekNumber - 1) * 7 + (lastSession.dayOfWeek - 1)).toLong()
-        )
+        ))
         return ((now - lastDate) / TimeUnit.DAYS.toMillis(1)).toInt().coerceAtLeast(0)
     }
 
@@ -259,11 +312,39 @@ class BootcampViewModel @Inject constructor(
         _uiState.update { it.copy(onboardingStep = step) }
     }
 
+    private fun computeOnboardingDurationState(
+        minutes: Int,
+        runsPerWeek: Int,
+        goal: BootcampGoal?
+    ): Triple<Int, Int, String?> {
+        val durations = DurationScaler.compute(runsPerWeek, minutes)
+        val easyRuns = if (runsPerWeek >= 3) runsPerWeek - 1 else runsPerWeek
+        val weeklyTotal = durations.easyMinutes * easyRuns + durations.longMinutes
+        val longRunWarning = if (goal != null && durations.longMinutes < goal.minLongRunMinutes) {
+            "Your long run (~${durations.longMinutes} min) is shorter than recommended for " +
+                "${goal.name.replace('_', ' ')} training (${goal.minLongRunMinutes} min). " +
+                "Consider increasing your run length or adding a day."
+        } else null
+        return Triple(durations.longMinutes, weeklyTotal, longRunWarning)
+    }
+
     fun setOnboardingGoal(goal: BootcampGoal) {
-        val warning = if (_uiState.value.onboardingMinutes < goal.warnBelowMinutes) {
+        val state = _uiState.value
+        val warning = if (state.onboardingMinutes < goal.warnBelowMinutes) {
             "${goal.name.replace('_', ' ')} training typically needs at least ${goal.suggestedMinMinutes} min per session."
         } else null
-        _uiState.update { it.copy(onboardingGoal = goal, onboardingTimeWarning = warning) }
+        val (longRun, weekly, longWarning) = computeOnboardingDurationState(
+            state.onboardingMinutes, state.onboardingRunsPerWeek, goal
+        )
+        _uiState.update {
+            it.copy(
+                onboardingGoal = goal,
+                onboardingTimeWarning = warning,
+                onboardingLongRunMinutes = longRun,
+                onboardingWeeklyTotal = weekly,
+                onboardingLongRunWarning = longWarning
+            )
+        }
     }
 
     fun setOnboardingMinutes(minutes: Int) {
@@ -271,17 +352,41 @@ class BootcampViewModel @Inject constructor(
         val warning = if (goal != null && minutes < goal.warnBelowMinutes) {
             "${goal.name.replace('_', ' ')} training typically needs at least ${goal.suggestedMinMinutes} min per session."
         } else null
-        _uiState.update { it.copy(onboardingMinutes = minutes, onboardingTimeWarning = warning) }
+        val (longRun, weekly, longWarning) = computeOnboardingDurationState(
+            minutes, _uiState.value.onboardingRunsPerWeek, goal
+        )
+        _uiState.update {
+            it.copy(
+                onboardingMinutes = minutes,
+                onboardingTimeWarning = warning,
+                onboardingLongRunMinutes = longRun,
+                onboardingWeeklyTotal = weekly,
+                onboardingLongRunWarning = longWarning
+            )
+        }
     }
 
     fun setOnboardingRunsPerWeek(runs: Int) {
-        _uiState.update { it.copy(onboardingRunsPerWeek = runs) }
+        val state = _uiState.value
+        val (longRun, weekly, longWarning) = computeOnboardingDurationState(
+            state.onboardingMinutes, runs, state.onboardingGoal
+        )
+        _uiState.update {
+            it.copy(
+                onboardingRunsPerWeek = runs,
+                onboardingLongRunMinutes = longRun,
+                onboardingWeeklyTotal = weekly,
+                onboardingLongRunWarning = longWarning
+            )
+        }
     }
 
     fun onBootcampWorkoutStarting() {
         // Store in WorkoutState (singleton) so the post-run NavEntry's separate
         // BootcampViewModel instance can read it via onWorkoutCompleted().
-        val nextScheduled = _uiState.value.currentWeekSessions.firstOrNull { it.sessionId != null && !it.isCompleted }
+        val nextScheduled = _uiState.value.currentWeekDays
+            .mapNotNull { it.session }
+            .firstOrNull { it.sessionId != null && !it.isCompleted }
         WorkoutState.setPendingBootcampSessionId(nextScheduled?.sessionId)
     }
 
@@ -290,7 +395,7 @@ class BootcampViewModel @Inject constructor(
         val goal = state.onboardingGoal ?: return
         val preferredDays = defaultPreferredDays(state.onboardingRunsPerWeek)
         viewModelScope.launch {
-            val startDate = firstPreferredDayAfterMs(preferredDays)
+            val startDate = firstPreferredDayAfterMs(preferredDays.map { it.day })
             bootcampRepository.createEnrollment(
                 goal = goal,
                 targetMinutesPerRun = state.onboardingMinutes,
@@ -304,11 +409,16 @@ class BootcampViewModel @Inject constructor(
         }
     }
 
-    private fun defaultPreferredDays(runsPerWeek: Int): List<Int> = when (runsPerWeek) {
-        2 -> listOf(2, 5)              // Tue, Fri
-        3 -> listOf(1, 3, 6)           // Mon, Wed, Sat
-        4 -> listOf(1, 3, 5, 7)        // Mon, Wed, Fri, Sun
-        else -> listOf(1, 2, 4, 6, 7)  // Mon, Tue, Thu, Sat, Sun (5+)
+    private fun defaultPreferredDays(runsPerWeek: Int): List<DayPreference> {
+        val days = when (runsPerWeek) {
+            2 -> listOf(2, 5)              // Tue, Fri
+            3 -> listOf(1, 3, 6)           // Mon, Wed, Sat
+            4 -> listOf(1, 3, 5, 7)        // Mon, Wed, Fri, Sun
+            else -> listOf(1, 2, 4, 6, 7)  // Mon, Tue, Thu, Sat, Sun (5+)
+        }
+        return days.mapIndexed { i, day ->
+            DayPreference(day, if (i == days.lastIndex) DaySelectionLevel.LONG_RUN_BIAS else DaySelectionLevel.AVAILABLE)
+        }
     }
 
     fun pauseBootcamp() {
@@ -327,6 +437,22 @@ class BootcampViewModel @Inject constructor(
 
     fun showDeleteConfirmDialog() {
         _uiState.update { it.copy(showDeleteConfirmDialog = true) }
+    }
+
+    fun onSessionClick(session: SessionUiItem) {
+        _uiState.update { it.copy(showSessionDetail = true, sessionDetailItem = session) }
+    }
+
+    fun dismissSessionDetail() {
+        _uiState.update { it.copy(showSessionDetail = false, sessionDetailItem = null) }
+    }
+
+    fun showGoalDetail() {
+        _uiState.update { it.copy(showGoalDetail = true) }
+    }
+
+    fun dismissGoalDetail() {
+        _uiState.update { it.copy(showGoalDetail = false) }
     }
 
     fun dismissDeleteConfirmDialog() {
@@ -419,6 +545,7 @@ class BootcampViewModel @Inject constructor(
         viewModelScope.launch {
             val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
             val session = bootcampRepository.getNextScheduledSession(enrollment.id) ?: return@launch
+            if (session.dayOfWeek != LocalDate.now().dayOfWeek.value) return@launch
             val sessionId = session.id
             bootcampRepository.swapSessionToRestDay(sessionId)
             refreshFromEnrollment(enrollment)
@@ -443,28 +570,35 @@ class BootcampViewModel @Inject constructor(
                 allSessionsThisWeek = sessions
             )
             val result = SessionRescheduler.reschedule(req)
-            val (targetDay, targetLabel) = when (result) {
-                is RescheduleResult.Moved -> result.newDayOfWeek to dayLabelFor(result.newDayOfWeek)
-                else -> null to null
+            val validDays = SessionRescheduler.availableDays(req)
+            val autoTargetDay = (result as? RescheduleResult.Moved)?.newDayOfWeek
+            val alternativeDays = when {
+                autoTargetDay != null -> validDays.filterNot { it == autoTargetDay }
+                else -> validDays
             }
+
             _uiState.update {
                 it.copy(
                     rescheduleSheetSessionId = sessionId,
-                    rescheduleAutoTargetDay = targetDay,
-                    rescheduleAutoTargetLabel = targetLabel
+                    rescheduleAutoTargetDay = autoTargetDay,
+                    rescheduleAutoTargetLabel = autoTargetDay?.let(::dayLabelFor),
+                    rescheduleDropSessionId = (result as? RescheduleResult.Dropped)?.droppedSessionId,
+                    rescheduleAvailableDays = alternativeDays,
+                    rescheduleAvailableLabels = alternativeDays.map(::dayLabelFor)
                 )
             }
         }
     }
 
-    fun confirmReschedule() {
+    fun confirmReschedule(dayOverride: Int? = null) {
         val sessionId = _uiState.value.rescheduleSheetSessionId ?: return
-        val newDay = _uiState.value.rescheduleAutoTargetDay
+        val newDay = dayOverride ?: _uiState.value.rescheduleAutoTargetDay
+        val droppedSessionId = _uiState.value.rescheduleDropSessionId ?: sessionId
         viewModelScope.launch {
             if (newDay != null) {
                 bootcampRepository.rescheduleSession(sessionId, newDay)
             } else {
-                bootcampRepository.dropSession(sessionId)
+                bootcampRepository.dropSession(droppedSessionId)
             }
             clearRescheduleSheet()
             loadBootcampState()
@@ -487,7 +621,10 @@ class BootcampViewModel @Inject constructor(
             it.copy(
                 rescheduleSheetSessionId = null,
                 rescheduleAutoTargetDay = null,
-                rescheduleAutoTargetLabel = null
+                rescheduleAutoTargetLabel = null,
+                rescheduleDropSessionId = null,
+                rescheduleAvailableDays = emptyList(),
+                rescheduleAvailableLabels = emptyList()
             )
         }
     }
@@ -499,55 +636,24 @@ class BootcampViewModel @Inject constructor(
         }
     }
 
+    fun savePreferredDays(days: List<com.hrcoach.domain.bootcamp.DayPreference>) {
+        viewModelScope.launch {
+            val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
+            bootcampRepository.updatePreferredDays(enrollment.id, days, _uiState.value.absoluteWeek)
+        }
+    }
+
     suspend fun onWorkoutCompleted(workoutId: Long): Boolean {
-        val expectedSessionId = WorkoutState.pendingBootcampSessionId ?: return false
-        WorkoutState.setPendingBootcampSessionId(null)
-        val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return false
-        val goal = BootcampGoal.valueOf(enrollment.goalType)
-        val preferredDays = BootcampEnrollmentEntity.parseDayPreferences(enrollment.preferredDays)
-        val engine = PhaseEngine(
-            goal = goal,
-            phaseIndex = enrollment.currentPhaseIndex,
-            weekInPhase = enrollment.currentWeekInPhase,
-            runsPerWeek = enrollment.runsPerWeek,
-            targetMinutes = enrollment.targetMinutesPerRun
-        )
-        val currentWeekSessions = ensureCurrentWeekSessions(
-            enrollment = enrollment,
-            engine = engine,
-            preferredDays = preferredDays,
+        val pendingSessionId = WorkoutState.snapshot.value.pendingBootcampSessionId ?: return false
+        val result = bootcampSessionCompleter.complete(
+            workoutId = workoutId,
+            pendingSessionId = pendingSessionId,
             tuningDirection = _uiState.value.tuningDirection
         )
-        val nextSession = currentWeekSessions.firstOrNull { it.id == expectedSessionId } ?: return false
-
-        bootcampRepository.updateSession(
-            nextSession.copy(
-                status = BootcampSessionEntity.STATUS_COMPLETED,
-                completedWorkoutId = workoutId
-            )
-        )
-
-        val refreshedWeek = bootcampRepository.getSessionsForWeek(enrollment.id, nextSession.weekNumber)
-        if (refreshedWeek.isNotEmpty() && refreshedWeek.all { it.status == BootcampSessionEntity.STATUS_COMPLETED }) {
-            val nextEngine = if (engine.shouldAdvancePhase()) {
-                engine.advancePhase()
-            } else {
-                engine.copy(weekInPhase = engine.weekInPhase + 1)
-            }
-            val updatedEnrollment = enrollment.copy(
-                currentPhaseIndex = nextEngine.phaseIndex,
-                currentWeekInPhase = nextEngine.weekInPhase
-            )
-            bootcampRepository.updateEnrollment(updatedEnrollment)
-            ensureCurrentWeekSessions(
-                enrollment = updatedEnrollment,
-                engine = nextEngine,
-                preferredDays = preferredDays,
-                tuningDirection = _uiState.value.tuningDirection
-            )
+        if (result.completed) {
+            WorkoutState.setPendingBootcampSessionId(null)
         }
-
-        return true
+        return result.completed
     }
 
     private suspend fun ensureCurrentWeekSessions(
@@ -568,10 +674,26 @@ class BootcampViewModel @Inject constructor(
         )
         if (plannedSessions.isEmpty()) return emptyList()
 
-        val availableDays = preferredDays
-            .filter { it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.NONE }
-            .map { it.day }
-        val entities = plannedSessions.mapIndexed { index, session ->
+        val filteredPrefs = preferredDays
+            .filter { it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.NONE && it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.BLACKOUT }
+        val availableDays = filteredPrefs.map { it.day }
+
+        // Reorder planned sessions so LONG-type lands on the LONG_RUN_BIAS day if one exists
+        val orderedSessions = run {
+            val biasIndex = filteredPrefs.indexOfFirst { it.level == com.hrcoach.domain.bootcamp.DaySelectionLevel.LONG_RUN_BIAS }
+            val longIndex = plannedSessions.indexOfFirst { it.type == com.hrcoach.domain.bootcamp.SessionType.LONG }
+            if (biasIndex >= 0 && longIndex >= 0 && biasIndex != longIndex && biasIndex < plannedSessions.size) {
+                plannedSessions.toMutableList().apply {
+                    val tmp = this[biasIndex]
+                    this[biasIndex] = this[longIndex]
+                    this[longIndex] = tmp
+                }
+            } else {
+                plannedSessions
+            }
+        }
+
+        val entities = orderedSessions.mapIndexed { index, session ->
             BootcampRepository.buildSessionEntity(
                 enrollmentId = enrollment.id,
                 weekNumber = weekNumber,
