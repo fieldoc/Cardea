@@ -2,6 +2,7 @@ package com.hrcoach.ui.bootcamp
 
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
+import com.hrcoach.domain.bootcamp.DurationScaler
 import com.hrcoach.domain.model.BootcampGoal
 
 data class BootcampSettingsUiState(
@@ -62,6 +63,25 @@ data class BootcampSettingsUiState(
             hasTierChanges ||
             hasStartDateChanges ||
             hasHrMaxChanges
+
+    val editLongRunMinutes: Int
+        get() = DurationScaler.compute(editRunsPerWeek, editTargetMinutesPerRun).longMinutes
+
+    val editWeeklyTotal: Int
+        get() {
+            val d = DurationScaler.compute(editRunsPerWeek, editTargetMinutesPerRun)
+            val easyRuns = if (editRunsPerWeek >= 3) editRunsPerWeek - 1 else editRunsPerWeek
+            return d.easyMinutes * easyRuns + d.longMinutes
+        }
+
+    val longRunWarning: String?
+        get() {
+            val longRun = editLongRunMinutes
+            return if (longRun < editGoal.minLongRunMinutes) {
+                "Your long run (~$longRun min) is shorter than recommended for " +
+                    "${editGoal.name.replace('_', ' ')} training (${editGoal.minLongRunMinutes} min)."
+            } else null
+        }
 
     val canSave: Boolean
         get() = preferredDaysValidationError == null &&

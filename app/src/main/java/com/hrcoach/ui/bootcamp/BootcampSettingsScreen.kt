@@ -8,6 +8,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,14 +18,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -31,26 +36,26 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,290 +64,462 @@ import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.CardeaTextTertiary
 import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.ZoneRed
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import androidx.compose.foundation.text.KeyboardOptions
 
 private val DayLetter = listOf("M", "T", "W", "T", "F", "S", "S")
 private val settingsDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("EEE, MMM d, yyyy")
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BootcampSettingsScreen(
     onBack: () -> Unit,
     viewModel: BootcampSettingsViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var showDestructiveConfirm by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
+    // ── Destructive-change confirmation dialog ────────────────────────────────
+    if (showDestructiveConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDestructiveConfirm = false },
+            containerColor = CardeaBgPrimary,
+            shape = RoundedCornerShape(20.dp),
+            tonalElevation = 0.dp,
+            title = {
+                Text(
+                    text = "Recalculate Program?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = CardeaTextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Program Settings",
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
+                        text = "These changes affect your program structure:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTextSecondary
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (state.hasGoalChanges) ChangeChip("Goal → ${goalLabel(state.editGoal)}")
+                        if (state.hasTierChanges) ChangeChip("Difficulty → ${tierLabel(state.editTierIndex)}")
+                        if (state.hasRunsPerWeekChanges) ChangeChip("${state.editRunsPerWeek} runs / week")
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Future sessions will be recalculated to match. Completed sessions are unaffected.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTextSecondary
+                    )
+                }
+            },
+            confirmButton = {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CardeaCtaGradient)
+                        .clickable {
+                            showDestructiveConfirm = false
+                            viewModel.saveSettings(onDone = onBack)
+                        }
+                        .padding(horizontal = 18.dp, vertical = 9.dp)
+                ) {
+                    Text(
+                        text = "Save anyway",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDestructiveConfirm = false }) {
+                    Text("Cancel", color = CardeaTextSecondary)
+                }
+            }
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CardeaBgPrimary)
+    ) {
+        if (state.isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = Color.White
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                // ── Title row ─────────────────────────────────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = CardeaTextSecondary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        },
-        containerColor = Color.Transparent
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
-                        center = Offset.Zero,
-                        radius = 1800f
+                    Text(
+                        text = "Settings",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp
+                        ),
+                        color = Color.White
                     )
-                )
-        ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = Color.White
-                )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    GlassCard(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "Training Schedule",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
-                        )
+                }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Goal",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        GoalSelector(
-                            selectedGoal = state.editGoal,
-                            onGoalSelected = viewModel::setGoal
-                        )
+                // ── TRAINING ──────────────────────────────────────────────────
+                SectionLabel("Training")
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Goal",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextSecondary
+                    )
+                    GoalSelector(
+                        selectedGoal = state.editGoal,
+                        onGoalSelected = viewModel::setGoal
+                    )
 
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "Target Minutes",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "${state.editTargetMinutesPerRun} min",
-                            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                            color = CardeaTextPrimary
-                        )
-                        Slider(
-                            value = state.editTargetMinutesPerRun.toFloat(),
-                            onValueChange = { viewModel.setTargetMinutesPerRun(it.toInt()) },
-                            valueRange = 15f..90f,
-                            steps = 14,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color.White,
-                                activeTrackColor = Color.White,
-                                inactiveTrackColor = GlassHighlight
-                            )
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("15 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
-                            Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
-                        }
+                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
-                        HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 16.dp))
-
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "Runs Per Week",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                            text = "Easy run",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = CardeaTextSecondary
                         )
-                        val options = listOf(2, 3, 4, 5)
-                        val labels = listOf("2", "3", "4", "5+")
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            options.forEachIndexed { index, runs ->
-                                val isSelected = state.editRunsPerWeek == runs
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(44.dp)
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .then(
-                                            if (isSelected) Modifier.background(CardeaGradient)
-                                            else Modifier.background(GlassHighlight)
-                                        )
-                                        .clickable { viewModel.setRunsPerWeek(runs) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = labels[index],
-                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
-                                    )
-                                }
-                            }
-                        }
-                        Text(
-                            text = "runs / week",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextTertiary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 16.dp)
-                        )
-
-                        Text(
-                            text = "Difficulty Tier",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        TierSelector(
-                            tierIndex = state.editTierIndex,
-                            onTierSelected = viewModel::setTierIndex
-                        )
-
-                        HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 16.dp))
-
-                        Text(
-                            text = "Program Start Date",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        StartDateEditor(
-                            dateMs = state.editStartDateMs,
-                            onPrevDay = { viewModel.shiftStartDate(-1) },
-                            onNextDay = { viewModel.shiftStartDate(1) }
-                        )
-                        Text(
-                            text = "If your schedule changed, move the start date so gap logic matches reality.",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CardeaTextSecondary,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )
-
-                        HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 16.dp))
-
-                        Text(
-                            text = "Max Heart Rate (HRmax)",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
-                        )
-                        OutlinedTextField(
-                            value = state.editHrMaxInput,
-                            onValueChange = viewModel::setHrMaxInput,
-                            singleLine = true,
-                            label = { Text("100-220 bpm") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            isError = state.hrMaxValidationError != null,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        val hrError = state.hrMaxValidationError
-                        if (hrError != null) {
+                        Row(verticalAlignment = Alignment.Bottom) {
                             Text(
-                                text = hrError,
+                                text = "${state.editTargetMinutesPerRun}",
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = CardeaTextPrimary
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                text = "min",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFFFF5A5F)
-                            )
-                        } else {
-                            Text(
-                                text = "Adaptive coaching quality improves when HRmax is set.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = CardeaTextSecondary
+                                color = CardeaTextSecondary,
+                                modifier = Modifier.padding(bottom = 3.dp)
                             )
                         }
-
-                        HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 16.dp))
-
-                        Text(
-                            text = "Preferred Days",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White
+                    }
+                    Slider(
+                        value = state.editTargetMinutesPerRun.toFloat(),
+                        onValueChange = { viewModel.setTargetMinutesPerRun(it.toInt()) },
+                        valueRange = 15f..90f,
+                        steps = 14,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color.White,
+                            activeTrackColor = Color.White,
+                            inactiveTrackColor = GlassHighlight
                         )
-                        val selectedCount = state.editPreferredDays.size
-                        val dayCopy = "Select exactly ${state.editRunsPerWeek} days \u00b7 $selectedCount selected"
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("15 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
+                        Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
-                            text = if (selectedCount == state.editRunsPerWeek) dayCopy else "$dayCopy \u2715",
+                            text = "Long run: ~${state.editLongRunMinutes} min",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (selectedCount == state.editRunsPerWeek) {
-                                CardeaTextSecondary
-                            } else {
-                                Color(0xFFFF5A5F)
-                            }
+                            color = CardeaTextSecondary
                         )
-                        DayChipRow(
-                            selectedDays = state.editPreferredDays,
-                            onToggle = viewModel::cycleDayPreference,
-                            onLongPress = viewModel::toggleBlackoutDay
+                        Text(
+                            text = "Weekly: ~${state.editWeeklyTotal} min",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTextTertiary
                         )
+                    }
+                    state.longRunWarning?.let { warning ->
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = warning,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFFFB74D)
+                        )
+                    }
 
-                        val visibleError = state.preferredDaysValidationError
-                            ?: state.hrMaxValidationError
-                            ?: state.saveError
-                        visibleError?.let { err ->
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = err,
-                                color = Color(0xFFFF5A5F),
-                                style = MaterialTheme.typography.bodySmall
-                            )
-                        }
+                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            TextButton(
-                                onClick = { viewModel.saveSettings(onDone = onBack) },
-                                enabled = state.canSave && !state.isSaving
+                    Text(
+                        text = "Runs / Week",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextSecondary
+                    )
+                    val runOptions = listOf(2, 3, 4, 5)
+                    val runLabels = listOf("2", "3", "4", "5+")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        runOptions.forEachIndexed { index, runs ->
+                            val isSelected = state.editRunsPerWeek == runs
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .then(
+                                        if (isSelected) Modifier.background(CardeaGradient)
+                                        else Modifier.background(GlassHighlight)
+                                    )
+                                    .clickable { viewModel.setRunsPerWeek(runs) },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (state.isSaving) "Saving..." else "Save",
-                                    color = if (state.canSave && !state.isSaving) Color.White else CardeaTextSecondary
+                                    text = runLabels[index],
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
+
+                    Text(
+                        text = "Difficulty",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextSecondary
+                    )
+                    TierSelector(
+                        tierIndex = state.editTierIndex,
+                        onTierSelected = viewModel::setTierIndex
+                    )
                 }
+
+                Spacer(Modifier.height(10.dp))
+
+                // ── SCHEDULE ──────────────────────────────────────────────────
+                SectionLabel("Schedule")
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Preferred Days",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextSecondary
+                    )
+                    val selectedCount = state.editPreferredDays.count {
+                        it.level == DaySelectionLevel.AVAILABLE || it.level == DaySelectionLevel.LONG_RUN_BIAS
+                    }
+                    Text(
+                        text = if (selectedCount == state.editRunsPerWeek)
+                            "Select exactly ${state.editRunsPerWeek} days · $selectedCount selected"
+                        else
+                            "Select exactly ${state.editRunsPerWeek} days · $selectedCount selected ✕",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selectedCount == state.editRunsPerWeek) CardeaTextSecondary else ZoneRed,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
+                    DayChipRow(
+                        selectedDays = state.editPreferredDays,
+                        onToggle = viewModel::cycleDayPreference,
+                        onLongPress = viewModel::toggleBlackoutDay
+                    )
+
+                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
+
+                    Text(
+                        text = "Start Date",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextSecondary
+                    )
+                    StartDateEditor(
+                        dateMs = state.editStartDateMs,
+                        onPrevDay = { viewModel.shiftStartDate(-1) },
+                        onNextDay = { viewModel.shiftStartDate(1) }
+                    )
+                    Text(
+                        text = "If your schedule changed, move the start date so gap logic matches reality.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CardeaTextTertiary,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // ── PROFILE ───────────────────────────────────────────────────
+                SectionLabel("Profile")
+                GlassCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Max Heart Rate",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextSecondary
+                    )
+                    OutlinedTextField(
+                        value = state.editHrMaxInput,
+                        onValueChange = viewModel::setHrMaxInput,
+                        singleLine = true,
+                        label = { Text("100–220 bpm") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = state.hrMaxValidationError != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    )
+                    val hrError = state.hrMaxValidationError
+                    if (hrError != null) {
+                        Text(
+                            text = hrError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ZoneRed,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "Adaptive coaching quality improves when HRmax is set.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CardeaTextTertiary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // ── Errors + Save CTA ─────────────────────────────────────────
+                val visibleError = state.preferredDaysValidationError
+                    ?: state.hrMaxValidationError
+                    ?: state.saveError
+                visibleError?.let { err ->
+                    Text(
+                        text = err,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ZoneRed,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                }
+
+                val hasProgramChanges = state.hasGoalChanges || state.hasTierChanges || state.hasRunsPerWeekChanges
+                val saveEnabled = state.canSave && !state.isSaving
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            if (saveEnabled) CardeaCtaGradient
+                            else Brush.linearGradient(listOf(GlassHighlight, GlassHighlight))
+                        )
+                        .clickable(enabled = saveEnabled) {
+                            if (hasProgramChanges) showDestructiveConfirm = true
+                            else viewModel.saveSettings(onDone = onBack)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (state.isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Save Changes",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = if (saveEnabled) Color.White else CardeaTextTertiary
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
 }
+
+// ── Shared helpers ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall.copy(
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp
+        ),
+        color = CardeaTextTertiary,
+        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+    )
+}
+
+@Composable
+private fun ChangeChip(text: String) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0x15FF4D5A))
+            .border(1.dp, Color(0x35FF4D5A), RoundedCornerShape(20.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+            color = GradientRed
+        )
+    }
+}
+
+private fun goalLabel(goal: BootcampGoal): String = when (goal) {
+    BootcampGoal.CARDIO_HEALTH -> "Cardio Health"
+    BootcampGoal.RACE_5K_10K -> "5K / 10K"
+    BootcampGoal.HALF_MARATHON -> "Half Marathon"
+    BootcampGoal.MARATHON -> "Marathon"
+}
+
+private fun tierLabel(index: Int): String = when (index) {
+    0 -> "Easy"
+    1 -> "Moderate"
+    else -> "Hard"
+}
+
+// ── GoalSelector ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun GoalSelector(
@@ -355,39 +532,44 @@ private fun GoalSelector(
         BootcampGoal.HALF_MARATHON,
         BootcampGoal.MARATHON
     )
-    goals.forEach { goal ->
-        val isSelected = selectedGoal == goal
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(GlassHighlight))
-                .clickable { onGoalSelected(goal) }
-                .padding(horizontal = 12.dp, vertical = 10.dp)
-        ) {
-            Text(
-                text = goalLabel(goal),
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
-            )
+    Column(
+        modifier = Modifier.padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        goals.forEach { goal ->
+            val isSelected = selectedGoal == goal
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(GlassHighlight))
+                    .clickable { onGoalSelected(goal) }
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    text = goalLabel(goal),
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                )
+            }
         }
     }
 }
+
+// ── TierSelector ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun TierSelector(
     tierIndex: Int,
     onTierSelected: (Int) -> Unit
 ) {
-    val labels = listOf("Easy", "Moderate", "Hard")
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        labels.forEachIndexed { index, label ->
+        listOf("Easy", "Moderate", "Hard").forEachIndexed { index, label ->
             val isSelected = tierIndex == index
             Box(
                 modifier = Modifier
@@ -408,6 +590,8 @@ private fun TierSelector(
     }
 }
 
+// ── StartDateEditor ───────────────────────────────────────────────────────────
+
 @Composable
 private fun StartDateEditor(
     dateMs: Long,
@@ -425,7 +609,7 @@ private fun StartDateEditor(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         TextButton(onClick = onPrevDay) {
-            Text("Previous", color = CardeaTextSecondary)
+            Text("← Prev", color = CardeaTextSecondary)
         }
         Text(
             text = settingsDateFormatter.format(localDate),
@@ -433,17 +617,12 @@ private fun StartDateEditor(
             color = Color.White
         )
         TextButton(onClick = onNextDay) {
-            Text("Next", color = CardeaTextSecondary)
+            Text("Next →", color = CardeaTextSecondary)
         }
     }
 }
 
-private fun goalLabel(goal: BootcampGoal): String = when (goal) {
-    BootcampGoal.CARDIO_HEALTH -> "Cardio Health"
-    BootcampGoal.RACE_5K_10K -> "5K / 10K"
-    BootcampGoal.HALF_MARATHON -> "Half Marathon"
-    BootcampGoal.MARATHON -> "Marathon"
-}
+// ── DayChipRow ────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -454,11 +633,11 @@ private fun DayChipRow(
 ) {
     val haptic = LocalHapticFeedback.current
 
-    // Legend strip — shows all four states as tiny labeled chips
+    // Legend strip
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp),
+            .padding(top = 8.dp, bottom = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -571,8 +750,8 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                 color = if (isBlackout) Color(0xFF8B3A3A) else Color.White
             )
-            if (isLongRun)  Icon(Icons.Default.Star,  null, tint = Color.White,        modifier = Modifier.size(7.dp))
-            if (isBlackout) Icon(Icons.Default.Close, null, tint = Color(0xFF8B3A3A),  modifier = Modifier.size(7.dp))
+            if (isLongRun)  Icon(Icons.Default.Star,  null, tint = Color.White,       modifier = Modifier.size(7.dp))
+            if (isBlackout) Icon(Icons.Default.Close, null, tint = Color(0xFF8B3A3A), modifier = Modifier.size(7.dp))
         }
     }
 }
