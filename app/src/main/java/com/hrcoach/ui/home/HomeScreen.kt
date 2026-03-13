@@ -45,8 +45,12 @@ import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaTextTertiary
+import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.GlassSurface
 
 private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
     sessionType.contains("Z2", ignoreCase = true) ||
@@ -58,7 +62,7 @@ private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
     sessionType.contains("INTERVAL", ignoreCase = true) ->
         Color(0xFFFF4D5A).copy(alpha = 0.2f) to Color(0xFFFF7B84)
     else ->
-        Color.White.copy(alpha = 0.07f) to Color.White.copy(alpha = 0.5f)
+        GlassBorder to CardeaTextSecondary
 }
 
 @Composable
@@ -66,12 +70,12 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
     Box(
         modifier = modifier
             .background(
-                color = Color.White.copy(alpha = 0.04f),
+                color = GlassHighlight,
                 shape = RoundedCornerShape(14.dp)
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.07f),
+                color = GlassBorder,
                 shape = RoundedCornerShape(14.dp)
             )
             .padding(vertical = 12.dp, horizontal = 8.dp),
@@ -85,7 +89,7 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
                     fontSize = 20.sp,
                     lineHeight = 20.sp
                 ),
-                color = Color.White
+                color = CardeaTextPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -94,7 +98,7 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
                     letterSpacing = 1.5.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                color = Color.White.copy(alpha = 0.4f)
+                color = CardeaTextSecondary
             )
         }
     }
@@ -149,6 +153,8 @@ private fun StatChipsRow(state: HomeUiState, modifier: Modifier = Modifier) {
 private fun BootcampHeroCard(
     session: BootcampSessionEntity,
     weekNumber: Int,
+    isToday: Boolean,
+    dayLabel: String,
     onStartSession: () -> Unit,
     onDetails: () -> Unit,
     modifier: Modifier = Modifier
@@ -159,6 +165,18 @@ private fun BootcampHeroCard(
         .split(" ")
         .joinToString(" ") { word -> word.lowercase().replaceFirstChar { it.uppercase() } }
 
+    // Mute visual intensity when the session isn't today
+    val gradientAlpha = if (isToday) 1f else 0.45f
+    val textPrimary = if (isToday) CardeaTextPrimary else CardeaTextSecondary
+    val textSecondary = if (isToday) CardeaTextSecondary else CardeaTextTertiary
+    val borderColor = if (isToday) GlassSurface else GlassBorder
+
+    val headerText = if (isToday) {
+        "TODAY'S SESSION · WEEK $weekNumber"
+    } else {
+        "NEXT RUN · $dayLabel"
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -166,8 +184,8 @@ private fun BootcampHeroCard(
             .background(
                 brush = Brush.linearGradient(
                     colorStops = arrayOf(
-                        0f to Color(0x33FF2DA6),
-                        1f to Color(0x14E5FFFF)
+                        0f to Color(0x33FF2DA6).copy(alpha = 0x33 / 255f * gradientAlpha),
+                        1f to Color(0x14E5FFFF).copy(alpha = 0x14 / 255f * gradientAlpha)
                     ),
                     start = Offset(0f, 0f),
                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
@@ -176,32 +194,34 @@ private fun BootcampHeroCard(
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.15f),
+                color = borderColor,
                 shape = RoundedCornerShape(20.dp)
             )
     ) {
-        // Radial glow — top right corner
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .offset(x = (-30).dp, y = (-30).dp)
-                .align(Alignment.TopEnd)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color(0x40FF2DA6), Color.Transparent)
-                    ),
-                    shape = CircleShape
-                )
-        )
+        // Radial glow — top right corner (hidden when muted)
+        if (isToday) {
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .offset(x = (-30).dp, y = (-30).dp)
+                    .align(Alignment.TopEnd)
+                    .background(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color(0x40FF2DA6), Color.Transparent)
+                        ),
+                        shape = CircleShape
+                    )
+            )
+        }
 
         Column(modifier = Modifier.padding(20.dp)) {
             Text(
-                text = "TODAY'S SESSION · WEEK $weekNumber",
+                text = headerText,
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 2.sp
                 ),
-                color = Color.White.copy(alpha = 0.5f)
+                color = textSecondary
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -211,18 +231,21 @@ private fun BootcampHeroCard(
                     fontSize = 22.sp,
                     lineHeight = 24.sp
                 ),
-                color = Color.White
+                color = textPrimary
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "${session.targetMinutes} min · $sessionLabel",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = textSecondary
             )
             Spacer(Modifier.height(12.dp))
             Box(
                 modifier = Modifier
-                    .background(color = pillBg, shape = RoundedCornerShape(20.dp))
+                    .background(
+                        color = if (isToday) pillBg else pillBg.copy(alpha = pillBg.alpha * 0.5f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
@@ -231,24 +254,45 @@ private fun BootcampHeroCard(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp
                     ),
-                    color = pillText
+                    color = if (isToday) pillText else pillText.copy(alpha = 0.6f)
                 )
             }
             Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                CardeaButton(
-                    text = "Start Session",
-                    onClick = onStartSession,
-                    modifier = Modifier.weight(1f)
-                )
+            if (isToday) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    CardeaButton(
+                        text = "Start Session",
+                        onClick = onStartSession,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .border(
+                                width = 1.dp,
+                                color = GlassSurface,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(onClick = onDetails)
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Details",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = CardeaTextSecondary
+                        )
+                    }
+                }
+            } else {
                 Box(
                     modifier = Modifier
                         .border(
                             width = 1.dp,
-                            color = Color.White.copy(alpha = 0.15f),
+                            color = GlassBorder,
                             shape = RoundedCornerShape(12.dp)
                         )
                         .clip(RoundedCornerShape(12.dp))
@@ -257,9 +301,9 @@ private fun BootcampHeroCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Details",
+                        text = "Preview",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White.copy(alpha = 0.7f)
+                        color = CardeaTextSecondary
                     )
                 }
             }
@@ -274,11 +318,11 @@ private fun NoBootcampCard(onSetupBootcamp: () -> Unit, modifier: Modifier = Mod
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.1f),
+                color = GlassBorder,
                 shape = RoundedCornerShape(20.dp)
             )
             .background(
-                color = Color.White.copy(alpha = 0.03f),
+                color = GlassHighlight,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(20.dp),
@@ -290,19 +334,19 @@ private fun NoBootcampCard(onSetupBootcamp: () -> Unit, modifier: Modifier = Mod
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             ),
-            color = Color.White.copy(alpha = 0.4f)
+            color = CardeaTextSecondary
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Start Bootcamp",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-            color = Color.White
+            color = CardeaTextPrimary
         )
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Adaptive program — HR zones, life-aware scheduling",
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.45f),
+            color = CardeaTextSecondary,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(16.dp))
@@ -361,7 +405,7 @@ fun HomeScreen(
                     Text(
                         text = state.greeting,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = CardeaTextPrimary
                     )
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -401,6 +445,8 @@ fun HomeScreen(
                     BootcampHeroCard(
                         session = nextSession,
                         weekNumber = state.currentWeekNumber,
+                        isToday = state.isNextSessionToday,
+                        dayLabel = state.nextSessionDayLabel,
                         onStartSession = onGoToBootcamp,
                         onDetails = onGoToBootcamp,
                         modifier = Modifier.fillMaxWidth()

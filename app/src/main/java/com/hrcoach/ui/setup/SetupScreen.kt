@@ -2,12 +2,12 @@ package com.hrcoach.ui.setup
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +27,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -36,36 +36,21 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TopAppBarDefaults
-import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextTertiary
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import com.hrcoach.ui.components.CardeaSlider
-import com.hrcoach.ui.components.CardeaSwitch
-import com.hrcoach.ui.components.cardeaSegmentedButtonColors
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,12 +62,14 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.R
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.VoiceVerbosity
@@ -91,9 +78,53 @@ import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.preset.PresetCategory
 import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.domain.preset.WorkoutPreset
+import com.hrcoach.ui.components.CardeaSlider
+import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.HrCoachThemeTokens
+import com.hrcoach.ui.components.cardeaSegmentedButtonColors
+import com.hrcoach.ui.theme.CardeaBgPrimary
+import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.GlassSurface
+import com.hrcoach.ui.theme.CardeaTextPrimary
+import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaTextTertiary
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.SurfaceVariant
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 import kotlin.math.roundToInt
+
+// ── WorkoutMode display helpers ───────────────────────────────────────────────
+
+private fun WorkoutMode.displayLabel() = when (this) {
+    WorkoutMode.STEADY_STATE      -> "Steady State"
+    WorkoutMode.DISTANCE_PROFILE  -> "Paced Segments"
+    WorkoutMode.FREE_RUN          -> "Free Run"
+}
+
+private fun WorkoutMode.displayDescription() = when (this) {
+    WorkoutMode.STEADY_STATE      -> "Hold one heart rate zone for the full run."
+    WorkoutMode.DISTANCE_PROFILE  -> "Different zone targets across distance intervals."
+    WorkoutMode.FREE_RUN          -> "No targets. Heart rate recorded for analysis."
+}
+
+private fun buildAlertsSummary(state: SetupUiState): String {
+    val parts = mutableListOf<String>()
+    if (state.earconVolume > 0) parts.add("Audio")
+    if (state.enableVibration) parts.add("Vibration")
+    when (state.voiceVerbosity) {
+        VoiceVerbosity.MINIMAL -> parts.add("Voice minimal")
+        VoiceVerbosity.FULL    -> parts.add("Voice full")
+        else                   -> {}
+    }
+    return if (parts.isEmpty()) "All alerts off" else parts.joinToString(" · ")
+}
+
+// ── SetupScreen ───────────────────────────────────────────────────────────────
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,8 +135,9 @@ fun SetupScreen(
     onGoToBootcamp: () -> Unit,
     viewModel: SetupViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsState()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     var pulseOn by remember { mutableStateOf(false) }
+    var expandedSection by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(state.liveHr, state.isHrConnected) {
         if (state.liveHr > 0 && state.isHrConnected) {
@@ -118,71 +150,145 @@ fun SetupScreen(
         targetValue = if (pulseOn) 1.04f else 1f,
         label = "setup-hr-pulse"
     )
+    val canStart = state.validation.canStartWorkout
 
-    Scaffold(
-        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.screen_setup_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = androidx.compose.ui.graphics.Color.Transparent
-                )
-            )
+    // Reusable start action — return@run is the Kotlin idiom for early return in a lambda
+    val doStartWorkout: () -> Unit = {
+        run {
+            val configJson = viewModel.buildConfigJsonOrNull() ?: return@run
+            viewModel.saveAudioSettings()
+            val deviceAddress = viewModel.handoffConnectedDeviceAddress()
+            onStartWorkout(configJson, deviceAddress)
         }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    androidx.compose.ui.graphics.Brush.radialGradient(
-                        colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
-                        center = androidx.compose.ui.geometry.Offset.Zero,
-                        radius = 1800f
-                    )
-                )
-        ) {
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CardeaBgPrimary)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = if (isWideLayout) 24.dp else 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(
+                    horizontal = if (isWideLayout) 24.dp else 16.dp,
+                    vertical = 20.dp
+                ),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Bootcamp is the primary training path — shown first
-            BootcampEntryCard(
-                onClick = onGoToBootcamp
+            // ── Title ─────────────────────────────────────────────────────────
+            Text(
+                text = "Training",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = Color.White,
+                modifier = Modifier.padding(bottom = 2.dp)
             )
 
-            // Manual run is the alternative
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f), color = CardeaTextTertiary.copy(alpha = 0.3f))
-                Text(
-                    text = "OR SET UP MANUALLY",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CardeaTextTertiary
+            // ── Bootcamp hero ──────────────────────────────────────────────────
+            BootcampEntryCard(onClick = onGoToBootcamp)
+
+            // ── Manual Run section ─────────────────────────────────────────────
+            // Section label — Manual Run is a full peer section, not an afterthought
+            Text(
+                text = "Manual run",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.08.sp,
+                    fontSize = 10.sp
+                ),
+                color = CardeaTextTertiary,
+                modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+            )
+
+            // Quick-launch — last settings + one-tap start
+            QuickLaunchCard(
+                state = state,
+                canStart = canStart,
+                onStart = doStartWorkout
+            )
+
+            // ── Change setup accordion ─────────────────────────────────────────
+            Text(
+                text = "Change setup",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.08.sp,
+                    fontSize = 10.sp
+                ),
+                color = CardeaTextTertiary,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+
+            // All config rows in a single grouped card
+            val hrSummary = if (state.isHrConnected)
+                "${state.connectedDeviceName.ifBlank { "HR Monitor" }} · " +
+                    if (state.liveHr > 0) "${state.liveHr} bpm" else "connected"
+            else "Not connected"
+            val hrSummaryColor = if (state.isHrConnected) Color(0xFF4CAF50) else CardeaTextSecondary
+
+            GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                ConfigSectionHeader(
+                    title = "Mode",
+                    summary = state.mode.displayLabel(),
+                    isExpanded = expandedSection == "mode",
+                    onToggle = { expandedSection = if (expandedSection == "mode") null else "mode" }
                 )
-                HorizontalDivider(modifier = Modifier.weight(1f), color = CardeaTextTertiary.copy(alpha = 0.3f))
+                HorizontalDivider(color = GlassBorder)
+                ConfigSectionHeader(
+                    title = "HR Monitor",
+                    summary = hrSummary,
+                    summaryColor = hrSummaryColor,
+                    isExpanded = expandedSection == "hr",
+                    onToggle = { expandedSection = if (expandedSection == "hr") null else "hr" }
+                )
+                if (state.mode != WorkoutMode.FREE_RUN) {
+                    val targetSummary = when {
+                        state.selectedPresetId != null && state.selectedPresetId != "custom" ->
+                            state.selectedPresetId ?: "Zone target"
+                        state.steadyStateHr.isNotBlank() -> "${state.steadyStateHr} bpm target"
+                        else -> "Not set"
+                    }
+                    HorizontalDivider(color = GlassBorder)
+                    ConfigSectionHeader(
+                        title = "HR Target",
+                        summary = targetSummary,
+                        isExpanded = expandedSection == "target",
+                        onToggle = { expandedSection = if (expandedSection == "target") null else "target" }
+                    )
+                }
+                HorizontalDivider(color = GlassBorder)
+                ConfigSectionHeader(
+                    title = "Alerts",
+                    summary = buildAlertsSummary(state),
+                    isExpanded = expandedSection == "alerts",
+                    onToggle = { expandedSection = if (expandedSection == "alerts") null else "alerts" }
+                )
             }
 
-            ModeSelector(
-                selectedMode = state.mode,
-                onModeSelected = viewModel::setMode
-            )
-
-            HrMonitorCard(
-                state = state,
-                hrPulseScale = hrPulseScale,
-                onStartScan = viewModel::startScan,
-                onConnectDevice = viewModel::connectToDevice,
-                onDisconnect = viewModel::disconnectDevice
-            )
-
-            if (state.mode != WorkoutMode.FREE_RUN) {
+            // Expanded content — appears below the accordion group
+            AnimatedVisibility(visible = expandedSection == "mode") {
+                ModeOptionsCard(
+                    selectedMode = state.mode,
+                    onModeSelected = { mode ->
+                        viewModel.setMode(mode)
+                        expandedSection = null
+                    }
+                )
+            }
+            AnimatedVisibility(visible = expandedSection == "hr") {
+                HrMonitorCard(
+                    state = state,
+                    hrPulseScale = hrPulseScale,
+                    onStartScan = viewModel::startScan,
+                    onConnectDevice = viewModel::connectToDevice,
+                    onDisconnect = viewModel::disconnectDevice
+                )
+            }
+            AnimatedVisibility(visible = expandedSection == "target") {
                 TargetCard(
                     state = state,
                     onSteadyStateHrChange = viewModel::setSteadyStateHr,
@@ -194,194 +300,348 @@ fun SetupScreen(
                     onRemoveSegment = viewModel::removeSegment
                 )
             }
+            AnimatedVisibility(visible = expandedSection == "alerts") {
+                AlertBehaviorCard(
+                    state = state,
+                    onToggle = viewModel::toggleAdvancedSettings,
+                    onBufferChange = viewModel::setBufferBpm,
+                    onAlertDelayChange = viewModel::setAlertDelaySec,
+                    onCooldownChange = viewModel::setAlertCooldownSec,
+                    onVolumeChange = { viewModel.setEarconVolume((it / 5f).roundToInt() * 5) },
+                    onVoiceVerbosityChange = viewModel::setVoiceVerbosity,
+                    onVibrationChange = viewModel::setEnableVibration,
+                    onPreview = viewModel::previewEarcon
+                )
+            }
 
-            AlertBehaviorCard(
-                state = state,
-                onToggle = viewModel::toggleAdvancedSettings,
-                onBufferChange = viewModel::setBufferBpm,
-                onAlertDelayChange = viewModel::setAlertDelaySec,
-                onCooldownChange = viewModel::setAlertCooldownSec,
-                onVolumeChange = { viewModel.setEarconVolume((it / 5f).roundToInt() * 5) },
-                onVoiceVerbosityChange = viewModel::setVoiceVerbosity,
-                onVibrationChange = viewModel::setEnableVibration,
-                onPreview = viewModel::previewEarcon
-            )
-
-            state.validation.startBlockedReason?.takeIf { !state.validation.canStartWorkout }?.let { reason ->
+            state.validation.startBlockedReason?.takeIf { !canStart }?.let { reason ->
                 Text(
                     text = reason,
                     style = MaterialTheme.typography.bodySmall,
-                    color = HrCoachThemeTokens.subtleText
+                    color = CardeaTextSecondary
                 )
             }
 
-            val canStart = state.validation.canStartWorkout
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (canStart) CardeaGradient
-                        else androidx.compose.ui.graphics.Brush.linearGradient(
-                            listOf(CardeaTextTertiary, CardeaTextTertiary)
-                        )
-                    )
-                    .clickable(enabled = canStart) {
-                        val configJson = viewModel.buildConfigJsonOrNull() ?: return@clickable
-                        viewModel.saveAudioSettings()
-                        val deviceAddress = viewModel.handoffConnectedDeviceAddress()
-                        onStartWorkout(configJson, deviceAddress)
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.button_start_workout),
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = androidx.compose.ui.graphics.Color.White
-                )
-            }
             Spacer(modifier = Modifier.height(8.dp))
         }
 
         // HRmax onboarding dialog
-        if (state.showHrMaxDialog) {
-            AlertDialog(
-                onDismissRequest = { viewModel.dismissHrMaxDialog() },
-                title = { Text("Max Heart Rate") },
-                text = {
-                    Column {
-                        Text("Required to personalise preset heart rate targets.")
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = state.maxHrInput,
-                            onValueChange = { viewModel.setMaxHrInput(it) },
-                            label = { Text("Max HR (bpm)") },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            placeholder = { Text("185") }
-                        )
-                        Text(
-                            text = "220 − age is a good estimate. A field test is more accurate.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = HrCoachThemeTokens.subtleText,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
+            if (state.showHrMaxDialog) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissHrMaxDialog() },
+                    title = { Text("Max Heart Rate") },
+                    text = {
+                        Column {
+                            Text("Required to personalise preset heart rate targets.")
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = state.maxHrInput,
+                                onValueChange = { viewModel.setMaxHrInput(it) },
+                                label = { Text("Max HR (bpm)") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                singleLine = true,
+                                placeholder = { Text("185") }
+                            )
+                            Text(
+                                text = "220 − age is a good estimate. A field test is more accurate.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTextSecondary,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(CardeaGradient)
+                                .clickable { viewModel.confirmMaxHr() }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) { Text("Confirm", color = CardeaTextPrimary, fontWeight = FontWeight.SemiBold) }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.dismissHrMaxDialog() }) { Text("Cancel") }
                     }
-                },
-                confirmButton = {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CardeaGradient)
-                            .clickable { viewModel.confirmMaxHr() }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) { Text("Confirm", color = CardeaTextPrimary, fontWeight = FontWeight.SemiBold) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.dismissHrMaxDialog() }) { Text("Cancel") }
-                }
-            )
-        }
-        } // close Box
+                )
+            }
     }
-
 }
 
+// ── BootcampEntryCard ─────────────────────────────────────────────────────────
+// Visually distinct from the manual run section — pink-tinted gradient
+// background + gradient border signals a different category of action.
+
 @Composable
-private fun BootcampEntryCard(
-    onClick: () -> Unit
-) {
-    GlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 18.dp, vertical = 16.dp)
+private fun BootcampEntryCard(onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0x1AFF4D6D),
+                        1f to Color(0x144D9FFF)
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0x33FF85A1),
+                        1f to Color(0x224D9FFF)
+                    )
+                ),
+                shape = RoundedCornerShape(18.dp)
+            )
+            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Subtle ambient glow in top-left corner
+        Box(
+            modifier = Modifier
+                .size(80.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(Color(0x26FF4D6D), Color.Transparent)
+                    )
+                )
+                .align(Alignment.TopStart)
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x26FF85A1))
+                        .border(1.dp, Color(0x33FF85A1), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
+                        contentDescription = null,
+                        tint = Color(0xFFFF85A1),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        text = "STRUCTURED TRAINING",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            letterSpacing = 1.5.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color(0xAAFF85A1)
+                    )
+                    Text(
+                        text = "Bootcamp",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
+                    )
+                }
+            }
+
+            Text(
+                text = "Adaptive weekly plan. Cardea schedules, paces, and adjusts your sessions automatically.",
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTextSecondary.copy(alpha = 0.75f)
+            )
+
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.06f))
-                    .border(1.dp, HrCoachThemeTokens.glassBorder, CircleShape),
+                    .fillMaxWidth()
+                    .height(42.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(CardeaGradient)
+                    .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                    contentDescription = null,
-                    tint = Color.White
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
                 Text(
-                    text = "STRUCTURED TRAINING",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = HrCoachThemeTokens.subtleText
-                )
-                Text(
-                    text = "Use Bootcamp instead",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    text = "Open Bootcamp →",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = Color.White
-                )
-                Text(
-                    text = "Skip manual setup and follow an adaptive weekly running plan.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HrCoachThemeTokens.subtleText
                 )
             }
         }
+    }
+}
 
+// ── QuickLaunchCard ───────────────────────────────────────────────────────────
+
+@Composable
+private fun QuickLaunchCard(
+    state: SetupUiState,
+    canStart: Boolean,
+    onStart: () -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = "Last setup",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                fontSize = 10.sp
+            ),
+            color = CardeaTextTertiary
+        )
+        Spacer(Modifier.height(10.dp))
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            SetupChip(label = state.mode.displayLabel(), color = Color(0xFF4D9FFF))
+            if (state.isHrConnected) {
+                SetupChip(
+                    label = "● ${if (state.liveHr > 0) "${state.liveHr} bpm" else "Connected"}",
+                    color = Color(0xFF4CAF50)
+                )
+            } else {
+                SetupChip(label = "No Monitor", color = CardeaTextSecondary)
+            }
+            SetupChip(label = "Audio On", color = CardeaTextSecondary)
+        }
+        Spacer(Modifier.height(12.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 10.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(CardeaGradient)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .height(50.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(
+                    if (canStart) CardeaGradient
+                    else Brush.linearGradient(listOf(CardeaTextTertiary, CardeaTextTertiary))
+                )
+                .clickable(enabled = canStart, onClick = onStart),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "OPEN BOOTCAMP",
+                text = "Start Run",
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary
+                color = Color.White
             )
         }
     }
 }
 
 @Composable
-private fun ModeSelector(
-    selectedMode: WorkoutMode,
-    onModeSelected: (WorkoutMode) -> Unit
+private fun SetupChip(label: String, color: Color) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 11.dp, vertical = 5.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = color
+        )
+    }
+}
+
+// ── ConfigSectionHeader ───────────────────────────────────────────────────────
+
+@Composable
+private fun ConfigSectionHeader(
+    title: String,
+    summary: String,
+    summaryColor: Color = CardeaTextSecondary,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
 ) {
-    val items = listOf(
-        Triple(WorkoutMode.STEADY_STATE, Icons.Default.FavoriteBorder, "Steady"),
-        Triple(WorkoutMode.DISTANCE_PROFILE, Icons.Default.Route, "Guided"),
-        Triple(WorkoutMode.FREE_RUN, Icons.AutoMirrored.Filled.DirectionsRun, "Free Run")
-    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 14.dp, vertical = 13.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        items.forEach { (mode, icon, label) ->
-            FilterChip(
-                selected = selectedMode == mode,
-                onClick = { onModeSelected(mode) },
-                label = { Text(label) },
-                leadingIcon = { Icon(icon, contentDescription = null) }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTextPrimary
             )
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.labelSmall,
+                color = summaryColor
+            )
+        }
+        Icon(
+            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = if (isExpanded) "Collapse" else "Expand",
+            tint = CardeaTextTertiary,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+// ── ModeOptionsCard ───────────────────────────────────────────────────────────
+
+@Composable
+private fun ModeOptionsCard(
+    selectedMode: WorkoutMode,
+    onModeSelected: (WorkoutMode) -> Unit
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            WorkoutMode.entries.forEach { mode ->
+                val isSelected = mode == selectedMode
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isSelected) Color(0xFF4D9FFF).copy(alpha = 0.10f)
+                            else GlassHighlight
+                        )
+                        .border(
+                            1.dp,
+                            if (isSelected) Color(0xFF4D9FFF).copy(alpha = 0.30f)
+                            else GlassBorder,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { onModeSelected(mode) }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(
+                                if (isSelected) Color(0xFF4D9FFF)
+                                else GlassSurface,
+                                CircleShape
+                            )
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = mode.displayLabel(),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                            ),
+                            color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                        )
+                        Text(
+                            text = mode.displayDescription(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTextTertiary
+                        )
+                    }
+                }
+            }
         }
     }
 }
+
+// ── AlertBehaviorCard ─────────────────────────────────────────────────────────
 
 @Composable
 private fun AlertBehaviorCard(
@@ -404,7 +664,7 @@ private fun AlertBehaviorCard(
             Text(
                 text = "Alert Behavior",
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CardeaTextPrimary
             )
             IconButton(onClick = onToggle) {
                 Icon(
@@ -453,16 +713,8 @@ private fun AlertBehaviorCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Alert Volume",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = "${state.earconVolume}%",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = HrCoachThemeTokens.subtleText
-                )
+                Text("Alert Volume", style = MaterialTheme.typography.bodyLarge, color = CardeaTextPrimary)
+                Text("${state.earconVolume}%", style = MaterialTheme.typography.bodyMedium, color = CardeaTextSecondary)
             }
             CardeaSlider(
                 value = state.earconVolume.toFloat(),
@@ -471,25 +723,19 @@ private fun AlertBehaviorCard(
                 steps = 19
             )
 
-            Text(
-                text = "Voice Coaching",
-                style = MaterialTheme.typography.bodyLarge,
-                color = CardeaTextPrimary
-            )
+            Text("Voice Coaching", style = MaterialTheme.typography.bodyLarge, color = CardeaTextPrimary)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 listOf(
-                    VoiceVerbosity.OFF to "Off",
+                    VoiceVerbosity.OFF     to "Off",
                     VoiceVerbosity.MINIMAL to "Minimal",
-                    VoiceVerbosity.FULL to "Full"
+                    VoiceVerbosity.FULL    to "Full"
                 ).forEachIndexed { index, (verbosity, label) ->
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
                         selected = state.voiceVerbosity == verbosity,
                         onClick = { onVoiceVerbosityChange(verbosity) },
                         colors = cardeaSegmentedButtonColors()
-                    ) {
-                        Text(label)
-                    }
+                    ) { Text(label) }
                 }
             }
 
@@ -498,47 +744,21 @@ private fun AlertBehaviorCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Vibration Alerts",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                CardeaSwitch(
-                    checked = state.enableVibration,
-                    onCheckedChange = onVibrationChange
-                )
+                Text("Vibration Alerts", style = MaterialTheme.typography.bodyLarge, color = CardeaTextPrimary)
+                CardeaSwitch(checked = state.enableVibration, onCheckedChange = onVibrationChange)
             }
 
-            Text(
-                text = "Preview Sounds",
-                style = MaterialTheme.typography.labelSmall,
-                color = HrCoachThemeTokens.subtleText
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                PreviewSoundButton(
-                    icon = Icons.Default.ArrowUpward,
-                    label = "Speed Up",
-                    onClick = { onPreview(CoachingEvent.SPEED_UP) }
-                )
-                PreviewSoundButton(
-                    icon = Icons.Default.ArrowDownward,
-                    label = "Slow Down",
-                    onClick = { onPreview(CoachingEvent.SLOW_DOWN) }
-                )
-                PreviewSoundButton(
-                    icon = Icons.Default.Check,
-                    label = "In Zone",
-                    onClick = { onPreview(CoachingEvent.RETURN_TO_ZONE) }
-                )
+            Text("Preview Sounds", style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                PreviewSoundButton(icon = Icons.Default.ArrowUpward, label = "Speed Up",  onClick = { onPreview(CoachingEvent.SPEED_UP) })
+                PreviewSoundButton(icon = Icons.Default.ArrowDownward, label = "Slow Down", onClick = { onPreview(CoachingEvent.SLOW_DOWN) })
+                PreviewSoundButton(icon = Icons.Default.Check,         label = "In Zone",   onClick = { onPreview(CoachingEvent.RETURN_TO_ZONE) })
             }
         } else {
             Text(
                 text = "Audio alerts and timing",
                 style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                color = CardeaTextSecondary
             )
         }
     }
@@ -554,18 +774,16 @@ private fun PreviewSoundButton(
         IconButton(
             onClick = onClick,
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                .border(1.dp, HrCoachThemeTokens.glassBorder, CircleShape)
+                .background(SurfaceVariant, CircleShape)
+                .border(1.dp, GlassBorder, CircleShape)
         ) {
             Icon(imageVector = icon, contentDescription = label)
         }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = HrCoachThemeTokens.subtleText
-        )
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
     }
 }
+
+// ── TargetCard ────────────────────────────────────────────────────────────────
 
 @Composable
 private fun TargetCard(
@@ -582,7 +800,7 @@ private fun TargetCard(
         Text(
             text = "Target Zone Plan",
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = CardeaTextPrimary
         )
         when (state.mode) {
             WorkoutMode.STEADY_STATE -> {
@@ -597,7 +815,6 @@ private fun TargetCard(
                     supportingText = { state.validation.steadyStateHr?.let { Text(it) } }
                 )
             }
-
             WorkoutMode.DISTANCE_PROFILE -> {
                 PresetGrid(
                     presets = PresetLibrary.ALL,
@@ -613,12 +830,8 @@ private fun TargetCard(
                         onRemoveSegment = onRemoveSegment
                     )
                 }
-                TextButton(
-                    onClick = onSelectCustom,
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Custom") }
+                TextButton(onClick = onSelectCustom, modifier = Modifier.fillMaxWidth()) { Text("Custom") }
             }
-
             WorkoutMode.FREE_RUN -> Unit
         }
     }
@@ -633,20 +846,16 @@ private fun SegmentEditor(
     onRemoveSegment: (Int) -> Unit
 ) {
     val segmentColors = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.tertiary,
-        MaterialTheme.colorScheme.secondary
+        GradientBlue,
+        GradientCyan,
+        GradientPink
     )
     state.segments.forEachIndexed { index, segment ->
         val segmentError = state.validation.segments.getOrNull(index) ?: SegmentInputError()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = HrCoachThemeTokens.glassBorder,
-                    shape = RoundedCornerShape(16.dp)
-                )
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top
@@ -661,7 +870,7 @@ private fun SegmentEditor(
                 Text(
                     text = "Segment ${index + 1}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = HrCoachThemeTokens.subtleText
+                    color = CardeaTextSecondary
                 )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -686,11 +895,7 @@ private fun SegmentEditor(
             }
             if (state.segments.size > 1) {
                 IconButton(onClick = { onRemoveSegment(index) }) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Remove segment",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                    Icon(Icons.Default.Close, contentDescription = "Remove segment", tint = ZoneRed)
                 }
             }
         }
@@ -715,7 +920,7 @@ private fun PresetGrid(
             Text(
                 text = category.displayName(),
                 style = MaterialTheme.typography.labelSmall,
-                color = HrCoachThemeTokens.subtleText,
+                color = CardeaTextSecondary,
                 modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
             )
             catPresets.forEach { preset ->
@@ -743,11 +948,7 @@ private fun PresetCard(
     onClick: () -> Unit
 ) {
     val borderModifier = if (isSelected) {
-        Modifier.border(
-            width = 2.dp,
-            brush = CardeaGradient,
-            shape = RoundedCornerShape(18.dp)
-        )
+        Modifier.border(width = 2.dp, brush = CardeaGradient, shape = RoundedCornerShape(18.dp))
     } else Modifier
 
     GlassCard(
@@ -763,22 +964,12 @@ private fun PresetCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        preset.name,
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextPrimary
-                    )
-                    Text(
-                        preset.subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = HrCoachThemeTokens.subtleText
-                    )
+                    Text(preset.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = CardeaTextPrimary)
+                    Text(preset.subtitle, style = MaterialTheme.typography.bodySmall, color = CardeaTextSecondary)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(preset.durationLabel, style = MaterialTheme.typography.labelSmall,
-                        color = HrCoachThemeTokens.subtleText)
-                    Text(preset.intensityLabel, style = MaterialTheme.typography.labelSmall,
-                        color = CardeaTextPrimary)
+                    Text(preset.durationLabel, style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
+                    Text(preset.intensityLabel, style = MaterialTheme.typography.labelSmall, color = CardeaTextPrimary)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -864,6 +1055,8 @@ private fun hrPercentColor(pct: Float) = when {
     else         -> Color(0xFF2B8C6E)
 }
 
+// ── HrMonitorCard ─────────────────────────────────────────────────────────────
+
 @SuppressLint("MissingPermission")
 @Composable
 private fun HrMonitorCard(
@@ -874,41 +1067,31 @@ private fun HrMonitorCard(
     onDisconnect: () -> Unit
 ) {
     GlassCard {
-        Text(
-            text = "HR Monitor",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Text(text = "HR Monitor", style = MaterialTheme.typography.titleLarge, color = CardeaTextPrimary)
 
         if (state.isHrConnected) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary
-                )
+                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = ZoneGreen)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Connected: ${state.connectedDeviceName.ifBlank { "HR Monitor" }}",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = ZoneGreen
                     )
                     Text(
                         text = if (state.liveHr > 0) state.liveHr.toString() else "--",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = CardeaTextPrimary,
                         modifier = Modifier.scale(hrPulseScale)
                     )
                     Text(
                         text = if (state.liveHr > 0) "Live" else "Waiting for signal…",
                         style = MaterialTheme.typography.labelSmall,
-                        color = HrCoachThemeTokens.subtleText
+                        color = CardeaTextSecondary
                     )
                 }
-                TextButton(onClick = onDisconnect) {
-                    Text("Disconnect")
-                }
+                TextButton(onClick = onDisconnect) { Text("Disconnect") }
             }
         } else {
             Box(
@@ -917,23 +1100,14 @@ private fun HrMonitorCard(
                     .height(52.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .then(
-                        if (!state.isScanning)
-                            Modifier.background(CardeaGradient)
-                        else
-                            Modifier.background(CardeaTextTertiary)
+                        if (!state.isScanning) Modifier.background(CardeaGradient)
+                        else Modifier.background(CardeaTextTertiary)
                     )
                     .clickable(enabled = !state.isScanning, onClick = onStartScan),
                 contentAlignment = Alignment.Center
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = CardeaTextPrimary
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CardeaTextPrimary)
                     Text(
                         text = if (state.isScanning) "Scanning…" else "Scan for Monitors",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
@@ -944,15 +1118,11 @@ private fun HrMonitorCard(
             Text(
                 text = "A monitor is optional — scanning continues during your run.",
                 style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                color = CardeaTextSecondary
             )
 
             state.connectionError?.let { message ->
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
+                Text(text = message, style = MaterialTheme.typography.bodySmall, color = ZoneRed)
             }
 
             if (state.discoveredDevices.isNotEmpty()) {
@@ -967,10 +1137,7 @@ private fun HrMonitorCard(
 
 @SuppressLint("MissingPermission")
 @Composable
-private fun DeviceRow(
-    device: BluetoothDevice,
-    onClick: () -> Unit
-) {
+private fun DeviceRow(device: BluetoothDevice, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -980,20 +1147,9 @@ private fun DeviceRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = device.name ?: "Unknown Device",
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = device.address,
-                style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
-            )
+            Text(text = device.name ?: "Unknown Device", style = MaterialTheme.typography.bodyLarge)
+            Text(text = device.address, style = MaterialTheme.typography.bodySmall, color = CardeaTextSecondary)
         }
-        Icon(
-            imageVector = Icons.Default.Bluetooth,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.6f)
-        )
+        Icon(imageVector = Icons.Default.Bluetooth, contentDescription = null, tint = CardeaTextSecondary)
     }
 }

@@ -78,6 +78,7 @@ import com.hrcoach.ui.theme.CardeaTextSecondary
 import com.hrcoach.ui.theme.CardeaTextTertiary
 import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.GlassSurface
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
@@ -406,7 +407,7 @@ private fun WeekStripCard(
 
             // Dim track
             drawLine(
-                color = Color.White.copy(alpha = 0.07f),
+                color = GlassBorder,
                 start = Offset(trackStart, trackY),
                 end = Offset(trackEnd, trackY),
                 strokeWidth = 1.dp.toPx()
@@ -416,7 +417,7 @@ private fun WeekStripCard(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.20f),
+                        GlassSurface,
                         Color.Transparent
                     ),
                     center = Offset(tickX, trackY),
@@ -428,7 +429,7 @@ private fun WeekStripCard(
 
             // Tick line
             drawLine(
-                color = Color.White.copy(alpha = 0.72f),
+                color = CardeaTextSecondary,
                 start = Offset(tickX, trackY - 4.5.dp.toPx()),
                 end = Offset(tickX, trackY + 4.5.dp.toPx()),
                 strokeWidth = 1.5.dp.toPx(),
@@ -618,7 +619,8 @@ private fun OnboardingStep1Goal(
 
     val goals = listOf(
         BootcampGoal.CARDIO_HEALTH to "Build your aerobic base",
-        BootcampGoal.RACE_5K_10K to "Train for your first race",
+        BootcampGoal.RACE_5K to "Speed and VO2max power",
+        BootcampGoal.RACE_10K to "Stamina and threshold grit",
         BootcampGoal.HALF_MARATHON to "Conquer the half",
         BootcampGoal.MARATHON to "Go the distance"
     )
@@ -2201,7 +2203,8 @@ private fun GoalDetailSheet(
 private object GoalDescription {
     fun forGoal(goal: BootcampGoal): String = when (goal) {
         BootcampGoal.CARDIO_HEALTH -> "Focuses on heart health and consistency. This program uses aerobic base training to lower your resting heart rate and improve daily energy."
-        BootcampGoal.RACE_5K_10K -> "Built for speed and stamina. A mix of intervals and tempo runs designed to get you across the finish line with a new personal best."
+        BootcampGoal.RACE_5K -> "Built for speed. VO2max intervals and fast finishes to sharpen your kick and get you across the 5K line with a new personal best."
+        BootcampGoal.RACE_10K -> "Built for stamina. Threshold tempo work and sustained efforts to build the endurance engine that carries you through 10 kilometers."
         BootcampGoal.HALF_MARATHON -> "A balanced approach to distance. Bridges the gap between speed and endurance, preparing your body for 13.1 miles of sustained effort."
         BootcampGoal.MARATHON -> "The ultimate endurance challenge. This plan prioritizes weekly volume and long runs to build the physiological resilience needed for 26.2 miles."
     }
@@ -2247,7 +2250,8 @@ private fun DeleteConfirmDialog(
 
 private fun goalDisplayName(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.CARDIO_HEALTH -> "Cardio Health"
-    BootcampGoal.RACE_5K_10K -> "5K / 10K"
+    BootcampGoal.RACE_5K -> "5K"
+    BootcampGoal.RACE_10K -> "10K"
     BootcampGoal.HALF_MARATHON -> "Half Marathon"
     BootcampGoal.MARATHON -> "Marathon"
 }
