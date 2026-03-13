@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -411,20 +412,35 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(GlassHighlight)
-                                .clickable(onClick = onStartRun),
-                            contentAlignment = Alignment.Center
+                                .clickable(onClick = onStartRun)
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
+                            val sensorColor = when {
+                                state.isSessionRunning -> Color(0xFF22C55E)
+                                state.sensorName != null -> CardeaTextSecondary
+                                else -> CardeaTextTertiary
+                            }
                             Icon(
                                 imageVector = Icons.Default.Bluetooth,
                                 contentDescription = "Sensor setup",
-                                tint = CardeaTextSecondary,
-                                modifier = Modifier.size(18.dp)
+                                tint = sensorColor,
+                                modifier = Modifier.size(16.dp)
                             )
+                            val sensorName = state.sensorName
+                            if (sensorName != null) {
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = sensorName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = CardeaTextSecondary,
+                                    maxLines = 1
+                                )
+                            }
                         }
                         Box(
                             modifier = Modifier

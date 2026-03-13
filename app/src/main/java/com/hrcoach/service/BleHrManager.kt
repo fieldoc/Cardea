@@ -35,6 +35,8 @@ class BleHrManager(context: Context) {
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private const val DEFAULT_SCAN_WINDOW_MS = 15_000L
         private const val RECONNECT_DELAY_MS = 5_000L
+        private const val MAX_RECONNECT_ATTEMPTS = 5
+        private const val RECONNECT_BASE_DELAY_MS = 1_000L
         private val COOSPO_NAME_MARKERS = listOf("COOSPO", "H808")
         private val GENERIC_HR_NAME_MARKERS = listOf("HR", "HEART", "PULSE")
 
@@ -66,12 +68,17 @@ class BleHrManager(context: Context) {
     private var shouldReconnect: Boolean = false
     private var lastDeviceAddress: String? = null
     private val deviceScores = mutableMapOf<String, Int>()
+    private var reconnectAttempts: Int = 0
 
     private val _heartRate = MutableStateFlow(0)
     val heartRate: StateFlow<Int> = _heartRate
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected
+
+    /** True once all reconnect attempts have been exhausted; cleared on a fresh connectToDevice call. */
+    private val _connectionFailed = MutableStateFlow(false)
+    val connectionFailed: StateFlow<Boolean> = _connectionFailed
 
     private val _discoveredDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<BluetoothDevice>> = _discoveredDevices
@@ -167,9 +174,11 @@ class BleHrManager(context: Context) {
     @SuppressLint("MissingPermission")
     fun connectToDevice(device: BluetoothDevice) {
         stopScan()
+        _connectionFailed.value = false
         synchronized(stateLock) {
             shouldReconnect = true
             lastDeviceAddress = device.address
+            reconnectAttempts = 0
             reconnectJob?.cancel()
             reconnectJob = null
             bluetoothGatt?.close()
@@ -218,15 +227,30 @@ class BleHrManager(context: Context) {
 
     @SuppressLint("MissingPermission")
     private fun attemptReconnect() {
-        val address = synchronized(stateLock) {
+        var exhausted = false
+        val reconnectParams: Pair<String, Int>? = synchronized(stateLock) {
             if (!shouldReconnect) return
-            lastDeviceAddress
-        } ?: return
+            if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+                shouldReconnect = false
+                exhausted = true
+                return@synchronized null
+            }
+            reconnectAttempts++
+            val addr = lastDeviceAddress ?: return
+            Pair(addr, reconnectAttempts)
+        }
+        if (exhausted) {
+            _connectionFailed.value = true
+            return
+        }
+        val (address, attempt) = reconnectParams ?: return
+
+        val backoffMs = RECONNECT_BASE_DELAY_MS shl (attempt - 1) // 1s, 2s, 4s, 8s, 16s
 
         synchronized(stateLock) {
             reconnectJob?.cancel()
             reconnectJob = scope.launch {
-                delay(RECONNECT_DELAY_MS)
+                delay(backoffMs)
                 val device = bluetoothAdapter?.getRemoteDevice(address) ?: return@launch
                 synchronized(stateLock) {
                     bluetoothGatt?.close()
@@ -242,6 +266,7 @@ class BleHrManager(context: Context) {
                 }.getOrNull()
                 synchronized(stateLock) {
                     bluetoothGatt = nextGatt
+                    if (nextGatt == null) shouldReconnect = false
                 }
             }
         }
@@ -255,9 +280,16 @@ class BleHrManager(context: Context) {
                     lastDeviceAddress = gatt.device?.address ?: lastDeviceAddress
                     reconnectJob?.cancel()
                     reconnectJob = null
+                    reconnectAttempts = 0
                 }
+                _connectionFailed.value = false
                 _isConnected.value = true
                 gatt.discoverServices()
+                appContext.getSharedPreferences("ble_prefs", Context.MODE_PRIVATE).edit()
+                    .putString("last_device_address", gatt.device?.address)
+                    .putString("last_device_name", gatt.device?.name ?: "HR Monitor")
+                    .putLong("last_connected_ms", System.currentTimeMillis())
+                    .apply()
                 return
             }
 

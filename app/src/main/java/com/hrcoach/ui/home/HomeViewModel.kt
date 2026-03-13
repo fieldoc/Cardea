@@ -18,8 +18,11 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -32,6 +35,10 @@ data class HomeUiState(
     val nextSession: BootcampSessionEntity? = null,
     val currentWeekNumber: Int = 1,
     val sessionStreak: Int = 0,
+    val isNextSessionToday: Boolean = false,
+    val nextSessionDayLabel: String = "",
+    val sensorName: String? = null,
+    val sensorLastSeenMs: Long? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -39,6 +46,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val bootcampRepository: BootcampRepository,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -71,10 +79,28 @@ class HomeViewModel @Inject constructor(
                 bootcampRepository.getNextSession(it.id)
             }
 
+            val today = now.toLocalDate()
+            val nextSessionDate: LocalDate? = if (activeEnrollment != null && nextSession != null) {
+                val enrollStartDate = Instant.ofEpochMilli(activeEnrollment.startDate)
+                    .atZone(zone).toLocalDate()
+                val daysOffset = ((nextSession.weekNumber - 1) * 7L) + (nextSession.dayOfWeek - 1)
+                enrollStartDate.plusDays(daysOffset)
+            } else null
+
+            val isNextSessionToday = nextSessionDate == today
+            val nextSessionDayLabel = nextSessionDate?.dayOfWeek
+                ?.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+                ?.uppercase()
+                ?: ""
+
             val sessionStreak = if (activeEnrollment != null) {
                 val allSessions = bootcampRepository.getSessionsForEnrollmentOnce(activeEnrollment.id)
                 computeSessionStreak(allSessions, activeEnrollment.startDate)
             } else 0
+
+            val blePrefs = context.getSharedPreferences("ble_prefs", Context.MODE_PRIVATE)
+            val sensorName = blePrefs.getString("last_device_name", null)
+            val sensorLastSeen = blePrefs.getLong("last_connected_ms", 0L).takeIf { it > 0L }
 
             emit(HomeUiState(
                 greeting = greeting,
@@ -88,6 +114,10 @@ class HomeViewModel @Inject constructor(
                     (it.currentPhaseIndex * 4) + it.currentWeekInPhase + 1
                 } ?: 1,
                 sessionStreak = sessionStreak,
+                isNextSessionToday = isNextSessionToday,
+                nextSessionDayLabel = nextSessionDayLabel,
+                sensorName = sensorName,
+                sensorLastSeenMs = sensorLastSeen,
             ))
         }
     }
