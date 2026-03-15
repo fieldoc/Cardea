@@ -62,6 +62,41 @@ val AchievementGold        = Color(0xFFFACC15)
 val AchievementGoldBorder  = Color(0x4DFACC15)    // 30% opacity
 val AchievementGoldBg      = Color(0x1FFACC15)    // 12% opacity
 
+// ── Light-mode palette values ────────────────────────────────
+val CardeaLightBgPrimary    = Color(0xFFFAFAFA)
+val CardeaLightBgSecondary  = Color(0xFFF0F0F2)
+val CardeaLightSurfaceVariant = Color(0xFFE8E8EC)
+
+val LightGlassBorder    = Color(0x1A000000)
+val LightGlassHighlight = Color(0x0A000000)
+val LightGlassSurface   = Color(0x0F000000)
+
+val CardeaLightTextPrimary   = Color(0xFF1A1A1A)
+val CardeaLightTextSecondary = Color(0xFF6B6B73)
+val CardeaLightTextTertiary  = Color(0xFFA1A1AA)
+
+val LightAchievementSlateBorder = Color(0x3394A3B8)
+val LightAchievementSlateBg     = Color(0x1A94A3B8)
+val LightAchievementSkyBorder   = Color(0x4D7DD3FC)
+val LightAchievementSkyBg       = Color(0x1A7DD3FC)
+val LightAchievementGoldBorder  = Color(0x59FACC15)
+val LightAchievementGoldBg      = Color(0x24FACC15)
+
+val CardeaAccentPink = Color(0xFFFF6B8A)
+
+val BlackoutBg     = Color(0xFF1C1F26)
+val BlackoutBorder = Color(0xFF3D2020)
+val BlackoutText   = Color(0xFF8B3A3A)
+
+val LightBlackoutBg     = Color(0xFFE8E0E0)
+val LightBlackoutBorder = Color(0xFFD4A0A0)
+val LightBlackoutText   = Color(0xFF8B3A3A)
+
+val ChartGridDark  = Color(0x0AFFFFFF)
+val ChartGridLight = Color(0x14000000)
+
+val MapOverlayBg = Color(0x99000000)
+
 // ── Legacy aliases — keeps existing screen files compiling ──
 val Background     = CardeaBgPrimary
 val Surface        = CardeaBgSecondary

@@ -1,7 +1,9 @@
 package com.hrcoach.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -17,12 +19,28 @@ private val CardeaDarkColorScheme = darkColorScheme(
     onPrimary        = CardeaTextPrimary,
     background       = CardeaBgPrimary,
     onBackground     = CardeaTextPrimary,
-    surface          = Surface,
+    surface          = CardeaBgSecondary,
     onSurface        = CardeaTextPrimary,
     surfaceVariant   = SurfaceVariant,
     onSurfaceVariant = CardeaTextSecondary,
     outline          = GlassBorder,
     outlineVariant   = GlassHighlight
+)
+
+private val CardeaLightColorScheme = lightColorScheme(
+    primary          = GradientBlue,
+    secondary        = ZoneAmber,
+    tertiary         = ZoneGreen,
+    error            = ZoneRed,
+    onPrimary        = Color.White,
+    background       = CardeaLightBgPrimary,
+    onBackground     = CardeaLightTextPrimary,
+    surface          = CardeaLightBgSecondary,
+    onSurface        = CardeaLightTextPrimary,
+    surfaceVariant   = CardeaLightSurfaceVariant,
+    onSurfaceVariant = CardeaLightTextSecondary,
+    outline          = LightGlassBorder,
+    outlineVariant   = LightGlassHighlight
 )
 
 val LocalGlassBorder     = staticCompositionLocalOf { GlassBorder }
@@ -43,28 +61,33 @@ object CardeaThemeTokens {
         get() = LocalCardeaGradient.current
 }
 
-// Backward-compat alias — existing imports of HrCoachThemeTokens continue to work.
 typealias HrCoachThemeTokens = CardeaThemeTokens
 
 @Composable
-fun CardeaTheme(content: @Composable () -> Unit) {
+fun CardeaTheme(
+    isDarkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    val colors = if (isDarkTheme) DarkCardeaColors else LightCardeaColors
+    val materialScheme = if (isDarkTheme) CardeaDarkColorScheme else CardeaLightColorScheme
+
     CompositionLocalProvider(
-        LocalGlassBorder    provides GlassBorder,
-        LocalSubtleText     provides CardeaTextSecondary,
-        LocalCardeaGradient provides CardeaGradient
+        LocalCardeaColors   provides colors,
+        LocalGlassBorder    provides colors.glassBorder,
+        LocalSubtleText     provides colors.textSecondary,
+        LocalCardeaGradient provides colors.gradient
     ) {
         MaterialTheme(
-            colorScheme = CardeaDarkColorScheme,
+            colorScheme = materialScheme,
             typography  = HrCoachTypography,
             content     = content
         )
     }
 }
 
-// Backward-compat wrapper — MainActivity calls HrCoachTheme { } and still compiles.
 @Composable
 fun HrCoachTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
-) = CardeaTheme(content)
+) = CardeaTheme(isDarkTheme = darkTheme, content = content)

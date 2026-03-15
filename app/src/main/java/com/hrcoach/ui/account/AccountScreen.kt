@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
@@ -77,6 +78,8 @@ import com.hrcoach.ui.theme.ZoneRed
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
+    onThemeModeChanged: (ThemeMode) -> Unit = {},
+    currentThemeMode: ThemeMode = ThemeMode.SYSTEM,
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -138,6 +141,51 @@ fun AccountScreen(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+
+            // ── Appearance ────────────────────────────────────────────────────
+            SectionLabel("Appearance")
+            Spacer(modifier = Modifier.height(6.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .background(Color(0x0FFFFFFF), RoundedCornerShape(8.dp))
+                            .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = CardeaTextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Theme",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTextPrimary
+                    )
+                }
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    listOf(ThemeMode.SYSTEM to "System", ThemeMode.LIGHT to "Light", ThemeMode.DARK to "Dark")
+                        .forEachIndexed { i, (mode, label) ->
+                            SegmentedButton(
+                                shape = SegmentedButtonDefaults.itemShape(i, 3),
+                                selected = currentThemeMode == mode,
+                                onClick = { onThemeModeChanged(mode) },
+                                colors = cardeaSegmentedButtonColors()
+                            ) { Text(label) }
+                        }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // ── Configuration ────────────────────────────────────────────────
             SectionLabel("Configuration")

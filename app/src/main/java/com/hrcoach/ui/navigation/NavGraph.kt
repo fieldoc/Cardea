@@ -33,8 +33,8 @@ import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -65,9 +65,11 @@ import com.hrcoach.ui.history.HistoryDetailScreen
 import com.hrcoach.ui.history.HistoryListScreen
 import com.hrcoach.ui.home.HomeScreen
 import com.hrcoach.ui.postrun.PostRunSummaryScreen
+import com.hrcoach.ui.postrun.PostRunSummaryViewModel
 import com.hrcoach.ui.progress.ProgressScreen
 import com.hrcoach.ui.setup.SetupScreen
 import com.hrcoach.ui.splash.SplashScreen
+import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaNavGradient
@@ -89,6 +91,7 @@ object Routes {
     const val HISTORY          = "history"
     const val ACCOUNT          = "account"
     const val BOOTCAMP         = "bootcamp"
+    const val BOOTCAMP_SETTINGS = "bootcamp_settings"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
 
@@ -98,20 +101,22 @@ object Routes {
 
 @Composable
 fun HrCoachNavGraph(
-    windowSizeClass: WindowSizeClass
+    windowSizeClass: WindowSizeClass,
+    onThemeModeChanged: (ThemeMode) -> Unit = {},
+    currentThemeMode: ThemeMode = ThemeMode.SYSTEM
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val workoutSnapshot by WorkoutState.snapshot.collectAsState()
+    val workoutSnapshot by WorkoutState.snapshot.collectAsStateWithLifecycle()
     val isWorkoutRunning = workoutSnapshot.isRunning
     val completedWorkoutId = workoutSnapshot.completedWorkoutId
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
 
     // Lightweight enrollment check — drives Training tab adaptive routing
     val enrollmentVm: BootcampStatusViewModel = hiltViewModel()
-    val isBootcampEnrolled by enrollmentVm.hasActiveEnrollment.collectAsState()
+    val isBootcampEnrolled by enrollmentVm.hasActiveEnrollment.collectAsStateWithLifecycle()
 
     LaunchedEffect(isWorkoutRunning, completedWorkoutId) {
         val routeNow = navController.currentBackStackEntry?.destination?.route
@@ -130,7 +135,6 @@ fun HrCoachNavGraph(
                     popUpTo(Routes.HOME) { inclusive = false }
                     launchSingleTop = true
                 }
-                WorkoutState.clearCompletedWorkoutId()
             } else {
                 navController.navigate(Routes.SETUP) {
                     popUpTo(Routes.HOME) { inclusive = false }
@@ -357,6 +361,12 @@ fun HrCoachNavGraph(
                             action = WorkoutForegroundService.ACTION_RESCAN_BLE
                         }
                         context.startService(intent)
+                    },
+                    onToggleAutoPause = {
+                        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+                            action = WorkoutForegroundService.ACTION_TOGGLE_AUTO_PAUSE
+                        }
+                        context.startService(intent)
                     }
                 )
             }
@@ -410,7 +420,10 @@ fun HrCoachNavGraph(
                 enterTransition = { defaultEnter(1) },
                 exitTransition = { defaultExit(1) }
             ) {
-                AccountScreen()
+                AccountScreen(
+                    onThemeModeChanged = onThemeModeChanged,
+                    currentThemeMode = currentThemeMode
+                )
             }
 
             composable(
@@ -441,9 +454,20 @@ fun HrCoachNavGraph(
                         }
                     },
                     onBack = { navController.popBackStack() },
+                    onGoToSettings = { navController.navigate(Routes.BOOTCAMP_SETTINGS) },
                     onGoToManualSetup = {
                         navController.navigate(Routes.SETUP) { launchSingleTop = true }
                     }
+                )
+            }
+
+            composable(
+                route = Routes.BOOTCAMP_SETTINGS,
+                enterTransition = { defaultEnter(1) },
+                exitTransition = { defaultExit(1) }
+            ) {
+                com.hrcoach.ui.bootcamp.BootcampSettingsScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
@@ -491,6 +515,8 @@ fun HrCoachNavGraph(
                 exitTransition = { defaultExit(1) }
             ) { backStackEntry ->
                 val workoutId = backStackEntry.arguments?.getLong("workoutId") ?: return@composable
+                val postRunViewModel: PostRunSummaryViewModel = hiltViewModel()
+                val postRunState by postRunViewModel.uiState.collectAsStateWithLifecycle()
                 PostRunSummaryScreen(
                     workoutId = workoutId,
                     onViewProgress = {
@@ -506,10 +532,16 @@ fun HrCoachNavGraph(
                         }
                     },
                     onDone = {
-                        // Send user directly to their run detail — encourages review momentum
-                        navController.navigate(Routes.historyDetail(workoutId)) {
-                            popUpTo(Routes.HISTORY) { inclusive = false }
-                            launchSingleTop = true
+                        if (postRunState.isBootcampRun) {
+                            navController.navigate(Routes.BOOTCAMP) {
+                                popUpTo(Routes.HOME) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate(Routes.historyDetail(workoutId)) {
+                                popUpTo(Routes.HISTORY) { inclusive = false }
+                                launchSingleTop = true
+                            }
                         }
                     },
                     onBack = {
@@ -519,7 +551,8 @@ fun HrCoachNavGraph(
                                 launchSingleTop = true
                             }
                         }
-                    }
+                    },
+                    viewModel = postRunViewModel
                 )
             }
         }

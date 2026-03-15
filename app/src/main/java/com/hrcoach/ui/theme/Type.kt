@@ -49,7 +49,6 @@ val HrCoachTypography = Typography(
     labelSmall = TextStyle(
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        letterSpacing = 0.8.sp,
-        color = SubtleText
+        letterSpacing = 0.8.sp
     )
 )
