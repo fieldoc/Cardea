@@ -17,38 +17,32 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.CardeaTheme
 
 private val GlassShape = RoundedCornerShape(18.dp)
-
-private val GlassFillBrush = Brush.verticalGradient(
-    colors = listOf(
-        Color(0x0FFFFFFF),
-        Color(0x05FFFFFF)
-    )
-)
 
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(16.dp),
-    borderColor: Color = GlassBorder,
+    borderColor: Color = CardeaTheme.colors.glassBorder,
     containerColor: Color = Color.Transparent,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val colors = CardeaTheme.colors
     Card(
         modifier = modifier.wrapContentHeight(),
         shape = GlassShape,
         border = BorderStroke(1.dp, borderColor),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = if (colors.isDark) Color.Transparent else colors.bgSecondary
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = colors.glassElevation)
     ) {
-        Box(modifier = Modifier.background(GlassFillBrush)) {
+        Box(modifier = Modifier.background(colors.glassFillBrush)) {
             Column(
                 modifier = Modifier
                     .padding(contentPadding)
@@ -76,19 +70,19 @@ fun StatItem(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = CardeaTheme.colors.textPrimary,
             textAlign = if (horizontalAlignment == Alignment.CenterHorizontally) TextAlign.Center else TextAlign.Start
         )
         if (unit != null) {
             Text(
                 text = unit,
                 style = MaterialTheme.typography.labelSmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }

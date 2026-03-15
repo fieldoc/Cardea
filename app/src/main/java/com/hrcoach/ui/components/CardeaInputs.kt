@@ -9,17 +9,10 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
 
-/**
- * Cardea-styled slider. Active track and thumb use GradientBlue; inactive track uses GlassHighlight.
- * Replaces all bare [Slider] usages to prevent Material 3 purple defaults from leaking in.
- */
 @Composable
 fun CardeaSlider(
     value: Float,
@@ -29,6 +22,7 @@ fun CardeaSlider(
     steps: Int = 0,
     onValueChangeFinished: (() -> Unit)? = null
 ) {
+    val colors = CardeaTheme.colors
     Slider(
         value = value,
         onValueChange = onValueChange,
@@ -39,49 +33,40 @@ fun CardeaSlider(
         colors = SliderDefaults.colors(
             thumbColor = GradientBlue,
             activeTrackColor = GradientBlue,
-            inactiveTrackColor = GlassHighlight,
+            inactiveTrackColor = colors.glassHighlight,
             activeTickColor = GradientBlue,
-            inactiveTickColor = CardeaTextTertiary
+            inactiveTickColor = colors.textTertiary
         )
     )
 }
 
-/**
- * Cardea-styled SegmentedButton colors provider.
- * Selected state uses GlassHighlight container + GradientBlue label;
- * unselected uses transparent container + secondary text.
- * Replaces M3 lavender/purple defaults in all [SingleChoiceSegmentedButtonRow] usages.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun cardeaSegmentedButtonColors() = SegmentedButtonDefaults.colors(
-    activeContainerColor = GlassHighlight,
+    activeContainerColor = CardeaTheme.colors.glassHighlight,
     activeContentColor = GradientBlue,
     activeBorderColor = GradientBlue,
     inactiveContainerColor = Color.Transparent,
-    inactiveContentColor = CardeaTextSecondary,
-    inactiveBorderColor = GlassBorder
+    inactiveContentColor = CardeaTheme.colors.textSecondary,
+    inactiveBorderColor = CardeaTheme.colors.glassBorder
 )
 
-/**
- * Cardea-styled switch. Checked state uses GradientPink track; unchecked uses GlassHighlight.
- * Replaces all bare [Switch] usages to enforce token consistency.
- */
 @Composable
 fun CardeaSwitch(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = CardeaTheme.colors
     Switch(
         checked = checked,
         onCheckedChange = onCheckedChange,
         modifier = modifier,
         colors = SwitchDefaults.colors(
             checkedTrackColor = GradientPink,
-            checkedThumbColor = Color.White,
-            uncheckedTrackColor = GlassHighlight,
-            uncheckedThumbColor = CardeaTextTertiary
+            checkedThumbColor = colors.onGradient,
+            uncheckedTrackColor = colors.glassHighlight,
+            uncheckedThumbColor = colors.textTertiary
         )
     )
 }

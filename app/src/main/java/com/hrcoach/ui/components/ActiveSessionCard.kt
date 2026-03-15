@@ -16,18 +16,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaTheme
 
 @Composable
 fun ActiveSessionCard(onClick: () -> Unit) {
+    val colors = CardeaTheme.colors
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .border(2.dp, CardeaGradient, RoundedCornerShape(18.dp))
+            .border(2.dp, colors.gradient, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -39,18 +38,18 @@ fun ActiveSessionCard(onClick: () -> Unit) {
                 Text(
                     text = "Active Session",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color.White
+                    color = colors.textPrimary
                 )
                 Text(
                     text = "Your run is still being recorded in the background.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
+                    color = colors.textSecondary
                 )
             }
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Resume",
-                tint = Color.White,
+                tint = colors.textPrimary,
                 modifier = Modifier.size(24.dp)
             )
         }
