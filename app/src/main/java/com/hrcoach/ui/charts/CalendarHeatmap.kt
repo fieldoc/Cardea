@@ -1,47 +1,64 @@
 package com.hrcoach.ui.charts
 
-import androidx.compose.foundation.background
+import android.graphics.Paint
+import android.graphics.Typeface
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
-import com.hrcoach.ui.theme.GradientBlue
-import com.hrcoach.ui.theme.GradientCyan
 import java.util.Locale
 
 data class CalendarDay(val epochDay: Int, val distanceKm: Float)
 
 @Composable
 fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
-    val cellSize = 10.dp
-    val cellGap = 2.dp
-    val cellStep = cellSize + cellGap
+    val density = LocalDensity.current
+    val cellSize = 12.dp
+    val cellGap = 3.dp
+    val monthLabelHeight = 20.dp
+
+    val cellSizePx = with(density) { cellSize.toPx() }
+    val cellGapPx = with(density) { cellGap.toPx() }
+    val cellStepPx = cellSizePx + cellGapPx
+    val monthLabelHeightPx = with(density) { monthLabelHeight.toPx() }
+    val fontSizePx = with(density) { 10.sp.toPx() }
 
     val today = remember { LocalDate.now() }
-    // Start from (today - 363 days) snapped to the Monday of that week
-    val startRaw = today.minusDays(363)
+    val todayEpoch = today.toEpochDay().toInt()
+
     val startDate = remember(today) {
+        val startRaw = today.minusDays(363)
         val dow = startRaw.dayOfWeek
         val daysFromMonday = (dow.value - DayOfWeek.MONDAY.value + 7) % 7
         startRaw.minusDays(daysFromMonday.toLong())
     }
 
-    // Build a map from epochDay -> distanceKm for O(1) lookup
     val dayMap = remember(days) { days.associate { it.epochDay to it.distanceKm } }
 
-    // Build list of 52 week columns; each column is a list of 7 LocalDates (Mon..Sun)
     val weeks = remember(startDate) {
         (0 until 52).map { weekIndex ->
             (0 until 7).map { dayIndex ->
@@ -50,98 +67,113 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
         }
     }
 
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
-    val heatLow = GradientBlue.copy(alpha = 0.4f)
+    val emptyColor = CardeaTheme.colors.surfaceVariant
+    val heatLow = GradientBlue.copy(alpha = 0.5f)
     val heatHigh = GradientCyan
-
-    // Day-of-week label strings: show text only at rows 0 (Mon), 2 (Wed), 4 (Fri)
-    val dowLabels = listOf("M", "", "W", "", "F", "", "")
+    val textSecondary = CardeaTheme.colors.textSecondary
 
     Row(modifier = modifier) {
-        // Left column: day-of-week labels
-        // Offset by the height of the month label row above
+        // Left column: day-of-week labels (M, W, F)
         Column(
-            // Month label row is lineHeight=12sp tall (= 12dp) + 2dp Spacer = 14dp total
-            modifier = Modifier.padding(top = 14.dp, end = 2.dp)
+            modifier = Modifier
+                .width(16.dp)
+                .padding(top = monthLabelHeight)
         ) {
-            dowLabels.forEachIndexed { index, label ->
-                // Box height = cellSize; no inner padding (the external Spacer handles the gap)
-                Box(modifier = Modifier.size(width = 10.dp, height = cellSize)) {
+            listOf("M", "", "W", "", "F", "", "").forEach { label ->
+                Box(
+                    modifier = Modifier.size(width = 16.dp, height = cellSize + cellGap),
+                    contentAlignment = Alignment.CenterStart
+                ) {
                     if (label.isNotEmpty()) {
                         Text(
                             text = label,
                             fontSize = 9.sp,
-                            lineHeight = 9.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = textSecondary,
+                            lineHeight = 9.sp
                         )
                     }
-                }
-                if (index < 6) {
-                    Spacer(modifier = Modifier.height(cellGap))
                 }
             }
         }
 
-        // Scrollable area: month labels row + week columns
-        Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            Column {
-                // Month labels row
-                Row {
-                    weeks.forEachIndexed { weekIndex, week ->
-                        val monday = week[0]
-                        // Show month label if this is the first week of a new month
-                        // (monday's day-of-month is in the first 7 days, meaning this is the first Mon of the month)
-                        val showMonth = monday.dayOfMonth <= 7
-                        Box(modifier = Modifier.width(cellStep)) {
-                            if (showMonth) {
-                                Text(
-                                    text = monday.month.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
-                                    fontSize = 12.sp,
-                                    lineHeight = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+        // Scrollable heatmap canvas
+        Box(modifier = Modifier.horizontalScroll(rememberScrollState())) {
+            Canvas(
+                modifier = Modifier
+                    .width(with(density) { (52 * cellStepPx).toDp() })
+                    .height(with(density) { (monthLabelHeightPx + 7 * cellStepPx).toDp() })
+                    .drawWithCache {
+                        val textPaint = Paint().apply {
+                            isAntiAlias = true
+                            textSize = fontSizePx
+                            color = textSecondary.toArgb()
+                            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
                         }
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                        onDrawBehind {
+                            drawIntoCanvas { canvas ->
+                                var lastMonthValue = -1
+                                weeks.forEachIndexed { weekIndex, week ->
+                                    val firstDay = week[0]
 
-                // Week columns
-                Row {
-                    weeks.forEachIndexed { weekIndex, week ->
-                        Column {
-                            week.forEachIndexed { dayIndex, date ->
-                                val epochDay = date.toEpochDay().toInt()
-                                val distanceKm = dayMap[epochDay]
-                                val color = if (distanceKm != null && distanceKm > 0f) {
-                                    val intensity = (distanceKm / 10f).coerceIn(0f, 1f)
-                                    lerp(heatLow, heatHigh, intensity)
-                                } else {
-                                    surfaceVariant
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(cellSize)
-                                        .background(
-                                            color = color,
-                                            shape = RoundedCornerShape(2.dp)
+                                    // Month label: drawn at first week of each new month — no Box clipping
+                                    if (firstDay.monthValue != lastMonthValue) {
+                                        val monthText = firstDay.month.getDisplayName(
+                                            TextStyle.SHORT, Locale.getDefault()
                                         )
-                                )
+                                        canvas.nativeCanvas.drawText(
+                                            monthText,
+                                            weekIndex * cellStepPx,
+                                            fontSizePx * 1.2f,
+                                            textPaint
+                                        )
+                                        lastMonthValue = firstDay.monthValue
+                                    }
 
-                                if (dayIndex < 6) {
-                                    Spacer(modifier = Modifier.height(cellGap))
+                                    // Draw each day cell
+                                    week.forEachIndexed { dayIndex, date ->
+                                        val epochDay = date.toEpochDay().toInt()
+                                        val distanceKm = dayMap[epochDay]
+
+                                        val x = weekIndex * cellStepPx
+                                        val y = monthLabelHeightPx + dayIndex * cellStepPx
+
+                                        val color = if (distanceKm != null && distanceKm > 0f) {
+                                            val intensity = (distanceKm / 10f).coerceIn(0f, 1f)
+                                            lerp(heatLow, heatHigh, intensity)
+                                        } else {
+                                            emptyColor
+                                        }
+
+                                        drawRoundRect(
+                                            color = color,
+                                            topLeft = Offset(x, y),
+                                            size = Size(cellSizePx, cellSizePx),
+                                            cornerRadius = CornerRadius(
+                                                with(density) { 2.dp.toPx() },
+                                                with(density) { 2.dp.toPx() }
+                                            )
+                                        )
+
+                                        // Cyan border on today's cell
+                                        if (epochDay == todayEpoch) {
+                                            drawRoundRect(
+                                                color = GradientCyan,
+                                                topLeft = Offset(x, y),
+                                                size = Size(cellSizePx, cellSizePx),
+                                                cornerRadius = CornerRadius(
+                                                    with(density) { 2.dp.toPx() },
+                                                    with(density) { 2.dp.toPx() }
+                                                ),
+                                                style = Stroke(width = with(density) { 1.dp.toPx() })
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
-
-                        if (weekIndex < 51) {
-                            Spacer(modifier = Modifier.width(cellGap))
-                        }
                     }
-                }
-            }
+            ) {}
         }
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
@@ -37,7 +38,7 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
         return
     }
 
-    val gridColor = Color(0x0AFFFFFF)
+    val gridColor = CardeaTheme.colors.chartGrid
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val density = LocalDensity.current
     val axisTextSizePx = with(density) { 12.sp.toPx() }

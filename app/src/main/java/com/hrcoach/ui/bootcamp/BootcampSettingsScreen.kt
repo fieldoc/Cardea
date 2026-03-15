@@ -63,14 +63,9 @@ import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaCtaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneRed
@@ -95,14 +90,14 @@ fun BootcampSettingsScreen(
     if (showDestructiveConfirm) {
         AlertDialog(
             onDismissRequest = { showDestructiveConfirm = false },
-            containerColor = CardeaBgPrimary,
+            containerColor = CardeaTheme.colors.bgPrimary,
             shape = RoundedCornerShape(20.dp),
             tonalElevation = 0.dp,
             title = {
                 Text(
                     text = "Recalculate Program?",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = CardeaTextPrimary
+                    color = CardeaTheme.colors.textPrimary
                 )
             },
             text = {
@@ -110,7 +105,7 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "These changes affect your program structure:",
                         style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (state.hasGoalChanges) ChangeChip("Goal → ${goalLabel(state.editGoal)}")
@@ -121,7 +116,7 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "Future sessions will be recalculated to match. Completed sessions are unaffected.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
             },
@@ -139,13 +134,13 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "Save anyway",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = CardeaTheme.colors.onGradient
                     )
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDestructiveConfirm = false }) {
-                    Text("Cancel", color = CardeaTextSecondary)
+                    Text("Cancel", color = CardeaTheme.colors.textSecondary)
                 }
             }
         )
@@ -154,12 +149,12 @@ fun BootcampSettingsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CardeaBgPrimary)
+            .background(CardeaTheme.colors.bgPrimary)
     ) {
         if (state.isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center),
-                color = Color.White
+                color = CardeaTheme.colors.textPrimary
             )
         } else {
             Column(
@@ -184,7 +179,7 @@ fun BootcampSettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = CardeaTextSecondary,
+                            tint = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -194,7 +189,7 @@ fun BootcampSettingsScreen(
                             fontWeight = FontWeight.ExtraBold,
                             letterSpacing = (-0.5).sp
                         ),
-                        color = Color.White
+                        color = CardeaTheme.colors.textPrimary
                     )
                 }
 
@@ -204,14 +199,14 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "Goal",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     GoalSelector(
                         selectedGoal = state.editGoal,
                         onGoalSelected = viewModel::setGoal
                     )
 
-                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -221,19 +216,19 @@ fun BootcampSettingsScreen(
                         Text(
                             text = "Easy run",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = CardeaTextSecondary
+                            color = CardeaTheme.colors.textSecondary
                         )
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
                                 text = "${state.editTargetMinutesPerRun}",
                                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                                color = CardeaTextPrimary
+                                color = CardeaTheme.colors.textPrimary
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
                                 text = "min",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CardeaTextSecondary,
+                                color = CardeaTheme.colors.textSecondary,
                                 modifier = Modifier.padding(bottom = 3.dp)
                             )
                         }
@@ -245,17 +240,17 @@ fun BootcampSettingsScreen(
                         steps = 14,
                         modifier = Modifier.fillMaxWidth(),
                         colors = SliderDefaults.colors(
-                            thumbColor = Color.White,
+                            thumbColor = CardeaTheme.colors.onGradient,
                             activeTrackColor = Color.White,
-                            inactiveTrackColor = GlassHighlight
+                            inactiveTrackColor = CardeaTheme.colors.glassHighlight
                         )
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("15 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
-                        Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
+                        Text("15 min", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textTertiary)
+                        Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textTertiary)
                     }
                     Spacer(Modifier.height(6.dp))
                     Row(
@@ -265,12 +260,12 @@ fun BootcampSettingsScreen(
                         Text(
                             text = "Long run: ~${state.editLongRunMinutes} min",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextSecondary
+                            color = CardeaTheme.colors.textSecondary
                         )
                         Text(
                             text = "Weekly: ~${state.editWeeklyTotal} min",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextTertiary
+                            color = CardeaTheme.colors.textTertiary
                         )
                     }
                     state.longRunWarning?.let { warning ->
@@ -278,16 +273,16 @@ fun BootcampSettingsScreen(
                         Text(
                             text = warning,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFFFB74D)
+                            color = CardeaTheme.colors.zoneAmber
                         )
                     }
 
-                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
                     Text(
                         text = "Runs / Week",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     val runOptions = listOf(2, 3, 4, 5)
                     val runLabels = listOf("2", "3", "4", "5+")
@@ -306,7 +301,7 @@ fun BootcampSettingsScreen(
                                     .clip(RoundedCornerShape(10.dp))
                                     .then(
                                         if (isSelected) Modifier.background(CardeaGradient)
-                                        else Modifier.background(GlassHighlight)
+                                        else Modifier.background(CardeaTheme.colors.glassHighlight)
                                     )
                                     .clickable { viewModel.setRunsPerWeek(runs) },
                                 contentAlignment = Alignment.Center
@@ -314,18 +309,18 @@ fun BootcampSettingsScreen(
                                 Text(
                                     text = runLabels[index],
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                                    color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
                                 )
                             }
                         }
                     }
 
-                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
                     Text(
                         text = "Difficulty",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     TierSelector(
                         tierIndex = state.editTierIndex,
@@ -341,7 +336,7 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "Preferred Days",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     val selectedCount = state.editPreferredDays.count {
                         it.level == DaySelectionLevel.AVAILABLE || it.level == DaySelectionLevel.LONG_RUN_BIAS
@@ -352,7 +347,7 @@ fun BootcampSettingsScreen(
                         else
                             "Select exactly ${state.editRunsPerWeek} days · $selectedCount selected ✕",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (selectedCount == state.editRunsPerWeek) CardeaTextSecondary else ZoneRed,
+                        color = if (selectedCount == state.editRunsPerWeek) CardeaTheme.colors.textSecondary else ZoneRed,
                         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
                     )
                     DayChipRow(
@@ -361,12 +356,12 @@ fun BootcampSettingsScreen(
                         onLongPress = viewModel::toggleBlackoutDay
                     )
 
-                    HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 14.dp))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
                     Text(
                         text = "Start Date",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     StartDateEditor(
                         dateMs = state.editStartDateMs,
@@ -376,7 +371,7 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "If your schedule changed, move the start date so gap logic matches reality.",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CardeaTextTertiary,
+                        color = CardeaTheme.colors.textTertiary,
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
@@ -389,7 +384,7 @@ fun BootcampSettingsScreen(
                     Text(
                         text = "Max Heart Rate",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                     OutlinedTextField(
                         value = state.editHrMaxInput,
@@ -414,7 +409,7 @@ fun BootcampSettingsScreen(
                         Text(
                             text = "Adaptive coaching quality improves when HRmax is set.",
                             style = MaterialTheme.typography.labelSmall,
-                            color = CardeaTextTertiary,
+                            color = CardeaTheme.colors.textTertiary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -445,7 +440,7 @@ fun BootcampSettingsScreen(
                         .clip(RoundedCornerShape(14.dp))
                         .background(
                             if (saveEnabled) CardeaCtaGradient
-                            else Brush.linearGradient(listOf(GlassHighlight, GlassHighlight))
+                            else Brush.linearGradient(listOf(CardeaTheme.colors.glassHighlight, CardeaTheme.colors.glassHighlight))
                         )
                         .clickable(enabled = saveEnabled) {
                             if (hasProgramChanges) showDestructiveConfirm = true
@@ -456,14 +451,14 @@ fun BootcampSettingsScreen(
                     if (state.isSaving) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
-                            color = Color.White,
+                            color = CardeaTheme.colors.onGradient,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Text(
                             text = "Save Changes",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = if (saveEnabled) Color.White else CardeaTextTertiary
+                            color = if (saveEnabled) CardeaTheme.colors.onGradient else CardeaTheme.colors.textTertiary
                         )
                     }
                 }
@@ -484,7 +479,7 @@ private fun SectionLabel(text: String) {
             fontWeight = FontWeight.Bold,
             fontSize = 10.sp
         ),
-        color = CardeaTextTertiary,
+        color = CardeaTheme.colors.textTertiary,
         modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
     )
 }
@@ -508,7 +503,8 @@ private fun ChangeChip(text: String) {
 
 private fun goalLabel(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.CARDIO_HEALTH -> "Cardio Health"
-    BootcampGoal.RACE_5K_10K -> "5K / 10K"
+    BootcampGoal.RACE_5K -> "5K"
+    BootcampGoal.RACE_10K -> "10K"
     BootcampGoal.HALF_MARATHON -> "Half Marathon"
     BootcampGoal.MARATHON -> "Marathon"
 }
@@ -528,7 +524,8 @@ private fun GoalSelector(
 ) {
     val goals = listOf(
         BootcampGoal.CARDIO_HEALTH,
-        BootcampGoal.RACE_5K_10K,
+        BootcampGoal.RACE_5K,
+        BootcampGoal.RACE_10K,
         BootcampGoal.HALF_MARATHON,
         BootcampGoal.MARATHON
     )
@@ -542,14 +539,14 @@ private fun GoalSelector(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(GlassHighlight))
+                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
                     .clickable { onGoalSelected(goal) }
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = goalLabel(goal),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                    color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
                 )
             }
         }
@@ -576,14 +573,14 @@ private fun TierSelector(
                     .weight(1f)
                     .height(42.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(GlassHighlight))
+                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
                     .clickable { onTierSelected(index) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                    color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
                 )
             }
         }
@@ -609,15 +606,15 @@ private fun StartDateEditor(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         TextButton(onClick = onPrevDay) {
-            Text("← Prev", color = CardeaTextSecondary)
+            Text("← Prev", color = CardeaTheme.colors.textSecondary)
         }
         Text(
             text = settingsDateFormatter.format(localDate),
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = Color.White
+            color = CardeaTheme.colors.textPrimary
         )
         TextButton(onClick = onNextDay) {
-            Text("Next →", color = CardeaTextSecondary)
+            Text("Next →", color = CardeaTheme.colors.textSecondary)
         }
     }
 }
@@ -665,7 +662,7 @@ private fun DayChipRow(
                     .clip(CircleShape)
                     .then(
                         when {
-                            isBlackout -> Modifier.background(Color(0xFF1C1F26))
+                            isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
                             isSelected -> Modifier.background(CardeaGradient)
                             else       -> Modifier
                         }
@@ -673,9 +670,9 @@ private fun DayChipRow(
                     .border(
                         width = 1.dp,
                         color = when {
-                            isBlackout -> Color(0xFF3D2020)
+                            isBlackout -> CardeaTheme.colors.blackoutBorder
                             isSelected -> Color.Transparent
-                            else       -> GlassBorder
+                            else       -> CardeaTheme.colors.glassBorder
                         },
                         shape = CircleShape
                     )
@@ -691,13 +688,13 @@ private fun DayChipRow(
                 Text(
                     text = DayLetter[day - 1],
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (isBlackout) Color(0xFF8B3A3A) else Color.White
+                    color = if (isBlackout) CardeaTheme.colors.blackoutText else CardeaTheme.colors.textPrimary
                 )
                 if (isLongRun) {
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = "Long run bias",
-                        tint = Color.White,
+                        tint = CardeaTheme.colors.onGradient,
                         modifier = Modifier
                             .size(10.dp)
                             .align(Alignment.TopEnd)
@@ -708,7 +705,7 @@ private fun DayChipRow(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Blocked",
-                        tint = Color(0xFF8B3A3A),
+                        tint = CardeaTheme.colors.blackoutText,
                         modifier = Modifier
                             .size(10.dp)
                             .align(Alignment.TopEnd)
@@ -732,12 +729,12 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
             .clip(CircleShape)
             .then(
                 when {
-                    isBlackout -> Modifier.background(Color(0xFF1C1F26))
+                    isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
                     isSelected -> Modifier.background(CardeaGradient)
                     else       -> Modifier
                 }
             )
-            .border(1.dp, if (isSelected) Color.Transparent else GlassBorder, CircleShape)
+            .border(1.dp, if (isSelected) Color.Transparent else CardeaTheme.colors.glassBorder, CircleShape)
             .padding(horizontal = 7.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -748,10 +745,10 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                color = if (isBlackout) Color(0xFF8B3A3A) else Color.White
+                color = if (isBlackout) CardeaTheme.colors.blackoutText else CardeaTheme.colors.textPrimary
             )
-            if (isLongRun)  Icon(Icons.Default.Star,  null, tint = Color.White,       modifier = Modifier.size(7.dp))
-            if (isBlackout) Icon(Icons.Default.Close, null, tint = Color(0xFF8B3A3A), modifier = Modifier.size(7.dp))
+            if (isLongRun)  Icon(Icons.Default.Star,  null, tint = CardeaTheme.colors.onGradient, modifier = Modifier.size(7.dp))
+            if (isBlackout) Icon(Icons.Default.Close, null, tint = CardeaTheme.colors.blackoutText, modifier = Modifier.size(7.dp))
         }
     }
 }

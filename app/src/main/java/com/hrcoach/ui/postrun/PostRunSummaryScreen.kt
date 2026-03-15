@@ -63,13 +63,8 @@ import com.hrcoach.ui.components.AchievementCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.AchievementGold
-import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.ZoneAmber
@@ -114,7 +109,7 @@ fun PostRunSummaryScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CardeaBgPrimary)
+            .background(CardeaTheme.colors.bgPrimary)
     ) {
         val contentState = when {
             uiState.isLoading -> PostRunContentState.LOADING
@@ -148,7 +143,7 @@ fun PostRunSummaryScreen(
                         Text(
                             text = uiState.errorMessage ?: "Unable to load summary.",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = CardeaTextSecondary
+                            color = CardeaTheme.colors.textSecondary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = onDone) {
@@ -185,13 +180,13 @@ fun PostRunSummaryScreen(
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                             contentDescription = "Back",
-                                            tint = CardeaTextTertiary,
+                                            tint = CardeaTheme.colors.textTertiary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Text(
                                             text = "History",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTextTertiary
+                                            color = CardeaTheme.colors.textTertiary
                                         )
                                     }
                                     // Eyebrow
@@ -201,7 +196,7 @@ fun PostRunSummaryScreen(
                                             letterSpacing = 3.sp,
                                             fontWeight = FontWeight.Black
                                         ),
-                                        color = CardeaTextTertiary
+                                        color = CardeaTheme.colors.textTertiary
                                     )
                                     // Motivational title
                                     Text(
@@ -209,7 +204,7 @@ fun PostRunSummaryScreen(
                                         style = MaterialTheme.typography.headlineMedium.copy(
                                             fontWeight = FontWeight.ExtraBold
                                         ),
-                                        color = CardeaTextPrimary
+                                        color = CardeaTheme.colors.textPrimary
                                     )
                                     // Giant gradient distance
                                     Text(
@@ -226,7 +221,7 @@ fun PostRunSummaryScreen(
                             }
                         }
 
-                        HorizontalDivider(color = GlassBorder, thickness = 1.dp)
+                        HorizontalDivider(color = CardeaTheme.colors.glassBorder, thickness = 1.dp)
 
                         // ── Scrollable content below hero ───────────────────
                         Column(
@@ -310,19 +305,19 @@ fun PostRunSummaryScreen(
                                             Icon(
                                                 imageVector = Icons.Default.Insights,
                                                 contentDescription = null,
-                                                tint = CardeaTextTertiary,
+                                                tint = CardeaTheme.colors.textTertiary,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                             Column {
                                                 Text(
                                                     text = "Not enough data yet.",
                                                     style = MaterialTheme.typography.bodyLarge,
-                                                    color = CardeaTextPrimary
+                                                    color = CardeaTheme.colors.textPrimary
                                                 )
                                                 Text(
                                                     text = "Complete a few similar sessions to unlock this view.",
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = CardeaTextTertiary
+                                                    color = CardeaTheme.colors.textTertiary
                                                 )
                                             }
                                         }
@@ -334,7 +329,7 @@ fun PostRunSummaryScreen(
                                             style = MaterialTheme.typography.labelSmall.copy(
                                                 letterSpacing = 1.sp
                                             ),
-                                            color = CardeaTextTertiary
+                                            color = CardeaTheme.colors.textTertiary
                                         )
                                         AssessmentCard(comparisons = uiState.comparisons)
                                     }
@@ -357,15 +352,15 @@ fun PostRunSummaryScreen(
                                                 .weight(1f)
                                                 .height(48.dp)
                                                 .clip(RoundedCornerShape(50.dp))
-                                                .background(GlassHighlight)
-                                                .border(1.dp, GlassBorder, RoundedCornerShape(50.dp))
+                                                .background(CardeaTheme.colors.glassHighlight)
+                                                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(50.dp))
                                                 .clickable(onClick = onViewProgress),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 text = stringResource(R.string.button_view_progress),
                                                 style = MaterialTheme.typography.labelLarge,
-                                                color = CardeaTextSecondary
+                                                color = CardeaTheme.colors.textSecondary
                                             )
                                         }
                                         // Done — gradient
@@ -385,7 +380,7 @@ fun PostRunSummaryScreen(
                                         Text(
                                             text = "View Route",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTextTertiary
+                                            color = CardeaTheme.colors.textTertiary
                                         )
                                     }
                                 }
@@ -404,20 +399,20 @@ private fun SmallStatCard(label: String, value: String, modifier: Modifier = Mod
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(GlassHighlight)
-            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
         Column {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = CardeaTextTertiary
+                color = CardeaTheme.colors.textTertiary
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary,
+                color = CardeaTheme.colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -431,15 +426,15 @@ private fun AssessmentCard(comparisons: List<PostRunComparison>) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(GlassHighlight)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
             text = "Session Overview",
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
-            color = CardeaTextTertiary
+            color = CardeaTheme.colors.textTertiary
         )
         comparisons.forEach { item ->
             Row(
@@ -452,13 +447,13 @@ private fun AssessmentCard(comparisons: List<PostRunComparison>) {
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.SemiBold
                         ),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     item.insight?.let {
                         Text(
                             text = it,
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextTertiary
+                            color = CardeaTheme.colors.textTertiary
                         )
                     }
                 }
@@ -468,7 +463,7 @@ private fun AssessmentCard(comparisons: List<PostRunComparison>) {
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold
                         ),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     item.delta?.let { delta ->
                         Text(
@@ -477,7 +472,7 @@ private fun AssessmentCard(comparisons: List<PostRunComparison>) {
                             color = when (item.positive) {
                                 true -> ZoneGreen
                                 false -> ZoneAmber
-                                null -> CardeaTextTertiary
+                                null -> CardeaTheme.colors.textTertiary
                             }
                         )
                     }
@@ -520,12 +515,12 @@ private fun HrrCooldownCard(secondsRemaining: Int) {
                     Text(
                         text = "Recovery Walk",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     Text(
                         text = "Stay moving at a slow pace",
                         style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
                 Text(
@@ -542,7 +537,7 @@ private fun HrrCooldownCard(secondsRemaining: Int) {
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp))
-                    .background(GlassBorder)
+                    .background(CardeaTheme.colors.glassBorder)
             ) {
                 Box(
                     modifier = Modifier
@@ -556,7 +551,7 @@ private fun HrrCooldownCard(secondsRemaining: Int) {
             Text(
                 text = "Measuring how quickly your heart rate drops to calibrate your fitness level.",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary,
+                color = CardeaTheme.colors.textSecondary,
                 lineHeight = 18.sp
             )
         }
@@ -572,8 +567,8 @@ private fun BootcampContextCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(GlassHighlight)
-            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
             .padding(14.dp)
     ) {
         Row(
@@ -590,12 +585,12 @@ private fun BootcampContextCard(
                 Text(
                     text = if (weekComplete) "Bootcamp Week Complete" else "Bootcamp Progress",
                     style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                    color = if (weekComplete) ZoneGreen else CardeaTextTertiary
+                    color = if (weekComplete) ZoneGreen else CardeaTheme.colors.textTertiary
                 )
                 Text(
                     text = progressLabel,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = CardeaTextPrimary
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Text(
                     text = if (weekComplete) {
@@ -604,7 +599,7 @@ private fun BootcampContextCard(
                         "This run has been applied to your bootcamp week."
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextTertiary
+                    color = CardeaTheme.colors.textTertiary
                 )
             }
         }

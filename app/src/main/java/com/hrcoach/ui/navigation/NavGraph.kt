@@ -70,13 +70,9 @@ import com.hrcoach.ui.progress.ProgressScreen
 import com.hrcoach.ui.setup.SetupScreen
 import com.hrcoach.ui.splash.SplashScreen
 import com.hrcoach.domain.model.ThemeMode
-import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaNavGradient
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
-import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.workout.ActiveWorkoutScreen
 import com.hrcoach.util.PermissionGate
 
@@ -149,7 +145,7 @@ fun HrCoachNavGraph(
     val showBottomBar = !isWorkoutRunning && currentRoute in tabRoutes
 
     Scaffold(
-        containerColor = CardeaBgPrimary,
+        containerColor = CardeaTheme.colors.bgPrimary,
         bottomBar = {
             AnimatedVisibility(
                 visible = showBottomBar,
@@ -162,12 +158,13 @@ fun HrCoachNavGraph(
                     animationSpec = spring()
                 ) + fadeOut(animationSpec = tween(NavDurationMs))
             ) {
+                val navBorderColor = CardeaTheme.colors.glassBorder
                 NavigationBar(
-                    containerColor = CardeaBgPrimary,
+                    containerColor = CardeaTheme.colors.bgPrimary,
                     tonalElevation = 0.dp,
                     modifier = Modifier.drawBehind {
                         drawLine(
-                            color = GlassBorder,
+                            color = navBorderColor,
                             start = Offset(0f, 0f),
                             end = Offset(size.width, 0f),
                             strokeWidth = 1.dp.toPx()
@@ -221,9 +218,9 @@ fun HrCoachNavGraph(
                             label = { Text(stringResource(navItem.labelRes)) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor   = Color.Unspecified,
-                                unselectedIconColor = CardeaTextSecondary,
+                                unselectedIconColor = CardeaTheme.colors.textSecondary,
                                 selectedTextColor   = GradientBlue,
-                                unselectedTextColor = CardeaTextSecondary,
+                                unselectedTextColor = CardeaTheme.colors.textSecondary,
                                 indicatorColor      = Color.Transparent
                             )
                         )
@@ -579,7 +576,7 @@ private fun GradientNavIcon(
             Icon(
                 imageVector = imageVector,
                 contentDescription = contentDescription,
-                tint = Color.White,
+                tint = CardeaTheme.colors.textPrimary,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -587,7 +584,7 @@ private fun GradientNavIcon(
         Icon(
             imageVector = imageVector,
             contentDescription = contentDescription,
-            tint = CardeaTextSecondary
+            tint = CardeaTheme.colors.textSecondary
         )
     }
 }

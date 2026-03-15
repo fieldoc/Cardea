@@ -18,7 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.AchievementType
-import com.hrcoach.ui.theme.*
+import com.hrcoach.ui.theme.AchievementGold
+import com.hrcoach.ui.theme.AchievementSky
+import com.hrcoach.ui.theme.AchievementSlate
+import com.hrcoach.ui.theme.CardeaTheme
 
 @Composable
 fun AchievementCard(
@@ -49,7 +52,7 @@ fun AchievementCard(
             Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
             Text(
                 text = achievementTitle(achievement),
-                color = CardeaTextPrimary,
+                color = CardeaTheme.colors.textPrimary,
                 fontSize = if (compact) 13.sp else 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
@@ -57,13 +60,13 @@ fun AchievementCard(
             if (achievement.goal != null) {
                 Text(
                     text = goalDisplayName(achievement.goal),
-                    color = CardeaTextTertiary,
+                    color = CardeaTheme.colors.textTertiary,
                     fontSize = if (compact) 11.sp else 13.sp
                 )
             } else {
                 Text(
                     text = categoryLabel(achievement.type),
-                    color = CardeaTextTertiary,
+                    color = CardeaTheme.colors.textTertiary,
                     fontSize = if (compact) 11.sp else 13.sp
                 )
             }
@@ -89,11 +92,12 @@ private fun PrestigeDots(level: Int, color: Color, compact: Boolean) {
     }
 }
 
+@Composable
 private fun prestigeColors(level: Int): Triple<Color, Color, Color> = when (level) {
-    1 -> Triple(AchievementSlate, AchievementSlateBorder, AchievementSlateBg)
-    2 -> Triple(AchievementSky, AchievementSkyBorder, AchievementSkyBg)
-    3 -> Triple(AchievementGold, AchievementGoldBorder, AchievementGoldBg)
-    else -> Triple(AchievementSlate, AchievementSlateBorder, AchievementSlateBg)
+    1 -> Triple(AchievementSlate, CardeaTheme.colors.achievementSlateBorder, CardeaTheme.colors.achievementSlateBg)
+    2 -> Triple(AchievementSky, CardeaTheme.colors.achievementSkyBorder, CardeaTheme.colors.achievementSkyBg)
+    3 -> Triple(AchievementGold, CardeaTheme.colors.achievementGoldBorder, CardeaTheme.colors.achievementGoldBg)
+    else -> Triple(AchievementSlate, CardeaTheme.colors.achievementSlateBorder, CardeaTheme.colors.achievementSlateBg)
 }
 
 private fun achievementIcon(a: AchievementEntity): String = when (a.type) {
@@ -107,6 +111,8 @@ private fun achievementIcon(a: AchievementEntity): String = when (a.type) {
 
 private fun goalIcon(goal: String?): String = when (goal) {
     "CARDIO_HEALTH" -> "\u2764\uFE0F"
+    "RACE_5K" -> "\uD83D\uDC5F"
+    "RACE_10K" -> "\uD83D\uDC5F"
     "RACE_5K_10K" -> "\uD83D\uDC5F"
     "HALF_MARATHON" -> "\uD83D\uDEE3\uFE0F"
     "MARATHON" -> "\uD83C\uDFC5"
@@ -132,6 +138,8 @@ private fun achievementTitle(a: AchievementEntity): String = when (a.type) {
 
 private fun goalDisplayName(goal: String?): String = when (goal) {
     "CARDIO_HEALTH" -> "Cardio Health"
+    "RACE_5K" -> "5K"
+    "RACE_10K" -> "10K"
     "RACE_5K_10K" -> "5K / 10K"
     "HALF_MARATHON" -> "Half Marathon"
     "MARATHON" -> "Marathon"

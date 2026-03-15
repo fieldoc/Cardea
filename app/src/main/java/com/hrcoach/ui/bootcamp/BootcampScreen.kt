@@ -70,15 +70,9 @@ import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaCtaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
-import com.hrcoach.ui.theme.GlassSurface
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
@@ -108,7 +102,7 @@ fun BootcampScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CardeaBgPrimary)
+            .background(CardeaTheme.colors.bgPrimary)
     ) {
         when {
             uiState.loadError != null -> {
@@ -246,12 +240,12 @@ private fun NoEnrollmentContent(onStartBootcamp: () -> Unit) {
         Text(
             text = "Bootcamp",
             style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Text(
             text = "A program that adapts to your goal, your schedule, and your life.",
             style = MaterialTheme.typography.bodyMedium,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center
         )
 
@@ -303,13 +297,13 @@ private fun LoadErrorContent(
             Text(
                 text = "Unable to load Bootcamp",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = errorMessage,
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
             Spacer(modifier = Modifier.height(12.dp))
             CardeaButton(
@@ -336,19 +330,19 @@ private fun FeatureBullet(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = CardeaTextPrimary,
+            tint = CardeaTheme.colors.textPrimary,
             modifier = Modifier.size(20.dp)
         )
         Column {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Text(
                 text = detail,
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }
@@ -369,12 +363,12 @@ private fun WeekStripCard(
             Text(
                 text = "This Week",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Text(
                 text = dateRange,
                 style = MaterialTheme.typography.labelSmall,
-                color = CardeaTextTertiary
+                color = CardeaTheme.colors.textTertiary
             )
         }
 
@@ -394,6 +388,9 @@ private fun WeekStripCard(
 
         // Tick + glow timeline indicator
         val todayIndex = days.indexOfFirst { it.isToday }.takeIf { it >= 0 } ?: 0
+        val trackColor = CardeaTheme.colors.glassBorder
+        val glowColor = CardeaTheme.colors.glassSurface
+        val tickColor = CardeaTheme.colors.textSecondary
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -407,7 +404,7 @@ private fun WeekStripCard(
 
             // Dim track
             drawLine(
-                color = GlassBorder,
+                color = trackColor,
                 start = Offset(trackStart, trackY),
                 end = Offset(trackEnd, trackY),
                 strokeWidth = 1.dp.toPx()
@@ -417,7 +414,7 @@ private fun WeekStripCard(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        GlassSurface,
+                        glowColor,
                         Color.Transparent
                     ),
                     center = Offset(tickX, trackY),
@@ -429,7 +426,7 @@ private fun WeekStripCard(
 
             // Tick line
             drawLine(
-                color = CardeaTextSecondary,
+                color = tickColor,
                 start = Offset(tickX, trackY - 4.5.dp.toPx()),
                 end = Offset(tickX, trackY + 4.5.dp.toPx()),
                 strokeWidth = 1.5.dp.toPx(),
@@ -449,7 +446,7 @@ private fun WeekDayPill(day: WeekDayItem) {
         Text(
             text = day.dayLabel,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextTertiary
+            color = CardeaTheme.colors.textTertiary
         )
 
         // Pill dot
@@ -462,17 +459,17 @@ private fun WeekDayPill(day: WeekDayItem) {
             session == null && day.isToday -> {
                 // today is a rest day — subtle bordered empty dot
                 dotBackground = Color.Transparent
-                dotBorder = GlassBorder
+                dotBorder = CardeaTheme.colors.glassBorder
                 dotContent = {
                     Text(
                         text = "—",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CardeaTextTertiary.copy(alpha = 0.4f)
+                        color = CardeaTheme.colors.textTertiary.copy(alpha = 0.4f)
                     )
                 }
             }
             session == null -> {
-                dotBackground = GlassHighlight.copy(alpha = 0.4f)
+                dotBackground = CardeaTheme.colors.glassHighlight.copy(alpha = 0.4f)
                 dotBorder = Color.Transparent
                 dotContent = {}
             }
@@ -508,13 +505,13 @@ private fun WeekDayPill(day: WeekDayItem) {
                 }
             }
             else -> {
-                dotBackground = GlassHighlight
-                dotBorder = GlassBorder
+                dotBackground = CardeaTheme.colors.glassHighlight
+                dotBorder = CardeaTheme.colors.glassBorder
                 dotContent = {
                     Text(
                         text = session.rawTypeName.take(2),
                         style = MaterialTheme.typography.labelSmall,
-                        color = CardeaTextTertiary
+                        color = CardeaTheme.colors.textTertiary
                     )
                 }
             }
@@ -566,7 +563,7 @@ private fun OnboardingWizard(
                         .clip(RoundedCornerShape(2.dp))
                         .then(
                             if (index <= step) Modifier.background(CardeaGradient)
-                            else Modifier.background(GlassBorder)
+                            else Modifier.background(CardeaTheme.colors.glassBorder)
                         )
                 )
             }
@@ -609,12 +606,12 @@ private fun OnboardingStep1Goal(
     Text(
         text = "What's your goal?",
         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        color = CardeaTextPrimary
+        color = CardeaTheme.colors.textPrimary
     )
     Text(
         text = "Choose the program that matches your ambition.",
         style = MaterialTheme.typography.bodyMedium,
-        color = CardeaTextSecondary
+        color = CardeaTheme.colors.textSecondary
     )
 
     val goals = listOf(
@@ -648,12 +645,12 @@ private fun OnboardingStep1Goal(
                     Text(
                         text = goalDisplayName(goal),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     Text(
                         text = description,
                         style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
                 if (isSelected) {
@@ -672,7 +669,7 @@ private fun OnboardingStep1Goal(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTextSecondary)
+            Text("Back", color = CardeaTheme.colors.textSecondary)
         }
         CardeaButton(
             text = "Next",
@@ -698,19 +695,19 @@ private fun OnboardingStep2Time(
     Text(
         text = "Easy run length",
         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        color = CardeaTextPrimary
+        color = CardeaTheme.colors.textPrimary
     )
     Text(
         text = "Set the length of a typical easy run.",
         style = MaterialTheme.typography.bodyMedium,
-        color = CardeaTextSecondary
+        color = CardeaTheme.colors.textSecondary
     )
 
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = "$minutes min",
             style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Slider(
             value = minutes.toFloat(),
@@ -721,17 +718,17 @@ private fun OnboardingStep2Time(
             colors = SliderDefaults.colors(
                 thumbColor = GradientPink,
                 activeTrackColor = GradientPink,
-                inactiveTrackColor = GlassHighlight
+                inactiveTrackColor = CardeaTheme.colors.glassHighlight
             )
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("15 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
-            Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTextTertiary)
+            Text("15 min", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textTertiary)
+            Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textTertiary)
         }
-        HorizontalDivider(color = Color(0x1AFFFFFF), modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(color = CardeaTheme.colors.divider, modifier = Modifier.padding(vertical = 8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -739,12 +736,12 @@ private fun OnboardingStep2Time(
             Text(
                 text = "Long run: ~$longRunMinutes min",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
             Text(
                 text = "Weekly: ~$weeklyTotal min",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextTertiary
+                color = CardeaTheme.colors.textTertiary
             )
         }
     }
@@ -760,13 +757,13 @@ private fun OnboardingStep2Time(
         Text(
             text = longRunWarning,
             style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFFFFB74D)
+            color = CardeaTheme.colors.zoneAmber
         )
     }
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTextSecondary)
+            Text("Back", color = CardeaTheme.colors.textSecondary)
         }
         CardeaButton(
             text = "Next",
@@ -788,12 +785,12 @@ private fun OnboardingStep3Frequency(
     Text(
         text = "Runs per week",
         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        color = CardeaTextPrimary
+        color = CardeaTheme.colors.textPrimary
     )
     Text(
         text = "How often will you run?",
         style = MaterialTheme.typography.bodyMedium,
-        color = CardeaTextSecondary
+        color = CardeaTheme.colors.textSecondary
     )
 
     val options = listOf(2, 3, 4, 5)
@@ -813,7 +810,7 @@ private fun OnboardingStep3Frequency(
                         .clip(RoundedCornerShape(10.dp))
                         .then(
                             if (isSelected) Modifier.background(CardeaGradient)
-                            else Modifier.background(GlassHighlight)
+                            else Modifier.background(CardeaTheme.colors.glassHighlight)
                         )
                         .clickable { onRunsPerWeekChanged(runs) },
                     contentAlignment = Alignment.Center
@@ -821,7 +818,7 @@ private fun OnboardingStep3Frequency(
                     Text(
                         text = labels[index],
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                        color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
                     )
                 }
             }
@@ -829,7 +826,7 @@ private fun OnboardingStep3Frequency(
         Text(
             text = "runs / week",
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextTertiary
+            color = CardeaTheme.colors.textTertiary
         )
     }
 
@@ -837,7 +834,7 @@ private fun OnboardingStep3Frequency(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTextSecondary)
+            Text("Back", color = CardeaTheme.colors.textSecondary)
         }
         CardeaButton(
             text = "Start Program",
@@ -857,8 +854,8 @@ private fun PhaseDetailSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CardeaBgPrimary,
-        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(GlassBorder)) }
+        containerColor = CardeaTheme.colors.bgPrimary,
+        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(CardeaTheme.colors.glassBorder)) }
     ) {
         Column(
             modifier = Modifier
@@ -870,7 +867,7 @@ private fun PhaseDetailSheet(
             Text(
                 text = "Training Plan Details",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
 
             GlassCard {
@@ -879,11 +876,11 @@ private fun PhaseDetailSheet(
                         ?.replace('_', ' ')
                         ?.lowercase()
                         ?.replaceFirstChar { it.uppercase() } ?: "\u2014")
-                    HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder.copy(alpha = 0.5f))
                     PhaseDetailRow("Total Program", "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks}")
-                    HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder.copy(alpha = 0.5f))
                     PhaseDetailRow("Phase Progress", "Week ${uiState.weekInPhase}")
-                    HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f))
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder.copy(alpha = 0.5f))
                     
                     val sessionsCount = uiState.currentWeekDays.count { it.session != null }
                     if (uiState.isRecoveryWeek) {
@@ -895,7 +892,7 @@ private fun PhaseDetailSheet(
                     uiState.weeksUntilNextRecovery
                         ?.takeIf { it > 0 }
                         ?.let { 
-                            HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f))
+                            HorizontalDivider(color = CardeaTheme.colors.glassBorder.copy(alpha = 0.5f))
                             PhaseDetailRow("Next recovery", "in $it week${if (it == 1) "" else "s"}") 
                         }
                 }
@@ -904,7 +901,7 @@ private fun PhaseDetailSheet(
             Text(
                 text = "Your plan adapts based on your fatigue (ATL) and fitness (CTL) signals from every run.",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary,
+                color = CardeaTheme.colors.textSecondary,
                 lineHeight = 18.sp
             )
 
@@ -925,11 +922,11 @@ private fun PhaseDetailRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = CardeaTextSecondary)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
         Text(
             text = value, 
             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), 
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
     }
 }
@@ -1038,7 +1035,7 @@ private fun ActiveBootcampDashboard(
                     Text(
                         text = "Set up a manual run \u2192",
                         style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextTertiary
+                        color = CardeaTheme.colors.textTertiary
                     )
                 }
             }
@@ -1055,13 +1052,13 @@ private fun StatusCard(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = detail,
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
     }
 }
@@ -1077,13 +1074,13 @@ private fun MissedSessionCard(
                 Text(
                     text = "Missed session detected",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                    color = CardeaTextPrimary
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "You have at least one earlier session this week that is still incomplete.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
+                    color = CardeaTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 CardeaButton(
@@ -1099,7 +1096,7 @@ private fun MissedSessionCard(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Dismiss",
-                    tint = CardeaTextTertiary,
+                    tint = CardeaTheme.colors.textTertiary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -1113,13 +1110,13 @@ private fun PausedCard(onResume: () -> Unit) {
         Text(
             text = "Program paused",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Your schedule is on hold. Resume whenever you're ready.",
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(12.dp))
         CardeaButton(
@@ -1153,14 +1150,14 @@ private fun PreferredDaysStrip(
                         .clip(CircleShape)
                         .then(
                             if (enabled) Modifier.background(CardeaGradient)
-                            else Modifier.background(GlassHighlight)
+                            else Modifier.background(CardeaTheme.colors.glassHighlight)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = label,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (enabled) CardeaTextPrimary else CardeaTextTertiary
+                        color = if (enabled) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary
                     )
                 }
             }
@@ -1168,7 +1165,7 @@ private fun PreferredDaysStrip(
         Text(
             text = "Tap to edit",
             style = MaterialTheme.typography.labelSmall,
-            color = CardeaTextTertiary,
+            color = CardeaTheme.colors.textTertiary,
             modifier = Modifier.padding(top = 4.dp)
         )
     }
@@ -1180,12 +1177,12 @@ private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
         Text(
             text = "Coming Up",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(12.dp))
         weeks.forEachIndexed { weekIndex, week ->
             if (weekIndex > 0) {
-                HorizontalDivider(color = GlassBorder, modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 10.dp))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1196,12 +1193,12 @@ private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
                     Text(
                         text = "Week ${week.weekNumber}",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     Text(
                         text = if (week.isRecoveryWeek) "Recovery week" else "Build week",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (week.isRecoveryWeek) ZoneGreen else CardeaTextSecondary
+                        color = if (week.isRecoveryWeek) ZoneGreen else CardeaTheme.colors.textSecondary
                     )
                 }
                 
@@ -1213,7 +1210,7 @@ private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
                 Text(
                     text = types,
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextTertiary,
+                    color = CardeaTheme.colors.textTertiary,
                     textAlign = TextAlign.End,
                     modifier = Modifier.weight(1f).padding(start = 16.dp)
                 )
@@ -1228,13 +1225,13 @@ private fun GraduationCard(onGraduateGoal: () -> Unit) {
         Text(
             text = "You finished!",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "You've completed this goal. Graduate to unlock your next training block.",
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(10.dp))
         CardeaButton(
@@ -1255,8 +1252,8 @@ private fun SessionDetailSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CardeaBgPrimary,
-        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(GlassBorder)) }
+        containerColor = CardeaTheme.colors.bgPrimary,
+        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(CardeaTheme.colors.glassBorder)) }
     ) {
         Column(
             modifier = Modifier
@@ -1274,12 +1271,12 @@ private fun SessionDetailSheet(
                     Text(
                         text = session.typeName,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     Text(
                         text = "${session.minutes} minute run",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
                 if (session.isCompleted) {
@@ -1302,7 +1299,7 @@ private fun SessionDetailSheet(
                 Text(
                     text = SessionDescription.forType(session.rawTypeName, session.presetId),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTextPrimary,
+                    color = CardeaTheme.colors.textPrimary,
                     lineHeight = 22.sp
                 )
             }
@@ -1310,7 +1307,7 @@ private fun SessionDetailSheet(
             Text(
                 text = "Training targets will be calculated based on your current recovery state and historical zones.",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextTertiary
+                color = CardeaTheme.colors.textTertiary
             )
 
             CardeaButton(
@@ -1383,14 +1380,14 @@ private fun TodayHeroSection(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.5).sp
                     ),
-                    color = CardeaTextPrimary
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Box {
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Program options",
-                            tint = CardeaTextSecondary
+                            tint = CardeaTheme.colors.textSecondary
                         )
                     }
                     DropdownMenu(
@@ -1456,14 +1453,14 @@ private fun TodayHeroSection(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0x0EFFFFFF))
-                        .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                        .background(CardeaTheme.colors.glassHighlight)
+                        .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = phaseText,
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
                 if (uiState.isRecoveryWeek) {
@@ -1494,12 +1491,12 @@ private fun TodayHeroSection(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.3).sp
                         ),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     Text(
                         text = "Your schedule is on hold. Resume whenever you're ready.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTextSecondary,
+                        color = CardeaTheme.colors.textSecondary,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
@@ -1513,7 +1510,7 @@ private fun TodayHeroSection(
                                 letterSpacing = 1.2.sp,
                                 fontSize = 10.sp
                             ),
-                            color = CardeaTextTertiary
+                            color = CardeaTheme.colors.textTertiary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         val sessionLabel = SessionType.displayLabelForPreset(today.session.presetId)
@@ -1526,7 +1523,7 @@ private fun TodayHeroSection(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = (-0.5).sp
                             ),
-                            color = CardeaTextPrimary
+                            color = CardeaTheme.colors.textPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1562,7 +1559,7 @@ private fun TodayHeroSection(
                                 Text(
                                     text = "Start run",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = CardeaTheme.colors.onGradient
                                 )
                             }
                         }
@@ -1580,7 +1577,7 @@ private fun TodayHeroSection(
                                     Text(
                                         text = "Reschedule",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = CardeaTextSecondary
+                                        color = CardeaTheme.colors.textSecondary
                                     )
                                 }
                             } else {
@@ -1593,7 +1590,7 @@ private fun TodayHeroSection(
                                 Text(
                                     text = "Rest today",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CardeaTextTertiary
+                                    color = CardeaTheme.colors.textTertiary
                                 )
                             }
                         }
@@ -1615,7 +1612,7 @@ private fun TodayHeroSection(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = (-0.3).sp
                                 ),
-                                color = CardeaTextPrimary
+                                color = CardeaTheme.colors.textPrimary
                             )
                         }
                         val nextLabel = today.nextSession?.let { s ->
@@ -1628,7 +1625,7 @@ private fun TodayHeroSection(
                             else
                                 "Week complete — great work!",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextSecondary,
+                            color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -1640,7 +1637,7 @@ private fun TodayHeroSection(
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = (-0.3).sp
                             ),
-                            color = CardeaTextPrimary
+                            color = CardeaTheme.colors.textPrimary
                         )
                         val nextLabel = today.nextSession?.let { s ->
                             SessionType.displayLabelForPreset(s.presetId)
@@ -1652,7 +1649,7 @@ private fun TodayHeroSection(
                             else
                                 "Week complete — great work!",
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextSecondary,
+                            color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -1667,14 +1664,14 @@ private fun MetaChip(text: String) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0x0FFFFFFF))
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
     }
 }
@@ -1699,20 +1696,20 @@ private fun TierPromptCard(
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
         if (!evidence.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = evidence,
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextTertiary
+                color = CardeaTheme.colors.textTertiary
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -1721,7 +1718,7 @@ private fun TierPromptCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                Text("Not now", color = CardeaTextSecondary)
+                Text("Not now", color = CardeaTheme.colors.textSecondary)
             }
             CardeaButton(
                 text = actionLabel,
@@ -1743,13 +1740,13 @@ private fun IllnessPromptCard(
         Text(
             text = "Check in with your body",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "Recent signals look atypical. If you're getting sick, keep today's effort easy.",
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(10.dp))
         Row(
@@ -1757,7 +1754,7 @@ private fun IllnessPromptCard(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                Text("Dismiss", color = CardeaTextSecondary)
+                Text("Dismiss", color = CardeaTheme.colors.textSecondary)
             }
             CardeaButton(
                 text = "I'm unwell",
@@ -1784,7 +1781,7 @@ private fun RescheduleBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CardeaBgPrimary,
+        containerColor = CardeaTheme.colors.bgPrimary,
         dragHandle = null,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
@@ -1798,7 +1795,7 @@ private fun RescheduleBottomSheet(
             Text(
                 text = "Reschedule Run",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -1807,7 +1804,7 @@ private fun RescheduleBottomSheet(
                 Text(
                     text = "Recommended for $autoTargetLabel",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTextSecondary
+                    color = CardeaTheme.colors.textSecondary
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1823,7 +1820,7 @@ private fun RescheduleBottomSheet(
                 Text(
                     text = "No other preferred slots this week.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTextSecondary
+                    color = CardeaTheme.colors.textSecondary
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1843,7 +1840,7 @@ private fun RescheduleBottomSheet(
                 Text(
                     text = "Or pick another day",
                     style = MaterialTheme.typography.labelSmall,
-                    color = CardeaTextTertiary
+                    color = CardeaTheme.colors.textTertiary
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1858,14 +1855,14 @@ private fun RescheduleBottomSheet(
                                 .weight(1f)
                                 .height(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(GlassHighlight)
+                                .background(CardeaTheme.colors.glassHighlight)
                                 .clickable { onConfirm(day) },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = availableLabels[index],
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                color = CardeaTextSecondary
+                                color = CardeaTheme.colors.textSecondary
                             )
                         }
                     }
@@ -1881,7 +1878,7 @@ private fun RescheduleBottomSheet(
                 Text(
                     text = "I'm not sure yet",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextTertiary
+                    color = CardeaTheme.colors.textTertiary
                 )
             }
         }
@@ -1900,7 +1897,7 @@ private fun PreferredDaysBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = CardeaBgPrimary
+        containerColor = CardeaTheme.colors.bgPrimary
     ) {
         Column(
             modifier = Modifier
@@ -1911,13 +1908,13 @@ private fun PreferredDaysBottomSheet(
             Text(
                 text = "Preferred training days",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Tap to toggle · Long-press to block a day out",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
             Spacer(modifier = Modifier.height(16.dp))
             Row(
@@ -1967,9 +1964,9 @@ private fun DayChipRow(
                     .clip(CircleShape)
                     .then(
                         when {
-                            isBlackout -> Modifier.background(Color(0xFF1C1F26))
+                            isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
                             isSelected -> Modifier.background(CardeaGradient)
-                            else       -> Modifier.border(1.dp, GlassBorder, CircleShape)
+                            else       -> Modifier.border(1.dp, CardeaTheme.colors.glassBorder, CircleShape)
                         }
                     )
                     .combinedClickable(
@@ -1984,13 +1981,13 @@ private fun DayChipRow(
                 Text(
                     text = dayLetters[day - 1],
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = if (isBlackout) Color(0xFF8B3A3A) else CardeaTextPrimary
+                    color = if (isBlackout) CardeaTheme.colors.blackoutText else CardeaTheme.colors.textPrimary
                 )
                 if (isLongRun) {
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = CardeaTheme.colors.onGradient,
                         modifier = Modifier
                             .size(10.dp)
                             .align(Alignment.TopEnd)
@@ -2001,7 +1998,7 @@ private fun DayChipRow(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = null,
-                        tint = Color(0xFF8B3A3A),
+                        tint = CardeaTheme.colors.blackoutText,
                         modifier = Modifier
                             .size(10.dp)
                             .align(Alignment.TopEnd)
@@ -2028,16 +2025,16 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
                         DaySelectionLevel.AVAILABLE,
                         DaySelectionLevel.LONG_RUN_BIAS -> Modifier.background(CardeaGradient)
                         DaySelectionLevel.BLACKOUT      -> Modifier
-                            .background(Color(0xFF1C1F26))
-                            .border(1.dp, Color(0xFF3D2020), CircleShape)
-                        DaySelectionLevel.NONE          -> Modifier.background(GlassHighlight)
+                            .background(CardeaTheme.colors.blackoutBg)
+                            .border(1.dp, CardeaTheme.colors.blackoutBorder, CircleShape)
+                        DaySelectionLevel.NONE          -> Modifier.background(CardeaTheme.colors.glassHighlight)
                     }
                 )
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = CardeaTextTertiary
+            color = CardeaTheme.colors.textTertiary
         )
     }
 }
@@ -2084,14 +2081,14 @@ private fun WelcomeBackDialog(
             Text(
                 text = "Welcome Back",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
         },
         text = {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
         },
         confirmButton = {
@@ -2099,7 +2096,7 @@ private fun WelcomeBackDialog(
                 Text("Got it", color = GradientPink)
             }
         },
-        containerColor = CardeaBgPrimary,
+        containerColor = CardeaTheme.colors.bgPrimary,
         shape = RoundedCornerShape(18.dp)
     )
 }
@@ -2113,8 +2110,8 @@ private fun GoalDetailSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CardeaBgPrimary,
-        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(GlassBorder)) }
+        containerColor = CardeaTheme.colors.bgPrimary,
+        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(CardeaTheme.colors.glassBorder)) }
     ) {
         Column(
             modifier = Modifier
@@ -2132,7 +2129,7 @@ private fun GoalDetailSheet(
             Text(
                 text = goalDisplayName(goal),
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
 
             GlassCard {
@@ -2145,7 +2142,7 @@ private fun GoalDetailSheet(
                         Text(
                             text = "Overall Progress",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = CardeaTextSecondary
+                            color = CardeaTheme.colors.textSecondary
                         )
                         Text(
                             text = "$progressPercentage%",
@@ -2153,7 +2150,7 @@ private fun GoalDetailSheet(
                                 fontWeight = FontWeight.Bold,
                                 fontFeatureSettings = "tnum"
                             ),
-                            color = CardeaTextPrimary
+                            color = CardeaTheme.colors.textPrimary
                         )
                     }
                     
@@ -2163,7 +2160,7 @@ private fun GoalDetailSheet(
                             .fillMaxWidth()
                             .height(10.dp)
                             .clip(RoundedCornerShape(5.dp))
-                            .background(GlassBorder)
+                            .background(CardeaTheme.colors.glassBorder)
                     ) {
                         Box(
                             modifier = Modifier
@@ -2179,7 +2176,7 @@ private fun GoalDetailSheet(
                 Text(
                     text = GoalDescription.forGoal(goal),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTextPrimary,
+                    color = CardeaTheme.colors.textPrimary,
                     lineHeight = 22.sp
                 )
             }
@@ -2187,7 +2184,7 @@ private fun GoalDetailSheet(
             Text(
                 text = "You're training at a tier that balances your historical volume with your current recovery capacity.",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 lineHeight = 18.sp
             )
 
@@ -2223,14 +2220,14 @@ private fun DeleteConfirmDialog(
             Text(
                 text = "End this program?",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
         },
         text = {
             Text(
                 text = "Your schedule and progress will be permanently deleted. Your completed run history stays in the app.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
         },
         confirmButton = {
@@ -2240,10 +2237,10 @@ private fun DeleteConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Keep it", color = CardeaTextSecondary)
+                Text("Keep it", color = CardeaTheme.colors.textSecondary)
             }
         },
-        containerColor = CardeaBgPrimary,
+        containerColor = CardeaTheme.colors.bgPrimary,
         shape = RoundedCornerShape(18.dp)
     )
 }

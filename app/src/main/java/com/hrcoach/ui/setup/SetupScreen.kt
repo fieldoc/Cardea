@@ -82,19 +82,11 @@ import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
-import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
-import com.hrcoach.ui.theme.GlassSurface
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
-import com.hrcoach.ui.theme.SurfaceVariant
-import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import kotlin.math.roundToInt
 
@@ -165,7 +157,7 @@ fun SetupScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CardeaBgPrimary)
+            .background(CardeaTheme.colors.bgPrimary)
     ) {
         Column(
             modifier = Modifier
@@ -184,7 +176,7 @@ fun SetupScreen(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = (-0.5).sp
                 ),
-                color = Color.White,
+                color = CardeaTheme.colors.textPrimary,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
 
@@ -200,7 +192,7 @@ fun SetupScreen(
                     letterSpacing = 0.08.sp,
                     fontSize = 10.sp
                 ),
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 modifier = Modifier.padding(start = 4.dp, top = 6.dp)
             )
 
@@ -219,7 +211,7 @@ fun SetupScreen(
                     letterSpacing = 0.08.sp,
                     fontSize = 10.sp
                 ),
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 modifier = Modifier.padding(start = 4.dp, top = 4.dp)
             )
 
@@ -228,7 +220,7 @@ fun SetupScreen(
                 "${state.connectedDeviceName.ifBlank { "HR Monitor" }} · " +
                     if (state.liveHr > 0) "${state.liveHr} bpm" else "connected"
             else "Not connected"
-            val hrSummaryColor = if (state.isHrConnected) Color(0xFF4CAF50) else CardeaTextSecondary
+            val hrSummaryColor = if (state.isHrConnected) CardeaTheme.colors.zoneGreen else CardeaTheme.colors.textSecondary
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                 ConfigSectionHeader(
@@ -237,7 +229,7 @@ fun SetupScreen(
                     isExpanded = expandedSection == "mode",
                     onToggle = { expandedSection = if (expandedSection == "mode") null else "mode" }
                 )
-                HorizontalDivider(color = GlassBorder)
+                HorizontalDivider(color = CardeaTheme.colors.glassBorder)
                 ConfigSectionHeader(
                     title = "HR Monitor",
                     summary = hrSummary,
@@ -252,7 +244,7 @@ fun SetupScreen(
                         state.steadyStateHr.isNotBlank() -> "${state.steadyStateHr} bpm target"
                         else -> "Not set"
                     }
-                    HorizontalDivider(color = GlassBorder)
+                    HorizontalDivider(color = CardeaTheme.colors.glassBorder)
                     ConfigSectionHeader(
                         title = "HR Target",
                         summary = targetSummary,
@@ -260,7 +252,7 @@ fun SetupScreen(
                         onToggle = { expandedSection = if (expandedSection == "target") null else "target" }
                     )
                 }
-                HorizontalDivider(color = GlassBorder)
+                HorizontalDivider(color = CardeaTheme.colors.glassBorder)
                 ConfigSectionHeader(
                     title = "Alerts",
                     summary = buildAlertsSummary(state),
@@ -318,7 +310,7 @@ fun SetupScreen(
                 Text(
                     text = reason,
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
+                    color = CardeaTheme.colors.textSecondary
                 )
             }
 
@@ -345,7 +337,7 @@ fun SetupScreen(
                             Text(
                                 text = "220 − age is a good estimate. A field test is more accurate.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = CardeaTextSecondary,
+                                color = CardeaTheme.colors.textSecondary,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
                         }
@@ -357,7 +349,7 @@ fun SetupScreen(
                                 .background(CardeaGradient)
                                 .clickable { viewModel.confirmMaxHr() }
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) { Text("Confirm", color = CardeaTextPrimary, fontWeight = FontWeight.SemiBold) }
+                        ) { Text("Confirm", color = CardeaTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold) }
                     },
                     dismissButton = {
                         TextButton(onClick = { viewModel.dismissHrMaxDialog() }) { Text("Cancel") }
@@ -425,7 +417,7 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
                         contentDescription = null,
-                        tint = Color(0xFFFF85A1),
+                        tint = CardeaTheme.colors.accentPink,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -436,12 +428,12 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
                             letterSpacing = 1.5.sp,
                             fontWeight = FontWeight.Bold
                         ),
-                        color = Color(0xAAFF85A1)
+                        color = CardeaTheme.colors.accentPink.copy(alpha = 0.67f)
                     )
                     Text(
                         text = "Bootcamp",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = CardeaTheme.colors.textPrimary
                     )
                 }
             }
@@ -449,7 +441,7 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
             Text(
                 text = "Adaptive weekly plan. Cardea schedules, paces, and adjusts your sessions automatically.",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary.copy(alpha = 0.75f)
+                color = CardeaTheme.colors.textSecondary.copy(alpha = 0.75f)
             )
 
             Box(
@@ -464,7 +456,7 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
                 Text(
                     text = "Open Bootcamp →",
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = Color.White
+                    color = CardeaTheme.colors.onGradient
                 )
             }
         }
@@ -486,7 +478,7 @@ private fun QuickLaunchCard(
                 fontWeight = FontWeight.Bold,
                 fontSize = 10.sp
             ),
-            color = CardeaTextTertiary
+            color = CardeaTheme.colors.textTertiary
         )
         Spacer(Modifier.height(10.dp))
         Row(
@@ -497,12 +489,12 @@ private fun QuickLaunchCard(
             if (state.isHrConnected) {
                 SetupChip(
                     label = "● ${if (state.liveHr > 0) "${state.liveHr} bpm" else "Connected"}",
-                    color = Color(0xFF4CAF50)
+                    color = CardeaTheme.colors.zoneGreen
                 )
             } else {
-                SetupChip(label = "No Monitor", color = CardeaTextSecondary)
+                SetupChip(label = "No Monitor", color = CardeaTheme.colors.textSecondary)
             }
-            SetupChip(label = "Audio On", color = CardeaTextSecondary)
+            SetupChip(label = "Audio On", color = CardeaTheme.colors.textSecondary)
         }
         Spacer(Modifier.height(12.dp))
         Box(
@@ -512,7 +504,7 @@ private fun QuickLaunchCard(
                 .clip(RoundedCornerShape(13.dp))
                 .background(
                     if (canStart) CardeaGradient
-                    else Brush.linearGradient(listOf(CardeaTextTertiary, CardeaTextTertiary))
+                    else Brush.linearGradient(listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary))
                 )
                 .clickable(enabled = canStart, onClick = onStart),
             contentAlignment = Alignment.Center
@@ -520,7 +512,7 @@ private fun QuickLaunchCard(
             Text(
                 text = "Start Run",
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = Color.White
+                color = CardeaTheme.colors.onGradient
             )
         }
     }
@@ -549,7 +541,7 @@ private fun SetupChip(label: String, color: Color) {
 private fun ConfigSectionHeader(
     title: String,
     summary: String,
-    summaryColor: Color = CardeaTextSecondary,
+    summaryColor: Color = CardeaTheme.colors.textSecondary,
     isExpanded: Boolean,
     onToggle: () -> Unit
 ) {
@@ -565,7 +557,7 @@ private fun ConfigSectionHeader(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Text(
                 text = summary,
@@ -576,7 +568,7 @@ private fun ConfigSectionHeader(
         Icon(
             imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
             contentDescription = if (isExpanded) "Collapse" else "Expand",
-            tint = CardeaTextTertiary,
+            tint = CardeaTheme.colors.textTertiary,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -599,12 +591,12 @@ private fun ModeOptionsCard(
                         .clip(RoundedCornerShape(10.dp))
                         .background(
                             if (isSelected) Color(0xFF4D9FFF).copy(alpha = 0.10f)
-                            else GlassHighlight
+                            else CardeaTheme.colors.glassHighlight
                         )
                         .border(
                             1.dp,
                             if (isSelected) Color(0xFF4D9FFF).copy(alpha = 0.30f)
-                            else GlassBorder,
+                            else CardeaTheme.colors.glassBorder,
                             RoundedCornerShape(10.dp)
                         )
                         .clickable { onModeSelected(mode) }
@@ -617,7 +609,7 @@ private fun ModeOptionsCard(
                             .size(8.dp)
                             .background(
                                 if (isSelected) Color(0xFF4D9FFF)
-                                else GlassSurface,
+                                else CardeaTheme.colors.glassSurface,
                                 CircleShape
                             )
                     )
@@ -627,12 +619,12 @@ private fun ModeOptionsCard(
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                             ),
-                            color = if (isSelected) CardeaTextPrimary else CardeaTextSecondary
+                            color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
                         )
                         Text(
                             text = mode.displayDescription(),
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextTertiary
+                            color = CardeaTheme.colors.textTertiary
                         )
                     }
                 }
@@ -664,7 +656,7 @@ private fun AlertBehaviorCard(
             Text(
                 text = "Alert Behavior",
                 style = MaterialTheme.typography.titleLarge,
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             IconButton(onClick = onToggle) {
                 Icon(
@@ -713,8 +705,8 @@ private fun AlertBehaviorCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Alert Volume", style = MaterialTheme.typography.bodyLarge, color = CardeaTextPrimary)
-                Text("${state.earconVolume}%", style = MaterialTheme.typography.bodyMedium, color = CardeaTextSecondary)
+                Text("Alert Volume", style = MaterialTheme.typography.bodyLarge, color = CardeaTheme.colors.textPrimary)
+                Text("${state.earconVolume}%", style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
             }
             CardeaSlider(
                 value = state.earconVolume.toFloat(),
@@ -723,7 +715,7 @@ private fun AlertBehaviorCard(
                 steps = 19
             )
 
-            Text("Voice Coaching", style = MaterialTheme.typography.bodyLarge, color = CardeaTextPrimary)
+            Text("Voice Coaching", style = MaterialTheme.typography.bodyLarge, color = CardeaTheme.colors.textPrimary)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 listOf(
                     VoiceVerbosity.OFF     to "Off",
@@ -744,11 +736,11 @@ private fun AlertBehaviorCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Vibration Alerts", style = MaterialTheme.typography.bodyLarge, color = CardeaTextPrimary)
+                Text("Vibration Alerts", style = MaterialTheme.typography.bodyLarge, color = CardeaTheme.colors.textPrimary)
                 CardeaSwitch(checked = state.enableVibration, onCheckedChange = onVibrationChange)
             }
 
-            Text("Preview Sounds", style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
+            Text("Preview Sounds", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textSecondary)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 PreviewSoundButton(icon = Icons.Default.ArrowUpward, label = "Speed Up",  onClick = { onPreview(CoachingEvent.SPEED_UP) })
                 PreviewSoundButton(icon = Icons.Default.ArrowDownward, label = "Slow Down", onClick = { onPreview(CoachingEvent.SLOW_DOWN) })
@@ -758,7 +750,7 @@ private fun AlertBehaviorCard(
             Text(
                 text = "Audio alerts and timing",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }
@@ -774,12 +766,12 @@ private fun PreviewSoundButton(
         IconButton(
             onClick = onClick,
             modifier = Modifier
-                .background(SurfaceVariant, CircleShape)
-                .border(1.dp, GlassBorder, CircleShape)
+                .background(CardeaTheme.colors.surfaceVariant, CircleShape)
+                .border(1.dp, CardeaTheme.colors.glassBorder, CircleShape)
         ) {
             Icon(imageVector = icon, contentDescription = label)
         }
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textSecondary)
     }
 }
 
@@ -800,7 +792,7 @@ private fun TargetCard(
         Text(
             text = "Target Zone Plan",
             style = MaterialTheme.typography.titleLarge,
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         when (state.mode) {
             WorkoutMode.STEADY_STATE -> {
@@ -855,7 +847,7 @@ private fun SegmentEditor(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
                 .padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top
@@ -870,7 +862,7 @@ private fun SegmentEditor(
                 Text(
                     text = "Segment ${index + 1}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
+                    color = CardeaTheme.colors.textSecondary
                 )
                 OutlinedTextField(
                     modifier = Modifier.fillMaxWidth(),
@@ -920,7 +912,7 @@ private fun PresetGrid(
             Text(
                 text = category.displayName(),
                 style = MaterialTheme.typography.labelSmall,
-                color = CardeaTextSecondary,
+                color = CardeaTheme.colors.textSecondary,
                 modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
             )
             catPresets.forEach { preset ->
@@ -964,12 +956,12 @@ private fun PresetCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(preset.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = CardeaTextPrimary)
-                    Text(preset.subtitle, style = MaterialTheme.typography.bodySmall, color = CardeaTextSecondary)
+                    Text(preset.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold), color = CardeaTheme.colors.textPrimary)
+                    Text(preset.subtitle, style = MaterialTheme.typography.bodySmall, color = CardeaTheme.colors.textSecondary)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(preset.durationLabel, style = MaterialTheme.typography.labelSmall, color = CardeaTextSecondary)
-                    Text(preset.intensityLabel, style = MaterialTheme.typography.labelSmall, color = CardeaTextPrimary)
+                    Text(preset.durationLabel, style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textSecondary)
+                    Text(preset.intensityLabel, style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textPrimary)
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -1067,28 +1059,28 @@ private fun HrMonitorCard(
     onDisconnect: () -> Unit
 ) {
     GlassCard {
-        Text(text = "HR Monitor", style = MaterialTheme.typography.titleLarge, color = CardeaTextPrimary)
+        Text(text = "HR Monitor", style = MaterialTheme.typography.titleLarge, color = CardeaTheme.colors.textPrimary)
 
         if (state.isHrConnected) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = ZoneGreen)
+                Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = CardeaTheme.colors.zoneGreen)
                 Spacer(modifier = Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Connected: ${state.connectedDeviceName.ifBlank { "HR Monitor" }}",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = ZoneGreen
+                        color = CardeaTheme.colors.zoneGreen
                     )
                     Text(
                         text = if (state.liveHr > 0) state.liveHr.toString() else "--",
                         style = MaterialTheme.typography.headlineMedium,
-                        color = CardeaTextPrimary,
+                        color = CardeaTheme.colors.textPrimary,
                         modifier = Modifier.scale(hrPulseScale)
                     )
                     Text(
                         text = if (state.liveHr > 0) "Live" else "Waiting for signal…",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
                 TextButton(onClick = onDisconnect) { Text("Disconnect") }
@@ -1101,24 +1093,24 @@ private fun HrMonitorCard(
                     .clip(RoundedCornerShape(14.dp))
                     .then(
                         if (!state.isScanning) Modifier.background(CardeaGradient)
-                        else Modifier.background(CardeaTextTertiary)
+                        else Modifier.background(CardeaTheme.colors.textTertiary)
                     )
                     .clickable(enabled = !state.isScanning, onClick = onStartScan),
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CardeaTextPrimary)
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CardeaTheme.colors.textPrimary)
                     Text(
                         text = if (state.isScanning) "Scanning…" else "Scan for Monitors",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                 }
             }
             Text(
                 text = "A monitor is optional — scanning continues during your run.",
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
 
             state.connectionError?.let { message ->
@@ -1148,8 +1140,8 @@ private fun DeviceRow(device: BluetoothDevice, onClick: () -> Unit) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = device.name ?: "Unknown Device", style = MaterialTheme.typography.bodyLarge)
-            Text(text = device.address, style = MaterialTheme.typography.bodySmall, color = CardeaTextSecondary)
+            Text(text = device.address, style = MaterialTheme.typography.bodySmall, color = CardeaTheme.colors.textSecondary)
         }
-        Icon(imageVector = Icons.Default.Bluetooth, contentDescription = null, tint = CardeaTextSecondary)
+        Icon(imageVector = Icons.Default.Bluetooth, contentDescription = null, tint = CardeaTheme.colors.textSecondary)
     }
 }

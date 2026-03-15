@@ -62,14 +62,9 @@ import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
-import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaBgSecondary
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
@@ -102,7 +97,7 @@ fun AccountScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CardeaBgPrimary)
+            .background(CardeaTheme.colors.bgPrimary)
     ) {
         // ── Header ──────────────────────────────────────────────────────────
         Column(modifier = Modifier.padding(horizontal = 20.dp)) {
@@ -113,7 +108,7 @@ fun AccountScreen(
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = (-0.5).sp
                 ),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -154,14 +149,14 @@ fun AccountScreen(
                     Box(
                         modifier = Modifier
                             .size(30.dp)
-                            .background(Color(0x0FFFFFFF), RoundedCornerShape(8.dp))
-                            .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                            .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = null,
-                            tint = CardeaTextSecondary,
+                            tint = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -169,7 +164,7 @@ fun AccountScreen(
                     Text(
                         text = "Theme",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                 }
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
@@ -211,7 +206,7 @@ fun AccountScreen(
                             text = if (state.mapsApiKeySaved) "Saved. Restart if map still appears blank."
                                    else "Used for route rendering in History.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = if (state.mapsApiKeySaved) ZoneGreen else CardeaTextTertiary,
+                            color = if (state.mapsApiKeySaved) ZoneGreen else CardeaTheme.colors.textTertiary,
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -221,7 +216,7 @@ fun AccountScreen(
 
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 16.dp),
-                    color = GlassBorder
+                    color = CardeaTheme.colors.glassBorder
                 )
 
                 // Max HR row
@@ -250,7 +245,7 @@ fun AccountScreen(
                             color = when {
                                 state.maxHrError != null -> ZoneRed
                                 state.maxHrSaved -> ZoneGreen
-                                else -> CardeaTextTertiary
+                                else -> CardeaTheme.colors.textTertiary
                             },
                             modifier = Modifier.weight(1f)
                         )
@@ -286,12 +281,12 @@ fun AccountScreen(
                         Text(
                             text = "${state.earconVolume}%",
                             style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = CardeaTextSecondary
+                            color = CardeaTheme.colors.textSecondary
                         )
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = GlassBorder)
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Voice Coaching
                 SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching") {
@@ -308,7 +303,7 @@ fun AccountScreen(
                     }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = GlassBorder)
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Vibration toggle
                 SettingToggleRow(
@@ -341,7 +336,7 @@ fun AccountScreen(
             Text(
                 text = "Cardea · Heart rate zone coach for runners",
                 style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
@@ -391,13 +386,13 @@ private fun ProfileHeroCard(
                     modifier = Modifier
                         .size(50.dp)
                         .clip(CircleShape)
-                        .background(CardeaBgPrimary),
+                        .background(CardeaTheme.colors.bgPrimary),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = avatarSymbol,
                         fontSize = 24.sp,
-                        color = Color(0xFFFF6B8A)
+                        color = CardeaTheme.colors.accentPink
                     )
                 }
             }
@@ -411,13 +406,13 @@ private fun ProfileHeroCard(
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = (-0.3).sp
                     ),
-                    color = CardeaTextPrimary
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "$runCount runs recorded",
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
+                    color = CardeaTheme.colors.textSecondary
                 )
             }
         }
@@ -453,14 +448,14 @@ private fun ProfileEditBottomSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = CardeaBgSecondary,
+        containerColor = CardeaTheme.colors.bgSecondary,
         dragHandle = {
             Box(
                 Modifier
                     .padding(vertical = 12.dp)
                     .size(32.dp, 4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(CardeaTextTertiary)
+                    .background(CardeaTheme.colors.textTertiary)
             )
         }
     ) {
@@ -472,31 +467,31 @@ private fun ProfileEditBottomSheet(
             Text(
                 text = "Edit Profile",
                 style = MaterialTheme.typography.titleMedium,
-                color = CardeaTextPrimary,
+                color = CardeaTheme.colors.textPrimary,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(20.dp))
 
             // Name field
-            Text("Name", style = MaterialTheme.typography.labelMedium, color = CardeaTextSecondary)
+            Text("Name", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
             Spacer(modifier = Modifier.height(6.dp))
             OutlinedTextField(
                 value = displayName,
                 onValueChange = { if (it.length <= 20) onNameChange(it) },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFFFF6B8A),
-                    unfocusedBorderColor = CardeaTextTertiary,
-                    cursorColor = Color(0xFFFF6B8A),
-                    focusedTextColor = CardeaTextPrimary,
-                    unfocusedTextColor = CardeaTextPrimary,
+                    focusedBorderColor = CardeaTheme.colors.accentPink,
+                    unfocusedBorderColor = CardeaTheme.colors.textTertiary,
+                    cursorColor = CardeaTheme.colors.accentPink,
+                    focusedTextColor = CardeaTheme.colors.textPrimary,
+                    unfocusedTextColor = CardeaTheme.colors.textPrimary,
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(20.dp))
 
             // Avatar picker
-            Text("Avatar", style = MaterialTheme.typography.labelMedium, color = CardeaTextSecondary)
+            Text("Avatar", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
             Spacer(modifier = Modifier.height(10.dp))
 
             // 5x2 grid
@@ -515,8 +510,8 @@ private fun ProfileEditBottomSheet(
                                     if (selected) CardeaGradient
                                     else Brush.linearGradient(
                                         listOf(
-                                            CardeaTextTertiary.copy(alpha = 0.3f),
-                                            CardeaTextTertiary.copy(alpha = 0.1f)
+                                            CardeaTheme.colors.textTertiary.copy(alpha = 0.3f),
+                                            CardeaTheme.colors.textTertiary.copy(alpha = 0.1f)
                                         )
                                     )
                                 )
@@ -527,14 +522,14 @@ private fun ProfileEditBottomSheet(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(CircleShape)
-                                    .background(CardeaBgPrimary),
+                                    .background(CardeaTheme.colors.bgPrimary),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = symbol,
                                     fontSize = 20.sp,
-                                    color = if (selected) Color(0xFFFF6B8A)
-                                            else CardeaTextTertiary
+                                    color = if (selected) CardeaTheme.colors.accentPink
+                                            else CardeaTheme.colors.textTertiary
                                 )
                             }
                         }
@@ -560,7 +555,7 @@ private fun SectionLabel(text: String) {
             letterSpacing = 0.08.sp,
             fontSize = 10.sp
         ),
-        color = CardeaTextTertiary,
+        color = CardeaTheme.colors.textTertiary,
         modifier = Modifier.padding(horizontal = 4.dp)
     )
 }
@@ -581,14 +576,14 @@ private fun SettingSection(
             Box(
                 modifier = Modifier
                     .size(30.dp)
-                    .background(Color(0x0FFFFFFF), RoundedCornerShape(8.dp))
-                    .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                    .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
+                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = CardeaTextSecondary,
+                    tint = CardeaTheme.colors.textSecondary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -596,7 +591,7 @@ private fun SettingSection(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
         }
         content()
@@ -622,14 +617,14 @@ private fun SettingToggleRow(
         Box(
             modifier = Modifier
                 .size(30.dp)
-                .background(Color(0x0FFFFFFF), RoundedCornerShape(8.dp))
-                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
+                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = CardeaTextSecondary,
+                tint = CardeaTheme.colors.textSecondary,
                 modifier = Modifier.size(16.dp)
             )
         }
@@ -638,14 +633,14 @@ private fun SettingToggleRow(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextTertiary
+                    color = CardeaTheme.colors.textTertiary
                 )
             }
         }
@@ -673,7 +668,7 @@ private fun GradientSaveButton(onClick: () -> Unit) {
         Text(
             text = "Save",
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = Color.White
+            color = CardeaTheme.colors.onGradient
         )
     }
 }

@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
@@ -51,6 +52,7 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     val axisTextSizePx = with(density) { 12.sp.toPx() }
 
+    val chartGridColor = CardeaTheme.colors.chartGrid
     Canvas(modifier = modifier.fillMaxSize()) {
         val leftPadding = 52.dp.toPx()
         val bottomPadding = 36.dp.toPx()
@@ -82,7 +84,7 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
         fun toScreenY(value: Float): Float =
             plotTop + plotHeight - (value - minY) / rangeY * plotHeight
 
-        val gridColor = Color(0x0AFFFFFF)
+        val gridColor = chartGridColor
         val textPaint = android.graphics.Paint().apply {
             color = onSurfaceColor.toArgb()
             textSize = axisTextSizePx

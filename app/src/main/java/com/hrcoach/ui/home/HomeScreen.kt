@@ -44,15 +44,9 @@ import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
-import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
-import com.hrcoach.ui.theme.GlassSurface
+import com.hrcoach.ui.theme.CardeaTheme
 
+@Composable
 private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
     sessionType.contains("Z2", ignoreCase = true) ||
     sessionType.contains("EASY", ignoreCase = true) ||
@@ -63,7 +57,7 @@ private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
     sessionType.contains("INTERVAL", ignoreCase = true) ->
         Color(0xFFFF4D5A).copy(alpha = 0.2f) to Color(0xFFFF7B84)
     else ->
-        GlassBorder to CardeaTextSecondary
+        CardeaTheme.colors.glassBorder to CardeaTheme.colors.textSecondary
 }
 
 @Composable
@@ -71,12 +65,12 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
     Box(
         modifier = modifier
             .background(
-                color = GlassHighlight,
+                color = CardeaTheme.colors.glassHighlight,
                 shape = RoundedCornerShape(14.dp)
             )
             .border(
                 width = 1.dp,
-                color = GlassBorder,
+                color = CardeaTheme.colors.glassBorder,
                 shape = RoundedCornerShape(14.dp)
             )
             .padding(vertical = 12.dp, horizontal = 8.dp),
@@ -90,7 +84,7 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
                     fontSize = 20.sp,
                     lineHeight = 20.sp
                 ),
-                color = CardeaTextPrimary
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -99,7 +93,7 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
                     letterSpacing = 1.5.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                color = CardeaTextSecondary
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }
@@ -168,9 +162,9 @@ private fun BootcampHeroCard(
 
     // Mute visual intensity when the session isn't today
     val gradientAlpha = if (isToday) 1f else 0.45f
-    val textPrimary = if (isToday) CardeaTextPrimary else CardeaTextSecondary
-    val textSecondary = if (isToday) CardeaTextSecondary else CardeaTextTertiary
-    val borderColor = if (isToday) GlassSurface else GlassBorder
+    val textPrimary = if (isToday) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
+    val textSecondary = if (isToday) CardeaTheme.colors.textSecondary else CardeaTheme.colors.textTertiary
+    val borderColor = if (isToday) CardeaTheme.colors.glassSurface else CardeaTheme.colors.glassBorder
 
     val headerText = if (isToday) {
         "TODAY'S SESSION · WEEK $weekNumber"
@@ -273,7 +267,7 @@ private fun BootcampHeroCard(
                         modifier = Modifier
                             .border(
                                 width = 1.dp,
-                                color = GlassSurface,
+                                color = CardeaTheme.colors.glassSurface,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clip(RoundedCornerShape(12.dp))
@@ -284,7 +278,7 @@ private fun BootcampHeroCard(
                         Text(
                             text = "Details",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = CardeaTextSecondary
+                            color = CardeaTheme.colors.textSecondary
                         )
                     }
                 }
@@ -293,7 +287,7 @@ private fun BootcampHeroCard(
                     modifier = Modifier
                         .border(
                             width = 1.dp,
-                            color = GlassBorder,
+                            color = CardeaTheme.colors.glassBorder,
                             shape = RoundedCornerShape(12.dp)
                         )
                         .clip(RoundedCornerShape(12.dp))
@@ -304,7 +298,7 @@ private fun BootcampHeroCard(
                     Text(
                         text = "Preview",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTextSecondary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
             }
@@ -319,11 +313,11 @@ private fun NoBootcampCard(onSetupBootcamp: () -> Unit, modifier: Modifier = Mod
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = GlassBorder,
+                color = CardeaTheme.colors.glassBorder,
                 shape = RoundedCornerShape(20.dp)
             )
             .background(
-                color = GlassHighlight,
+                color = CardeaTheme.colors.glassHighlight,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(20.dp),
@@ -335,19 +329,19 @@ private fun NoBootcampCard(onSetupBootcamp: () -> Unit, modifier: Modifier = Mod
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp
             ),
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
         Spacer(Modifier.height(8.dp))
         Text(
             text = "Start Bootcamp",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-            color = CardeaTextPrimary
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(Modifier.height(6.dp))
         Text(
             text = "Adaptive program — HR zones, life-aware scheduling",
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(16.dp))
@@ -370,9 +364,11 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val backgroundBrush = remember {
+    val bgSecondary = CardeaTheme.colors.bgSecondary
+    val bgPrimary = CardeaTheme.colors.bgPrimary
+    val backgroundBrush = remember(bgSecondary, bgPrimary) {
         Brush.radialGradient(
-            colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
+            colors = listOf(bgSecondary, bgPrimary),
             center = Offset.Zero,
             radius = 1800f
         )
@@ -406,7 +402,7 @@ fun HomeScreen(
                     Text(
                         text = state.greeting,
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTextPrimary
+                        color = CardeaTheme.colors.textPrimary
                     )
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -416,14 +412,14 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(GlassHighlight)
+                                .background(CardeaTheme.colors.glassHighlight)
                                 .clickable(onClick = onStartRun)
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             val sensorColor = when {
-                                state.isSessionRunning -> Color(0xFF22C55E)
-                                state.sensorName != null -> CardeaTextSecondary
-                                else -> CardeaTextTertiary
+                                state.isSessionRunning -> CardeaTheme.colors.zoneGreen
+                                state.sensorName != null -> CardeaTheme.colors.textSecondary
+                                else -> CardeaTheme.colors.textTertiary
                             }
                             Icon(
                                 imageVector = Icons.Default.Bluetooth,
@@ -437,7 +433,7 @@ fun HomeScreen(
                                 Text(
                                     text = sensorName,
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = CardeaTextSecondary,
+                                    color = CardeaTheme.colors.textSecondary,
                                     maxLines = 1
                                 )
                             }
@@ -446,7 +442,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(GlassHighlight)
+                                .background(CardeaTheme.colors.glassHighlight)
                                 .clickable(onClick = onGoToAccount),
                             contentAlignment = Alignment.Center
                         ) {

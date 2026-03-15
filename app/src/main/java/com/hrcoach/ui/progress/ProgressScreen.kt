@@ -1,68 +1,66 @@
 package com.hrcoach.ui.progress
 
+import android.graphics.BlurMaskFilter
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import android.graphics.BlurMaskFilter
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.foundation.background
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.R
 import com.hrcoach.ui.charts.BarChart
 import com.hrcoach.ui.charts.CalendarHeatmap
-import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.charts.PieChart
 import com.hrcoach.ui.charts.ProgressChartCard
 import com.hrcoach.ui.charts.ScatterPlot
 import com.hrcoach.ui.charts.SectionHeader
 import com.hrcoach.ui.charts.TrendInfo
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.components.StatItem
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
+import com.hrcoach.ui.theme.CardeaGradient
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
-import com.hrcoach.ui.theme.HrCoachThemeTokens
-import com.hrcoach.ui.theme.SubtleText
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,36 +70,27 @@ fun ProgressScreen(
     onGoToLog: (() -> Unit)? = null,
     viewModel: ProgressViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.screen_progress_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CardeaTheme.colors.bgPrimary)
+    ) {
+        // ── Header ──────────────────────────────────────────────────────────
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Trends",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = CardeaTheme.colors.textPrimary
             )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(Color(0xFF0F1623), Color(0xFF0B0F17)),
-                        center = Offset.Zero,
-                        radius = 1800f
-                    )
-                )
-                .padding(paddingValues)
-        ) {
-            // Activity sub-tab selector (shown only when Activity tab is active)
+            Spacer(modifier = Modifier.height(14.dp))
             if (onGoToLog != null) {
-                SingleChoiceSegmentedButtonRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         shape = SegmentedButtonDefaults.itemShape(0, 2),
                         selected = false,
@@ -115,58 +104,61 @@ fun ProgressScreen(
                         colors = cardeaSegmentedButtonColors()
                     ) { Text("Trends") }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
             }
             FilterRow(
                 selected = uiState.filter,
                 onFilterSelected = viewModel::setFilter,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(14.dp))
+        }
 
-            when {
-                uiState.isLoading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+        // ── Content ─────────────────────────────────────────────────────────
+        when {
+            uiState.isLoading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = GradientRed)
                 }
+            }
 
-                uiState.errorMessage != null -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            uiState.errorMessage != null -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = uiState.errorMessage!!,
+                        color = CardeaTheme.colors.textSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(32.dp)
+                    )
+                }
+            }
+
+            !uiState.hasData -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
                         Text(
-                            text = uiState.errorMessage!!,
-                            color = HrCoachThemeTokens.subtleText,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(32.dp)
+                            text = "No workout data yet. Complete a few sessions to unlock your dashboard.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = CardeaTheme.colors.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        CardeaButton(
+                            text = stringResource(R.string.button_start_workout),
+                            onClick = onStartWorkout,
+                            modifier = Modifier
+                                .height(48.dp)
+                                .fillMaxWidth(0.7f),
+                            innerPadding = PaddingValues(horizontal = 16.dp)
                         )
                     }
                 }
-
-                !uiState.hasData -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Text(
-                                text = "No workout data yet. Complete a few sessions to unlock your dashboard.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = HrCoachThemeTokens.subtleText,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            CardeaButton(
-                                text = stringResource(R.string.button_start_workout),
-                                onClick = onStartWorkout,
-                                modifier = Modifier
-                                    .height(48.dp)
-                                    .fillMaxWidth(0.7f),
-                                innerPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp)
-                            )
-                        }
-                    }
-                }
-
-                else -> DashboardContent(uiState)
             }
+
+            else -> DashboardContent(uiState)
         }
     }
 }
@@ -177,8 +169,8 @@ private fun DashboardContent(uiState: ProgressUiState) {
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { KeyMetricsGrid(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { CoachTakeCard(uiState, Modifier.padding(horizontal = 16.dp)) }
-        item { KeyMetricsStrip(uiState) }
 
         // Efficiency — how much effort each kilometer costs
         item { SectionHeader("Efficiency", "How economically you convert effort into speed.", Modifier.padding(horizontal = 16.dp)) }
@@ -227,7 +219,7 @@ private fun CoachTakeCard(uiState: ProgressUiState, modifier: Modifier = Modifie
             Text(
                 text = line,
                 style = MaterialTheme.typography.bodyMedium,
-                color = androidx.compose.ui.graphics.Color.White
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.height(4.dp))
         }
@@ -265,54 +257,89 @@ private fun buildCoachTakeLines(uiState: ProgressUiState): List<String> {
 }
 
 @Composable
-private fun KeyMetricsStrip(uiState: ProgressUiState) {
+private fun KeyMetricsGrid(uiState: ProgressUiState, modifier: Modifier = Modifier) {
     val currentHbKm = uiState.heartbeatsPerKmBars.lastOrNull { it.value > 0f }?.value
     val previousHbKm = uiState.heartbeatsPerKmBars.dropLast(1).lastOrNull { it.value > 0f }?.value
     val weeklyDistance = uiState.weeklyDistanceBars.lastOrNull()?.value ?: 0f
     val vo2Estimate = uiState.vo2MaxSeries.lastOrNull()?.value
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        GlassCard(modifier = Modifier.width(180.dp)) {
-            StatItem(
-                label = "Heartbeats/km",
-                value = currentHbKm?.let { it.toInt().toString() } ?: "--"
-            )
+    val hbkmDelta = if (currentHbKm != null && previousHbKm != null) currentHbKm - previousHbKm else null
+    val vo2Trend = seriesTrendInfo(uiState.vo2MaxSeries, lowerIsBetter = false) {
+        "${if (it >= 0f) "+" else ""}${String.format("%.1f", it)}"
+    }
+
+    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        MetricCell(
+            value = currentHbKm?.toInt()?.toString() ?: "--",
+            label = "HB / km",
+            trendLabel = hbkmDelta?.let { d ->
+                val i = d.toInt()
+                if (i == 0) "flat" else "${if (i > 0) "+" else ""}$i"
+            },
+            trendPositive = hbkmDelta?.let { it < 0f },
+            valueBrush = CardeaGradient,
+            modifier = Modifier.weight(1f)
+        )
+        MetricCell(
+            value = vo2Estimate?.let { String.format("%.1f", it) } ?: "--",
+            label = "VO₂ est.",
+            trendLabel = vo2Trend?.label,
+            trendPositive = vo2Trend?.positive,
+            valueColor = GradientBlue,
+            modifier = Modifier.weight(1f)
+        )
+        MetricCell(
+            value = String.format("%.1f", weeklyDistance),
+            label = "km / wk",
+            trendLabel = null,
+            trendPositive = null,
+            valueColor = ZoneGreen,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun MetricCell(
+    value: String,
+    label: String,
+    trendLabel: String?,
+    trendPositive: Boolean?,
+    valueBrush: Brush? = null,
+    valueColor: Color = Color.Unspecified,
+    modifier: Modifier = Modifier
+) {
+    val resolvedColor = if (valueColor == Color.Unspecified) CardeaTheme.colors.textPrimary else valueColor
+    GlassCard(modifier = modifier, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = (-0.5).sp,
+                brush = valueBrush
+            ),
+            color = if (valueBrush != null) Color.Unspecified else resolvedColor
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 9.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.04.sp
+            ),
+            color = CardeaTheme.colors.textTertiary
+        )
+        if (trendLabel != null) {
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = if (currentHbKm != null && previousHbKm != null) {
-                    "vs last month ${deltaLabel(currentHbKm - previousHbKm, lowerIsBetter = true, suffix = " beats")}"
-                } else {
-                    "Current month vs last"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
-            )
-        }
-        GlassCard(modifier = Modifier.width(180.dp)) {
-            StatItem(
-                label = "Estimated VO2 Max",
-                value = vo2Estimate?.let { String.format("%.1f", it) } ?: "--"
-            )
-            Text(
-                text = "(estimated +/-10%)",
-                style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
-            )
-        }
-        GlassCard(modifier = Modifier.width(180.dp)) {
-            StatItem(
-                label = "Weekly Distance",
-                value = String.format("%.1f km", weeklyDistance)
-            )
-            Text(
-                text = "Last 7 days",
-                style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                text = trendLabel,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                color = when (trendPositive) {
+                    true -> ZoneGreen
+                    false -> ZoneRed
+                    null -> CardeaTheme.colors.textTertiary
+                }
             )
         }
     }
@@ -331,7 +358,7 @@ private fun HeartbeatsPerKmCard(uiState: ProgressUiState, modifier: Modifier = M
         } else {
             BarChart(
                 bars = uiState.heartbeatsPerKmBars,
-                color = MaterialTheme.colorScheme.primary,
+                color = GradientRed,
                 modifier = Modifier
                     .height(200.dp)
                     .fillMaxWidth()
@@ -446,7 +473,7 @@ private fun Vo2MaxCard(uiState: ProgressUiState, modifier: Modifier = Modifier) 
         Text(
             text = "(estimated +/-10%)",
             style = MaterialTheme.typography.bodySmall,
-            color = HrCoachThemeTokens.subtleText
+            color = CardeaTheme.colors.textSecondary
         )
     }
 }
@@ -460,7 +487,7 @@ private fun WeeklyDistanceCard(uiState: ProgressUiState, modifier: Modifier = Mo
     ) {
         BarChart(
             bars = uiState.weeklyDistanceBars,
-            color = MaterialTheme.colorScheme.secondary,
+            color = GradientBlue,
             modifier = Modifier
                 .height(200.dp)
                 .fillMaxWidth()
@@ -477,7 +504,7 @@ private fun WeeklyLoadCard(uiState: ProgressUiState, modifier: Modifier = Modifi
     ) {
         BarChart(
             bars = uiState.weeklyLoadBars,
-            color = MaterialTheme.colorScheme.tertiary,
+            color = GradientPink,
             modifier = Modifier
                 .height(200.dp)
                 .fillMaxWidth()
@@ -539,6 +566,7 @@ private fun TrendLineChart(
     val chartMax = threshold?.let { maxOf(rawMax, it) } ?: rawMax
     val range = (chartMax - chartMin).takeIf { it > 0f } ?: 1f
 
+    val thresholdLineColor = CardeaTheme.colors.textSecondary
     Column {
         Spacer(
             modifier = modifier
@@ -572,7 +600,7 @@ private fun TrendLineChart(
                         threshold?.let { tv ->
                             val ty = h - ((tv - chartMin) / range * h)
                             drawLine(
-                                color = SubtleText,
+                                color = thresholdLineColor,
                                 start = Offset(0f, ty),
                                 end = Offset(w, ty),
                                 strokeWidth = 2f,
@@ -613,13 +641,13 @@ private fun TrendLineChart(
             Text(
                 text = yFormatter(values.first()),
                 style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                color = CardeaTheme.colors.textSecondary
             )
             Spacer(Modifier.weight(1f))
             Text(
                 text = yFormatter(values.last()),
                 style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }
@@ -636,7 +664,7 @@ private fun NotEnoughDataText() {
         Text(
             text = "Not enough data yet",
             style = MaterialTheme.typography.bodyMedium,
-            color = HrCoachThemeTokens.subtleText
+            color = CardeaTheme.colors.textSecondary
         )
     }
 }

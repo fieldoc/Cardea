@@ -33,18 +33,14 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,29 +48,83 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.zIndex
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.hrcoach.R
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.components.StatItem
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
-import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaCtaGradient
+import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.util.asModeLabel
 import com.hrcoach.util.formatDuration
-import com.hrcoach.util.formatWorkoutDate
-import kotlin.math.floor
+import com.hrcoach.util.formatPaceMinPerKm
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
-private val HistoryBackdrop = Brush.radialGradient(
-    colors = listOf(
-        Color(0xFF0F1623),
-        Color(0xFF0B0F17)
-    )
+// ── Week grouping model ──────────────────────────────────────────────────────
+
+private data class WeekGroup(
+    val label: String,
+    val runCount: Int,
+    val totalKm: Float,
+    val workouts: List<WorkoutEntity>
 )
+
+private fun groupWorkoutsByWeek(workouts: List<WorkoutEntity>): List<WeekGroup> {
+    if (workouts.isEmpty()) return emptyList()
+    val cal = Calendar.getInstance()
+    val nowYear = cal.get(Calendar.YEAR)
+    val nowWeek = cal.get(Calendar.WEEK_OF_YEAR)
+
+    return workouts
+        .groupBy { w ->
+            cal.timeInMillis = w.startTime
+            cal.get(Calendar.YEAR) * 100 + cal.get(Calendar.WEEK_OF_YEAR)
+        }
+        .entries
+        .sortedByDescending { it.key }
+        .map { (key, items) ->
+            val year = key / 100
+            val week = key % 100
+            val isThisWeek = year == nowYear && week == nowWeek
+            val label = if (isThisWeek) "This Week" else weekRangeLabel(items)
+            val totalKm = items.sumOf { it.totalDistanceMeters.toDouble() }.toFloat() / 1000f
+            WeekGroup(
+                label = label,
+                runCount = items.size,
+                totalKm = totalKm,
+                workouts = items.sortedByDescending { it.startTime }
+            )
+        }
+}
+
+private fun weekRangeLabel(workouts: List<WorkoutEntity>): String {
+    if (workouts.isEmpty()) return ""
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = workouts.first().startTime
+    cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+    val weekStart = cal.time
+    cal.add(Calendar.DAY_OF_WEEK, 6)
+    val weekEnd = cal.time
+    val monthFmt = SimpleDateFormat("MMM", Locale.getDefault())
+    val dayFmt = SimpleDateFormat("d", Locale.getDefault())
+    return "${monthFmt.format(weekStart)} ${dayFmt.format(weekStart)} – ${dayFmt.format(weekEnd)}"
+}
+
+// ── Screen ───────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,78 +134,73 @@ fun HistoryListScreen(
     onGoToTrends: (() -> Unit)? = null,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    val workouts by viewModel.workouts.collectAsState()
+    val workouts by viewModel.workouts.collectAsStateWithLifecycle()
+    val weekGroups = remember(workouts) { groupWorkoutsByWeek(workouts) }
     var deleteModeId by remember { mutableStateOf<Long?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.screen_history_title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color.White
-                )
-            )
-        }
-    ) { paddingValues ->
-        Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CardeaTheme.colors.bgPrimary)
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(HistoryBackdrop)
+                .padding(horizontal = 20.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 16.dp)
-            ) {
-                // Activity sub-tab selector (shown only when Activity tab is active)
-                if (onGoToTrends != null) {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(0, 2),
-                            selected = true,
-                            onClick = {},
-                            colors = cardeaSegmentedButtonColors()
-                        ) { Text("Log") }
-                        SegmentedButton(
-                            shape = SegmentedButtonDefaults.itemShape(1, 2),
-                            selected = false,
-                            onClick = onGoToTrends,
-                            colors = cardeaSegmentedButtonColors()
-                        ) { Text("Trends") }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if (workouts.isEmpty()) {
-                        "Every workout you save shows up here."
-                    } else {
-                        "${workouts.size} recorded sessions ready to review."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTextSecondary
-                )
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                if (workouts.isEmpty()) {
-                    HistoryEmptyState(onStartWorkout = onStartWorkout)
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(workouts, key = { it.id }) { workout ->
-                            WorkoutCard(
+            // ── Header ──────────────────────────────────────────────────────
+            Text(
+                text = "Activity",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = CardeaTheme.colors.textPrimary
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            if (onGoToTrends != null) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        selected = true,
+                        onClick = {},
+                        colors = cardeaSegmentedButtonColors()
+                    ) { Text("Log") }
+                    SegmentedButton(
+                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        selected = false,
+                        onClick = onGoToTrends,
+                        colors = cardeaSegmentedButtonColors()
+                    ) { Text("Trends") }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // ── Content ─────────────────────────────────────────────────────
+            if (workouts.isEmpty()) {
+                HistoryEmptyState(onStartWorkout = onStartWorkout)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 32.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    weekGroups.forEach { group ->
+                        item(key = "header_${group.label}") {
+                            WeekHeader(group = group)
+                        }
+                        items(group.workouts, key = { it.id }) { workout ->
+                            WeekWorkoutCard(
                                 workout = workout,
                                 isDeleteMode = deleteModeId == workout.id,
                                 onClick = {
                                     if (deleteModeId != null) {
-                                        deleteModeId = null  // dismiss delete mode on any tap
+                                        deleteModeId = null
                                     } else {
                                         onWorkoutClick(workout.id)
                                     }
@@ -167,43 +212,262 @@ fun HistoryListScreen(
                                 }
                             )
                         }
+                        item(key = "spacer_${group.label}") {
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
                     }
+                }
+            }
+        }
 
-                    if (showDeleteDialog) {
-                        AlertDialog(
-                            onDismissRequest = {
-                                showDeleteDialog = false
-                                deleteModeId = null
-                            },
-                            title = { Text("Delete this run?") },
-                            text = { Text("This will permanently remove all route data and stats.") },
-                            confirmButton = {
-                                TextButton(
-                                    onClick = {
-                                        deleteModeId?.let { viewModel.deleteWorkout(it) }
-                                        showDeleteDialog = false
-                                        deleteModeId = null
-                                    }
-                                ) {
-                                    Text("Delete", color = Color(0xFFEF4444))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = {
-                                    showDeleteDialog = false
-                                    deleteModeId = null
-                                }) { Text("Cancel") }
-                            },
-                            containerColor = Color(0xFF141B27),
-                            titleContentColor = Color.White,
-                            textContentColor = CardeaTextSecondary
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = {
+                    showDeleteDialog = false
+                    deleteModeId = null
+                },
+                title = { Text("Delete this run?") },
+                text = { Text("This will permanently remove all route data and stats.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            deleteModeId?.let { viewModel.deleteWorkout(it) }
+                            showDeleteDialog = false
+                            deleteModeId = null
+                        }
+                    ) {
+                        Text("Delete", color = ZoneRed)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showDeleteDialog = false
+                        deleteModeId = null
+                    }) { Text("Cancel") }
+                },
+                containerColor = CardeaTheme.colors.bgPrimary,
+                titleContentColor = CardeaTheme.colors.textPrimary,
+                textContentColor = CardeaTheme.colors.textSecondary
+            )
+        }
+    }
+}
+
+// ── Week header ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun WeekHeader(group: WeekGroup) {
+    val isThisWeek = group.label == "This Week"
+
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(top = 8.dp, bottom = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Text(
+                text = group.label,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 0.sp
+                ),
+                color = if (isThisWeek) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
+            )
+            Text(
+                text = "${group.runCount} run${if (group.runCount != 1) "s" else ""} · ${"%.1f".format(group.totalKm)} km",
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textTertiary
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    brush = if (isThisWeek) {
+                        Brush.horizontalGradient(
+                            listOf(GradientRed.copy(alpha = 0.5f), GradientPink.copy(alpha = 0.2f), Color.Transparent)
+                        )
+                    } else {
+                        Brush.horizontalGradient(
+                            listOf(CardeaTheme.colors.glassBorder, Color.Transparent)
+                        )
+                    }
+                )
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+}
+
+// ── Workout card ─────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WeekWorkoutCard(
+    workout: WorkoutEntity,
+    isDeleteMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    val cal = Calendar.getInstance().apply { timeInMillis = workout.startTime }
+    val dayNumber = SimpleDateFormat("d", Locale.getDefault()).format(cal.time)
+    val dayName = SimpleDateFormat("EEE", Locale.getDefault()).format(cal.time).uppercase()
+
+    val distanceKm = workout.totalDistanceMeters / 1000f
+    val distanceText = "%.2f".format(distanceKm)
+    val duration = formatDuration(workout.startTime, workout.endTime)
+    val pace = averagePaceLabel(workout, distanceKm)
+    val modeLabel = workout.mode.asModeLabel()
+
+    val modeBrush = if (workout.mode == "DISTANCE_PROFILE") {
+        CardeaCtaGradient
+    } else null
+    val modeColor = when (workout.mode) {
+        "FREE_RUN" -> GradientBlue
+        "STEADY_STATE" -> ZoneGreen
+        else -> Color.Unspecified
+    }
+
+    Box(modifier = Modifier
+        .fillMaxWidth()
+        .padding(bottom = 4.dp)
+    ) {
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = onClick,
+                    onLongClick = onLongClick
+                ),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Day column
+                Column(
+                    modifier = Modifier.width(36.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = dayNumber,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.5).sp,
+                            lineHeight = 20.sp
+                        ),
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    Text(
+                        text = dayName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.06.sp
+                        ),
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                }
+
+                // Divider
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp)
+                        .width(1.dp)
+                        .height(36.dp)
+                        .background(CardeaTheme.colors.glassBorder)
+                )
+
+                // Center content
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        // Distance number
+                        Text(
+                            text = distanceText,
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                letterSpacing = (-0.5).sp,
+                                fontSize = 20.sp,
+                                brush = modeBrush
+                            ),
+                            color = if (modeBrush != null) Color.Unspecified else modeColor
+                        )
+                        Text(
+                            text = " km",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTheme.colors.textTertiary,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = modeLabel,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.06.sp
+                            ),
+                            color = CardeaTheme.colors.textTertiary,
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            text = duration,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTheme.colors.textSecondary,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = pace,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTheme.colors.textSecondary,
+                            maxLines = 1
                         )
                     }
                 }
             }
         }
+
+        // X badge for delete mode
+        AnimatedVisibility(
+            visible = isDeleteMode,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 6.dp, y = (-6).dp)
+                .zIndex(1f),
+            enter = fadeIn() + scaleIn(initialScale = 0.6f),
+            exit = fadeOut() + scaleOut(targetScale = 0.6f)
+        ) {
+            IconButton(
+                onClick = onDeleteClick,
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(color = CardeaTheme.colors.zoneRed, shape = androidx.compose.foundation.shape.CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Delete workout",
+                    tint = CardeaTheme.colors.onGradient,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
     }
 }
+
+// ── Empty state ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
@@ -216,18 +480,18 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
         Text(
             text = "Your run archive is still empty",
             style = MaterialTheme.typography.headlineSmall,
-            color = Color.White,
+            color = CardeaTheme.colors.textPrimary,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Start a workout to unlock route replay, post-run insights, and long-term progress trends.",
             style = MaterialTheme.typography.bodyLarge,
-            color = CardeaTextSecondary
+            color = CardeaTheme.colors.textSecondary
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         CardeaButton(
-            text = stringResource(R.string.button_start_workout),
+            text = "Start a Run",
             onClick = onStartWorkout,
             modifier = Modifier.height(44.dp),
             innerPadding = PaddingValues(horizontal = 24.dp)
@@ -235,130 +499,12 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun WorkoutCard(
-    workout: WorkoutEntity,
-    isDeleteMode: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onDeleteClick: () -> Unit
-) {
-    val date = formatWorkoutDate(workout.startTime)
-    val duration = formatDuration(workout.startTime, workout.endTime)
-    val distanceKm = workout.totalDistanceMeters / 1000f
-    val distanceLabel = String.format("%.2f km", distanceKm)
-    val paceLabel = averagePaceLabel(workout, distanceKm)
-
-    Box(modifier = Modifier.fillMaxWidth()) {
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
-        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = date,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-                ) {
-                    Text(
-                        text = workout.mode.asModeLabel(),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = distanceLabel,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Tap for route and stats",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            StatItem(
-                label = "Duration",
-                value = duration,
-                modifier = Modifier.weight(1f)
-            )
-            StatItem(
-                label = "Avg pace",
-                value = paceLabel,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-
-    // X badge — floats outside the card at top-right when delete mode is active
-    AnimatedVisibility(
-        visible = isDeleteMode,
-        modifier = Modifier
-            .align(Alignment.TopEnd)
-            .offset(x = 6.dp, y = (-6).dp)
-            .zIndex(1f),
-        enter = fadeIn() + scaleIn(initialScale = 0.6f),
-        exit = fadeOut() + scaleOut(targetScale = 0.6f)
-    ) {
-        IconButton(
-            onClick = onDeleteClick,
-            modifier = Modifier
-                .size(26.dp)
-                .background(color = Color(0xFFEF4444), shape = androidx.compose.foundation.shape.CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Close,
-                contentDescription = "Delete workout",
-                tint = Color.White,
-                modifier = Modifier.size(14.dp)
-            )
-        }
-    }
-    } // end Box
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 private fun averagePaceLabel(workout: WorkoutEntity, distanceKm: Float): String {
     if (distanceKm <= 0f || workout.endTime <= workout.startTime) return "--"
     val durationMinutes = (workout.endTime - workout.startTime) / 60_000f
     if (durationMinutes <= 0f) return "--"
-    val pace = durationMinutes / distanceKm
-    val wholeMinutes = floor(pace).toInt()
-    val seconds = ((pace - wholeMinutes) * 60f).toInt().coerceIn(0, 59)
-    return String.format("%d:%02d /km", wholeMinutes, seconds)
+    return formatPaceMinPerKm(durationMinutes / distanceKm)
 }
 
-private fun String.asModeLabel(): String =
-    lowercase()
-        .split('_')
-        .joinToString(" ") { part ->
-            part.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        }

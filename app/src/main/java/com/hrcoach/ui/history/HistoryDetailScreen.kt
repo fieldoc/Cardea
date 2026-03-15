@@ -4,10 +4,12 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,47 +17,35 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.components.CardeaButton
-import com.hrcoach.ui.theme.GlassBorder
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
@@ -71,25 +61,20 @@ import com.hrcoach.data.db.TrackPointEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
+import com.hrcoach.ui.components.CardeaButton
+import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.ZoneAmber
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.JsonCodec
+import com.hrcoach.util.asModeLabel
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
 
-private enum class HistoryDetailContentState {
-    LOADING,
-    EMPTY,
-    CONTENT
-}
+private enum class HistoryDetailContentState { LOADING, EMPTY, CONTENT }
 
-private val DetailBackdrop = Brush.radialGradient(
-    colors = listOf(CardeaBgSecondary, CardeaBgPrimary),
-    center = Offset.Zero,
-    radius = 1800f
-)
-
-private val DetailGlass = Color(0x0FFFFFFF)   // 6% white — spec glass fill
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HistoryDetailScreen(
     workoutId: Long,
@@ -100,58 +85,62 @@ fun HistoryDetailScreen(
     onDeleteWorkout: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(workoutId) {
-        viewModel.loadWorkoutDetail(workoutId)
-    }
+    LaunchedEffect(workoutId) { viewModel.loadWorkoutDetail(workoutId) }
 
-    val workout by viewModel.selectedWorkout.collectAsState()
-    val trackPoints by viewModel.trackPoints.collectAsState()
-    val metrics by viewModel.selectedMetrics.collectAsState()
-    val isLoading by viewModel.isDetailLoading.collectAsState()
-    val errorMessage by viewModel.detailError.collectAsState()
-    val isMapsEnabled by viewModel.isMapsEnabled.collectAsState()
+    val workout by viewModel.selectedWorkout.collectAsStateWithLifecycle()
+    val trackPoints by viewModel.trackPoints.collectAsStateWithLifecycle()
+    val metrics by viewModel.selectedMetrics.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isDetailLoading.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.detailError.collectAsStateWithLifecycle()
+    val isMapsEnabled by viewModel.isMapsEnabled.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(workout?.startTime?.let(::formatWorkoutDate) ?: "Workout detail")
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    titleContentColor = Color(0xFFF4F7FB),
-                    navigationIconContentColor = Color(0xFFF4F7FB)
-                )
-            )
-        }
-    ) { paddingValues ->
-        val contentState = when {
-            isLoading -> HistoryDetailContentState.LOADING
-            workout == null -> HistoryDetailContentState.EMPTY
-            else -> HistoryDetailContentState.CONTENT
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CardeaTheme.colors.bgPrimary)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(DetailBackdrop)
-                .padding(paddingValues)
-        ) {
+            // ── Inline header ────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = CardeaTheme.colors.textSecondary,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clickable(onClick = onBack)
+                        .padding(8.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = workout?.startTime?.let(::formatWorkoutDate) ?: "Workout",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.3).sp
+                    ),
+                    color = CardeaTheme.colors.textPrimary
+                )
+            }
+
+            // ── Content ──────────────────────────────────────────────────
+            val contentState = when {
+                isLoading -> HistoryDetailContentState.LOADING
+                workout == null -> HistoryDetailContentState.EMPTY
+                else -> HistoryDetailContentState.CONTENT
+            }
+
             Crossfade(targetState = contentState, label = "history-detail-content") { state ->
                 when (state) {
                     HistoryDetailContentState.LOADING -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(color = GradientRed)
                         }
                     }
 
@@ -165,7 +154,7 @@ fun HistoryDetailScreen(
                             Text(
                                 text = errorMessage ?: "Workout not found.",
                                 style = MaterialTheme.typography.bodyLarge,
-                                color = Color(0xFFB6C2D1),
+                                color = CardeaTheme.colors.textSecondary,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -174,7 +163,7 @@ fun HistoryDetailScreen(
                     HistoryDetailContentState.CONTENT -> {
                         val selectedWorkout = workout ?: return@Crossfade
                         val targetConfig = remember(selectedWorkout.targetConfig) {
-                            selectedWorkout.targetConfig.let(::parseWorkoutConfig)
+                            parseWorkoutConfig(selectedWorkout.targetConfig)
                         }
                         val targetSummary = remember(targetConfig) {
                             parseTargetSummary(targetConfig)
@@ -183,8 +172,8 @@ fun HistoryDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                                .padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             DetailMapCard(
                                 trackPoints = trackPoints,
@@ -201,7 +190,7 @@ fun HistoryDetailScreen(
                                     .fillMaxWidth()
                                     .weight(1f)
                                     .verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 StatsCard(
                                     workout = selectedWorkout,
@@ -215,6 +204,7 @@ fun HistoryDetailScreen(
                                     onViewProgress = onViewProgress,
                                     onDelete = { showDeleteDialog = true }
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
                     }
@@ -236,17 +226,22 @@ fun HistoryDetailScreen(
                         onDeleteWorkout()
                     }
                 ) {
-                    Text(stringResource(R.string.button_delete_run))
+                    Text(stringResource(R.string.button_delete_run), color = ZoneRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text(stringResource(R.string.dialog_cancel))
                 }
-            }
+            },
+            containerColor = CardeaTheme.colors.bgSecondary,
+            titleContentColor = Color.White,
+            textContentColor = CardeaTheme.colors.textSecondary
         )
     }
 }
+
+// ── Map card ─────────────────────────────────────────────────────────────────
 
 @Composable
 private fun DetailMapCard(
@@ -258,28 +253,21 @@ private fun DetailMapCard(
 ) {
     Box(
         modifier = modifier
-            .border(
-                border = BorderStroke(1.dp, GlassBorder),
-                shape = RoundedCornerShape(18.dp)
-            )
-            .background(DetailGlass, RoundedCornerShape(18.dp))
+            .border(border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder), shape = RoundedCornerShape(18.dp))
+            .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(18.dp))
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(1.dp)
-                .background(CardeaBgPrimary, RoundedCornerShape(17.dp))
+                .background(CardeaTheme.colors.bgPrimary, RoundedCornerShape(17.dp))
         ) {
             when {
                 trackPoints.size >= 2 && isMapsEnabled -> {
-                    HrHeatmapRouteMap(
-                        trackPoints = trackPoints,
-                        workoutConfig = workoutConfig
-                    )
+                    HrHeatmapRouteMap(trackPoints = trackPoints, workoutConfig = workoutConfig)
                     MapHeaderOverlay(hasWorkoutTarget = workoutConfig != null)
                     MapLegendOverlay(hasWorkoutTarget = workoutConfig != null)
                 }
-
                 trackPoints.size >= 2 -> {
                     EmptyMapState(
                         title = "Route ready, map setup missing",
@@ -288,7 +276,6 @@ private fun DetailMapCard(
                         onAction = onOpenMapsSetup
                     )
                 }
-
                 else -> {
                     EmptyMapState(
                         title = "No route data captured",
@@ -307,10 +294,7 @@ private fun EmptyMapState(
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier.padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -319,17 +303,20 @@ private fun EmptyMapState(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFFF4F7FB),
+                color = CardeaTheme.colors.textPrimary,
                 textAlign = TextAlign.Center
             )
             Text(
                 text = body,
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFFB6C2D1),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CardeaTheme.colors.textSecondary,
                 textAlign = TextAlign.Center
             )
             if (actionLabel != null && onAction != null) {
-                OutlinedButton(onClick = onAction) {
+                OutlinedButton(
+                    onClick = onAction,
+                    border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
+                ) {
                     Text(actionLabel)
                 }
             }
@@ -339,29 +326,25 @@ private fun EmptyMapState(
 
 @Composable
 private fun BoxScope.MapHeaderOverlay(hasWorkoutTarget: Boolean) {
-    Surface(
+    Box(
         modifier = Modifier
-            .padding(16.dp)
-            .align(Alignment.TopStart),
-        shape = RoundedCornerShape(20.dp),
-        color = DetailGlass,
-        border = BorderStroke(1.dp, GlassBorder)
+            .padding(12.dp)
+            .align(Alignment.TopStart)
+            .background(Color(0x99000000), RoundedCornerShape(10.dp))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = if (hasWorkoutTarget) "Target heatmap" else "Heart-rate route",
-                style = MaterialTheme.typography.titleSmall,
-                color = Color(0xFFF4F7FB),
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
             )
             Text(
-                text = if (hasWorkoutTarget) {
-                    "Green is on target. Warm colors show drift above the plan."
-                } else {
-                    "Colors move from lower effort to higher effort across the route."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFFB6C2D1)
+                text = if (hasWorkoutTarget) "Green = on target. Warm colors = drift above plan."
+                       else "Colors shift from lower effort to higher across the route.",
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }
@@ -369,26 +352,23 @@ private fun BoxScope.MapHeaderOverlay(hasWorkoutTarget: Boolean) {
 
 @Composable
 private fun BoxScope.MapLegendOverlay(hasWorkoutTarget: Boolean) {
-    Surface(
+    Box(
         modifier = Modifier
             .align(Alignment.BottomStart)
-            .padding(16.dp),
-        shape = RoundedCornerShape(22.dp),
-        color = DetailGlass,
-        border = BorderStroke(1.dp, GlassBorder)
+            .padding(12.dp)
+            .background(Color(0x99000000), RoundedCornerShape(10.dp))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             if (hasWorkoutTarget) {
-                LegendChip("On target", MaterialTheme.colorScheme.tertiary)
-                LegendChip("Caution", MaterialTheme.colorScheme.secondary)
-                LegendChip("Redline", MaterialTheme.colorScheme.error)
+                LegendChip("On target", ZoneGreen)
+                LegendChip("Caution", ZoneAmber)
+                LegendChip("Redline", ZoneRed)
             } else {
-                LegendChip("Easy", MaterialTheme.colorScheme.tertiary)
-                LegendChip("Moderate", MaterialTheme.colorScheme.secondary)
-                LegendChip("High", MaterialTheme.colorScheme.error)
+                LegendChip("Easy", ZoneGreen)
+                LegendChip("Moderate", ZoneAmber)
+                LegendChip("High", ZoneRed)
             }
         }
     }
@@ -398,20 +378,22 @@ private fun BoxScope.MapLegendOverlay(hasWorkoutTarget: Boolean) {
 private fun LegendChip(label: String, color: Color) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        Surface(
-            modifier = Modifier.size(10.dp),
-            shape = RoundedCornerShape(999.dp),
-            color = color
-        ) {}
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color, RoundedCornerShape(999.dp))
+        )
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color(0xFFF4F7FB)
+            style = MaterialTheme.typography.labelSmall,
+            color = CardeaTheme.colors.textPrimary
         )
     }
 }
+
+// ── Map route ────────────────────────────────────────────────────────────────
 
 @Composable
 private fun HrHeatmapRouteMap(
@@ -420,26 +402,17 @@ private fun HrHeatmapRouteMap(
 ) {
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
-    val inZoneColor = MaterialTheme.colorScheme.tertiary
-    val warningColor = MaterialTheme.colorScheme.secondary
-    val highColor = MaterialTheme.colorScheme.error
 
     LaunchedEffect(isMapLoaded, trackPoints) {
         if (!isMapLoaded || trackPoints.isEmpty()) return@LaunchedEffect
         runCatching {
             val boundsBuilder = LatLngBounds.builder()
-            trackPoints.forEach { point ->
-                boundsBuilder.include(LatLng(point.latitude, point.longitude))
-            }
-            val bounds = boundsBuilder.build()
-            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, 64))
+            trackPoints.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
+            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 64))
         }.onFailure {
             val first = trackPoints.first()
             cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(
-                    LatLng(first.latitude, first.longitude),
-                    15f
-                )
+                CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), 15f)
             )
         }
     }
@@ -448,45 +421,34 @@ private fun HrHeatmapRouteMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
         onMapLoaded = { isMapLoaded = true },
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            mapToolbarEnabled = false
-        )
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false)
     ) {
         for (i in 0 until trackPoints.lastIndex) {
             val p1 = trackPoints[i]
             val p2 = trackPoints[i + 1]
             Polyline(
-                points = listOf(
-                    LatLng(p1.latitude, p1.longitude),
-                    LatLng(p2.latitude, p2.longitude)
-                ),
+                points = listOf(LatLng(p1.latitude, p1.longitude), LatLng(p2.latitude, p2.longitude)),
                 color = hrToColor(
                     hr = p2.heartRate,
                     distanceMeters = p2.distanceMeters,
                     config = workoutConfig,
-                    inZoneColor = inZoneColor,
-                    warningColor = warningColor,
-                    highColor = highColor
+                    inZoneColor = ZoneGreen,
+                    warningColor = ZoneAmber,
+                    highColor = ZoneRed
                 ),
                 width = 8f
             )
         }
-
         trackPoints.firstOrNull()?.let { start ->
-            Marker(
-                state = MarkerState(position = LatLng(start.latitude, start.longitude)),
-                title = "Start"
-            )
+            Marker(state = MarkerState(LatLng(start.latitude, start.longitude)), title = "Start")
         }
         trackPoints.lastOrNull()?.let { end ->
-            Marker(
-                state = MarkerState(position = LatLng(end.latitude, end.longitude)),
-                title = "Finish"
-            )
+            Marker(state = MarkerState(LatLng(end.latitude, end.longitude)), title = "Finish")
         }
     }
 }
+
+// ── Stats card ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun StatsCard(
@@ -497,90 +459,54 @@ private fun StatsCard(
     modifier: Modifier = Modifier
 ) {
     val duration = formatDuration(workout.startTime, workout.endTime)
-    val fallbackAvg = trackPoints
-        .map { it.heartRate }
-        .filter { it > 0 }
-        .takeIf { it.isNotEmpty() }
-        ?.average()
-        ?.toInt()
+    val fallbackAvg = trackPoints.map { it.heartRate }.filter { it > 0 }
+        .takeIf { it.isNotEmpty() }?.average()?.toInt()
     val avgHrValue = avgHr?.toInt() ?: fallbackAvg ?: 0
-    val statItems = listOf(
-        "Distance" to String.format("%.2f km", workout.totalDistanceMeters / 1000f),
-        "Duration" to duration,
-        "Avg HR" to if (avgHrValue > 0) "$avgHrValue bpm" else "--",
-        "Track points" to trackPoints.size.toString()
-    )
+    val distanceKm = workout.totalDistanceMeters / 1000f
+    val durationMinutes = (workout.endTime - workout.startTime) / 60_000f
+    val pace = if (distanceKm > 0f && durationMinutes > 0f) {
+        val p = durationMinutes / distanceKm
+        val min = p.toInt()
+        val sec = ((p - min) * 60f).toInt().coerceIn(0, 59)
+        "%d:%02d /km".format(min, sec)
+    } else "--"
 
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-        colors = CardDefaults.cardColors(containerColor = DetailGlass)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = "Session overview",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFFF4F7FB),
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "The stats grid summarizes what this run captured, and the route heatmap shows where effort drifted across the course.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFB6C2D1)
-            )
+    GlassCard(modifier = modifier, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)) {
+        Text(
+            text = "Session overview",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = CardeaTheme.colors.textPrimary
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DetailStatCell("Distance", "%.2f km".format(distanceKm), modifier = Modifier.weight(1f))
+            DetailStatCell("Duration", duration, modifier = Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DetailStatCell("Avg HR", if (avgHrValue > 0) "$avgHrValue bpm" else "--", modifier = Modifier.weight(1f))
+            DetailStatCell("Avg pace", pace, modifier = Modifier.weight(1f))
+        }
 
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DetailStatCell(
-                        label = statItems[0].first,
-                        value = statItems[0].second,
-                        modifier = Modifier.weight(1f)
-                    )
-                    DetailStatCell(
-                        label = statItems[1].first,
-                        value = statItems[1].second,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DetailStatCell(
-                        label = statItems[2].first,
-                        value = statItems[2].second,
-                        modifier = Modifier.weight(1f)
-                    )
-                    DetailStatCell(
-                        label = statItems[3].first,
-                        value = statItems[3].second,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color.White.copy(alpha = 0.04f),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
+        if (targetSummary != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(10.dp))
+                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = "Workout plan",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = Color(0xFF8FA4B7)
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTheme.colors.textTertiary
                     )
                     Text(
-                        text = targetSummary ?: workout.mode.asModeLabel(),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color(0xFFF4F7FB),
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Glass overlays keep the target context and map legend visible without burying the route.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF9DB0C2)
+                        text = targetSummary,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = CardeaTheme.colors.textPrimary
                     )
                 }
             }
@@ -589,33 +515,30 @@ private fun StatsCard(
 }
 
 @Composable
-private fun DetailStatCell(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        color = Color.White.copy(alpha = 0.04f),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
+private fun DetailStatCell(label: String, value: String, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(12.dp))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF8EA4B8)
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                color = CardeaTheme.colors.textTertiary
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color(0xFFF4F7FB),
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
             )
         }
     }
 }
+
+// ── More actions card ─────────────────────────────────────────────────────────
 
 @Composable
 private fun MoreActionsCard(
@@ -623,72 +546,61 @@ private fun MoreActionsCard(
     onViewProgress: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
-        colors = CardDefaults.cardColors(containerColor = DetailGlass)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = "More actions",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFFF4F7FB),
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "Open the post-run breakdown, jump into long-term progress, or remove the workout from history.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFFB6C2D1)
-            )
-            CardeaButton(
-                text = stringResource(R.string.button_post_run_insights),
-                onClick = onViewPostRunSummary,
-                modifier = Modifier.fillMaxWidth().height(52.dp)
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(
-                    onClick = onViewProgress,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.button_view_progress))
-                }
-                TextButton(
-                    onClick = onDelete,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(stringResource(R.string.button_delete_run))
-                }
+    GlassCard(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)) {
+        Text(
+            text = "More actions",
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
+            color = CardeaTheme.colors.textPrimary
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        CardeaButton(
+            text = stringResource(R.string.button_post_run_insights),
+            onClick = onViewPostRunSummary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(
+                onClick = onViewProgress,
+                modifier = Modifier.weight(1f).height(44.dp),
+                border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
+            ) {
+                Text(
+                    text = stringResource(R.string.button_view_progress),
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+            TextButton(
+                onClick = onDelete,
+                modifier = Modifier.weight(1f).height(44.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.button_delete_run),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = ZoneRed
+                )
             }
         }
     }
 }
 
-private fun parseWorkoutConfig(targetConfigJson: String): WorkoutConfig? {
-    return runCatching {
-        JsonCodec.gson.fromJson(targetConfigJson, WorkoutConfig::class.java)
-    }.getOrNull()
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+private fun parseWorkoutConfig(targetConfigJson: String): WorkoutConfig? =
+    runCatching { JsonCodec.gson.fromJson(targetConfigJson, WorkoutConfig::class.java) }.getOrNull()
 
 private fun parseTargetSummary(config: WorkoutConfig?): String? {
     if (config == null) return null
     return when (config.mode) {
         WorkoutMode.STEADY_STATE ->
-            config.steadyStateTargetHr?.let { "Planned target: $it bpm" }
-
+            config.steadyStateTargetHr?.let { "Target: $it bpm steady state" }
         WorkoutMode.DISTANCE_PROFILE -> {
             val segments = config.segments
-            if (segments.isEmpty()) {
-                null
-            } else {
-                val first = segments.first()
-                val last = segments.last()
-                "Planned profile: ${segments.size} segments (${first.targetHr}-${last.targetHr} bpm)"
-            }
+            if (segments.isEmpty()) null
+            else "Distance profile · ${segments.size} segments (${segments.first().targetHr}–${segments.last().targetHr} bpm)"
         }
-
         WorkoutMode.FREE_RUN -> "Free run"
     }
 }
@@ -701,54 +613,23 @@ private fun hrToColor(
     warningColor: Color,
     highColor: Color
 ): Color {
-    if (config == null) {
-        return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
-    }
-    val target = config.targetHrAtDistance(distanceMeters) ?: return fallbackHrColor(
-        hr = hr,
-        inZoneColor = inZoneColor,
-        warningColor = warningColor,
-        highColor = highColor
-    )
+    if (config == null) return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
+    val target = config.targetHrAtDistance(distanceMeters)
+        ?: return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
     val buffer = config.bufferBpm.coerceAtLeast(1)
-    val delta = hr - target
-
-    val absDelta = kotlin.math.abs(delta).toFloat()
+    val absDelta = kotlin.math.abs(hr - target).toFloat()
     return when {
         absDelta <= buffer -> inZoneColor
-        absDelta <= buffer * 2f -> lerp(
-            inZoneColor,
-            warningColor,
-            (absDelta - buffer) / buffer.toFloat()
-        )
-
-        absDelta <= buffer * 4f -> lerp(
-            warningColor,
-            highColor,
-            (absDelta - (buffer * 2f)) / (buffer * 2f)
-        )
-
+        absDelta <= buffer * 2f -> lerp(inZoneColor, warningColor, (absDelta - buffer) / buffer.toFloat())
+        absDelta <= buffer * 4f -> lerp(warningColor, highColor, (absDelta - buffer * 2f) / (buffer * 2f))
         else -> highColor
     }
 }
 
-private fun fallbackHrColor(
-    hr: Int,
-    inZoneColor: Color,
-    warningColor: Color,
-    highColor: Color
-): Color {
-    return when {
+private fun fallbackHrColor(hr: Int, inZoneColor: Color, warningColor: Color, highColor: Color): Color =
+    when {
         hr <= 100 -> inZoneColor
         hr in 101..149 -> lerp(inZoneColor, warningColor, (hr - 100) / 50f)
         hr in 150..199 -> lerp(warningColor, highColor, (hr - 150) / 50f)
         else -> highColor
     }
-}
-
-private fun String.asModeLabel(): String =
-    lowercase()
-        .split('_')
-        .joinToString(" ") { part ->
-            part.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
-        }
