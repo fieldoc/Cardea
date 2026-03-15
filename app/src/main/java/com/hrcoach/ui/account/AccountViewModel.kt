@@ -30,6 +30,10 @@ data class AccountUiState(
     val earconVolume: Int = 80,
     val voiceVerbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL,
     val enableVibration: Boolean = true,
+    val enableHalfwayReminder: Boolean = true,
+    val enableKmSplits: Boolean = true,
+    val enableWorkoutComplete: Boolean = true,
+    val enableInZoneConfirm: Boolean = true,
     val maxHr: Int? = null,
     val maxHrInput: String = "",
     val maxHrSaved: Boolean = false,
@@ -53,6 +57,10 @@ class AccountViewModel @Inject constructor(
     private val _volume       = MutableStateFlow(80)
     private val _verbosity    = MutableStateFlow(VoiceVerbosity.MINIMAL)
     private val _vibration    = MutableStateFlow(true)
+    private val _halfwayReminder   = MutableStateFlow(true)
+    private val _kmSplits          = MutableStateFlow(true)
+    private val _workoutComplete   = MutableStateFlow(true)
+    private val _inZoneConfirm     = MutableStateFlow(true)
 
     private val _maxHr      = MutableStateFlow<Int?>(null)
     private val _maxHrInput = MutableStateFlow("")
@@ -71,6 +79,10 @@ class AccountViewModel @Inject constructor(
             _volume.value    = settings.earconVolume
             _verbosity.value = settings.voiceVerbosity
             _vibration.value = settings.enableVibration
+            _halfwayReminder.value = settings.enableHalfwayReminder != false
+            _kmSplits.value = settings.enableKmSplits != false
+            _workoutComplete.value = settings.enableWorkoutComplete != false
+            _inZoneConfirm.value = settings.enableInZoneConfirm != false
             _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
             _displayName.value = userProfileRepo.getDisplayName()
             _avatarSymbol.value = userProfileRepo.getAvatarSymbol()
@@ -92,7 +104,19 @@ class AccountViewModel @Inject constructor(
             mapsApiKeySaved = saved,
             earconVolume    = vol,
             voiceVerbosity  = verb,
-            enableVibration = _vibration.value
+        )
+    }.combine(_vibration) { base, vib ->
+        base.copy(enableVibration = vib)
+    }.combine(
+        combine(_halfwayReminder, _kmSplits, _workoutComplete, _inZoneConfirm) { hw, km, wc, iz ->
+            listOf(hw, km, wc, iz)
+        }
+    ) { base, cues ->
+        base.copy(
+            enableHalfwayReminder = cues[0],
+            enableKmSplits = cues[1],
+            enableWorkoutComplete = cues[2],
+            enableInZoneConfirm = cues[3]
         )
     }.combine(
         combine(_maxHr, _maxHrInput, _maxHrSaved, _maxHrError) { hr, hrInput, hrSaved, hrError ->
@@ -129,6 +153,10 @@ class AccountViewModel @Inject constructor(
     fun setVolume(v: Float) { _volume.value = ((v / 5f).toInt() * 5).coerceIn(0, 100) }
     fun setVerbosity(v: VoiceVerbosity) { _verbosity.value = v }
     fun setVibration(v: Boolean) { _vibration.value = v }
+    fun setEnableHalfwayReminder(v: Boolean) { _halfwayReminder.value = v; saveAudioSettings() }
+    fun setEnableKmSplits(v: Boolean) { _kmSplits.value = v; saveAudioSettings() }
+    fun setEnableWorkoutComplete(v: Boolean) { _workoutComplete.value = v; saveAudioSettings() }
+    fun setEnableInZoneConfirm(v: Boolean) { _inZoneConfirm.value = v; saveAudioSettings() }
 
     fun setAutoPauseEnabled(enabled: Boolean) {
         _autoPauseEnabled.value = enabled
@@ -141,7 +169,11 @@ class AccountViewModel @Inject constructor(
                 AudioSettings(
                     earconVolume    = _volume.value,
                     voiceVerbosity  = _verbosity.value,
-                    enableVibration = _vibration.value
+                    enableVibration = _vibration.value,
+                    enableHalfwayReminder = _halfwayReminder.value,
+                    enableKmSplits = _kmSplits.value,
+                    enableWorkoutComplete = _workoutComplete.value,
+                    enableInZoneConfirm = _inZoneConfirm.value,
                 )
             )
         }

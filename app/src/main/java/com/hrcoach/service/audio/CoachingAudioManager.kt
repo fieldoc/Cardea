@@ -17,27 +17,38 @@ class CoachingAudioManager(
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    private val earconSynthesizer = EarconSynthesizer()
+    private val earconPlayer = EarconPlayer(context)
     private val voiceCoach = VoiceCoach(context)
     private val vibrationManager = VibrationManager(context)
     private val escalationTracker = EscalationTracker()
+    private var currentSettings: AudioSettings = settings
 
     init {
         applySettings(settings)
     }
 
     fun applySettings(settings: AudioSettings) {
-        earconSynthesizer.setVolume(settings.earconVolume)
+        currentSettings = settings
+        earconPlayer.setVolume(settings.earconVolume)
         voiceCoach.verbosity = settings.voiceVerbosity
         vibrationManager.enabled = settings.enableVibration
     }
 
     fun fireEvent(event: CoachingEvent, guidanceText: String? = null) {
+        // Filter informational cues by individual toggles
+        when (event) {
+            CoachingEvent.HALFWAY -> if (currentSettings.enableHalfwayReminder == false) return
+            CoachingEvent.KM_SPLIT -> if (currentSettings.enableKmSplits == false) return
+            CoachingEvent.WORKOUT_COMPLETE -> if (currentSettings.enableWorkoutComplete == false) return
+            CoachingEvent.IN_ZONE_CONFIRM -> if (currentSettings.enableInZoneConfirm == false) return
+            else -> { /* coaching alerts always pass through */ }
+        }
+
         when (event) {
             CoachingEvent.SPEED_UP,
             CoachingEvent.SLOW_DOWN -> {
                 val escalationLevel = escalationTracker.onZoneAlert()
-                playEarcon(event)
+                earconPlayer.play(event)
                 if (
                     escalationLevel == EscalationLevel.EARCON_VOICE ||
                     escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION
@@ -54,12 +65,12 @@ class CoachingAudioManager(
 
             CoachingEvent.RETURN_TO_ZONE -> {
                 escalationTracker.reset()
-                playEarcon(event)
+                earconPlayer.play(event)
                 voiceCoach.speak(event, guidanceText)
             }
 
             else -> {
-                playEarcon(event)
+                earconPlayer.play(event)
                 voiceCoach.speak(event, guidanceText)
             }
         }
@@ -71,20 +82,8 @@ class CoachingAudioManager(
 
     fun destroy() {
         scope.cancel()
-        earconSynthesizer.destroy()
+        earconPlayer.destroy()
         voiceCoach.destroy()
         vibrationManager.destroy()
-    }
-
-    private fun playEarcon(event: CoachingEvent) {
-        when (event) {
-            CoachingEvent.SPEED_UP -> earconSynthesizer.playSpeedUp()
-            CoachingEvent.SLOW_DOWN -> earconSynthesizer.playSlowDown()
-            CoachingEvent.RETURN_TO_ZONE -> earconSynthesizer.playReturnToZone()
-            CoachingEvent.PREDICTIVE_WARNING -> earconSynthesizer.playPredictiveWarning()
-            CoachingEvent.SEGMENT_CHANGE -> earconSynthesizer.playSegmentChange()
-            CoachingEvent.SIGNAL_LOST -> earconSynthesizer.playSignalLost()
-            CoachingEvent.SIGNAL_REGAINED -> earconSynthesizer.playSignalRegained()
-        }
     }
 }

@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -312,6 +313,20 @@ fun AccountScreen(
                     checked = state.enableVibration,
                     onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() }
                 )
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
+
+                // Informational Cues
+                SettingSection(icon = Icons.Default.Mic, title = "Informational Cues") {
+                    val cuesEnabled = state.voiceVerbosity != VoiceVerbosity.OFF
+                    val cueAlpha = if (cuesEnabled) 1f else 0.4f
+                    Column(modifier = Modifier.alpha(cueAlpha)) {
+                        InfoCueToggle("Halfway reminder", state.enableHalfwayReminder && cuesEnabled, cuesEnabled) { viewModel.setEnableHalfwayReminder(it) }
+                        InfoCueToggle("Kilometer splits", state.enableKmSplits && cuesEnabled, cuesEnabled) { viewModel.setEnableKmSplits(it) }
+                        InfoCueToggle("Workout complete", state.enableWorkoutComplete && cuesEnabled, cuesEnabled) { viewModel.setEnableWorkoutComplete(it) }
+                        InfoCueToggle("In-zone confirmation", state.enableInZoneConfirm && cuesEnabled, cuesEnabled) { viewModel.setEnableInZoneConfirm(it) }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -670,5 +685,22 @@ private fun GradientSaveButton(onClick: () -> Unit) {
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             color = CardeaTheme.colors.onGradient
         )
+    }
+}
+
+@Composable
+private fun InfoCueToggle(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
+        CardeaSwitch(checked = checked, onCheckedChange = { if (enabled) onCheckedChange(it) })
     }
 }

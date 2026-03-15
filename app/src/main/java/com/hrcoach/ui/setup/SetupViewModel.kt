@@ -15,9 +15,11 @@ import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.service.BleConnectionCoordinator
-import com.hrcoach.service.audio.EarconSynthesizer
+import com.hrcoach.service.audio.EarconPlayer
 import com.hrcoach.util.JsonCodec
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.Context
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +59,10 @@ data class SetupUiState(
     val earconVolume: Int = 80,
     val voiceVerbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL,
     val enableVibration: Boolean = true,
+    val enableHalfwayReminder: Boolean = true,
+    val enableKmSplits: Boolean = true,
+    val enableWorkoutComplete: Boolean = true,
+    val enableInZoneConfirm: Boolean = true,
     val showAdvancedSettings: Boolean = false,
     val showAppSettings: Boolean = false,
     val isScanning: Boolean = false,
@@ -78,6 +84,7 @@ data class SetupUiState(
 
 @HiltViewModel
 class SetupViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val audioSettingsRepository: AudioSettingsRepository,
     private val mapsSettingsRepository: MapsSettingsRepository,
     private val bleCoordinator: BleConnectionCoordinator,
@@ -89,7 +96,7 @@ class SetupViewModel @Inject constructor(
 
     private var bleCollectJob: Job? = null
     private var scanTimeoutJob: Job? = null
-    private var previewSynthesizer: EarconSynthesizer? = null
+    private var previewPlayer: EarconPlayer? = null
 
     init {
         val savedKey = mapsSettingsRepository.getMapsApiKey()
@@ -99,6 +106,10 @@ class SetupViewModel @Inject constructor(
             earconVolume = audioSettings.earconVolume,
             voiceVerbosity = audioSettings.voiceVerbosity,
             enableVibration = audioSettings.enableVibration,
+            enableHalfwayReminder = audioSettings.enableHalfwayReminder != false,
+            enableKmSplits = audioSettings.enableKmSplits != false,
+            enableWorkoutComplete = audioSettings.enableWorkoutComplete != false,
+            enableInZoneConfirm = audioSettings.enableInZoneConfirm != false,
             maxHr = userProfileRepository.getMaxHr()
         )
         startBleCollectors()
@@ -163,7 +174,7 @@ class SetupViewModel @Inject constructor(
     fun setEarconVolume(value: Int) {
         _uiState.value = _uiState.value.copy(earconVolume = value.coerceIn(0, 100))
         saveAudioSettings()
-        previewSynthesizer?.setVolume(_uiState.value.earconVolume)
+        previewPlayer?.setVolume(_uiState.value.earconVolume)
     }
 
     fun setVoiceVerbosity(value: VoiceVerbosity) {
@@ -188,12 +199,36 @@ class SetupViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(mapsApiKeySaved = true)
     }
 
+    fun setEnableHalfwayReminder(value: Boolean) {
+        _uiState.value = _uiState.value.copy(enableHalfwayReminder = value)
+        saveAudioSettings()
+    }
+
+    fun setEnableKmSplits(value: Boolean) {
+        _uiState.value = _uiState.value.copy(enableKmSplits = value)
+        saveAudioSettings()
+    }
+
+    fun setEnableWorkoutComplete(value: Boolean) {
+        _uiState.value = _uiState.value.copy(enableWorkoutComplete = value)
+        saveAudioSettings()
+    }
+
+    fun setEnableInZoneConfirm(value: Boolean) {
+        _uiState.value = _uiState.value.copy(enableInZoneConfirm = value)
+        saveAudioSettings()
+    }
+
     fun saveAudioSettings() {
         audioSettingsRepository.saveAudioSettings(
             AudioSettings(
                 earconVolume = _uiState.value.earconVolume,
                 voiceVerbosity = _uiState.value.voiceVerbosity,
-                enableVibration = _uiState.value.enableVibration
+                enableVibration = _uiState.value.enableVibration,
+                enableHalfwayReminder = _uiState.value.enableHalfwayReminder,
+                enableKmSplits = _uiState.value.enableKmSplits,
+                enableWorkoutComplete = _uiState.value.enableWorkoutComplete,
+                enableInZoneConfirm = _uiState.value.enableInZoneConfirm,
             )
         )
     }
@@ -253,19 +288,11 @@ class SetupViewModel @Inject constructor(
     }
 
     fun previewEarcon(event: CoachingEvent) {
-        val synthesizer = previewSynthesizer ?: EarconSynthesizer().also {
-            previewSynthesizer = it
+        val player = previewPlayer ?: EarconPlayer(appContext).also {
+            previewPlayer = it
         }
-        synthesizer.setVolume(_uiState.value.earconVolume)
-        when (event) {
-            CoachingEvent.SPEED_UP -> synthesizer.playSpeedUp()
-            CoachingEvent.SLOW_DOWN -> synthesizer.playSlowDown()
-            CoachingEvent.RETURN_TO_ZONE -> synthesizer.playReturnToZone()
-            CoachingEvent.PREDICTIVE_WARNING -> synthesizer.playPredictiveWarning()
-            CoachingEvent.SEGMENT_CHANGE -> synthesizer.playSegmentChange()
-            CoachingEvent.SIGNAL_LOST -> synthesizer.playSignalLost()
-            CoachingEvent.SIGNAL_REGAINED -> synthesizer.playSignalRegained()
-        }
+        player.setVolume(_uiState.value.earconVolume)
+        player.play(event)
     }
 
     fun addSegment() {
@@ -585,8 +612,8 @@ class SetupViewModel @Inject constructor(
     override fun onCleared() {
         scanTimeoutJob?.cancel()
         bleCollectJob?.cancel()
-        previewSynthesizer?.destroy()
-        previewSynthesizer = null
+        previewPlayer?.destroy()
+        previewPlayer = null
         super.onCleared()
     }
 }

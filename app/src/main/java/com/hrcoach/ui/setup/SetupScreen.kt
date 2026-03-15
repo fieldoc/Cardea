@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
@@ -113,6 +114,12 @@ private fun buildAlertsSummary(state: SetupUiState): String {
         VoiceVerbosity.FULL    -> parts.add("Voice full")
         else                   -> {}
     }
+    val infoCues = mutableListOf<String>()
+    if (state.enableHalfwayReminder) infoCues.add("Halfway")
+    if (state.enableKmSplits) infoCues.add("Splits")
+    if (state.enableWorkoutComplete) infoCues.add("Complete")
+    if (state.enableInZoneConfirm) infoCues.add("Zone confirm")
+    if (infoCues.isNotEmpty()) parts.add("Info: ${infoCues.joinToString(", ")}")
     return if (parts.isEmpty()) "All alerts off" else parts.joinToString(" · ")
 }
 
@@ -302,7 +309,11 @@ fun SetupScreen(
                     onVolumeChange = { viewModel.setEarconVolume((it / 5f).roundToInt() * 5) },
                     onVoiceVerbosityChange = viewModel::setVoiceVerbosity,
                     onVibrationChange = viewModel::setEnableVibration,
-                    onPreview = viewModel::previewEarcon
+                    onPreview = viewModel::previewEarcon,
+                    onHalfwayChange = viewModel::setEnableHalfwayReminder,
+                    onKmSplitsChange = viewModel::setEnableKmSplits,
+                    onWorkoutCompleteChange = viewModel::setEnableWorkoutComplete,
+                    onInZoneConfirmChange = viewModel::setEnableInZoneConfirm
                 )
             }
 
@@ -645,7 +656,11 @@ private fun AlertBehaviorCard(
     onVolumeChange: (Float) -> Unit,
     onVoiceVerbosityChange: (VoiceVerbosity) -> Unit,
     onVibrationChange: (Boolean) -> Unit,
-    onPreview: (CoachingEvent) -> Unit
+    onPreview: (CoachingEvent) -> Unit,
+    onHalfwayChange: (Boolean) -> Unit,
+    onKmSplitsChange: (Boolean) -> Unit,
+    onWorkoutCompleteChange: (Boolean) -> Unit,
+    onInZoneConfirmChange: (Boolean) -> Unit
 ) {
     GlassCard {
         Row(
@@ -745,6 +760,46 @@ private fun AlertBehaviorCard(
                 PreviewSoundButton(icon = Icons.Default.ArrowUpward, label = "Speed Up",  onClick = { onPreview(CoachingEvent.SPEED_UP) })
                 PreviewSoundButton(icon = Icons.Default.ArrowDownward, label = "Slow Down", onClick = { onPreview(CoachingEvent.SLOW_DOWN) })
                 PreviewSoundButton(icon = Icons.Default.Check,         label = "In Zone",   onClick = { onPreview(CoachingEvent.RETURN_TO_ZONE) })
+            }
+
+            HorizontalDivider()
+
+            Text("Informational Cues", style = MaterialTheme.typography.bodyLarge, color = CardeaTheme.colors.textPrimary)
+
+            val cuesEnabled = state.voiceVerbosity != VoiceVerbosity.OFF
+            val cueAlpha = if (cuesEnabled) 1f else 0.4f
+
+            Row(
+                modifier = Modifier.fillMaxWidth().alpha(cueAlpha),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Halfway reminder", style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
+                CardeaSwitch(checked = state.enableHalfwayReminder && cuesEnabled, onCheckedChange = { if (cuesEnabled) onHalfwayChange(it) })
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().alpha(cueAlpha),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Kilometer splits", style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
+                CardeaSwitch(checked = state.enableKmSplits && cuesEnabled, onCheckedChange = { if (cuesEnabled) onKmSplitsChange(it) })
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().alpha(cueAlpha),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Workout complete", style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
+                CardeaSwitch(checked = state.enableWorkoutComplete && cuesEnabled, onCheckedChange = { if (cuesEnabled) onWorkoutCompleteChange(it) })
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().alpha(cueAlpha),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("In-zone confirmation", style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
+                CardeaSwitch(checked = state.enableInZoneConfirm && cuesEnabled, onCheckedChange = { if (cuesEnabled) onInZoneConfirmChange(it) })
             }
         } else {
             Text(
