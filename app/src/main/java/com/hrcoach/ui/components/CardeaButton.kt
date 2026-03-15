@@ -15,8 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
+import com.hrcoach.ui.theme.CardeaTheme
 
 /**
  * Primary CTA button using the Cardea gradient fill.
@@ -36,14 +35,14 @@ fun CardeaButton(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .background(CardeaGradient)
+            .background(CardeaTheme.colors.ctaGradient)
             .clickable(onClick = onClick)
             .padding(innerPadding),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.onGradient,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold
         )

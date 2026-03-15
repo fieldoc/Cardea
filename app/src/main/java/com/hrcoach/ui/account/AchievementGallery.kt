@@ -15,8 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.ui.components.AchievementCard
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaTheme
 
 @Composable
 fun AchievementGallery(
@@ -32,13 +31,13 @@ fun AchievementGallery(
         ) {
             Text(
                 text = "Achievements",
-                color = CardeaTextPrimary,
+                color = CardeaTheme.colors.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = "${achievements.size} earned",
-                color = CardeaTextSecondary,
+                color = CardeaTheme.colors.textSecondary,
                 fontSize = 13.sp
             )
         }

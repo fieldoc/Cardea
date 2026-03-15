@@ -1,5 +1,6 @@
 package com.hrcoach.ui.workout
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,20 +11,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.HrCoachThemeTokens
+import com.hrcoach.ui.theme.CardeaTheme
 
 @Composable
 fun HrRing(
@@ -34,9 +39,25 @@ fun HrRing(
     onConnectHr: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Only run glow animation when connected — avoids per-frame ticks when idle
+    val glowAlpha = if (isConnected) {
+        val infiniteTransition = rememberInfiniteTransition(label = "ringGlow")
+        val alpha by infiniteTransition.animateFloat(
+            initialValue = 0.3f,
+            targetValue = 0.7f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = FastOutSlowInEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "glow"
+        )
+        alpha
+    } else 0f
+
+    val colors = CardeaTheme.colors
     Box(
         modifier = modifier
-            .size(160.dp)
+            .size(200.dp)
             .scale(if (isConnected) pulseScale else 1f)
             .then(
                 if (!isConnected) Modifier
@@ -46,15 +67,27 @@ fun HrRing(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Canvas(modifier = Modifier.size(160.dp)) {
-            val strokePx = 8.dp.toPx()
+        val disconnectedRingColor = colors.textTertiary
+        Canvas(modifier = Modifier.size(200.dp)) {
+            val strokePx = 6.dp.toPx()
+            val segmentStrokePx = 3.dp.toPx()
             val radius = size.minDimension / 2f - strokePx / 2f
+            
             if (isConnected) {
-                drawCircle(
-                    color = zoneColor.copy(alpha = 0.12f),
-                    radius = radius,
-                    style = Stroke(width = strokePx)
-                )
+                // Background track (segmented)
+                val segments = 60
+                val sweep = 360f / segments
+                for (i in 0 until segments) {
+                    drawArc(
+                        color = zoneColor.copy(alpha = 0.1f),
+                        startAngle = i * sweep - 90f + 1f,
+                        sweepAngle = sweep - 2f,
+                        useCenter = false,
+                        style = Stroke(width = strokePx, cap = StrokeCap.Butt)
+                    )
+                }
+
+                // Main progress ring
                 drawArc(
                     brush = CardeaGradient,
                     startAngle = -90f,
@@ -67,11 +100,18 @@ fun HrRing(
                         size.height - strokePx
                     )
                 )
+
+                // Glow layer (soft behind the ring)
+                drawCircle(
+                    color = zoneColor.copy(alpha = 0.05f * glowAlpha),
+                    radius = radius + 4.dp.toPx(),
+                    style = Stroke(width = 12.dp.toPx())
+                )
             } else {
                 drawCircle(
-                    color = CardeaTextTertiary,
+                    color = disconnectedRingColor.copy(alpha = 0.3f),
                     radius = radius,
-                    style = Stroke(width = strokePx)
+                    style = Stroke(width = strokePx, cap = StrokeCap.Round)
                 )
             }
         }
@@ -80,34 +120,46 @@ fun HrRing(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = if (hr > 0) hr.toString() else "---",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = CardeaTextPrimary,
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = 56.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace // Precision feel
+                    ),
+                    color = colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "bpm",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = HrCoachThemeTokens.subtleText
+                    text = "BPM",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        letterSpacing = 2.sp,
+                        fontWeight = FontWeight.Black
+                    ),
+                    color = zoneColor // Use zone color for the label for emphasis
                 )
             }
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
-                        .size(10.dp)
+                        .size(12.dp)
                         .clip(CircleShape)
                         .background(CardeaGradient)
                 )
                 Text(
-                    text = "Connect HR",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = CardeaTextPrimary,
+                    text = "CONNECT",
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = colors.textPrimary,
                     textAlign = TextAlign.Center
                 )
                 Text(
-                    text = "monitor",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CardeaTextSecondary
+                    text = "HR MONITOR",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp
+                    ),
+                    color = colors.textSecondary
                 )
             }
         }

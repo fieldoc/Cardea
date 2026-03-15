@@ -16,9 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
@@ -34,7 +32,7 @@ fun CardeaLoadingScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(CardeaBgSecondary, CardeaBgPrimary)
+                    colors = listOf(CardeaTheme.colors.bgSecondary, CardeaTheme.colors.bgPrimary)
                 )
             ),
         contentAlignment = Alignment.Center
@@ -80,7 +78,7 @@ fun ShimmeringText(
     Text(
         text = text,
         style = style,
-        color = CardeaTextSecondary.copy(alpha = alpha),
+        color = CardeaTheme.colors.textSecondary.copy(alpha = alpha),
         modifier = modifier
     )
 }
