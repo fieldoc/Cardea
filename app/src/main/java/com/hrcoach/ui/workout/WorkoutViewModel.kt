@@ -4,6 +4,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.model.WorkoutConfig
+import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.util.JsonCodec
@@ -24,13 +25,22 @@ private data class SegmentInfo(
     val nextLabel: String? = null
 )
 
+private data class ProgressInfo(
+    val totalDurationSeconds: Long? = null,
+    val totalDistanceMeters: Float? = null,
+    val workoutTypeLabel: String? = null
+)
+
 data class ActiveWorkoutUiState(
     val snapshot: WorkoutSnapshot = WorkoutSnapshot(),
     val elapsedSeconds: Long = 0L,
     val workoutConfig: WorkoutConfig? = null,
     val segmentLabel: String? = null,
     val segmentCountdownSeconds: Long? = null,
-    val nextSegmentLabel: String? = null
+    val nextSegmentLabel: String? = null,
+    val totalDurationSeconds: Long? = null,
+    val totalDistanceMeters: Float? = null,
+    val workoutTypeLabel: String? = null
 )
 
 @HiltViewModel
@@ -67,11 +77,15 @@ class WorkoutViewModel @Inject constructor(
                 _uiState.update { current ->
                     val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
                     val seg = deriveSegmentInfo(current.workoutConfig, newElapsed)
+                    val prog = deriveProgressInfo(current.workoutConfig)
                     current.copy(
                         elapsedSeconds = newElapsed,
                         segmentLabel = seg.label,
                         segmentCountdownSeconds = seg.countdownSeconds,
-                        nextSegmentLabel = seg.nextLabel
+                        nextSegmentLabel = seg.nextLabel,
+                        totalDurationSeconds = prog.totalDurationSeconds,
+                        totalDistanceMeters = prog.totalDistanceMeters,
+                        workoutTypeLabel = prog.workoutTypeLabel
                     )
                 }
             }
@@ -120,13 +134,17 @@ class WorkoutViewModel @Inject constructor(
             val newElapsed = if (snapshot.isRunning) computeElapsedSeconds(nowMs) else 0L
             val config = if (snapshot.isRunning) current.workoutConfig else null
             val seg = deriveSegmentInfo(config, newElapsed)
+            val prog = deriveProgressInfo(config)
             current.copy(
                 snapshot = snapshot,
                 elapsedSeconds = newElapsed,
                 workoutConfig = config,
                 segmentLabel = seg.label,
                 segmentCountdownSeconds = seg.countdownSeconds,
-                nextSegmentLabel = seg.nextLabel
+                nextSegmentLabel = seg.nextLabel,
+                totalDurationSeconds = prog.totalDurationSeconds,
+                totalDistanceMeters = prog.totalDistanceMeters,
+                workoutTypeLabel = prog.workoutTypeLabel
             )
         }
     }
@@ -148,12 +166,16 @@ class WorkoutViewModel @Inject constructor(
             _uiState.update { current ->
                 val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
                 val seg = deriveSegmentInfo(config, newElapsed)
+                val prog = deriveProgressInfo(config)
                 current.copy(
                     workoutConfig = config,
                     elapsedSeconds = newElapsed,
                     segmentLabel = seg.label,
                     segmentCountdownSeconds = seg.countdownSeconds,
-                    nextSegmentLabel = seg.nextLabel
+                    nextSegmentLabel = seg.nextLabel,
+                    totalDurationSeconds = prog.totalDurationSeconds,
+                    totalDistanceMeters = prog.totalDistanceMeters,
+                    workoutTypeLabel = prog.workoutTypeLabel
                 )
             }
         } finally {
@@ -182,5 +204,33 @@ class WorkoutViewModel @Inject constructor(
         }
         val last = config.segments.lastOrNull()
         return SegmentInfo(last?.label, 0L, null)
+    }
+
+    private fun deriveProgressInfo(config: WorkoutConfig?): ProgressInfo {
+        if (config == null) return ProgressInfo()
+        return when {
+            config.mode == WorkoutMode.FREE_RUN ->
+                ProgressInfo(workoutTypeLabel = "Open-ended \u00b7 No target")
+
+            config.isTimeBased() -> {
+                val total = config.segments.sumOf { it.durationSeconds?.toLong() ?: 0L }
+                val mins = total / 60
+                ProgressInfo(
+                    totalDurationSeconds = total,
+                    workoutTypeLabel = "${mins} min \u00b7 Steady-state"
+                )
+            }
+
+            config.mode == WorkoutMode.DISTANCE_PROFILE && config.segments.isNotEmpty() -> {
+                val totalDist = config.segments.lastOrNull()?.distanceMeters
+                val km = totalDist?.let { "%.1f".format(it / 1000f) } ?: "?"
+                ProgressInfo(
+                    totalDistanceMeters = totalDist,
+                    workoutTypeLabel = "$km km \u00b7 Distance profile"
+                )
+            }
+
+            else -> ProgressInfo()
+        }
     }
 }
