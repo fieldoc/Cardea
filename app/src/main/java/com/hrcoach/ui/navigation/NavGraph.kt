@@ -72,7 +72,10 @@ import com.hrcoach.ui.splash.SplashScreen
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.ui.theme.CardeaNavGradient
 import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.DarkCardeaColors
 import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.LocalCardeaColors
+import androidx.compose.runtime.CompositionLocalProvider
 import com.hrcoach.ui.workout.ActiveWorkoutScreen
 import com.hrcoach.util.PermissionGate
 
@@ -335,37 +338,41 @@ fun HrCoachNavGraph(
                 enterTransition = { defaultEnter(1) },
                 exitTransition = { defaultExit(1) }
             ) {
-                ActiveWorkoutScreen(
-                    onPauseResume = {
-                        val action = if (workoutSnapshot.isPaused) {
-                            WorkoutForegroundService.ACTION_RESUME
-                        } else {
-                            WorkoutForegroundService.ACTION_PAUSE
+                CompositionLocalProvider(
+                    LocalCardeaColors provides DarkCardeaColors
+                ) {
+                    ActiveWorkoutScreen(
+                        onPauseResume = {
+                            val action = if (workoutSnapshot.isPaused) {
+                                WorkoutForegroundService.ACTION_RESUME
+                            } else {
+                                WorkoutForegroundService.ACTION_PAUSE
+                            }
+                            val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+                                this.action = action
+                            }
+                            context.startService(intent)
+                        },
+                        onStopConfirmed = {
+                            val stopIntent = Intent(context, WorkoutForegroundService::class.java).apply {
+                                action = WorkoutForegroundService.ACTION_STOP
+                            }
+                            context.startService(stopIntent)
+                        },
+                        onConnectHr = {
+                            val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+                                action = WorkoutForegroundService.ACTION_RESCAN_BLE
+                            }
+                            context.startService(intent)
+                        },
+                        onToggleAutoPause = {
+                            val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+                                action = WorkoutForegroundService.ACTION_TOGGLE_AUTO_PAUSE
+                            }
+                            context.startService(intent)
                         }
-                        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
-                            this.action = action
-                        }
-                        context.startService(intent)
-                    },
-                    onStopConfirmed = {
-                        val stopIntent = Intent(context, WorkoutForegroundService::class.java).apply {
-                            action = WorkoutForegroundService.ACTION_STOP
-                        }
-                        context.startService(stopIntent)
-                    },
-                    onConnectHr = {
-                        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
-                            action = WorkoutForegroundService.ACTION_RESCAN_BLE
-                        }
-                        context.startService(intent)
-                    },
-                    onToggleAutoPause = {
-                        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
-                            action = WorkoutForegroundService.ACTION_TOGGLE_AUTO_PAUSE
-                        }
-                        context.startService(intent)
-                    }
-                )
+                    )
+                }
             }
 
             composable(
