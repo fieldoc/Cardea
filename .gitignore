@@ -8,3 +8,8 @@
 .externalNativeBuild
 .cxx
 
+# Tool downloads and caches
+.codex-downloads/
+.gradle-local/
+.gradle-user-home/
+.kotlin/

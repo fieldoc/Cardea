@@ -8,7 +8,6 @@ import com.hrcoach.data.db.AppDatabase
 import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.TrackPointDao
 import com.hrcoach.data.db.WorkoutMetricsDao
-import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.WorkoutDao
 import dagger.Module
 import dagger.Provides
@@ -32,16 +31,7 @@ object AppModule {
             .addMigrations(
                 AppDatabase.MIGRATION_1_2,
                 AppDatabase.MIGRATION_2_3,
-                AppDatabase.MIGRATION_3_4,
-                AppDatabase.MIGRATION_4_5,
-                AppDatabase.MIGRATION_5_6,
-                AppDatabase.MIGRATION_6_7,
-                AppDatabase.MIGRATION_7_8,
-                AppDatabase.MIGRATION_8_9,
-                AppDatabase.MIGRATION_9_10,
-                AppDatabase.MIGRATION_10_11,
-                AppDatabase.MIGRATION_11_12,
-                AppDatabase.MIGRATION_12_13
+                AppDatabase.MIGRATION_3_4
             )
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
@@ -66,8 +56,4 @@ object AppModule {
     @Provides
     @Singleton
     fun provideBootcampDao(db: AppDatabase): BootcampDao = db.bootcampDao()
-
-    @Provides
-    @Singleton
-    fun provideAchievementDao(db: AppDatabase): AchievementDao = db.achievementDao()
 }
