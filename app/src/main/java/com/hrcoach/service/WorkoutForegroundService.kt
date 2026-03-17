@@ -236,15 +236,16 @@ class WorkoutForegroundService : LifecycleService() {
                     }
                 }
 
-                WorkoutState.set(
+                WorkoutState.update { current ->
                     WorkoutSnapshot(
                         isRunning = true,
                         isPaused = false,
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
                         guidanceText = "GET HR SIGNAL",
                         autoPauseEnabled = sessionAutoPauseEnabled,
+                        pendingBootcampSessionId = current.pendingBootcampSessionId,
                     )
-                )
+                }
                 observeWorkoutTicks(workoutConfig)
             }.onFailure {
                 handleStartFailure("Workout start failed. Check permissions and try again.", it)
@@ -650,6 +651,13 @@ class WorkoutForegroundService : LifecycleService() {
 
     private fun handleStartFailure(message: String, cause: Throwable? = null) {
         Log.e("WorkoutService", message, cause)
+        // Delete orphaned workout record if one was created before the failure
+        if (workoutId > 0L) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                runCatching { repository.deleteWorkout(workoutId) }
+            }
+            workoutId = 0L
+        }
         runCatching { notificationHelper.update(message) }
             .onFailure { Log.w("WorkoutService", "Failed to update notification", it) }
         cleanupManagers()

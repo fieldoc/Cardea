@@ -146,6 +146,10 @@ class PostRunSummaryViewModel @Inject constructor(
                             newAchievements = newAchievements
                         )
                     }
+
+                    // Clear stale completedWorkoutId so the next workout start
+                    // triggers a clean LaunchedEffect transition in NavGraph.
+                    WorkoutState.clearCompletedWorkoutId()
                 }
             }.onFailure {
                 Log.e("PostRunSummaryVM", "Failed to load post-run summary", it)
