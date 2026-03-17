@@ -8,7 +8,7 @@ class BootcampGoalTest {
     @Test
     fun `each goal has correct tier`() {
         assertEquals(1, BootcampGoal.CARDIO_HEALTH.tier)
-        assertEquals(2, BootcampGoal.RACE_5K_10K.tier)
+        assertEquals(2, BootcampGoal.RACE_5K.tier)
         assertEquals(3, BootcampGoal.HALF_MARATHON.tier)
         assertEquals(4, BootcampGoal.MARATHON.tier)
     }
@@ -16,7 +16,7 @@ class BootcampGoalTest {
     @Test
     fun `each goal has correct suggested min minutes`() {
         assertEquals(20, BootcampGoal.CARDIO_HEALTH.suggestedMinMinutes)
-        assertEquals(25, BootcampGoal.RACE_5K_10K.suggestedMinMinutes)
+        assertEquals(25, BootcampGoal.RACE_5K.suggestedMinMinutes)
         assertEquals(30, BootcampGoal.HALF_MARATHON.suggestedMinMinutes)
         assertEquals(45, BootcampGoal.MARATHON.suggestedMinMinutes)
     }
@@ -24,7 +24,7 @@ class BootcampGoalTest {
     @Test
     fun `each goal has correct warn-below minutes`() {
         assertEquals(15, BootcampGoal.CARDIO_HEALTH.warnBelowMinutes)
-        assertEquals(20, BootcampGoal.RACE_5K_10K.warnBelowMinutes)
+        assertEquals(20, BootcampGoal.RACE_5K.warnBelowMinutes)
         assertEquals(25, BootcampGoal.HALF_MARATHON.warnBelowMinutes)
         assertEquals(30, BootcampGoal.MARATHON.warnBelowMinutes)
     }

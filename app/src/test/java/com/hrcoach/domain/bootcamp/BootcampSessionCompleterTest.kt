@@ -83,7 +83,7 @@ class BootcampSessionCompleterTest {
         currentWeekInPhase: Int = 0
     ) = BootcampEnrollmentEntity(
         id = id,
-        goalType = BootcampGoal.RACE_5K_10K.name,
+        goalType = BootcampGoal.RACE_5K.name,
         targetMinutesPerRun = 30,
         runsPerWeek = runsPerWeek,
         preferredDays = listOf(

@@ -74,7 +74,7 @@ class SessionSelectorTest {
     fun `2 runs per week still includes one quality session on build phase`() {
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.BUILD,
-            goal = BootcampGoal.RACE_5K_10K,
+            goal = BootcampGoal.RACE_5K,
             runsPerWeek = 2,
             targetMinutes = 30
         )
@@ -86,7 +86,7 @@ class SessionSelectorTest {
     fun `build phase with four runs injects strides for tier two and above`() {
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.BUILD,
-            goal = BootcampGoal.RACE_5K_10K,
+            goal = BootcampGoal.RACE_5K,
             runsPerWeek = 4,
             targetMinutes = 35
         )

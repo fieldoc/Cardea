@@ -7,11 +7,19 @@ import org.junit.Test
 
 class SessionReschedulerTest {
 
-    private fun enrollment(preferredDays: String = "1:AVAILABLE,3:AVAILABLE,6:AVAILABLE") =
-        BootcampEnrollmentEntity(
-            id = 1L, goalType = "CARDIO_HEALTH", targetMinutesPerRun = 30,
-            runsPerWeek = 3, preferredDays = preferredDays, startDate = 0L
+    private fun dayPrefs(vararg specs: Pair<Int, DaySelectionLevel>): List<DayPreference> =
+        specs.map { DayPreference(it.first, it.second) }
+
+    private fun enrollment(
+        preferredDays: List<DayPreference> = dayPrefs(
+            1 to DaySelectionLevel.AVAILABLE,
+            3 to DaySelectionLevel.AVAILABLE,
+            6 to DaySelectionLevel.AVAILABLE
         )
+    ) = BootcampEnrollmentEntity(
+        id = 1L, goalType = "CARDIO_HEALTH", targetMinutesPerRun = 30,
+        runsPerWeek = 3, preferredDays = preferredDays, startDate = 0L
+    )
 
     private fun session(day: Int, type: String = "EASY", status: String = "SCHEDULED") =
         BootcampSessionEntity(
@@ -35,7 +43,11 @@ class SessionReschedulerTest {
     @Test fun skips_blackout_days() {
         val req = RescheduleRequest(
             session = session(day = 1),
-            enrollment = enrollment("1:AVAILABLE,3:BLACKOUT,6:AVAILABLE"),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.AVAILABLE
+            )),
             todayDayOfWeek = 1,
             occupiedDaysThisWeek = setOf(1),
             allSessionsThisWeek = listOf(session(1), session(3), session(6))
@@ -50,7 +62,7 @@ class SessionReschedulerTest {
         val longSession  = session(day = 6, type = "LONG_RUN")
         val req = RescheduleRequest(
             session = tempoSession,
-            enrollment = enrollment("1:AVAILABLE,3:AVAILABLE,6:AVAILABLE"),
+            enrollment = enrollment(),
             todayDayOfWeek = 5,
             occupiedDaysThisWeek = setOf(1, 3, 6),
             allSessionsThisWeek = listOf(easySession, tempoSession, longSession)
@@ -67,7 +79,11 @@ class SessionReschedulerTest {
     @Test fun respects_48h_recovery_gap_for_hard_sessions() {
         val req = RescheduleRequest(
             session = session(day = 1, type = "TEMPO"),
-            enrollment = enrollment("1:AVAILABLE,2:AVAILABLE,3:AVAILABLE"),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                2 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE
+            )),
             todayDayOfWeek = 1,
             occupiedDaysThisWeek = setOf(1, 2),
             allSessionsThisWeek = listOf(
@@ -83,7 +99,11 @@ class SessionReschedulerTest {
     @Test fun skips_none_level_days() {
         val req = RescheduleRequest(
             session = session(day = 1),
-            enrollment = enrollment("1:AVAILABLE,4:NONE,6:AVAILABLE"),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                4 to DaySelectionLevel.NONE,
+                6 to DaySelectionLevel.AVAILABLE
+            )),
             todayDayOfWeek = 1,
             occupiedDaysThisWeek = setOf(1),
             allSessionsThisWeek = listOf(session(1), session(6))

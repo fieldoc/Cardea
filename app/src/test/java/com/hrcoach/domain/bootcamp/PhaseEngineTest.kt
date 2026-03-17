@@ -21,7 +21,7 @@ class PhaseEngineTest {
 
     @Test
     fun `totalWeeks sums midpoints of all phase ranges`() {
-        val engine = PhaseEngine(goal = BootcampGoal.RACE_5K_10K, phaseIndex = 0, weekInPhase = 0)
+        val engine = PhaseEngine(goal = BootcampGoal.RACE_5K, phaseIndex = 0, weekInPhase = 0)
         // BASE(3..6)=4 + BUILD(4..6)=5 + PEAK(2..3)=2 + TAPER(1..2)=1 = 12
         assertEquals(12, engine.totalWeeks)
     }
