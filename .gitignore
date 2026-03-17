@@ -13,3 +13,16 @@
 .gradle-local/
 .gradle-user-home/
 .kotlin/
+
+# AI tool configs and temp files
+.firecrawl/
+.gemini/
+.gradle-codex/
+.serena/logs/
+.serena/memories/
+.serena/project.yml
+.superpowers/
+GEMINI.md
+tmp_*
+bootcamp_info_flow.md
+review/
