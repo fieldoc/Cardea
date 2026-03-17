@@ -43,7 +43,7 @@ class BootcampSettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false) }
                 return@launch
             }
-            val days = BootcampEnrollmentEntity.parseDayPreferences(enrollment.preferredDays)
+            val days = enrollment.preferredDays
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -239,7 +239,7 @@ class BootcampSettingsViewModel @Inject constructor(
                         startDate = state.editStartDateMs,
                         currentPhaseIndex = clampedPhaseIndex,
                         currentWeekInPhase = clampedWeekInPhase,
-                        preferredDays = BootcampEnrollmentEntity.serializeDayPreferences(normalizedDays)
+                        preferredDays = normalizedDays
                     )
                 )
                 bootcampRepository.updatePreferredDays(

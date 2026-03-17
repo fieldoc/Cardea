@@ -22,7 +22,7 @@ class BootcampRepository @Inject constructor(
         goal: BootcampGoal,
         targetMinutesPerRun: Int,
         runsPerWeek: Int,
-        preferredDays: List<Int>,
+        preferredDays: List<com.hrcoach.domain.bootcamp.DayPreference>,
         startDate: Long
     ): Long {
         val entity = buildEnrollmentEntity(goal, targetMinutesPerRun, runsPerWeek, preferredDays, startDate)
@@ -137,11 +137,7 @@ class BootcampRepository @Inject constructor(
         currentWeekNumber: Int
     ) {
         val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
-        bootcampDao.updateEnrollment(
-            enrollment.copy(
-                preferredDays = newDays
-            )
-        )
+        bootcampDao.updateEnrollment(enrollment.copy(preferredDays = newDays))
     }
 
     suspend fun deleteScheduledSessionsFromWeek(enrollmentId: Long, weekNumber: Int) {
@@ -154,13 +150,13 @@ class BootcampRepository @Inject constructor(
             goal: BootcampGoal,
             targetMinutesPerRun: Int,
             runsPerWeek: Int,
-            preferredDays: List<Int>,
+            preferredDays: List<com.hrcoach.domain.bootcamp.DayPreference>,
             startDate: Long
         ) = BootcampEnrollmentEntity(
             goalType = goal.name,
             targetMinutesPerRun = targetMinutesPerRun,
             runsPerWeek = runsPerWeek,
-            preferredDays = preferredDays.map { com.hrcoach.domain.bootcamp.DayPreference(it, com.hrcoach.domain.bootcamp.DaySelectionLevel.AVAILABLE) },
+            preferredDays = preferredDays,
             startDate = startDate
         )
 

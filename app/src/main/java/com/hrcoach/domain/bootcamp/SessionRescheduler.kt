@@ -6,7 +6,7 @@ import com.hrcoach.data.db.BootcampSessionEntity
 data class RescheduleRequest(
     val session: BootcampSessionEntity,
     val enrollment: BootcampEnrollmentEntity,
-    /** ISO day-of-week: 1=Mon � 7=Sun */
+    /** ISO day-of-week: 1=Mon ... 7=Sun */
     val todayDayOfWeek: Int,
     val occupiedDaysThisWeek: Set<Int>,
     val allSessionsThisWeek: List<BootcampSessionEntity>
@@ -20,11 +20,10 @@ sealed class RescheduleResult {
 
 object SessionRescheduler {
 
-    private val hardTypes = setOf("TEMPO", "INTERVALS")
+    private val hardTypes = setOf("TEMPO", "INTERVAL", "INTERVALS")
 
     fun reschedule(req: RescheduleRequest): RescheduleResult {
-        val prefs = BootcampEnrollmentEntity.parseDayPreferences(req.enrollment.preferredDays)
-        val validDays = findValidDays(req, prefs)
+        val validDays = availableDays(req)
         if (validDays.isNotEmpty()) return RescheduleResult.Moved(validDays.first())
         val toDrop = lowestPrioritySession(req.allSessionsThisWeek, req.session)
         return RescheduleResult.Dropped(toDrop.id)
@@ -32,7 +31,8 @@ object SessionRescheduler {
 
     fun defer(): RescheduleResult = RescheduleResult.Deferred
 
-    private fun findValidDays(req: RescheduleRequest, prefs: List<DayPreference>): List<Int> {
+    fun availableDays(req: RescheduleRequest): List<Int> {
+        val prefs = req.enrollment.preferredDays
         val hardDaysOtherThanThis = req.allSessionsThisWeek
             .filter { it.sessionType in hardTypes && it.dayOfWeek != req.session.dayOfWeek }
             .map { it.dayOfWeek }
