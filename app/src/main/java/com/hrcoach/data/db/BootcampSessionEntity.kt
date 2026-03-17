@@ -14,9 +14,15 @@ import androidx.room.PrimaryKey
             parentColumns = ["id"],
             childColumns = ["enrollmentId"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = WorkoutEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["completedWorkoutId"],
+            onDelete = ForeignKey.SET_NULL
         )
     ],
-    indices = [Index("enrollmentId")]
+    indices = [Index("enrollmentId"), Index("completedWorkoutId")]
 )
 data class BootcampSessionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,

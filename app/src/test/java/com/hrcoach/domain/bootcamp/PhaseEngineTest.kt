@@ -116,4 +116,35 @@ class PhaseEngineTest {
         assertEquals(2, lookahead.size)
         assertTrue(lookahead.all { it.sessions.isNotEmpty() })
     }
+
+    @Test
+    fun `planCurrentWeek passes tierIndex to SessionSelector`() {
+        // RACE_5K (tier=2) with tierIndex=0 → effectiveTier=1 → baseAerobicWeek (no tempo/interval)
+        val engine = PhaseEngine(
+            goal = BootcampGoal.RACE_5K,
+            phaseIndex = 1, // BUILD phase
+            weekInPhase = 0,
+            runsPerWeek = 4,
+            targetMinutes = 30
+        )
+        val sessions = engine.planCurrentWeek(tierIndex = 0)
+        assertTrue(sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
+    }
+
+    @Test
+    fun `lookaheadWeeks forwards tierIndex`() {
+        // RACE_5K with tierIndex=0 → all weeks should be aerobic-only
+        val engine = PhaseEngine(
+            goal = BootcampGoal.RACE_5K,
+            phaseIndex = 1, // BUILD phase
+            weekInPhase = 0,
+            runsPerWeek = 4,
+            targetMinutes = 30
+        )
+        val lookahead = engine.lookaheadWeeks(2, tierIndex = 0)
+        assertEquals(2, lookahead.size)
+        for (week in lookahead) {
+            assertTrue(week.sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
+        }
+    }
 }

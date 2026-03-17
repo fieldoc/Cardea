@@ -55,7 +55,8 @@ data class PhaseEngine(
             phase = currentPhase,
             goal = goal,
             runsPerWeek = runsPerWeek,
-            targetMinutes = effectiveMinutes
+            targetMinutes = effectiveMinutes,
+            tierIndex = tierIndex
         )
     }
 
@@ -67,7 +68,7 @@ data class PhaseEngine(
         return copy(phaseIndex = nextIndex, weekInPhase = 0)
     }
 
-    fun lookaheadWeeks(count: Int): List<WeekLookahead> {
+    fun lookaheadWeeks(count: Int, tierIndex: Int = 1): List<WeekLookahead> {
         if (count <= 0) return emptyList()
         val result = mutableListOf<WeekLookahead>()
         var cursor = this
@@ -81,7 +82,7 @@ data class PhaseEngine(
                 WeekLookahead(
                     weekNumber = cursor.absoluteWeek,
                     isRecovery = cursor.isRecoveryWeek,
-                    sessions = cursor.planCurrentWeek()
+                    sessions = cursor.planCurrentWeek(tierIndex = tierIndex)
                 )
             )
         }

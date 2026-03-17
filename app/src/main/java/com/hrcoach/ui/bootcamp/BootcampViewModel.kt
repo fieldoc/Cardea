@@ -23,6 +23,7 @@ import com.hrcoach.domain.bootcamp.RescheduleResult
 import com.hrcoach.domain.bootcamp.SessionRescheduler
 import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.bootcamp.DurationScaler
+import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.TierCtlRanges
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.domain.engine.FitnessSignalEvaluator
@@ -236,7 +237,7 @@ class BootcampViewModel @Inject constructor(
             )
         }
 
-        val upcomingWeeks = engine.lookaheadWeeks(2).map { lookahead ->
+        val upcomingWeeks = engine.lookaheadWeeks(2, tierIndex = enrollment.tierIndex).map { lookahead ->
             UpcomingWeekItem(
                 weekNumber = lookahead.weekNumber,
                 isRecoveryWeek = lookahead.isRecovery,
@@ -333,16 +334,21 @@ class BootcampViewModel @Inject constructor(
 
     fun setOnboardingGoal(goal: BootcampGoal) {
         val state = _uiState.value
-        val warning = if (state.onboardingMinutes < goal.warnBelowMinutes) {
-            "${goal.name.replace('_', ' ')} training typically needs at least ${goal.suggestedMinMinutes} min per session."
-        } else null
+        val finishingTime = FinishingTimeTierMapper.bracketsFor(goal)?.defaultMinutes
+        val derivedTier = if (finishingTime != null) FinishingTimeTierMapper.tierFromFinishingTime(goal, finishingTime) else 0
+        val recommendedMin = FinishingTimeTierMapper.recommendedRunMinutes(goal, derivedTier)
+        val minutes = if (FinishingTimeTierMapper.isRaceGoal(goal)) recommendedMin else state.onboardingMinutes
+        val validation = FinishingTimeTierMapper.validateTimeCommitment(goal, derivedTier, minutes)
         val (longRun, weekly, longWarning) = computeOnboardingDurationState(
-            state.onboardingMinutes, state.onboardingRunsPerWeek, goal
+            minutes, state.onboardingRunsPerWeek, goal
         )
         _uiState.update {
             it.copy(
                 onboardingGoal = goal,
-                onboardingTimeWarning = warning,
+                onboardingTargetFinishingTime = finishingTime,
+                onboardingMinutes = minutes,
+                onboardingTimeWarning = validation.warningMessage,
+                onboardingTimeCanProceed = validation.canProceed,
                 onboardingLongRunMinutes = longRun,
                 onboardingWeeklyTotal = weekly,
                 onboardingLongRunWarning = longWarning
@@ -352,9 +358,15 @@ class BootcampViewModel @Inject constructor(
 
     fun setOnboardingMinutes(minutes: Int) {
         val goal = _uiState.value.onboardingGoal
-        val warning = if (goal != null && minutes < goal.warnBelowMinutes) {
-            "${goal.name.replace('_', ' ')} training typically needs at least ${goal.suggestedMinMinutes} min per session."
-        } else null
+        val finishingTime = _uiState.value.onboardingTargetFinishingTime
+        val tierIndex = if (goal != null && finishingTime != null)
+            FinishingTimeTierMapper.tierFromFinishingTime(goal, finishingTime) else 0
+        val validation = if (goal != null)
+            FinishingTimeTierMapper.validateTimeCommitment(goal, tierIndex, minutes) else null
+        val warning = validation?.warningMessage
+            ?: if (goal != null && minutes < goal.warnBelowMinutes) {
+                "${goal.name.replace('_', ' ')} training typically needs at least ${goal.suggestedMinMinutes} min per session."
+            } else null
         val (longRun, weekly, longWarning) = computeOnboardingDurationState(
             minutes, _uiState.value.onboardingRunsPerWeek, goal
         )
@@ -362,6 +374,28 @@ class BootcampViewModel @Inject constructor(
             it.copy(
                 onboardingMinutes = minutes,
                 onboardingTimeWarning = warning,
+                onboardingTimeCanProceed = validation?.canProceed ?: true,
+                onboardingLongRunMinutes = longRun,
+                onboardingWeeklyTotal = weekly,
+                onboardingLongRunWarning = longWarning
+            )
+        }
+    }
+
+    fun setOnboardingFinishingTime(minutes: Int) {
+        val goal = _uiState.value.onboardingGoal ?: return
+        val tierIndex = FinishingTimeTierMapper.tierFromFinishingTime(goal, minutes)
+        val recommendedMin = FinishingTimeTierMapper.recommendedRunMinutes(goal, tierIndex)
+        val validation = FinishingTimeTierMapper.validateTimeCommitment(goal, tierIndex, recommendedMin)
+        val (longRun, weekly, longWarning) = computeOnboardingDurationState(
+            recommendedMin, _uiState.value.onboardingRunsPerWeek, goal
+        )
+        _uiState.update {
+            it.copy(
+                onboardingTargetFinishingTime = minutes,
+                onboardingMinutes = recommendedMin,
+                onboardingTimeWarning = validation.warningMessage,
+                onboardingTimeCanProceed = validation.canProceed,
                 onboardingLongRunMinutes = longRun,
                 onboardingWeeklyTotal = weekly,
                 onboardingLongRunWarning = longWarning
@@ -404,7 +438,8 @@ class BootcampViewModel @Inject constructor(
                 targetMinutesPerRun = state.onboardingMinutes,
                 runsPerWeek = state.onboardingRunsPerWeek,
                 preferredDays = preferredDays,
-                startDate = startDate
+                startDate = startDate,
+                targetFinishingTimeMinutes = state.onboardingTargetFinishingTime
             )
             // Session seeding is handled by refreshFromEnrollment() which fires
             // automatically when the Flow re-emits after createEnrollment writes.
@@ -509,9 +544,26 @@ class BootcampViewModel @Inject constructor(
             val updatedTierIndex = (enrollment.tierIndex + delta)
                 .coerceIn(TierCtlRanges.minTierIndex, TierCtlRanges.maxTierIndex)
 
+            // Adjust finishing time to stay consistent with the new tier
+            val goal = BootcampGoal.valueOf(enrollment.goalType)
+            val updatedFinishingTime = if (enrollment.targetFinishingTimeMinutes != null &&
+                FinishingTimeTierMapper.isRaceGoal(goal)
+            ) {
+                val brackets = FinishingTimeTierMapper.bracketsFor(goal)
+                if (brackets != null) {
+                    val midpoint = when (updatedTierIndex) {
+                        0 -> (brackets.easyAboveMinutes + brackets.uiMax) / 2
+                        2 -> (brackets.uiMin + brackets.hardBelowMinutes) / 2
+                        else -> (brackets.easyAboveMinutes + brackets.hardBelowMinutes) / 2
+                    }
+                    midpoint
+                } else enrollment.targetFinishingTimeMinutes
+            } else enrollment.targetFinishingTimeMinutes
+
             bootcampRepository.updateEnrollment(
                 enrollment.copy(
                     tierIndex = updatedTierIndex,
+                    targetFinishingTimeMinutes = updatedFinishingTime,
                     tierPromptDismissCount = 0,
                     tierPromptSnoozedUntilMs = 0L
                 )
@@ -773,7 +825,8 @@ class BootcampViewModel @Inject constructor(
                     direction = TierPromptDirection.UP,
                     aboveOrBelowWeeks = aboveWeeks,
                     ctlTrend = ctlTrend,
-                    tsb = tsb
+                    tsb = tsb,
+                    hasFinishingTime = enrollment.targetFinishingTimeMinutes != null
                 )
             )
         }
@@ -797,7 +850,8 @@ class BootcampViewModel @Inject constructor(
                     direction = TierPromptDirection.DOWN,
                     aboveOrBelowWeeks = belowWeeks,
                     ctlTrend = ctlTrend,
-                    tsb = tsb
+                    tsb = tsb,
+                    hasFinishingTime = enrollment.targetFinishingTimeMinutes != null
                 )
             )
         }

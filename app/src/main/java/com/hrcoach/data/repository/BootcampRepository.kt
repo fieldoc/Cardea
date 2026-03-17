@@ -23,9 +23,10 @@ class BootcampRepository @Inject constructor(
         targetMinutesPerRun: Int,
         runsPerWeek: Int,
         preferredDays: List<com.hrcoach.domain.bootcamp.DayPreference>,
-        startDate: Long
+        startDate: Long,
+        targetFinishingTimeMinutes: Int? = null
     ): Long {
-        val entity = buildEnrollmentEntity(goal, targetMinutesPerRun, runsPerWeek, preferredDays, startDate)
+        val entity = buildEnrollmentEntity(goal, targetMinutesPerRun, runsPerWeek, preferredDays, startDate, targetFinishingTimeMinutes)
         return bootcampDao.insertEnrollment(entity)
     }
 
@@ -151,14 +152,21 @@ class BootcampRepository @Inject constructor(
             targetMinutesPerRun: Int,
             runsPerWeek: Int,
             preferredDays: List<com.hrcoach.domain.bootcamp.DayPreference>,
-            startDate: Long
-        ) = BootcampEnrollmentEntity(
-            goalType = goal.name,
-            targetMinutesPerRun = targetMinutesPerRun,
-            runsPerWeek = runsPerWeek,
-            preferredDays = preferredDays,
-            startDate = startDate
-        )
+            startDate: Long,
+            targetFinishingTimeMinutes: Int? = null
+        ): BootcampEnrollmentEntity {
+            val tierIndex = if (targetFinishingTimeMinutes != null)
+                com.hrcoach.domain.bootcamp.FinishingTimeTierMapper.tierFromFinishingTime(goal, targetFinishingTimeMinutes) else 0
+            return BootcampEnrollmentEntity(
+                goalType = goal.name,
+                targetMinutesPerRun = targetMinutesPerRun,
+                runsPerWeek = runsPerWeek,
+                preferredDays = preferredDays,
+                startDate = startDate,
+                tierIndex = tierIndex,
+                targetFinishingTimeMinutes = targetFinishingTimeMinutes
+            )
+        }
 
         fun buildSessionEntity(
             enrollmentId: Long,

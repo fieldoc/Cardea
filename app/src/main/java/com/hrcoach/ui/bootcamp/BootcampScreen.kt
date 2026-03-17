@@ -64,6 +64,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.PlannedSession
+import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.model.BootcampGoal
@@ -126,6 +127,7 @@ fun BootcampScreen(
                     onGoalSelected = { viewModel.setOnboardingGoal(it) },
                     onMinutesChanged = { viewModel.setOnboardingMinutes(it) },
                     onRunsPerWeekChanged = { viewModel.setOnboardingRunsPerWeek(it) },
+                    onFinishingTimeChanged = { viewModel.setOnboardingFinishingTime(it) },
                     onComplete = { viewModel.completeOnboarding() },
                     onBack = onBack
                 )
@@ -540,9 +542,14 @@ private fun OnboardingWizard(
     onGoalSelected: (BootcampGoal) -> Unit,
     onMinutesChanged: (Int) -> Unit,
     onRunsPerWeekChanged: (Int) -> Unit,
+    onFinishingTimeChanged: (Int) -> Unit,
     onComplete: () -> Unit,
     onBack: () -> Unit
 ) {
+    val isRaceGoal = uiState.onboardingGoal != null &&
+        FinishingTimeTierMapper.isRaceGoal(uiState.onboardingGoal)
+    val totalSteps = if (isRaceGoal) 4 else 3
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -555,7 +562,7 @@ private fun OnboardingWizard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            repeat(3) { index ->
+            repeat(totalSteps) { index ->
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -569,6 +576,10 @@ private fun OnboardingWizard(
             }
         }
 
+        // Steps: for race goals, insert finishing-time step at position 1
+        val timeStep = if (isRaceGoal) 2 else 1
+        val freqStep = if (isRaceGoal) 3 else 2
+
         when (step) {
             0 -> OnboardingStep1Goal(
                 selectedGoal = uiState.onboardingGoal,
@@ -576,21 +587,45 @@ private fun OnboardingWizard(
                 onNext = { if (uiState.onboardingGoal != null) onStepChange(1) },
                 onBack = onBack
             )
-            1 -> OnboardingStep2Time(
-                minutes = uiState.onboardingMinutes,
-                warning = uiState.onboardingTimeWarning,
-                longRunMinutes = uiState.onboardingLongRunMinutes,
-                weeklyTotal = uiState.onboardingWeeklyTotal,
-                longRunWarning = uiState.onboardingLongRunWarning,
-                onMinutesChanged = onMinutesChanged,
-                onNext = { onStepChange(2) },
-                onBack = { onStepChange(0) }
-            )
-            2 -> OnboardingStep3Frequency(
+            1 -> if (isRaceGoal) {
+                OnboardingStepFinishingTime(
+                    goal = uiState.onboardingGoal!!,
+                    finishingTimeMinutes = uiState.onboardingTargetFinishingTime ?: 30,
+                    onFinishingTimeChanged = onFinishingTimeChanged,
+                    onNext = { onStepChange(2) },
+                    onBack = { onStepChange(0) }
+                )
+            } else {
+                OnboardingStep2Time(
+                    minutes = uiState.onboardingMinutes,
+                    warning = uiState.onboardingTimeWarning,
+                    canProceed = uiState.onboardingTimeCanProceed,
+                    longRunMinutes = uiState.onboardingLongRunMinutes,
+                    weeklyTotal = uiState.onboardingWeeklyTotal,
+                    longRunWarning = uiState.onboardingLongRunWarning,
+                    onMinutesChanged = onMinutesChanged,
+                    onNext = { onStepChange(2) },
+                    onBack = { onStepChange(0) }
+                )
+            }
+            timeStep -> if (isRaceGoal && step == 2) {
+                OnboardingStep2Time(
+                    minutes = uiState.onboardingMinutes,
+                    warning = uiState.onboardingTimeWarning,
+                    canProceed = uiState.onboardingTimeCanProceed,
+                    longRunMinutes = uiState.onboardingLongRunMinutes,
+                    weeklyTotal = uiState.onboardingWeeklyTotal,
+                    longRunWarning = uiState.onboardingLongRunWarning,
+                    onMinutesChanged = onMinutesChanged,
+                    onNext = { onStepChange(freqStep) },
+                    onBack = { onStepChange(1) }
+                )
+            }
+            freqStep -> OnboardingStep3Frequency(
                 runsPerWeek = uiState.onboardingRunsPerWeek,
                 onRunsPerWeekChanged = onRunsPerWeekChanged,
                 onComplete = onComplete,
-                onBack = { onStepChange(1) }
+                onBack = { onStepChange(timeStep) }
             )
         }
     }
@@ -682,9 +717,92 @@ private fun OnboardingStep1Goal(
 }
 
 @Composable
+private fun OnboardingStepFinishingTime(
+    goal: BootcampGoal,
+    finishingTimeMinutes: Int,
+    onFinishingTimeChanged: (Int) -> Unit,
+    onNext: () -> Unit,
+    onBack: () -> Unit
+) {
+    val brackets = FinishingTimeTierMapper.bracketsFor(goal) ?: return
+    val tierIndex = FinishingTimeTierMapper.tierFromFinishingTime(goal, finishingTimeMinutes)
+    val tierLabel = when (tierIndex) {
+        0 -> "Easy"
+        1 -> "Moderate"
+        2 -> "Hard"
+        else -> "Moderate"
+    }
+
+    Text(
+        text = "Target finishing time",
+        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+        color = CardeaTheme.colors.textPrimary
+    )
+    Text(
+        text = "What time are you aiming for?",
+        style = MaterialTheme.typography.bodyMedium,
+        color = CardeaTheme.colors.textSecondary
+    )
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = FinishingTimeTierMapper.formatTime(finishingTimeMinutes),
+            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            color = CardeaTheme.colors.textPrimary
+        )
+        Slider(
+            value = finishingTimeMinutes.toFloat(),
+            onValueChange = { onFinishingTimeChanged(it.toInt()) },
+            valueRange = brackets.uiMin.toFloat()..brackets.uiMax.toFloat(),
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(
+                thumbColor = GradientPink,
+                activeTrackColor = GradientPink,
+                inactiveTrackColor = CardeaTheme.colors.glassHighlight
+            )
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                FinishingTimeTierMapper.formatTime(brackets.uiMin),
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textTertiary
+            )
+            Text(
+                FinishingTimeTierMapper.formatTime(brackets.uiMax),
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textTertiary
+            )
+        }
+        HorizontalDivider(color = CardeaTheme.colors.divider, modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Intensity: $tierLabel",
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTheme.colors.textSecondary
+        )
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
+            Text("Back", color = CardeaTheme.colors.textSecondary)
+        }
+        CardeaButton(
+            text = "Next",
+            onClick = onNext,
+            modifier = Modifier
+                .weight(2f)
+                .height(48.dp)
+        )
+    }
+}
+
+@Composable
 private fun OnboardingStep2Time(
     minutes: Int,
     warning: String?,
+    canProceed: Boolean = true,
     longRunMinutes: Int,
     weeklyTotal: Int,
     longRunWarning: String?,
@@ -750,7 +868,7 @@ private fun OnboardingStep2Time(
         Text(
             text = warning,
             style = MaterialTheme.typography.bodySmall,
-            color = GradientRed
+            color = if (canProceed) CardeaTheme.colors.zoneAmber else GradientRed
         )
     }
     if (longRunWarning != null) {
@@ -766,8 +884,8 @@ private fun OnboardingStep2Time(
             Text("Back", color = CardeaTheme.colors.textSecondary)
         }
         CardeaButton(
-            text = "Next",
-            onClick = onNext,
+            text = if (canProceed) "Next" else "Increase time",
+            onClick = { if (canProceed) onNext() },
             modifier = Modifier
                 .weight(2f)
                 .height(48.dp)

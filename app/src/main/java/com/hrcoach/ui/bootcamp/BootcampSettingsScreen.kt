@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.BootcampGoal
@@ -322,10 +323,21 @@ fun BootcampSettingsScreen(
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = CardeaTheme.colors.textSecondary
                     )
-                    TierSelector(
-                        tierIndex = state.editTierIndex,
-                        onTierSelected = viewModel::setTierIndex
-                    )
+                    if (FinishingTimeTierMapper.isRaceGoal(state.editGoal)) {
+                        FinishingTimeInput(
+                            goal = state.editGoal,
+                            finishingTimeMinutes = state.editTargetFinishingTimeMinutes
+                                ?: FinishingTimeTierMapper.bracketsFor(state.editGoal)?.defaultMinutes ?: 30,
+                            derivedTierIndex = state.editTierIndex,
+                            warning = state.editTimeWarning,
+                            onFinishingTimeChanged = viewModel::setTargetFinishingTime
+                        )
+                    } else {
+                        TierSelector(
+                            tierIndex = state.editTierIndex,
+                            onTierSelected = viewModel::setTierIndex
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(10.dp))
@@ -430,7 +442,7 @@ fun BootcampSettingsScreen(
                     )
                 }
 
-                val hasProgramChanges = state.hasGoalChanges || state.hasTierChanges || state.hasRunsPerWeekChanges
+                val hasProgramChanges = state.hasGoalChanges || state.hasTierChanges || state.hasFinishingTimeChanges || state.hasRunsPerWeekChanges
                 val saveEnabled = state.canSave && !state.isSaving
 
                 Box(
@@ -554,6 +566,76 @@ private fun GoalSelector(
 }
 
 // ── TierSelector ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun FinishingTimeInput(
+    goal: BootcampGoal,
+    finishingTimeMinutes: Int,
+    derivedTierIndex: Int,
+    warning: String?,
+    onFinishingTimeChanged: (Int) -> Unit
+) {
+    val brackets = FinishingTimeTierMapper.bracketsFor(goal) ?: return
+    val tierLabel = when (derivedTierIndex) {
+        0 -> "Easy"
+        1 -> "Moderate"
+        2 -> "Hard"
+        else -> "Moderate"
+    }
+
+    Column(modifier = Modifier.padding(top = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Target: ${FinishingTimeTierMapper.formatTime(finishingTimeMinutes)}",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Text(
+                text = tierLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textSecondary
+            )
+        }
+        Slider(
+            value = finishingTimeMinutes.toFloat(),
+            onValueChange = { onFinishingTimeChanged(it.toInt()) },
+            valueRange = brackets.uiMin.toFloat()..brackets.uiMax.toFloat(),
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(
+                thumbColor = GradientPink,
+                activeTrackColor = GradientPink,
+                inactiveTrackColor = CardeaTheme.colors.glassHighlight
+            )
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                FinishingTimeTierMapper.formatTime(brackets.uiMin),
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textTertiary
+            )
+            Text(
+                FinishingTimeTierMapper.formatTime(brackets.uiMax),
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textTertiary
+            )
+        }
+        if (warning != null) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = warning,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.zoneAmber
+            )
+        }
+    }
+}
 
 @Composable
 private fun TierSelector(

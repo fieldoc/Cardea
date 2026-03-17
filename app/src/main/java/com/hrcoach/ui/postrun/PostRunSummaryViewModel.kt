@@ -38,6 +38,7 @@ data class PostRunSummaryUiState(
     val comparisons: List<PostRunComparison> = emptyList(),
     val bootcampProgressLabel: String? = null,
     val bootcampWeekComplete: Boolean = false,
+    val isBootcampRun: Boolean = false,
     val isHrrActive: Boolean = false,
 )
 

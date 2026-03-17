@@ -6,6 +6,7 @@ import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
+import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.model.BootcampGoal
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,6 +52,7 @@ class BootcampSettingsViewModel @Inject constructor(
                     runsPerWeek = enrollment.runsPerWeek,
                     targetMinutesPerRun = enrollment.targetMinutesPerRun,
                     tierIndex = enrollment.tierIndex,
+                    targetFinishingTimeMinutes = enrollment.targetFinishingTimeMinutes,
                     startDateMs = normalizeToLocalDateStart(enrollment.startDate),
                     hrMax = userProfileRepository.getMaxHr(),
                     preferredDays = days,
@@ -58,6 +60,7 @@ class BootcampSettingsViewModel @Inject constructor(
                     editRunsPerWeek = enrollment.runsPerWeek,
                     editTargetMinutesPerRun = enrollment.targetMinutesPerRun,
                     editTierIndex = enrollment.tierIndex,
+                    editTargetFinishingTimeMinutes = enrollment.targetFinishingTimeMinutes,
                     editStartDateMs = normalizeToLocalDateStart(enrollment.startDate),
                     editHrMaxInput = userProfileRepository.getMaxHr()?.toString().orEmpty(),
                     editPreferredDays = days
@@ -97,6 +100,22 @@ class BootcampSettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 editTierIndex = tierIndex.coerceIn(0, 2),
+                saveError = null
+            )
+        }
+    }
+
+    fun setTargetFinishingTime(minutes: Int) {
+        val state = _uiState.value
+        val goal = state.editGoal
+        val tierIndex = FinishingTimeTierMapper.tierFromFinishingTime(goal, minutes)
+        val validation = FinishingTimeTierMapper.validateTimeCommitment(goal, tierIndex, state.editTargetMinutesPerRun)
+        _uiState.update {
+            it.copy(
+                editTargetFinishingTimeMinutes = minutes,
+                editTierIndex = tierIndex,
+                editTimeWarning = validation.warningMessage,
+                editTimeCanProceed = validation.canProceed,
                 saveError = null
             )
         }
@@ -236,6 +255,7 @@ class BootcampSettingsViewModel @Inject constructor(
                         runsPerWeek = state.editRunsPerWeek,
                         targetMinutesPerRun = state.editTargetMinutesPerRun,
                         tierIndex = state.editTierIndex.coerceIn(0, 2),
+                        targetFinishingTimeMinutes = state.editTargetFinishingTimeMinutes,
                         startDate = state.editStartDateMs,
                         currentPhaseIndex = clampedPhaseIndex,
                         currentWeekInPhase = clampedWeekInPhase,
@@ -255,6 +275,7 @@ class BootcampSettingsViewModel @Inject constructor(
                         runsPerWeek = state.editRunsPerWeek,
                         targetMinutesPerRun = state.editTargetMinutesPerRun,
                         tierIndex = state.editTierIndex.coerceIn(0, 2),
+                        targetFinishingTimeMinutes = state.editTargetFinishingTimeMinutes,
                         startDateMs = state.editStartDateMs,
                         hrMax = parsedHrMax ?: state.hrMax,
                         preferredDays = normalizedDays,
@@ -262,6 +283,7 @@ class BootcampSettingsViewModel @Inject constructor(
                         editRunsPerWeek = state.editRunsPerWeek,
                         editTargetMinutesPerRun = state.editTargetMinutesPerRun,
                         editTierIndex = state.editTierIndex.coerceIn(0, 2),
+                        editTargetFinishingTimeMinutes = state.editTargetFinishingTimeMinutes,
                         editStartDateMs = state.editStartDateMs,
                         editHrMaxInput = (parsedHrMax ?: state.hrMax)?.toString().orEmpty(),
                         editPreferredDays = normalizedDays
