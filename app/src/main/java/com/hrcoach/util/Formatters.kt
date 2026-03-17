@@ -34,3 +34,8 @@ fun formatWorkoutDate(timestampMs: Long): String {
     val format = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     return format.format(Date(timestampMs))
 }
+
+fun String.asModeLabel(): String =
+    split("_").joinToString(" ") { word ->
+        word.lowercase().replaceFirstChar { it.uppercase() }
+    }

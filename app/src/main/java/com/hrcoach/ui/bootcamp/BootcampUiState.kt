@@ -91,7 +91,8 @@ data class BootcampUiState(
     val sessionDetailItem: SessionUiItem? = null,
     // Goal detail sheet
     val showGoalDetail: Boolean = false,
-    val goalProgressPercentage: Int = 0
+    val goalProgressPercentage: Int = 0,
+    val maxHr: Int? = null
 )
 
 data class SessionUiItem(

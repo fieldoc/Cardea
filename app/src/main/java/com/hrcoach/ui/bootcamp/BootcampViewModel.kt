@@ -285,7 +285,8 @@ class BootcampViewModel @Inject constructor(
             tierPromptEvidence = tierPromptEvidence,
             missedSession = missedSession,
             swapRestMessage = null,
-            goalProgressPercentage = progressPercentage
+            goalProgressPercentage = progressPercentage,
+            maxHr = userProfileRepository.getMaxHr()
         )
     }
 

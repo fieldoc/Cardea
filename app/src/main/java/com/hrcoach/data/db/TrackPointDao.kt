@@ -11,4 +11,7 @@ interface TrackPointDao {
 
     @Query("SELECT * FROM track_points WHERE workoutId = :workoutId ORDER BY timestamp ASC")
     suspend fun getPointsForWorkout(workoutId: Long): List<TrackPointEntity>
+
+    @Query("SELECT * FROM track_points WHERE workoutId IN (:workoutIds) ORDER BY timestamp ASC")
+    suspend fun getTrackPointsForWorkouts(workoutIds: List<Long>): List<TrackPointEntity>
 }
