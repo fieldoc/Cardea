@@ -69,6 +69,7 @@ import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.asModeLabel
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatPaceMinPerKm
+import com.hrcoach.util.metersToKm
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -101,7 +102,7 @@ private fun groupWorkoutsByWeek(workouts: List<WorkoutEntity>): List<WeekGroup> 
             val week = key % 100
             val isThisWeek = year == nowYear && week == nowWeek
             val label = if (isThisWeek) "This Week" else weekRangeLabel(items)
-            val totalKm = items.sumOf { it.totalDistanceMeters.toDouble() }.toFloat() / 1000f
+            val totalKm = metersToKm(items.sumOf { it.totalDistanceMeters.toDouble() }.toFloat())
             WeekGroup(
                 label = label,
                 runCount = items.size,
@@ -318,7 +319,7 @@ private fun WeekWorkoutCard(
     val dayNumber = SimpleDateFormat("d", Locale.getDefault()).format(cal.time)
     val dayName = SimpleDateFormat("EEE", Locale.getDefault()).format(cal.time).uppercase()
 
-    val distanceKm = workout.totalDistanceMeters / 1000f
+    val distanceKm = metersToKm(workout.totalDistanceMeters)
     val distanceText = "%.2f".format(distanceKm)
     val duration = formatDuration(workout.startTime, workout.endTime)
     val pace = averagePaceLabel(workout, distanceKm)

@@ -18,6 +18,7 @@ import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.audio.EarconPlayer
 import com.hrcoach.util.JsonCodec
+import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
@@ -348,9 +349,13 @@ class SetupViewModel @Inject constructor(
                 connectionError = null
             )
         }.onFailure {
+            Log.e("SetupVM", "BLE scan failed", it)
             _uiState.value = _uiState.value.copy(
                 isScanning = false,
-                connectionError = "Unable to scan. Check Bluetooth and permissions."
+                connectionError = when (it) {
+                    is SecurityException -> "Bluetooth permission required. Check Settings."
+                    else -> "Unable to scan. Check Bluetooth and permissions."
+                }
             )
         }
     }
@@ -368,8 +373,12 @@ class SetupViewModel @Inject constructor(
                 connectionError = null
             )
         }.onFailure {
+            Log.e("SetupVM", "BLE connect failed", it)
             _uiState.value = _uiState.value.copy(
-                connectionError = "Unable to connect to selected device."
+                connectionError = when (it) {
+                    is SecurityException -> "Bluetooth permission required. Check Settings."
+                    else -> "Unable to connect to selected device."
+                }
             )
         }
     }

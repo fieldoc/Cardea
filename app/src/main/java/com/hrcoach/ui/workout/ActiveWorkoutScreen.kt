@@ -72,9 +72,9 @@ import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.formatDistanceKm
+import com.hrcoach.util.formatDurationSeconds
 import com.hrcoach.util.formatPaceMinPerKm
 import kotlinx.coroutines.delay
-import java.util.Locale
 
 @Composable
 fun ActiveWorkoutScreen(
@@ -174,7 +174,7 @@ fun ActiveWorkoutScreen(
                     }
                 }
                 Text(
-                    text = formatElapsedHms(uiState.elapsedSeconds),
+                    text = formatDurationSeconds(uiState.elapsedSeconds),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = CardeaTextSecondary
                 )
@@ -596,12 +596,12 @@ private fun WorkoutProgressStrip(
                         val totalSec = uiState.totalDurationSeconds ?: 0L
                         val remaining = (totalSec - uiState.elapsedSeconds).coerceAtLeast(0L)
                         Text(
-                            text = "${formatElapsedHms(uiState.elapsedSeconds)} elapsed",
+                            text = "${formatDurationSeconds(uiState.elapsedSeconds)} elapsed",
                             style = MaterialTheme.typography.labelSmall,
                             color = CardeaTextTertiary
                         )
                         Text(
-                            text = "${formatElapsedHms(remaining)} remaining",
+                            text = "${formatDurationSeconds(remaining)} remaining",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.SemiBold
                             ),
@@ -727,9 +727,3 @@ private fun zoneStatusLabel(state: WorkoutSnapshot): String = when {
     else -> "No Signal"
 }
 
-private fun formatElapsedHms(totalSeconds: Long): String {
-    val hours = totalSeconds / 3_600L
-    val minutes = (totalSeconds % 3_600L) / 60L
-    val seconds = totalSeconds % 60L
-    return String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds)
-}

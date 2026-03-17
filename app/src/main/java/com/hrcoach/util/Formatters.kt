@@ -35,6 +35,19 @@ fun formatWorkoutDate(timestampMs: Long): String {
     return format.format(Date(timestampMs))
 }
 
+fun formatDurationSeconds(totalSeconds: Long): String {
+    val hours = totalSeconds / 3600L
+    val minutesRemainder = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return if (hours > 0) {
+        String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutesRemainder, seconds)
+    } else {
+        String.format(Locale.getDefault(), "%d:%02d", totalSeconds / 60L, seconds)
+    }
+}
+
+fun metersToKm(meters: Float): Float = meters / 1000f
+
 fun String.asModeLabel(): String =
     split("_").joinToString(" ") { word ->
         word.lowercase().replaceFirstChar { it.uppercase() }

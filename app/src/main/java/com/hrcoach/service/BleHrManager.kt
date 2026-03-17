@@ -15,6 +15,7 @@ import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -104,6 +105,7 @@ class BleHrManager(context: Context) {
         }
 
         override fun onScanFailed(errorCode: Int) {
+            Log.e("BleHrManager", "BLE scan failed with error code: $errorCode")
             synchronized(stateLock) {
                 isScanning = false
             }

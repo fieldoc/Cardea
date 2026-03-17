@@ -135,14 +135,7 @@ class CoachingEventRouter {
     }
 
     private fun segmentIndexByTime(config: WorkoutConfig, elapsedSeconds: Long): Int {
-        if (config.segments.isEmpty()) return -1
-        var cumulative = 0L
-        config.segments.forEachIndexed { index, seg ->
-            val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
-            cumulative += dur
-            if (elapsedSeconds < cumulative) return index
-        }
-        return config.segments.lastIndex
+        return config.segmentAtElapsed(elapsedSeconds)?.first ?: -1
     }
 
     private fun segmentIndexByDistance(config: WorkoutConfig, distanceMeters: Float): Int {

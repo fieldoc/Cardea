@@ -14,6 +14,10 @@ import com.hrcoach.data.repository.ThemePreferencesRepository
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.ui.navigation.HrCoachNavGraph
 import com.hrcoach.ui.theme.HrCoachTheme
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
 import com.hrcoach.util.MapsApiKeyRuntime
 import com.hrcoach.util.PermissionGate
 import dagger.hilt.android.AndroidEntryPoint
@@ -33,7 +37,33 @@ class MainActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ -> }
+    ) { results ->
+        val denied = results.filterValues { !it }.keys
+        if (denied.isNotEmpty()) {
+            val permanentlyDenied = denied.any { perm ->
+                !shouldShowRequestPermissionRationale(perm)
+            }
+            if (permanentlyDenied) {
+                // User selected "Don't ask again" — direct to Settings
+                Toast.makeText(
+                    this,
+                    "Permissions required. Tap to open Settings.",
+                    Toast.LENGTH_LONG
+                ).show()
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                }
+                startActivity(intent)
+            } else {
+                val names = denied.joinToString { PermissionGate.describePermission(it) }
+                Toast.makeText(
+                    this,
+                    "Denied: $names. Needed for full functionality.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

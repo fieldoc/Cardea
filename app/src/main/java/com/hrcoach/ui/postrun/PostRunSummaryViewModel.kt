@@ -15,12 +15,15 @@ import com.hrcoach.service.WorkoutState
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
+import com.hrcoach.util.metersToKm
+import com.hrcoach.util.recordedAtMs
 import com.hrcoach.ui.common.MetricLabels
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import android.util.Log
 import javax.inject.Inject
 import kotlin.math.abs
 
@@ -100,7 +103,7 @@ class PostRunSummaryViewModel @Inject constructor(
                     isLoading = false,
                     errorMessage = null,
                     titleText = formatWorkoutDate(workout.startTime),
-                    distanceText = String.format("%.2f km", workout.totalDistanceMeters / 1000f),
+                    distanceText = String.format("%.2f km", metersToKm(workout.totalDistanceMeters)),
                     durationText = formatDuration(workout.startTime, workout.endTime),
                     avgHrText = avgHr?.let { "${it.toInt()} bpm" } ?: "--",
                     similarRunCount = similar.size,
@@ -145,9 +148,10 @@ class PostRunSummaryViewModel @Inject constructor(
                     }
                 }
             }.onFailure {
+                Log.e("PostRunSummaryVM", "Failed to load post-run summary", it)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    errorMessage = "Unable to load post-run summary."
+                    errorMessage = it.message ?: "Unable to load post-run summary."
                 )
             }
         }
@@ -158,10 +162,9 @@ class PostRunSummaryViewModel @Inject constructor(
         if (stored != null) return stored
 
         val trackPoints = workoutRepository.getTrackPoints(workout.id)
-        val recordedAtMs = if (workout.endTime > workout.startTime) workout.endTime else workout.startTime
         val derived = MetricsCalculator.deriveFullMetrics(
             workoutId = workout.id,
-            recordedAtMs = recordedAtMs,
+            recordedAtMs = workout.recordedAtMs,
             trackPoints = trackPoints
         )
         if (derived != null) {

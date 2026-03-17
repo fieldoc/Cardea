@@ -1,6 +1,8 @@
 package com.hrcoach.ui.navigation
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -329,7 +331,13 @@ fun HrCoachNavGraph(
                             runCatching {
                                 context.startForegroundService(intent)
                             }.onFailure {
-                                Toast.makeText(context, "Unable to start workout.", Toast.LENGTH_LONG).show()
+                                Log.e("NavGraph", "Failed to start workout service", it)
+                                val msg = if (it is ForegroundServiceStartNotAllowedException) {
+                                    "Cannot start workout in background. Open the app and try again."
+                                } else {
+                                    "Unable to start workout."
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                         }
                     },
@@ -461,7 +469,13 @@ fun HrCoachNavGraph(
                             runCatching {
                                 context.startForegroundService(intent)
                             }.onFailure {
-                                Toast.makeText(context, "Unable to start workout.", Toast.LENGTH_LONG).show()
+                                Log.e("NavGraph", "Failed to start workout service", it)
+                                val msg = if (it is ForegroundServiceStartNotAllowedException) {
+                                    "Cannot start workout in background. Open the app and try again."
+                                } else {
+                                    "Unable to start workout."
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                         }
                     },

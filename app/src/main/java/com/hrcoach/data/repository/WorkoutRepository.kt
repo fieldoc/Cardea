@@ -33,4 +33,14 @@ class WorkoutRepository @Inject constructor(
         trackPointDao.getTrackPointsForWorkouts(workoutIds).groupBy { it.workoutId }
 
     suspend fun sumAllDistanceKm(): Double = workoutDao.sumAllDistanceKm()
+
+    suspend fun cleanupOrphanedWorkouts() {
+        val orphans = workoutDao.getOrphanedWorkouts()
+        for (orphan in orphans) {
+            val trackPoints = getTrackPoints(orphan.id)
+            val estimatedEnd = trackPoints.maxOfOrNull { it.timestamp } ?: orphan.startTime
+            val estimatedDistance = trackPoints.maxOfOrNull { it.distanceMeters } ?: 0f
+            updateWorkout(orphan.copy(endTime = estimatedEnd, totalDistanceMeters = estimatedDistance))
+        }
+    }
 }

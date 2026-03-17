@@ -7,6 +7,7 @@ import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
+import com.hrcoach.domain.achievement.StreakCalculator
 import com.hrcoach.service.WorkoutState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -97,7 +98,7 @@ class HomeViewModel @Inject constructor(
 
             val sessionStreak = if (activeEnrollment != null) {
                 val allSessions = bootcampRepository.getSessionsForEnrollmentOnce(activeEnrollment.id)
-                computeSessionStreak(allSessions, activeEnrollment.startDate)
+                StreakCalculator.computeSessionStreak(allSessions, activeEnrollment.startDate)
             } else 0
 
             val blePrefs = context.getSharedPreferences("ble_prefs", Context.MODE_PRIVATE)

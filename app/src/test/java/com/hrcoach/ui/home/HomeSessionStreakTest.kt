@@ -1,6 +1,7 @@
 package com.hrcoach.ui.home
 
 import com.hrcoach.data.db.BootcampSessionEntity
+import com.hrcoach.domain.achievement.StreakCalculator.computeSessionStreak
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate

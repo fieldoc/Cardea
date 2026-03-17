@@ -1,5 +1,6 @@
 package com.hrcoach.ui.bootcamp
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.BootcampEnrollmentEntity
@@ -305,6 +306,7 @@ class BootcampSettingsViewModel @Inject constructor(
                 }
                 onDone()
             } catch (t: Throwable) {
+                Log.e("BootcampSettingsVM", "Failed to save settings", t)
                 _uiState.update { it.copy(isSaving = false, saveError = t.message ?: "Save failed") }
             }
         }
