@@ -25,12 +25,20 @@ enum class BootcampGoal(
         minLongRunMinutes = 20,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD)
     ),
-    RACE_5K_10K(
+    RACE_5K(
         tier = 2,
         suggestedMinMinutes = 25,
         warnBelowMinutes = 20,
         neverPrescribeBelowMinutes = 15,
-        minLongRunMinutes = 35,
+        minLongRunMinutes = 30,
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
+    ),
+    RACE_10K(
+        tier = 2,
+        suggestedMinMinutes = 30,
+        warnBelowMinutes = 20,
+        neverPrescribeBelowMinutes = 15,
+        minLongRunMinutes = 40,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
     ),
     HALF_MARATHON(

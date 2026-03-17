@@ -18,7 +18,8 @@ object TierCtlRanges {
     fun rangeFor(goal: BootcampGoal, tierIndex: Int): IntRange {
         val ranges = when (goal) {
             BootcampGoal.CARDIO_HEALTH -> cardioRanges
-            BootcampGoal.RACE_5K_10K -> raceRanges
+            BootcampGoal.RACE_5K -> raceRanges
+            BootcampGoal.RACE_10K -> raceRanges
             BootcampGoal.HALF_MARATHON -> halfRanges
             BootcampGoal.MARATHON -> marathonRanges
         }

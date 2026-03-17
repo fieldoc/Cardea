@@ -11,11 +11,17 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
                 BootcampEnrollmentEntity::class, BootcampSessionEntity::class,
                 AchievementEntity::class],
-    version = 13,
+    version = 14,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("UPDATE bootcamp_enrollments SET goalType = 'RACE_5K' WHERE goalType = 'RACE_5K_10K'")
+                db.execSQL("UPDATE achievements SET goal = 'RACE_5K' WHERE goal = 'RACE_5K_10K'")
+            }
+        }
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""

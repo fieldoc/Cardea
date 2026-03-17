@@ -107,6 +107,10 @@ object SessionSelector {
                     if (qualitySessions >= 2) {
                         sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
                     }
+                } else if (goal == BootcampGoal.RACE_5K) {
+                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
+                } else if (goal == BootcampGoal.RACE_10K) {
+                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                 } else {
                     sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 }
