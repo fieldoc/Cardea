@@ -3,7 +3,10 @@ package com.hrcoach.domain.bootcamp
 import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
+import com.hrcoach.data.db.AchievementDao
+import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.repository.BootcampRepository
+import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.model.BootcampGoal
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -16,9 +19,21 @@ import org.junit.Test
 
 class BootcampSessionCompleterTest {
 
+    private val noopAchievementEvaluator = AchievementEvaluator(object : AchievementDao {
+        override suspend fun insert(achievement: AchievementEntity) {}
+        override suspend fun hasAchievement(type: String, milestone: String): Boolean = false
+        override fun getAllAchievements(): Flow<List<AchievementEntity>> = emptyFlow()
+        override fun getAchievementsByType(type: String): Flow<List<AchievementEntity>> = emptyFlow()
+        override suspend fun getUnshownAchievements(): List<AchievementEntity> = emptyList()
+        override suspend fun markShown(ids: List<Long>) {}
+    })
+
+    private fun makeCompleter(dao: FakeBootcampDao) =
+        BootcampSessionCompleter(BootcampRepository(dao), noopAchievementEvaluator)
+
     @Test
     fun completeReturnsFalseWhenNoPendingSessionId() = runTest {
-        val completer = BootcampSessionCompleter(BootcampRepository(FakeBootcampDao()))
+        val completer = makeCompleter(FakeBootcampDao())
 
         val result = completer.complete(workoutId = 5L, pendingSessionId = null)
 
@@ -27,7 +42,7 @@ class BootcampSessionCompleterTest {
 
     @Test
     fun completeReturnsFalseWhenEnrollmentMissing() = runTest {
-        val completer = BootcampSessionCompleter(BootcampRepository(FakeBootcampDao()))
+        val completer = makeCompleter(FakeBootcampDao())
 
         val result = completer.complete(workoutId = 5L, pendingSessionId = 10L)
 
@@ -45,7 +60,7 @@ class BootcampSessionCompleterTest {
                 )
             )
         )
-        val completer = BootcampSessionCompleter(BootcampRepository(dao))
+        val completer = makeCompleter(dao)
 
         val result = completer.complete(workoutId = 99L, pendingSessionId = 10L)
 
@@ -64,7 +79,7 @@ class BootcampSessionCompleterTest {
                 1 to mutableListOf(makeSession(id = 10L, dayOfWeek = 2))
             )
         )
-        val completer = BootcampSessionCompleter(BootcampRepository(dao))
+        val completer = makeCompleter(dao)
 
         val result = completer.complete(workoutId = 100L, pendingSessionId = 10L)
 
@@ -211,4 +226,14 @@ private class FakeBootcampDao(
 
     fun getSession(sessionId: Long): BootcampSessionEntity? =
         sessionsByWeek.values.flatten().firstOrNull { it.id == sessionId }
+
+    override suspend fun getCompletedWeekNumbers(enrollmentId: Long): List<Int> =
+        sessionsByWeek.entries
+            .filter { (_, sessions) ->
+                sessions.filter { it.enrollmentId == enrollmentId }.let { enrolled ->
+                    enrolled.isNotEmpty() && enrolled.all { it.status == BootcampSessionEntity.STATUS_COMPLETED }
+                }
+            }
+            .map { it.key }
+            .sortedDescending()
 }

@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.domain.bootcamp.DayPreference
+import com.hrcoach.domain.bootcamp.FitnessLevel
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
@@ -1681,6 +1682,22 @@ private fun TodayHeroSection(
                             text = "Recovery",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = ZoneGreen
+                        )
+                    }
+                }
+                if (uiState.fitnessLevel != FitnessLevel.UNKNOWN) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(CardeaTheme.colors.glassHighlight)
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = uiState.fitnessLevel.name.lowercase()
+                                .replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                            color = CardeaTheme.colors.textSecondary
                         )
                     }
                 }

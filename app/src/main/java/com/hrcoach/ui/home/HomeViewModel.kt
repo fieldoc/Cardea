@@ -13,8 +13,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.DayOfWeek
 import java.time.Instant
@@ -52,11 +54,11 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         workoutRepository.getAllWorkouts(),
         bootcampRepository.getActiveEnrollment(),
-        WorkoutState.snapshot
-    ) { workouts, enrollment, snapshot ->
-        Triple(workouts, enrollment, snapshot)
+        WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged()
+    ) { workouts, enrollment, isRunning ->
+        Triple(workouts, enrollment, isRunning)
     }
-    .flatMapLatest { (workouts, enrollment, snapshot) ->
+    .flatMapLatest { (workouts, enrollment, isRunning) ->
         flow {
             val zone = ZoneId.systemDefault()
             val now = Instant.now().atZone(zone)
@@ -107,7 +109,7 @@ class HomeViewModel @Inject constructor(
                 lastWorkout = workouts.firstOrNull(),
                 workoutsThisWeek = thisWeek,
                 weeklyTarget = activeEnrollment?.runsPerWeek ?: 4,
-                isSessionRunning = snapshot.isRunning,
+                isSessionRunning = isRunning,
                 hasActiveBootcamp = activeEnrollment != null,
                 nextSession = nextSession,
                 currentWeekNumber = activeEnrollment?.let {

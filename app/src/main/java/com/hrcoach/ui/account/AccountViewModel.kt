@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.AutoPauseSettingsRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
@@ -50,6 +51,7 @@ class AccountViewModel @Inject constructor(
     private val userProfileRepo: UserProfileRepository,
     private val autoPauseRepo: AutoPauseSettingsRepository,
     private val achievementDao: AchievementDao,
+    private val adaptiveProfileRepo: AdaptiveProfileRepository,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -210,6 +212,8 @@ class AccountViewModel @Inject constructor(
         }
         _maxHrError.value = null
         userProfileRepo.setMaxHr(value)
+        val profile = adaptiveProfileRepo.getProfile()
+        adaptiveProfileRepo.saveProfile(profile.copy(hrMax = value))
         _maxHr.value = value
         _maxHrSaved.value = true
     }

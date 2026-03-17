@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea — Adaptive Trim System</title>
+<style>
+  :root {
+    --bg: #0B0F17;
+    --bg2: #0F1623;
+    --glass: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.06);
+    --text: #E8EAED;
+    --text-dim: #9AA0A6;
+    --accent1: #FF5A5F;
+    --accent2: #FF2DA6;
+    --accent3: #5B5BFF;
+    --accent4: #00D1FF;
+    --green: #34D399;
+    --yellow: #FBBF24;
+    --red: #F87171;
+    --orange: #FB923C;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: radial-gradient(ellipse at 50% 20%, var(--bg2) 0%, var(--bg) 70%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+  h1 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--accent3), var(--accent4));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 32px;
+  }
+
+  /* Tab navigation */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+  .tab:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .tab.active {
+    background: linear-gradient(135deg, rgba(255,90,95,0.25), rgba(91,91,255,0.25));
+    border-color: rgba(255,90,95,0.4);
+    color: #fff;
+    font-weight: 600;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Glass cards */
+  .card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(12px);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+    color: var(--accent4);
+  }
+  .card p, .card li {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-dim);
+  }
+  .card ul { list-style: none; padding-left: 0; }
+  .card li::before { content: "›  "; color: var(--accent2); font-weight: 700; }
+
+  /* Flowchart boxes */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .flow-arrow {
+    width: 2px;
+    height: 28px;
+    background: linear-gradient(180deg, var(--accent4), var(--accent3));
+    position: relative;
+  }
+  .flow-arrow::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: -4px;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--accent3);
+  }
+  .flow-arrow.side {
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent4), var(--accent3));
+  }
+  .flow-box {
+    border: 1px solid;
+    border-radius: 12px;
+    padding: 14px 20px;
+    text-align: center;
+    max-width: 420px;
+    width: 100%;
+    position: relative;
+  }
+  .flow-box .label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .flow-box .desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .flow-box.input {
+    border-color: rgba(0, 209, 255, 0.4);
+    background: rgba(0, 209, 255, 0.08);
+  }
+  .flow-box.input .label { color: var(--accent4); }
+  .flow-box.process {
+    border-color: rgba(91, 91, 255, 0.4);
+    background: rgba(91, 91, 255, 0.08);
+  }
+  .flow-box.process .label { color: var(--accent3); }
+  .flow-box.storage {
+    border-color: rgba(255, 45, 166, 0.4);
+    background: rgba(255, 45, 166, 0.08);
+    border-radius: 24px;
+  }
+  .flow-box.storage .label { color: var(--accent2); }
+  .flow-box.output {
+    border-color: rgba(52, 211, 153, 0.4);
+    background: rgba(52, 211, 153, 0.08);
+  }
+  .flow-box.output .label { color: var(--green); }
+  .flow-box.decision {
+    border-color: rgba(251, 191, 36, 0.4);
+    background: rgba(251, 191, 36, 0.08);
+    transform: rotate(0deg);
+    border-style: dashed;
+  }
+  .flow-box.decision .label { color: var(--yellow); }
+
+  /* Side-by-side layout */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 800px) {
+    .split { grid-template-columns: 1fr; }
+  }
+
+  /* Code blocks */
+  code {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: var(--accent4);
+  }
+  pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: var(--text-dim);
+    margin: 12px 0;
+  }
+  pre .kw { color: var(--accent3); }
+  pre .fn { color: var(--accent4); }
+  pre .val { color: var(--green); }
+  pre .comment { color: #6B7280; font-style: italic; }
+  pre .num { color: var(--orange); }
+
+  /* Equation blocks */
+  .equation {
+    background: rgba(91, 91, 255, 0.06);
+    border: 1px solid rgba(91, 91, 255, 0.2);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    text-align: center;
+  }
+  .equation .highlight { color: var(--accent4); font-weight: 600; }
+  .equation .accent { color: var(--accent2); font-weight: 600; }
+  .equation .green { color: var(--green); font-weight: 600; }
+  .equation .dim { color: var(--text-dim); font-size: 11px; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* Horizontal flow */
+  .hflow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .hflow .flow-arrow {
+    width: 32px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent4), var(--accent3));
+  }
+  .hflow .flow-arrow::after {
+    bottom: auto;
+    top: -4px;
+    left: auto;
+    right: -5px;
+    border-left: 5px solid transparent;
+    border-right: none;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid var(--accent3);
+  }
+  .hflow .flow-box {
+    max-width: 200px;
+    min-width: 120px;
+    padding: 10px 14px;
+  }
+
+  .file-ref {
+    font-size: 11px;
+    color: var(--text-dim);
+    opacity: 0.7;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Adaptive Trim System</h1>
+<p class="subtitle">How Cardea learns your heart rate response patterns across sessions</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" onclick="switchTab('tick')">Per-Tick Projection</div>
+  <div class="tab" onclick="switchTab('session')">End-of-Session</div>
+  <div class="tab" onclick="switchTab('storage')">Data Storage</div>
+  <div class="tab" onclick="switchTab('consumers')">Where It's Used</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ OVERVIEW ═══════════════════════════════════════════════ -->
+<div id="panel-overview" class="panel active">
+  <div class="card">
+    <h2>🎯 What Problem Does Adaptive Trim Solve?</h2>
+    <p>Heart rate doesn't respond instantly to pace changes — there's a <strong>physiological lag</strong> (typically 15–40 seconds).
+       If you speed up, your HR keeps climbing for a while before it levels off. If you slow down, HR stays elevated before dropping.</p>
+    <p style="margin-top:8px">Without prediction, the app can only tell you "you're above zone" <em>after</em> you've already been there.
+       With adaptive trim, it <strong>projects where your HR is heading</strong> and warns you <em>before</em> you leave the zone.</p>
+  </div>
+
+  <div class="card">
+    <h2>🏗 Architecture at a Glance</h2>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background: var(--accent4);"></div>Live sensor input</div>
+      <div class="legend-item"><div class="legend-dot" style="background: var(--accent3);"></div>Processing/calculation</div>
+      <div class="legend-item"><div class="legend-dot" style="background: var(--accent2);"></div>Persistent storage</div>
+      <div class="legend-item"><div class="legend-dot" style="background: var(--green);"></div>Output to UI/Audio</div>
+    </div>
+    <div class="flow-container">
+      <div class="flow-box input">
+        <div class="label">Live Inputs (every tick, ~1s)</div>
+        <div class="desc">BLE heart rate · GPS distance · elapsed time · target HR from workout config</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box process">
+        <div class="label">AdaptivePaceController.evaluateTick()</div>
+        <div class="desc">Computes HR slope, updates short-term trim, looks up pace bias from bucket history, projects future HR</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box output">
+        <div class="label">TickResult → WorkoutState → UI</div>
+        <div class="desc">Projected HR, projected zone status, guidance text ("HR drifting up — ease off"), confidence flag</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; justify-content:center;">
+        <div class="flow-box output" style="max-width:200px">
+          <div class="label">Workout Screen</div>
+          <div class="desc">Shows predicted HR, guidance text, zone alerts</div>
+        </div>
+        <div class="flow-box output" style="max-width:200px">
+          <div class="label">Audio Alerts</div>
+          <div class="desc">CoachingEventRouter triggers tone alerts based on projected zone</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 24px;"></div>
+    <div class="flow-container">
+      <div class="flow-box decision">
+        <div class="label">Workout Ends</div>
+        <div class="desc">finishSession() runs once</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box process">
+        <div class="label">Long-term Learning</div>
+        <div class="desc">Updates long-term trim, refines response lag, merges pace-HR buckets</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box storage">
+        <div class="label">SharedPreferences (JSON)</div>
+        <div class="desc">AdaptiveProfile persists across sessions via AdaptiveProfileRepository</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ PER-TICK ═══════════════════════════════════════════════ -->
+<div id="panel-tick" class="panel">
+  <div class="card">
+    <h2>⏱ Per-Tick Projection Formula</h2>
+    <p>Every ~1 second, <code>evaluateTick()</code> computes a projected HR. Here's the formula broken down:</p>
+    <div class="equation">
+      <span class="highlight">projectedHr</span> = currentHr<br>
+      + (<span class="accent">hrSlope</span> × horizonSec / 60) <span class="dim">← where HR is trending right now</span><br>
+      + (<span class="accent">shortTermTrim</span> × 0.35) <span class="dim">← recent prediction error correction</span><br>
+      + <span class="green">longTermTrim</span> <span class="dim">← your body's systematic bias learned over sessions</span><br>
+      + <span class="green">paceTrendBias</span> <span class="dim">← what HR this pace historically produces</span>
+    </div>
+    <p style="margin-top: 8px">Each component serves a different time scale — from sub-second HR trend to multi-session body knowledge.</p>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h2 style="color: var(--accent2);">① HR Slope (real-time trend)</h2>
+      <p>Tracks the instantaneous rate of HR change in <strong>bpm per minute</strong>.</p>
+      <div class="equation">
+        <span class="accent">instSlope</span> = (currentHr − lastHr) / deltaMinutes<br><br>
+        <span class="accent">hrSlope</span> = prevSlope × <span class="num">0.75</span> + instSlope × <span class="num">0.25</span>
+      </div>
+      <p>This is an <strong>exponential moving average</strong> (EMA). The 75/25 split smooths out beat-to-beat noise while still responding quickly to real trends.</p>
+      <p class="file-ref">📄 AdaptivePaceController.kt → updateHrSlope()</p>
+    </div>
+
+    <div class="card">
+      <h2 style="color: var(--accent2);">② Short-Term Trim (error correction)</h2>
+      <p>A self-correcting signal: compares last tick's <em>prediction</em> to the <em>actual</em> HR.</p>
+      <div class="equation">
+        <span class="accent">predictionError</span> = actualHr − lastProjectedHr<br><br>
+        <span class="accent">shortTermTrim</span> = prevTrim × <span class="num">0.86</span> + error × <span class="num">0.14</span>
+      </div>
+      <p>Decays toward zero (0.86 decay) so it doesn't accumulate forever. Clamped to <strong>±20 bpm</strong>. Applied to projection at <strong>35% weight</strong>.</p>
+      <p style="margin-top:8px"><strong>Intuition:</strong> If the last few predictions were too low (HR came in higher than expected), short-term trim nudges future predictions up.</p>
+      <p class="file-ref">📄 AdaptivePaceController.kt → evaluateTick()</p>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h2 style="color: var(--green);">③ Long-Term Trim (session learning)</h2>
+      <p>Your body's systematic HR bias — are you consistently running hotter or cooler than target?</p>
+      <div class="equation">
+        <span class="green">sessionError</span> = session avg HR − session avg target<br><br>
+        <span class="green">longTermTrim</span> = prevTrim × <span class="num">0.92</span> + sessionError × <span class="num">0.08</span>
+      </div>
+      <p>Updated <strong>only at workout end</strong> (not per-tick). Persists to disk. After ~12 sessions, this converges on your personal bias. Clamped ±20 bpm.</p>
+      <p class="file-ref">📄 AdaptivePaceController.kt → finishSession()</p>
+    </div>
+
+    <div class="card">
+      <h2 style="color: var(--green);">④ Pace-HR Bias (historical lookup)</h2>
+      <p>At your current pace, does your HR typically run above or below target?</p>
+      <div class="equation">
+        <span class="green">bucketKey</span> = round(paceMinPerKm × 4) <span class="dim">← 15s/km granularity</span><br><br>
+        <span class="green">avgBucketHr</span> = avg of [bucket-1, bucket, bucket+1]<br><br>
+        <span class="green">paceBias</span> = (avgBucketHr − targetHr) × <span class="num">0.2</span>
+      </div>
+      <p>Looks up 3 neighboring buckets (±15s/km) for smoothness. Clamped to <strong>±6 bpm</strong>. Uses the cross-session <code>paceHrBuckets</code> map.</p>
+      <p style="margin-top:8px"><strong>Example:</strong> If at 6:00 min/km your HR averages 155 but target is 145, paceBias = (155-145) × 0.2 = <strong>+2 bpm</strong>, nudging the projection up.</p>
+      <p class="file-ref">📄 AdaptivePaceController.kt → lookupPaceBias()</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔭 Projection Horizon & Confidence</h2>
+    <div class="split" style="margin:0">
+      <div>
+        <h3>How far ahead does it project?</h3>
+        <div class="equation">
+          <span class="highlight">horizon</span> = responseLag × <span class="num">0.4</span><br>
+          <span class="dim">clamped to 10–15 seconds</span>
+        </div>
+        <p>The projection looks ahead by ~40% of your measured response lag. If your body takes 30s to stabilize after a pace change, it projects 12s ahead.</p>
+      </div>
+      <div>
+        <h3>When does the projection activate?</h3>
+        <p>Three confidence tiers based on data accumulated:</p>
+        <ul>
+          <li><strong style="color: var(--red);">LOW</strong> — &lt;2 sessions AND &lt;80 samples → projections hidden, shows "Learning your patterns"</li>
+          <li><strong style="color: var(--yellow);">MEDIUM</strong> — 2–3 sessions OR 80–179 samples → shows projections with hedged language ("may drift up")</li>
+          <li><strong style="color: var(--green);">HIGH</strong> — 4+ sessions OR 180+ samples → full confidence ("drifting up")</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ SESSION ═══════════════════════════════════════════════ -->
+<div id="panel-session" class="panel">
+  <div class="card">
+    <h2>🏁 End-of-Session: finishSession()</h2>
+    <p>When a workout ends, three learning updates happen before the profile is saved:</p>
+  </div>
+
+  <div class="flow-container">
+    <div class="flow-box decision">
+      <div class="label">Workout Ends</div>
+      <div class="desc">WorkoutForegroundService calls <code>adaptiveController.finishSession()</code></div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-box process">
+      <div class="label">1. Update Long-Term Trim</div>
+      <div class="desc">
+        Compute weighted average HR and weighted average target across session.<br>
+        <code>longTermTrim = prev × 0.92 + (avgHR − avgTarget) × 0.08</code>
+      </div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-box process">
+      <div class="label">2. Refine Response Lag</div>
+      <div class="desc">
+        Average the settling times (how long it took HR to return to zone after leaving).<br>
+        <code>responseLag = prev × 0.85 + observed × 0.15</code><br>
+        Clamped to 8–90 seconds.
+      </div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-box process">
+      <div class="label">3. Merge Pace-HR Buckets</div>
+      <div class="desc">
+        Session's pace→HR samples merged into the cross-session baseline map.<br>
+        Weighted by sample count. New buckets are created, existing ones averaged in.
+      </div>
+    </div>
+    <div class="flow-arrow"></div>
+    <div class="flow-box storage">
+      <div class="label">Save Updated AdaptiveProfile</div>
+      <div class="desc">JSON → SharedPreferences via AdaptiveProfileRepository.saveProfile()</div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px" class="split">
+    <div class="card">
+      <h2>⏳ How Response Lag Is Measured</h2>
+      <p><code>trackSettling()</code> runs every tick and observes <strong>zone transitions</strong>:</p>
+      <ul>
+        <li>When HR leaves the zone (ABOVE or BELOW), a timer starts</li>
+        <li>When HR returns IN_ZONE, the timer stops → that's one "settling sample"</li>
+        <li>Settle-down samples (above→in) and settle-up samples (below→in) are tracked separately</li>
+        <li>At session end, they're averaged and blended with the existing lag estimate</li>
+      </ul>
+      <p style="margin-top:8px"><strong>Why it matters:</strong> Response lag controls the projection horizon. A runner with a 40s lag needs to be warned earlier than one with a 15s lag.</p>
+    </div>
+
+    <div class="card">
+      <h2>🪣 Pace-HR Bucket Merging</h2>
+      <p>Buckets are keyed by <code>round(pace × 4)</code> — so bucket 24 = 6:00 min/km, bucket 25 = 6:15, etc.</p>
+      <h3>During session:</h3>
+      <p>Each GPS update accumulates HR samples into the matching bucket:</p>
+      <pre><span class="kw">val</span> bucket = (smoothedPace * <span class="num">4f</span>).<span class="fn">roundToInt</span>()
+running.hrSum += hr
+running.sampleCount += <span class="num">1</span></pre>
+
+      <h3>At session end (merge):</h3>
+      <p>Session averages are <strong>weighted-averaged</strong> with baseline buckets:</p>
+      <pre><span class="kw">val</span> avg = (baseline.avgHr * baseline.count
+         + session.avgHr * session.count)
+         / (baseline.count + session.count)
+<span class="comment">// sample count capped at 10,000</span></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ STORAGE ═══════════════════════════════════════════════ -->
+<div id="panel-storage" class="panel">
+  <div class="card">
+    <h2>💾 Data Storage: AdaptiveProfile</h2>
+    <p>The entire adaptive learning state is one JSON blob in Android <code>SharedPreferences</code>.</p>
+
+    <div class="split" style="margin-top:16px;">
+      <div>
+        <h3>Storage mechanism</h3>
+        <ul>
+          <li><strong>File:</strong> <code>hr_coach_adaptive_profile.xml</code> in app's private SharedPreferences dir</li>
+          <li><strong>Key:</strong> <code>"adaptive_profile_json"</code></li>
+          <li><strong>Format:</strong> Gson-serialized JSON of <code>AdaptiveProfile</code> data class</li>
+          <li><strong>Scope:</strong> Singleton repository (<code>@Singleton</code>, Hilt-injected)</li>
+          <li><strong>Thread safety:</strong> <code>@Synchronized</code> on read/write</li>
+        </ul>
+        <p class="file-ref">📄 AdaptiveProfileRepository.kt</p>
+      </div>
+      <div>
+        <h3>Why SharedPreferences (not Room)?</h3>
+        <ul>
+          <li>It's a single, small document — not relational data</li>
+          <li>Read on startup, written once per workout end — no need for queries or Flow observation</li>
+          <li>Gson handles the nested Map&lt;Int, PaceHrBucket&gt; naturally</li>
+          <li>No migration headaches — the default-valued data class handles missing fields gracefully</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📦 AdaptiveProfile Fields</h2>
+    <p>Defined in <code>domain/model/AdaptiveProfile.kt</code>:</p>
+    <pre><span class="kw">data class</span> <span class="fn">AdaptiveProfile</span>(
+    <span class="kw">val</span> longTermHrTrimBpm: Float = <span class="num">0f</span>,      <span class="comment">// ← systematic HR bias (session-learned)</span>
+    <span class="kw">val</span> responseLagSec: Float = <span class="num">25f</span>,        <span class="comment">// ← how fast your HR responds (default 25s)</span>
+    <span class="kw">val</span> paceHrBuckets: Map&lt;Int, PaceHrBucket&gt;, <span class="comment">// ← pace→HR lookup table</span>
+    <span class="kw">val</span> totalSessions: Int = <span class="num">0</span>,            <span class="comment">// ← confidence gating</span>
+    <span class="kw">val</span> ctl: Float = <span class="num">0f</span>,                    <span class="comment">// ← chronic training load (fitness)</span>
+    <span class="kw">val</span> atl: Float = <span class="num">0f</span>,                    <span class="comment">// ← acute training load (fatigue)</span>
+    <span class="kw">val</span> hrMax: Int? = <span class="kw">null</span>,                 <span class="comment">// ← calibrated max HR</span>
+    <span class="kw">val</span> hrMaxIsCalibrated: Boolean = <span class="kw">false</span>,
+    <span class="kw">val</span> hrRest: Float? = <span class="kw">null</span>,              <span class="comment">// ← resting HR estimate</span>
+    <span class="kw">val</span> lastTuningDirection: TuningDirection?,
+)</pre>
+    <p style="margin-top: 12px">The three fields used by the trim system are highlighted in the first four lines: <code>longTermHrTrimBpm</code>, <code>responseLagSec</code>, <code>paceHrBuckets</code>, and <code>totalSessions</code>.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔄 Read/Write Lifecycle</h2>
+    <div class="hflow">
+      <div class="flow-box storage" style="max-width:160px;">
+        <div class="label">SharedPrefs</div>
+        <div class="desc">JSON on disk</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box process" style="max-width:200px;">
+        <div class="label">getProfile()</div>
+        <div class="desc">Gson deserialize → AdaptiveProfile</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box input" style="max-width:200px;">
+        <div class="label">Workout Start</div>
+        <div class="desc">Loaded as initialProfile into AdaptivePaceController</div>
+      </div>
+    </div>
+    <div style="height:16px"></div>
+    <div class="hflow">
+      <div class="flow-box decision" style="max-width:160px;">
+        <div class="label">Workout End</div>
+        <div class="desc">finishSession()</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box process" style="max-width:200px;">
+        <div class="label">Calibration Pass</div>
+        <div class="desc">hrMax, fitness eval, tuning direction</div>
+      </div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box storage" style="max-width:200px;">
+        <div class="label">saveProfile()</div>
+        <div class="desc">Gson serialize → SharedPrefs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ CONSUMERS ═══════════════════════════════════════════════ -->
+<div id="panel-consumers" class="panel">
+  <div class="card">
+    <h2>📡 Where the Adaptive Data Gets Used</h2>
+    <p>The adaptive system feeds into three distinct output channels:</p>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h2 style="color: var(--accent4);">1. WorkoutState → UI</h2>
+      <p>Every tick, the service writes the TickResult into <code>WorkoutState</code> (a singleton StateFlow):</p>
+      <pre>WorkoutState.<span class="fn">update</span> {
+  it.<span class="fn">copy</span>(
+    predictedHr = adaptiveResult.predictedHr,
+    guidanceText = guidance,
+    adaptiveLagSec = adaptive.currentLagSec(),
+    projectionReady = adaptiveResult.hasProjectionConfidence,
+  )
+}</pre>
+      <p style="margin-top:8px">The <strong>WorkoutScreen</strong> observes this StateFlow and renders:</p>
+      <ul>
+        <li>The <strong>predicted HR</strong> value (when projection is ready)</li>
+        <li>The <strong>guidance text</strong> ("HR drifting up — ease off slightly")</li>
+        <li>The current <strong>response lag</strong> (for debugging/display)</li>
+      </ul>
+      <p class="file-ref">📄 WorkoutForegroundService.kt:378–382</p>
+    </div>
+
+    <div class="card">
+      <h2 style="color: var(--accent4);">2. CoachingEventRouter → Audio Alerts</h2>
+      <p>The <code>CoachingEventRouter</code> receives the <code>TickResult</code> and decides whether to fire audio coaching events:</p>
+      <ul>
+        <li>Uses <strong>projected zone status</strong> (not just actual zone) to trigger preemptive alerts</li>
+        <li>Passes <strong>guidance text</strong> through to spoken/toned alerts</li>
+        <li>Alert timing influenced by the adaptive lag estimate</li>
+      </ul>
+      <p style="margin-top:8px">This is the key value: you hear "ease off" <em>before</em> your HR actually goes above zone, because the projection saw it coming.</p>
+      <p class="file-ref">📄 CoachingEventRouter.kt</p>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="card">
+      <h2 style="color: var(--accent4);">3. Bootcamp ViewModels</h2>
+      <p><code>BootcampViewModel</code> and <code>BootcampSettingsViewModel</code> read the profile for:</p>
+      <ul>
+        <li><strong>hrMax</strong> — used to compute HR zones for bootcamp sessions</li>
+        <li><strong>ctl/atl</strong> — fitness and fatigue signals for training load management</li>
+        <li><strong>totalSessions</strong> — confidence indicator for the adaptive system</li>
+      </ul>
+      <p class="file-ref">📄 BootcampViewModel.kt, BootcampSettingsViewModel.kt</p>
+    </div>
+
+    <div class="card">
+      <h2 style="color: var(--accent4);">4. FitnessSignalEvaluator</h2>
+      <p>At workout end, the service runs a fitness evaluation pass using the updated profile:</p>
+      <ul>
+        <li>Reads <code>longTermHrTrimBpm</code>, <code>responseLagSec</code>, <code>ctl</code>, <code>atl</code></li>
+        <li>Produces a <code>TuningDirection</code> (harder/easier/maintain) stored back into profile</li>
+        <li>Used by bootcamp system to auto-adjust future session difficulty</li>
+      </ul>
+      <p class="file-ref">📄 FitnessSignalEvaluator.kt</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🔗 Complete Data Flow Diagram</h2>
+    <div style="overflow-x:auto">
+      <pre style="font-size:11px; line-height:1.7; color: var(--text); white-space: pre;">
+  ┌─────────────────┐    ┌──────────────────┐
+  │  BLE HR Monitor  │    │   GPS Tracker     │
+  └────────┬────────┘    └────────┬─────────┘
+           │                      │
+           ▼                      ▼
+  ┌───────────────────────────────────────────┐
+  │     WorkoutForegroundService (tick loop)   │
+  │                                           │
+  │  ┌─────────────────────────────────────┐  │
+  │  │   <span style="color:var(--accent4)">AdaptivePaceController</span>             │  │
+  │  │                                     │  │
+  │  │  updateHrSlope() → <span style="color:var(--accent2)">hrSlope</span>         │  │
+  │  │  updatePace()    → <span style="color:var(--accent2)">smoothedPace</span>     │  │
+  │  │                    → <span style="color:var(--accent2)">sessionBuckets</span>  │  │
+  │  │  evaluateTick()  → <span style="color:var(--green)">TickResult</span>       │  │
+  │  │    ├─ <span style="color:var(--accent2)">shortTermTrim</span> (per-tick EMA)  │  │
+  │  │    ├─ <span style="color:var(--green)">longTermTrim</span> (from profile)   │  │
+  │  │    ├─ <span style="color:var(--green)">paceTrendBias</span> (bucket lookup) │  │
+  │  │    └─ → <span style="color:var(--accent4)">projectedHr</span>                │  │
+  │  └─────────────────────────────────────┘  │
+  │                    │                      │
+  │         ┌──────────┼──────────┐           │
+  │         ▼          ▼          ▼           │
+  │  ┌───────────┐ ┌────────┐ ┌──────────┐   │
+  │  │<span style="color:var(--green)">WorkoutState</span>│ │<span style="color:var(--green)">Coaching</span>│ │<span style="color:var(--green)">Notif-   </span>│   │
+  │  │(StateFlow) │ │<span style="color:var(--green)">Event   </span>│ │<span style="color:var(--green)">ication  </span>│   │
+  │  │→ UI Screen │ │<span style="color:var(--green)">Router  </span>│ │<span style="color:var(--green)">Bar      </span>│   │
+  │  └───────────┘ │<span style="color:var(--green)">→ Audio </span>│ └──────────┘   │
+  │                └────────┘                 │
+  │                                           │
+  │  ════════════ WORKOUT ENDS ═════════════  │
+  │                                           │
+  │  finishSession() →                        │
+  │    1. Update <span style="color:var(--green)">longTermTrim</span>                  │
+  │    2. Refine <span style="color:var(--green)">responseLag</span>                   │
+  │    3. Merge <span style="color:var(--green)">paceHrBuckets</span>                  │
+  │                    │                      │
+  │    Calibration pass (hrMax, fitness)      │
+  │                    │                      │
+  └────────────────────┼──────────────────────┘
+                       ▼
+           ┌───────────────────────┐
+           │  <span style="color:var(--accent2)">AdaptiveProfileRepo</span>    │
+           │  SharedPreferences     │
+           │  (JSON on disk)        │
+           └───────────┬───────────┘
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+  ┌──────────────┐ ┌────────┐ ┌─────────┐
+  │ Next workout  │ │Bootcamp│ │ Fitness │
+  │ (initializes  │ │  VMs   │ │ Signal  │
+  │  controller)  │ │(hrMax, │ │Evaluator│
+  └──────────────┘ │ctl/atl)│ └─────────┘
+                   └────────┘
+      </pre>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`#panel-${id}`).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

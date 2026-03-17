@@ -11,6 +11,7 @@ import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.domain.bootcamp.DayPreference
+import com.hrcoach.service.BootcampNotificationManager
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.firstPreferredDayAfterMs
 import com.hrcoach.domain.bootcamp.FitnessEvaluator
@@ -54,7 +55,8 @@ class BootcampViewModel @Inject constructor(
     private val userProfileRepository: UserProfileRepository,
     private val workoutMetricsRepository: WorkoutMetricsRepository,
     private val bootcampSessionCompleter: BootcampSessionCompleter,
-    private val achievementEvaluator: AchievementEvaluator
+    private val achievementEvaluator: AchievementEvaluator,
+    private val notificationManager: BootcampNotificationManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -539,6 +541,7 @@ class BootcampViewModel @Inject constructor(
     fun deleteBootcamp() {
         viewModelScope.launch {
             val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
+            notificationManager.cancelAll(enrollment.id)
             WorkoutState.setPendingBootcampSessionId(null)
             bootcampRepository.deleteEnrollment(enrollment.id)
             _uiState.update { it.copy(showDeleteConfirmDialog = false) }
@@ -809,7 +812,18 @@ class BootcampViewModel @Inject constructor(
             )
         }
         bootcampRepository.insertSessions(entities)
-        return bootcampRepository.getSessionsForWeek(enrollment.id, weekNumber)
+        val saved = bootcampRepository.getSessionsForWeek(enrollment.id, weekNumber)
+
+        // Schedule day-before notification reminders for the new sessions
+        notificationManager.createNotificationChannel()
+        notificationManager.scheduleWeekReminders(
+            enrollmentId = enrollment.id,
+            weekNumber = weekNumber,
+            sessions = saved,
+            startDateMs = enrollment.startDate
+        )
+
+        return saved
     }
 
     private suspend fun clearTierPromptSnoozeIfCtlSafe(

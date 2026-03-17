@@ -237,7 +237,6 @@ class WorkoutForegroundService : LifecycleService() {
                         isPaused = false,
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
                         guidanceText = "GET HR SIGNAL",
-                        adaptiveLagSec = adaptiveController?.currentLagSec() ?: 0f,
                         autoPauseEnabled = sessionAutoPauseEnabled,
                     )
                 )
@@ -378,7 +377,6 @@ class WorkoutForegroundService : LifecycleService() {
                 paceMinPerKm = adaptiveResult?.currentPaceMinPerKm ?: current.paceMinPerKm,
                 predictedHr = adaptiveResult?.predictedHr ?: 0,
                 guidanceText = guidance,
-                adaptiveLagSec = adaptive?.currentLagSec() ?: 0f,
                 projectionReady = adaptiveResult?.hasProjectionConfidence ?: false,
                 isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN,
                 avgHr = sessionAvgHr
@@ -542,7 +540,8 @@ class WorkoutForegroundService : LifecycleService() {
                 val canonicalMetrics = MetricsCalculator.deriveFullMetrics(
                     workoutId = workoutId,
                     recordedAtMs = now,
-                    trackPoints = trackPoints
+                    trackPoints = trackPoints,
+                    targetHr = currentProfile.hrMax?.toFloat()
                 )
                 val metricsToSave = when {
                     canonicalMetrics != null && session != null -> canonicalMetrics.copy(

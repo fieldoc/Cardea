@@ -3,10 +3,15 @@ package com.hrcoach.ui.postrun
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.db.AchievementDao
+import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.domain.achievement.AchievementEvaluator
+import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.domain.engine.MetricsCalculator
+import com.hrcoach.service.WorkoutState
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
@@ -40,21 +45,23 @@ data class PostRunSummaryUiState(
     val bootcampWeekComplete: Boolean = false,
     val isBootcampRun: Boolean = false,
     val isHrrActive: Boolean = false,
+    val newAchievements: List<AchievementEntity> = emptyList(),
 )
 
 @HiltViewModel
 class PostRunSummaryViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val workoutRepository: WorkoutRepository,
-    private val workoutMetricsRepository: WorkoutMetricsRepository
+    private val workoutMetricsRepository: WorkoutMetricsRepository,
+    private val bootcampSessionCompleter: BootcampSessionCompleter,
+    private val achievementEvaluator: AchievementEvaluator,
+    private val achievementDao: AchievementDao
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostRunSummaryUiState())
     val uiState: StateFlow<PostRunSummaryUiState> = _uiState.asStateFlow()
 
     private val workoutId: Long? = savedStateHandle.get<Long>("workoutId")
-    private val bootcampProgressLabelArg: String? = savedStateHandle.get<String>("bootcampProgressLabel")
-    private val bootcampWeekCompleteArg: Boolean = savedStateHandle.get<Boolean>("bootcampWeekComplete") ?: false
 
     init {
         load()
@@ -98,10 +105,45 @@ class PostRunSummaryViewModel @Inject constructor(
                     avgHrText = avgHr?.let { "${it.toInt()} bpm" } ?: "--",
                     similarRunCount = similar.size,
                     comparisons = comparisons,
-                    bootcampProgressLabel = bootcampProgressLabelArg,
-                    bootcampWeekComplete = bootcampWeekCompleteArg,
                     isHrrActive = isHrrActive,
                 )
+
+                // Wire bootcamp session completion
+                val fresh = savedStateHandle.get<Boolean>("fresh") ?: false
+                if (fresh) {
+                    val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
+                    if (pendingId != null) {
+                        val result = bootcampSessionCompleter.complete(
+                            workoutId = id,
+                            pendingSessionId = pendingId
+                        )
+                        if (result.completed) {
+                            WorkoutState.setPendingBootcampSessionId(null)
+                            _uiState.value = _uiState.value.copy(
+                                isBootcampRun = true,
+                                bootcampProgressLabel = result.progressLabel,
+                                bootcampWeekComplete = result.weekComplete
+                            )
+                        }
+                    }
+
+                    // Evaluate achievements
+                    val allWorkouts = workoutRepository.getAllWorkoutsOnce()
+                    val totalKm = allWorkouts.sumOf { it.totalDistanceMeters.toDouble() } / 1000.0
+                    achievementEvaluator.evaluateDistance(totalKm, id)
+
+                    val streak = computeWorkoutStreak(allWorkouts)
+                    achievementEvaluator.evaluateStreak(streak, id)
+
+                    // Surface newly earned achievements
+                    val newAchievements = achievementDao.getUnshownAchievements()
+                    if (newAchievements.isNotEmpty()) {
+                        achievementDao.markShown(newAchievements.map { it.id })
+                        _uiState.value = _uiState.value.copy(
+                            newAchievements = newAchievements
+                        )
+                    }
+                }
             }.onFailure {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -233,5 +275,19 @@ class PostRunSummaryViewModel @Inject constructor(
         }
 
         return items
+    }
+
+    internal companion object {
+        fun computeWorkoutStreak(workouts: List<WorkoutEntity>): Int {
+            val sorted = workouts.sortedByDescending { it.startTime }
+            if (sorted.isEmpty()) return 0
+            var streak = 1
+            for (i in 0 until sorted.lastIndex) {
+                val gapDays = (sorted[i].startTime - sorted[i + 1].startTime) / 86_400_000L
+                if (gapDays > 10) break
+                streak++
+            }
+            return streak
+        }
     }
 }

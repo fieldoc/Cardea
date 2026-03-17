@@ -89,4 +89,13 @@ interface BootcampDao {
     suspend fun completeSessionOnly(completedSession: BootcampSessionEntity) {
         updateSession(completedSession)
     }
+
+    @Query("""
+        SELECT weekNumber FROM bootcamp_sessions
+        WHERE enrollmentId = :enrollmentId
+        GROUP BY weekNumber
+        HAVING COUNT(*) = SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END)
+        ORDER BY weekNumber DESC
+    """)
+    suspend fun getCompletedWeekNumbers(enrollmentId: Long): List<Int>
 }

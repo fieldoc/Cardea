@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea — HR Prediction Visualized</title>
+<style>
+  :root {
+    --bg: #0B0F17;
+    --bg2: #0F1623;
+    --glass: rgba(255,255,255,0.05);
+    --glass-border: rgba(255,255,255,0.07);
+    --text: #E8EAED;
+    --dim: #6B7280;
+    --accent1: #FF5A5F;
+    --accent2: #FF2DA6;
+    --accent3: #5B5BFF;
+    --accent4: #00D1FF;
+    --green: #34D399;
+    --yellow: #FBBF24;
+    --red: #F87171;
+    --orange: #FB923C;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: radial-gradient(ellipse at 50% 10%, var(--bg2), var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  h1 {
+    text-align:center; font-size:26px; font-weight:700; padding-top:28px;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2), var(--accent3), var(--accent4));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .subtitle { text-align:center; color:var(--dim); font-size:13px; margin:4px 0 20px; }
+
+  /* Main chart area */
+  .chart-wrap {
+    position: relative;
+    width: 96%; max-width: 1100px;
+    margin: 0 auto 12px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 16px 12px 8px;
+  }
+  canvas { display:block; width:100%; cursor:crosshair; }
+
+  /* Decomposition bars */
+  .decomp-wrap {
+    width: 96%; max-width: 1100px;
+    margin: 0 auto 16px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+  .decomp-title {
+    font-size: 13px; font-weight: 600; color: var(--dim);
+    text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px;
+  }
+  .decomp-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .decomp-label { width: 130px; color: var(--dim); text-align:right; flex-shrink:0; }
+  .decomp-bar-track {
+    flex: 1; height: 18px; background: rgba(255,255,255,0.04);
+    border-radius: 9px; position: relative; overflow: hidden;
+  }
+  .decomp-bar {
+    height: 100%; border-radius: 9px; transition: width 0.15s;
+    position: absolute; top: 0;
+  }
+  .decomp-val { width: 70px; font-family: 'JetBrains Mono', monospace; font-size: 12px; flex-shrink:0; }
+
+  /* Controls */
+  .controls {
+    width: 96%; max-width: 1100px;
+    margin: 0 auto 16px;
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: center;
+  }
+  .btn {
+    padding: 7px 18px; border-radius: 20px; border: 1px solid var(--glass-border);
+    background: var(--glass); color: var(--text); font-size: 13px; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: rgba(255,255,255,0.1); }
+  .btn.active {
+    background: linear-gradient(135deg, rgba(255,90,95,0.3), rgba(91,91,255,0.3));
+    border-color: rgba(255,90,95,0.5); font-weight:600;
+  }
+  .speed-label { color: var(--dim); font-size: 12px; }
+
+  /* Scenario selector */
+  .scenarios {
+    width: 96%; max-width: 1100px;
+    margin: 0 auto 16px;
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  }
+  .scenario-btn {
+    padding: 8px 16px; border-radius: 12px; border: 1px solid var(--glass-border);
+    background: var(--glass); color: var(--dim); font-size: 12px; cursor: pointer;
+    transition: all 0.2s; line-height: 1.4;
+  }
+  .scenario-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+  .scenario-btn.active {
+    color: var(--text); font-weight: 600;
+    border-color: var(--accent4);
+    background: rgba(0,209,255,0.08);
+  }
+  .scenario-btn .sc-title { display: block; font-weight: 600; color: var(--text); }
+  .scenario-btn .sc-desc { display: block; font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+  /* Legend */
+  .legend-bar {
+    width: 96%; max-width: 1100px;
+    margin: 0 auto 10px;
+    display: flex; gap: 18px; flex-wrap: wrap; justify-content: center;
+    font-size: 12px; color: var(--dim);
+  }
+  .legend-bar span { display: flex; align-items: center; gap: 5px; }
+  .legend-bar .dot { width: 10px; height: 3px; border-radius: 2px; }
+
+  /* Narrative */
+  .narrative {
+    width: 96%; max-width: 1100px;
+    margin: 0 auto 20px;
+    background: rgba(91,91,255,0.06);
+    border: 1px solid rgba(91,91,255,0.15);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 13px; line-height: 1.7; color: var(--text);
+    min-height: 48px;
+    transition: opacity 0.3s;
+  }
+  .narrative .event-label {
+    font-weight: 700; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 4px;
+    color: var(--accent4);
+  }
+</style>
+</head>
+<body>
+
+<h1>How Cardea Predicts Your Heart Rate</h1>
+<p class="subtitle">Watch the projection formula react to pace changes in real time</p>
+
+<div class="scenarios">
+  <div class="scenario-btn active" onclick="loadScenario(0)">
+    <span class="sc-title">Pace Surge</span>
+    <span class="sc-desc">Steady → fast burst → settle back</span>
+  </div>
+  <div class="scenario-btn" onclick="loadScenario(1)">
+    <span class="sc-title">Hill Climb</span>
+    <span class="sc-desc">Gradual pace increase uphill</span>
+  </div>
+  <div class="scenario-btn" onclick="loadScenario(2)">
+    <span class="sc-title">Interval Repeats</span>
+    <span class="sc-desc">Fast/slow alternating intervals</span>
+  </div>
+  <div class="scenario-btn" onclick="loadScenario(3)">
+    <span class="sc-title">Cardiac Drift</span>
+    <span class="sc-desc">Same pace, HR slowly climbs (fatigue)</span>
+  </div>
+</div>
+
+<div class="chart-wrap">
+  <canvas id="mainChart" height="320"></canvas>
+</div>
+
+<div class="legend-bar">
+  <span><div class="dot" style="background:var(--accent4);height:3px;"></div> Actual HR</span>
+  <span><div class="dot" style="background:var(--accent2);height:3px;"></div> Projected HR</span>
+  <span><div class="dot" style="background:rgba(52,211,153,0.35);height:12px;width:30px;border-radius:3px;"></div> Target Zone</span>
+  <span><div class="dot" style="background:var(--orange);height:3px;border-style:dashed;"></div> Pace (min/km)</span>
+</div>
+
+<div class="decomp-wrap">
+  <div class="decomp-title">Projection Breakdown — what's pushing the prediction right now</div>
+  <div class="decomp-row">
+    <div class="decomp-label">Current HR</div>
+    <div class="decomp-bar-track"><div class="decomp-bar" id="bar-base" style="background:var(--accent4);"></div></div>
+    <div class="decomp-val" id="val-base">—</div>
+  </div>
+  <div class="decomp-row">
+    <div class="decomp-label">HR Slope</div>
+    <div class="decomp-bar-track"><div class="decomp-bar" id="bar-slope" style="background:var(--yellow);"></div></div>
+    <div class="decomp-val" id="val-slope">—</div>
+  </div>
+  <div class="decomp-row">
+    <div class="decomp-label">Short-Term Trim</div>
+    <div class="decomp-bar-track"><div class="decomp-bar" id="bar-short" style="background:var(--accent2);"></div></div>
+    <div class="decomp-val" id="val-short">—</div>
+  </div>
+  <div class="decomp-row">
+    <div class="decomp-label">Long-Term Trim</div>
+    <div class="decomp-bar-track"><div class="decomp-bar" id="bar-long" style="background:var(--green);"></div></div>
+    <div class="decomp-val" id="val-long">—</div>
+  </div>
+  <div class="decomp-row">
+    <div class="decomp-label">Pace Bias</div>
+    <div class="decomp-bar-track"><div class="decomp-bar" id="bar-pace" style="background:var(--orange);"></div></div>
+    <div class="decomp-val" id="val-pace">—</div>
+  </div>
+  <div class="decomp-row" style="margin-top:4px; border-top:1px solid rgba(255,255,255,0.06); padding-top:8px;">
+    <div class="decomp-label" style="color:var(--accent2); font-weight:600;">= Projected HR</div>
+    <div class="decomp-bar-track"><div class="decomp-bar" id="bar-proj" style="background:linear-gradient(90deg,var(--accent2),var(--accent3));"></div></div>
+    <div class="decomp-val" id="val-proj" style="color:var(--accent2); font-weight:600;">—</div>
+  </div>
+</div>
+
+<div class="narrative" id="narrative">
+  <div class="event-label">Ready</div>
+  Press Play to watch the adaptive prediction system respond to a simulated run.
+</div>
+
+<div class="controls">
+  <button class="btn active" id="btnPlay" onclick="togglePlay()">▶ Play</button>
+  <button class="btn" onclick="resetSim()">↺ Reset</button>
+  <span class="speed-label">Speed:</span>
+  <button class="btn" onclick="setSpeed(0.5)">0.5×</button>
+  <button class="btn active" onclick="setSpeed(1)">1×</button>
+  <button class="btn" onclick="setSpeed(3)">3×</button>
+  <button class="btn" onclick="setSpeed(6)">6×</button>
+</div>
+
+<script>
+// ─── Simulation engine (mirrors AdaptivePaceController logic) ───
+
+const SIM = {
+  // Tuning config defaults from the real code
+  shortTermTrimDecay: 0.86,
+  shortTermTrimErrorWeight: 0.14,
+  shortTermTrimProjectionWeight: 0.35,
+  longTermTrimDecay: 0.92,
+  longTermTrimSessionWeight: 0.08,
+  paceSmoothingPrev: 0.72,
+  paceSmoothingInst: 0.28,
+  slopeSmoothingPrev: 0.75,
+  slopeSmoothingInst: 0.25,
+  projHorizonFactor: 0.4,
+  projHorizonMin: 10,
+  projHorizonMax: 15,
+  paceBiasFactor: 0.2,
+  paceBiasMin: -6,
+  paceBiasMax: 6,
+};
+
+// Simulated runner physiology
+let state = {};
+
+function initState() {
+  state = {
+    t: 0,          // elapsed seconds
+    hr: 140,       // actual current HR
+    pace: 6.0,     // min/km
+    targetHr: 150,
+    bufferBpm: 5,
+
+    // Adaptive state
+    shortTermTrim: 0,
+    longTermTrim: 2.5,    // pretend 10 sessions of slightly running hot
+    responseLag: 28,      // 28s settling time learned
+    hrSlope: 0,
+    lastHr: 140,
+    lastProjectedHr: null,
+    smoothedPace: 6.0,
+
+    // Simulated pace-HR buckets (pre-learned)
+    paceBuckets: {
+      20: { avgHr: 162, count: 40 },  // 5:00 pace
+      21: { avgHr: 158, count: 55 },  // 5:15
+      22: { avgHr: 154, count: 70 },  // 5:30
+      23: { avgHr: 150, count: 80 },  // 5:45
+      24: { avgHr: 146, count: 90 },  // 6:00
+      25: { avgHr: 143, count: 75 },  // 6:15
+      26: { avgHr: 140, count: 60 },  // 6:30
+      27: { avgHr: 137, count: 45 },  // 6:45
+      28: { avgHr: 135, count: 30 },  // 7:00
+    },
+
+    // History for chart
+    history: [],
+    events: [],
+  };
+}
+
+// Physiological HR model: HR lags behind "demand" with exponential settling
+let hrDemand = 142; // what HR "wants" to be at current effort
+
+function physiologicalHr(dt) {
+  // HR chases hrDemand with exponential lag
+  const tau = state.responseLag * 0.8; // time constant
+  const alpha = 1 - Math.exp(-dt / tau);
+  state.hr += alpha * (hrDemand - state.hr);
+  // Add noise
+  state.hr += (Math.random() - 0.5) * 0.8;
+  state.hr = Math.max(60, Math.min(200, state.hr));
+}
+
+function evaluateTick() {
+  const hr = state.hr;
+  const pace = state.pace;
+  const target = state.targetHr;
+
+  // 1. HR slope
+  const deltaMin = 1 / 60; // 1 second tick
+  const instSlope = (hr - state.lastHr) / deltaMin;
+  state.hrSlope = state.hrSlope * SIM.slopeSmoothingPrev + instSlope * SIM.slopeSmoothingInst;
+  state.lastHr = hr;
+
+  // 2. Smoothed pace
+  state.smoothedPace = state.smoothedPace * SIM.paceSmoothingPrev + pace * SIM.paceSmoothingInst;
+
+  // 3. Short-term trim (prediction error feedback)
+  const predError = state.lastProjectedHr !== null ? (hr - state.lastProjectedHr) : 0;
+  state.shortTermTrim = Math.max(-20, Math.min(20,
+    state.shortTermTrim * SIM.shortTermTrimDecay + predError * SIM.shortTermTrimErrorWeight
+  ));
+
+  // 4. Pace bias lookup
+  const bucketKey = Math.round(state.smoothedPace * 4);
+  const neighbors = [bucketKey - 1, bucketKey, bucketKey + 1]
+    .map(k => state.paceBuckets[k]).filter(b => b && b.count > 0);
+  let paceBias = 0;
+  if (neighbors.length > 0) {
+    const avgBucketHr = neighbors.reduce((s, b) => s + b.avgHr, 0) / neighbors.length;
+    paceBias = Math.max(SIM.paceBiasMin, Math.min(SIM.paceBiasMax,
+      (avgBucketHr - target) * SIM.paceBiasFactor
+    ));
+  }
+
+  // 5. Projection horizon
+  const horizon = Math.max(SIM.projHorizonMin, Math.min(SIM.projHorizonMax,
+    state.responseLag * SIM.projHorizonFactor
+  ));
+
+  // 6. Components
+  const slopeContrib = state.hrSlope * (horizon / 60);
+  const shortContrib = state.shortTermTrim * SIM.shortTermTrimProjectionWeight;
+  const longContrib = state.longTermTrim;
+  const paceContrib = paceBias;
+
+  const projectedHr = hr + slopeContrib + shortContrib + longContrib + paceContrib;
+  state.lastProjectedHr = projectedHr;
+
+  return {
+    hr: Math.round(hr * 10) / 10,
+    projected: Math.round(projectedHr * 10) / 10,
+    slopeContrib: Math.round(slopeContrib * 100) / 100,
+    shortContrib: Math.round(shortContrib * 100) / 100,
+    longContrib: Math.round(longContrib * 100) / 100,
+    paceContrib: Math.round(paceContrib * 100) / 100,
+    pace: Math.round(state.smoothedPace * 100) / 100,
+    target: target,
+    zoneLow: target - state.bufferBpm,
+    zoneHigh: target + state.bufferBpm,
+  };
+}
+
+// ─── Scenarios ───
+
+const SCENARIOS = [
+  { // 0: Pace surge
+    name: "Pace Surge",
+    duration: 180,
+    targetHr: 150,
+    paceProfile: t => {
+      if (t < 30) return 6.0;
+      if (t < 40) return 6.0 - (t - 30) / 10 * 1.5; // ramp down to 4:30
+      if (t < 80) return 4.5;
+      if (t < 95) return 4.5 + (t - 80) / 15 * 1.5; // ramp back up
+      return 6.0;
+    },
+    demandProfile: t => {
+      if (t < 30) return 146;
+      if (t < 40) return 146 + (t - 30) / 10 * 22;
+      if (t < 80) return 168;
+      if (t < 95) return 168 - (t - 80) / 15 * 22;
+      return 146;
+    },
+    events: [
+      { t: 30, text: "You pick up the pace sharply (6:00 → 4:30/km). HR hasn't reacted yet — but the projection sees the slope starting and the pace-HR buckets say this pace runs hot." },
+      { t: 50, text: "HR is climbing but still in zone. The projection is already above zone — it predicted this 10–15 seconds before the actual HR crossed. Short-term trim is reinforcing the upward prediction because each tick HR keeps coming in higher than predicted." },
+      { t: 80, text: "You ease off back to 6:00/km. HR is still elevated (physiological lag). The projection sees the negative slope and starts pulling down — it knows HR will settle." },
+      { t: 110, text: "HR has settled back into zone. Short-term trim has decayed toward zero. The system correctly anticipated both the overshoot and the recovery." },
+    ]
+  },
+  { // 1: Hill climb
+    name: "Hill Climb",
+    duration: 180,
+    targetHr: 148,
+    paceProfile: t => {
+      if (t < 20) return 6.0;
+      if (t < 120) return 6.0 - (t - 20) / 100 * 1.2; // gradual to 4:48
+      return 4.8 + (t - 120) / 60 * 1.2;
+    },
+    demandProfile: t => {
+      if (t < 20) return 144;
+      if (t < 120) return 144 + (t - 20) / 100 * 26;
+      return 170 - (t - 120) / 60 * 20;
+    },
+    events: [
+      { t: 20, text: "Starting uphill — pace gradually increases. The projection's pace bias starts contributing: faster paces have higher avgHr in the bucket table." },
+      { t: 70, text: "Halfway up the hill. HR is climbing steadily. The slope component is the dominant upward force. Long-term trim (+2.5 bpm) adds a constant offset because your body historically runs slightly hot." },
+      { t: 120, text: "Cresting the hill, easing off. The slope component flips negative — projection drops before actual HR does. This early warning is the core value of the system." },
+    ]
+  },
+  { // 2: Intervals
+    name: "Interval Repeats",
+    duration: 210,
+    targetHr: 155,
+    paceProfile: t => {
+      const cycle = t % 50;
+      if (cycle < 20) return 4.5;
+      if (cycle < 25) return 4.5 + (cycle - 20) / 5 * 1.8;
+      if (cycle < 45) return 6.3;
+      return 6.3 - (cycle - 45) / 5 * 1.8;
+    },
+    demandProfile: t => {
+      const cycle = t % 50;
+      if (cycle < 20) return 170;
+      if (cycle < 25) return 170 - (cycle - 20) / 5 * 28;
+      if (cycle < 45) return 142;
+      return 142 + (cycle - 45) / 5 * 28;
+    },
+    events: [
+      { t: 5, text: "Fast interval — 4:30/km pace. The pace bucket lookup immediately contributes +3–4 bpm because this pace historically produces ~162 bpm (well above 155 target)." },
+      { t: 25, text: "Recovery interval starts. Pace drops to 6:15/km. The slope goes sharply negative and the projection dips — it knows HR will come down before it actually does." },
+      { t: 50, text: "Second fast interval begins. Notice the short-term trim: if the last recovery overshot the prediction, the trim compensates. Each cycle refines the within-session accuracy." },
+      { t: 100, text: "After two full cycles, the short-term trim has converged on a stable correction factor. Predictions are tighter than the first interval." },
+    ]
+  },
+  { // 3: Cardiac drift
+    name: "Cardiac Drift",
+    duration: 240,
+    targetHr: 148,
+    paceProfile: t => 6.0 + Math.sin(t / 30) * 0.15,
+    demandProfile: t => 144 + t * 0.09 + Math.sin(t / 20) * 1.5,
+    events: [
+      { t: 10, text: "Steady 6:00/km pace. HR is comfortably in zone. All projection components are near zero — nothing dramatic happening yet." },
+      { t: 70, text: "HR is slowly drifting up despite constant pace. This is cardiac drift — as you dehydrate and fatigue, HR rises for the same effort. The slope component picks this up as a gentle positive trend." },
+      { t: 130, text: "The projection is now above zone even though actual HR is still inside. The steady positive slope + long-term trim (+2.5) are signaling: 'at this trajectory, you'll be above zone in ~12 seconds.'" },
+      { t: 180, text: "HR has drifted above zone. The prediction caught this ~15 seconds early. This is exactly the scenario where the system shines — same pace, but your body is gradually losing efficiency." },
+    ]
+  },
+];
+
+let currentScenario = 0;
+let playing = false;
+let speed = 1;
+let animId = null;
+let lastFrameTime = 0;
+let simAccum = 0;
+
+function loadScenario(idx) {
+  currentScenario = idx;
+  document.querySelectorAll('.scenario-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  resetSim();
+}
+
+function resetSim() {
+  initState();
+  const sc = SCENARIOS[currentScenario];
+  state.targetHr = sc.targetHr;
+  state.bufferBpm = 5;
+  state.pace = sc.paceProfile(0);
+  hrDemand = sc.demandProfile(0);
+  state.hr = hrDemand - 2;
+  state.lastHr = state.hr;
+  simAccum = 0;
+  lastFrameTime = 0;
+  updateNarrative(-1);
+  drawChart();
+  updateDecomp(null);
+}
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('btnPlay');
+  btn.textContent = playing ? '⏸ Pause' : '▶ Play';
+  btn.classList.toggle('active', playing);
+  if (playing) {
+    lastFrameTime = performance.now();
+    animId = requestAnimationFrame(loop);
+  } else if (animId) {
+    cancelAnimationFrame(animId);
+  }
+}
+
+function setSpeed(s) {
+  speed = s;
+  document.querySelectorAll('.controls .btn').forEach(b => {
+    if (b.textContent.includes('×')) b.classList.toggle('active', parseFloat(b.textContent) === s);
+  });
+}
+
+function loop(timestamp) {
+  if (!playing) return;
+  if (lastFrameTime === 0) lastFrameTime = timestamp;
+  const dt = (timestamp - lastFrameTime) / 1000;
+  lastFrameTime = timestamp;
+  simAccum += dt * speed;
+
+  const sc = SCENARIOS[currentScenario];
+
+  while (simAccum >= 1 && state.t < sc.duration) {
+    simAccum -= 1;
+    state.t += 1;
+    state.pace = sc.paceProfile(state.t);
+    hrDemand = sc.demandProfile(state.t);
+    physiologicalHr(1);
+
+    const tick = evaluateTick();
+    state.history.push({
+      t: state.t,
+      hr: tick.hr,
+      projected: tick.projected,
+      pace: tick.pace,
+      target: tick.target,
+      zoneLow: tick.zoneLow,
+      zoneHigh: tick.zoneHigh,
+      slopeContrib: tick.slopeContrib,
+      shortContrib: tick.shortContrib,
+      longContrib: tick.longContrib,
+      paceContrib: tick.paceContrib,
+    });
+  }
+
+  drawChart();
+  if (state.history.length > 0) {
+    updateDecomp(state.history[state.history.length - 1]);
+  }
+  updateNarrative(state.t);
+
+  if (state.t >= sc.duration) {
+    playing = false;
+    document.getElementById('btnPlay').textContent = '▶ Play';
+    document.getElementById('btnPlay').classList.remove('active');
+    return;
+  }
+
+  animId = requestAnimationFrame(loop);
+}
+
+// ─── Narrative ───
+
+let lastEventIdx = -1;
+function updateNarrative(t) {
+  const sc = SCENARIOS[currentScenario];
+  const narr = document.getElementById('narrative');
+  if (t < 0) {
+    narr.innerHTML = `<div class="event-label">Scenario: ${sc.name}</div>Press Play to watch the adaptive prediction respond in real time.`;
+    lastEventIdx = -1;
+    return;
+  }
+  let best = -1;
+  for (let i = sc.events.length - 1; i >= 0; i--) {
+    if (t >= sc.events[i].t) { best = i; break; }
+  }
+  if (best >= 0 && best !== lastEventIdx) {
+    lastEventIdx = best;
+    const ev = sc.events[best];
+    narr.innerHTML = `<div class="event-label">t = ${ev.t}s</div>${ev.text}`;
+    narr.style.opacity = '0';
+    requestAnimationFrame(() => { narr.style.opacity = '1'; });
+  }
+}
+
+// ─── Decomposition bars ───
+
+function updateDecomp(tick) {
+  const maxBpm = 20;
+  const setBar = (id, val, color) => {
+    const bar = document.getElementById('bar-' + id);
+    const valEl = document.getElementById('val-' + id);
+    if (!tick) { bar.style.width = '0%'; valEl.textContent = '—'; return; }
+
+    if (id === 'base' || id === 'proj') {
+      // Scale 100–200 bpm to 0–100%
+      const pct = Math.max(0, Math.min(100, ((val - 100) / 100) * 100));
+      bar.style.width = pct + '%';
+      valEl.textContent = val.toFixed(1) + ' bpm';
+      valEl.style.color = '';
+    } else {
+      // Signed value, center at 50%
+      const pct = (val / maxBpm) * 50;
+      if (pct >= 0) {
+        bar.style.left = '50%';
+        bar.style.width = Math.min(pct, 50) + '%';
+      } else {
+        bar.style.left = Math.max(50 + pct, 0) + '%';
+        bar.style.width = Math.min(-pct, 50) + '%';
+      }
+      const sign = val >= 0 ? '+' : '';
+      valEl.textContent = sign + val.toFixed(2) + ' bpm';
+      valEl.style.color = val > 0.5 ? 'var(--red)' : val < -0.5 ? 'var(--accent4)' : 'var(--dim)';
+    }
+  };
+
+  setBar('base', tick ? tick.hr : 0);
+  setBar('slope', tick ? tick.slopeContrib : 0);
+  setBar('short', tick ? tick.shortContrib : 0);
+  setBar('long', tick ? tick.longContrib : 0);
+  setBar('pace', tick ? tick.paceContrib : 0);
+  setBar('proj', tick ? tick.projected : 0);
+}
+
+// ─── Chart drawing ───
+
+const canvas = document.getElementById('mainChart');
+const ctx = canvas.getContext('2d');
+let dpr = 1;
+
+function resizeCanvas() {
+  dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = 320 * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', () => { resizeCanvas(); drawChart(); });
+resizeCanvas();
+
+function drawChart() {
+  const W = canvas.width / dpr;
+  const H = 320;
+  const pad = { top: 24, right: 60, bottom: 32, left: 48 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const sc = SCENARIOS[currentScenario];
+  const data = state.history;
+  const maxT = sc.duration;
+  const hrMin = 120;
+  const hrMax = 185;
+  const paceMin = 4.0;
+  const paceMax = 7.5;
+
+  const xScale = t => pad.left + (t / maxT) * cw;
+  const yScale = hr => pad.top + ch - ((hr - hrMin) / (hrMax - hrMin)) * ch;
+  const paceY = p => pad.top + ch - ((p - paceMin) / (paceMax - paceMin)) * ch;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 1;
+  for (let hr = 120; hr <= 180; hr += 10) {
+    const y = yScale(hr);
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.font = '10px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(hr + '', pad.left - 6, y + 3);
+  }
+  for (let t = 0; t <= maxT; t += 30) {
+    const x = xScale(t);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.textAlign = 'center';
+    ctx.fillText(t + 's', x, H - pad.bottom + 16);
+  }
+
+  // Axis labels
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.translate(12, pad.top + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Heart Rate (bpm)', 0, 0);
+  ctx.restore();
+
+  // Right axis label for pace
+  ctx.save();
+  ctx.fillStyle = 'rgba(251,146,60,0.35)';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.translate(W - 8, pad.top + ch / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Pace (min/km)', 0, 0);
+  ctx.restore();
+
+  // Right axis ticks for pace
+  ctx.fillStyle = 'rgba(251,146,60,0.25)';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  for (let p = 4.5; p <= 7; p += 0.5) {
+    ctx.fillText(p.toFixed(1), W - pad.right + 6, paceY(p) + 3);
+  }
+
+  if (data.length === 0) return;
+
+  // Target zone fill
+  ctx.fillStyle = 'rgba(52, 211, 153, 0.07)';
+  const zoneTop = yScale(data[0].zoneHigh);
+  const zoneBot = yScale(data[0].zoneLow);
+  ctx.fillRect(pad.left, zoneTop, cw, zoneBot - zoneTop);
+
+  // Zone boundary lines
+  ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = 'rgba(52, 211, 153, 0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.left, zoneTop); ctx.lineTo(pad.left + cw, zoneTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad.left, zoneBot); ctx.lineTo(pad.left + cw, zoneBot); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Zone labels
+  ctx.fillStyle = 'rgba(52, 211, 153, 0.4)';
+  ctx.font = '10px Inter, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Target + ' + state.bufferBpm, pad.left + 4, zoneTop - 4);
+  ctx.fillText('Target − ' + state.bufferBpm, pad.left + 4, zoneBot + 12);
+
+  // Target center line
+  ctx.strokeStyle = 'rgba(52, 211, 153, 0.15)';
+  ctx.lineWidth = 1;
+  const targetY = yScale(data[0].target);
+  ctx.beginPath(); ctx.moveTo(pad.left, targetY); ctx.lineTo(pad.left + cw, targetY); ctx.stroke();
+
+  // Pace line (dashed, right axis)
+  ctx.strokeStyle = 'rgba(251, 146, 60, 0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = xScale(data[i].t);
+    const y = paceY(data[i].pace);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Projected HR line (wider, glow)
+  ctx.strokeStyle = 'rgba(255, 45, 166, 0.15)';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = xScale(data[i].t);
+    const y = yScale(data[i].projected);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = '#FF2DA6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = xScale(data[i].t);
+    const y = yScale(data[i].projected);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Actual HR line
+  ctx.strokeStyle = 'rgba(0, 209, 255, 0.12)';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = xScale(data[i].t);
+    const y = yScale(data[i].hr);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  ctx.strokeStyle = '#00D1FF';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = xScale(data[i].t);
+    const y = yScale(data[i].hr);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Current position dots
+  if (data.length > 0) {
+    const last = data[data.length - 1];
+    const cx = xScale(last.t);
+
+    // Projected dot
+    const py = yScale(last.projected);
+    ctx.beginPath();
+    ctx.arc(cx, py, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF2DA6';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,45,166,0.4)';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+
+    // Actual dot
+    const ay = yScale(last.hr);
+    ctx.beginPath();
+    ctx.arc(cx, ay, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#00D1FF';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,209,255,0.4)';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+
+    // Gap annotation
+    const gap = last.projected - last.hr;
+    if (Math.abs(gap) > 1) {
+      const midY = (py + ay) / 2;
+      ctx.fillStyle = gap > 0 ? 'rgba(248,113,113,0.8)' : 'rgba(0,209,255,0.8)';
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      const sign = gap > 0 ? '+' : '';
+      ctx.fillText(sign + gap.toFixed(1) + ' bpm', cx + 10, midY + 4);
+
+      // Connecting line
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 2]);
+      ctx.beginPath(); ctx.moveTo(cx + 6, py); ctx.lineTo(cx + 6, ay); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // HR readouts
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#00D1FF';
+    ctx.fillText(Math.round(last.hr) + '', pad.left - 14, ay + 4);
+    ctx.fillStyle = '#FF2DA6';
+    ctx.fillText(Math.round(last.projected) + '', pad.left - 14, py + 4);
+
+    // Time indicator
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cx, pad.top); ctx.lineTo(cx, H - pad.bottom); ctx.stroke();
+  }
+
+  // Scenario event markers
+  const sc2 = SCENARIOS[currentScenario];
+  for (const ev of sc2.events) {
+    if (ev.t <= state.t) {
+      const ex = xScale(ev.t);
+      ctx.strokeStyle = 'rgba(91,91,255,0.2)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath(); ctx.moveTo(ex, pad.top); ctx.lineTo(ex, H - pad.bottom); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(91,91,255,0.5)';
+      ctx.font = '9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('t=' + ev.t + 's', ex, pad.top - 4);
+    }
+  }
+}
+
+// ─── Mouse hover on chart ───
+
+canvas.addEventListener('mousemove', (e) => {
+  if (state.history.length === 0) return;
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const W = rect.width;
+  const pad = { left: 48, right: 60 };
+  const cw = W - pad.left - pad.right;
+  const sc = SCENARIOS[currentScenario];
+  const t = Math.round(((mx - pad.left) / cw) * sc.duration);
+  const idx = state.history.findIndex(d => d.t >= t);
+  if (idx >= 0 && idx < state.history.length) {
+    updateDecomp(state.history[idx]);
+  }
+});
+
+// ─── Init ───
+
+initState();
+const sc0 = SCENARIOS[0];
+state.targetHr = sc0.targetHr;
+state.pace = sc0.paceProfile(0);
+hrDemand = sc0.demandProfile(0);
+state.hr = hrDemand - 2;
+state.lastHr = state.hr;
+drawChart();
+</script>
+</body>
+</html>

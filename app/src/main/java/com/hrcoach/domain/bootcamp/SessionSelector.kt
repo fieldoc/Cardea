@@ -1,5 +1,6 @@
 package com.hrcoach.domain.bootcamp
 
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 import com.hrcoach.domain.preset.SessionPresetArray
@@ -11,13 +12,19 @@ object SessionSelector {
         goal: BootcampGoal,
         runsPerWeek: Int,
         targetMinutes: Int,
-        tierIndex: Int = 1
+        tierIndex: Int = 1,
+        tuningDirection: TuningDirection = TuningDirection.HOLD
     ): List<PlannedSession> {
         val effectiveTier = (goal.tier + tierIndex - 1).coerceIn(1, 4)
+        val tuningFactor = when (tuningDirection) {
+            TuningDirection.PUSH_HARDER -> 1.05f
+            TuningDirection.EASE_BACK -> 0.90f
+            TuningDirection.HOLD -> 1.0f
+        }
         val effectiveMinutes = if (phase == TrainingPhase.TAPER) {
-            (targetMinutes * 0.7f).toInt()
+            (targetMinutes * 0.7f * tuningFactor).toInt()
         } else {
-            targetMinutes
+            (targetMinutes * tuningFactor).toInt()
         }
         val durations = DurationScaler.compute(runsPerWeek, effectiveMinutes)
         val longMinutes = durations.longMinutes

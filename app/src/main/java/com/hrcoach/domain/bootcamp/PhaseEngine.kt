@@ -56,7 +56,8 @@ data class PhaseEngine(
             goal = goal,
             runsPerWeek = runsPerWeek,
             targetMinutes = effectiveMinutes,
-            tierIndex = tierIndex
+            tierIndex = tierIndex,
+            tuningDirection = tuningDirection
         )
     }
 
