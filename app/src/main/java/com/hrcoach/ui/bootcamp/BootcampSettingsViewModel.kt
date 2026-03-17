@@ -267,6 +267,20 @@ class BootcampSettingsViewModel @Inject constructor(
                     newDays = normalizedDays,
                     currentWeekNumber = oldEngine.absoluteWeek
                 )
+
+                // Reslot current week's SCHEDULED/DEFERRED sessions to match new days
+                val currentWeekSessions = bootcampRepository.getSessionsForWeek(
+                    enrollment.id, oldEngine.absoluteWeek
+                )
+                val reslotted = BootcampRepository.computeReslottedDays(
+                    currentWeekSessions, normalizedDays
+                )
+                for ((session, newDay) in reslotted) {
+                    if (newDay != session.dayOfWeek) {
+                        bootcampRepository.rescheduleSession(session.id, newDay)
+                    }
+                }
+
                 bootcampRepository.deleteScheduledSessionsFromWeek(enrollment.id, resetFromWeek + 1)
                 _uiState.update {
                     it.copy(

@@ -351,7 +351,9 @@ class BootcampViewModel @Inject constructor(
                 onboardingTimeCanProceed = validation.canProceed,
                 onboardingLongRunMinutes = longRun,
                 onboardingWeeklyTotal = weekly,
-                onboardingLongRunWarning = longWarning
+                onboardingLongRunWarning = longWarning,
+                onboardingPreferredDays = if (it.onboardingPreferredDays.isEmpty())
+                    defaultPreferredDays(it.onboardingRunsPerWeek) else it.onboardingPreferredDays
             )
         }
     }
@@ -411,10 +413,45 @@ class BootcampViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 onboardingRunsPerWeek = runs,
+                onboardingPreferredDays = defaultPreferredDays(runs),
                 onboardingLongRunMinutes = longRun,
                 onboardingWeeklyTotal = weekly,
                 onboardingLongRunWarning = longWarning
             )
+        }
+    }
+
+    fun cycleOnboardingDayPreference(day: Int) {
+        _uiState.update { state ->
+            val current = state.onboardingPreferredDays.toMutableList()
+            val existingIndex = current.indexOfFirst { it.day == day }
+
+            if (existingIndex != -1) {
+                val nextLevel = current[existingIndex].level.next()
+                if (nextLevel == DaySelectionLevel.NONE) {
+                    current.removeAt(existingIndex)
+                } else {
+                    current[existingIndex] = current[existingIndex].copy(level = nextLevel)
+                }
+            } else {
+                current.add(DayPreference(day, DaySelectionLevel.AVAILABLE))
+            }
+
+            state.copy(onboardingPreferredDays = current.sortedBy { it.day })
+        }
+    }
+
+    fun toggleOnboardingBlackoutDay(day: Int) {
+        _uiState.update { state ->
+            val current = state.onboardingPreferredDays.toMutableList()
+            val existing = current.indexOfFirst { it.day == day }
+            if (existing != -1 && current[existing].level == DaySelectionLevel.BLACKOUT) {
+                current.removeAt(existing)
+            } else {
+                if (existing != -1) current.removeAt(existing)
+                current.add(DayPreference(day, DaySelectionLevel.BLACKOUT))
+            }
+            state.copy(onboardingPreferredDays = current.sortedBy { it.day })
         }
     }
 
@@ -430,7 +467,9 @@ class BootcampViewModel @Inject constructor(
     fun completeOnboarding() {
         val state = _uiState.value
         val goal = state.onboardingGoal ?: return
-        val preferredDays = defaultPreferredDays(state.onboardingRunsPerWeek)
+        val preferredDays = state.onboardingPreferredDays.ifEmpty {
+            defaultPreferredDays(state.onboardingRunsPerWeek)
+        }
         viewModelScope.launch {
             val startDate = firstPreferredDayAfterMs(preferredDays.map { it.day })
             bootcampRepository.createEnrollment(
