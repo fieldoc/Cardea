@@ -1,5 +1,6 @@
 package com.hrcoach.ui.bootcamp
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.BootcampEnrollmentEntity
@@ -267,6 +268,20 @@ class BootcampSettingsViewModel @Inject constructor(
                     newDays = normalizedDays,
                     currentWeekNumber = oldEngine.absoluteWeek
                 )
+
+                // Reslot current week's SCHEDULED/DEFERRED sessions to match new days
+                val currentWeekSessions = bootcampRepository.getSessionsForWeek(
+                    enrollment.id, oldEngine.absoluteWeek
+                )
+                val reslotted = BootcampRepository.computeReslottedDays(
+                    currentWeekSessions, normalizedDays
+                )
+                for ((session, newDay) in reslotted) {
+                    if (newDay != session.dayOfWeek) {
+                        bootcampRepository.rescheduleSession(session.id, newDay)
+                    }
+                }
+
                 bootcampRepository.deleteScheduledSessionsFromWeek(enrollment.id, resetFromWeek + 1)
                 _uiState.update {
                     it.copy(
@@ -291,6 +306,7 @@ class BootcampSettingsViewModel @Inject constructor(
                 }
                 onDone()
             } catch (t: Throwable) {
+                Log.e("BootcampSettingsVM", "Failed to save settings", t)
                 _uiState.update { it.copy(isSaving = false, saveError = t.message ?: "Save failed") }
             }
         }

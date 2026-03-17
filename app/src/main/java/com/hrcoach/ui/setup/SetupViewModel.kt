@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
 import com.hrcoach.data.repository.UserProfileRepository
@@ -17,6 +18,7 @@ import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.audio.EarconPlayer
 import com.hrcoach.util.JsonCodec
+import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import android.content.Context
@@ -88,7 +90,8 @@ class SetupViewModel @Inject constructor(
     private val audioSettingsRepository: AudioSettingsRepository,
     private val mapsSettingsRepository: MapsSettingsRepository,
     private val bleCoordinator: BleConnectionCoordinator,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val adaptiveProfileRepository: AdaptiveProfileRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SetupUiState())
@@ -267,6 +270,8 @@ class SetupViewModel @Inject constructor(
         val value = _uiState.value.maxHrInput.toIntOrNull() ?: return false
         if (value !in 100..220) return false
         userProfileRepository.setMaxHr(value)
+        val profile = adaptiveProfileRepository.getProfile()
+        adaptiveProfileRepository.saveProfile(profile.copy(hrMax = value))
         val pendingId = _uiState.value.pendingPresetId
         _uiState.value = _uiState.value.copy(
             maxHr = value,
@@ -344,9 +349,13 @@ class SetupViewModel @Inject constructor(
                 connectionError = null
             )
         }.onFailure {
+            Log.e("SetupVM", "BLE scan failed", it)
             _uiState.value = _uiState.value.copy(
                 isScanning = false,
-                connectionError = "Unable to scan. Check Bluetooth and permissions."
+                connectionError = when (it) {
+                    is SecurityException -> "Bluetooth permission required. Check Settings."
+                    else -> "Unable to scan. Check Bluetooth and permissions."
+                }
             )
         }
     }
@@ -364,8 +373,12 @@ class SetupViewModel @Inject constructor(
                 connectionError = null
             )
         }.onFailure {
+            Log.e("SetupVM", "BLE connect failed", it)
             _uiState.value = _uiState.value.copy(
-                connectionError = "Unable to connect to selected device."
+                connectionError = when (it) {
+                    is SecurityException -> "Bluetooth permission required. Check Settings."
+                    else -> "Unable to connect to selected device."
+                }
             )
         }
     }

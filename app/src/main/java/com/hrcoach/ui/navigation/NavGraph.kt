@@ -1,6 +1,8 @@
 package com.hrcoach.ui.navigation
 
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.Intent
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -34,6 +36,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +61,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.service.WorkoutForegroundService
 import com.hrcoach.service.WorkoutState
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.hrcoach.ui.account.AccountScreen
 import com.hrcoach.ui.bootcamp.BootcampScreen
 import com.hrcoach.ui.bootcamp.BootcampStatusViewModel
@@ -108,9 +113,14 @@ fun HrCoachNavGraph(
     val context = LocalContext.current
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val workoutSnapshot by WorkoutState.snapshot.collectAsStateWithLifecycle()
-    val isWorkoutRunning = workoutSnapshot.isRunning
-    val completedWorkoutId = workoutSnapshot.completedWorkoutId
+    data class NavWorkoutState(val isRunning: Boolean, val completedId: Long?, val isPaused: Boolean)
+    val navState by remember {
+        WorkoutState.snapshot
+            .map { NavWorkoutState(it.isRunning, it.completedWorkoutId, it.isPaused) }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(NavWorkoutState(false, null, false))
+    val isWorkoutRunning = navState.isRunning
+    val completedWorkoutId = navState.completedId
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
 
     // Lightweight enrollment check — drives Training tab adaptive routing
@@ -321,7 +331,13 @@ fun HrCoachNavGraph(
                             runCatching {
                                 context.startForegroundService(intent)
                             }.onFailure {
-                                Toast.makeText(context, "Unable to start workout.", Toast.LENGTH_LONG).show()
+                                Log.e("NavGraph", "Failed to start workout service", it)
+                                val msg = if (it is ForegroundServiceStartNotAllowedException) {
+                                    "Cannot start workout in background. Open the app and try again."
+                                } else {
+                                    "Unable to start workout."
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                         }
                     },
@@ -343,7 +359,7 @@ fun HrCoachNavGraph(
                 ) {
                     ActiveWorkoutScreen(
                         onPauseResume = {
-                            val action = if (workoutSnapshot.isPaused) {
+                            val action = if (navState.isPaused) {
                                 WorkoutForegroundService.ACTION_RESUME
                             } else {
                                 WorkoutForegroundService.ACTION_PAUSE
@@ -453,7 +469,13 @@ fun HrCoachNavGraph(
                             runCatching {
                                 context.startForegroundService(intent)
                             }.onFailure {
-                                Toast.makeText(context, "Unable to start workout.", Toast.LENGTH_LONG).show()
+                                Log.e("NavGraph", "Failed to start workout service", it)
+                                val msg = if (it is ForegroundServiceStartNotAllowedException) {
+                                    "Cannot start workout in background. Open the app and try again."
+                                } else {
+                                    "Unable to start workout."
+                                }
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                             }
                         }
                     },

@@ -7,14 +7,17 @@ import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
+import com.hrcoach.domain.achievement.StreakCalculator
 import com.hrcoach.service.WorkoutState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.DayOfWeek
 import java.time.Instant
@@ -52,11 +55,11 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = combine(
         workoutRepository.getAllWorkouts(),
         bootcampRepository.getActiveEnrollment(),
-        WorkoutState.snapshot
-    ) { workouts, enrollment, snapshot ->
-        Triple(workouts, enrollment, snapshot)
+        WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged()
+    ) { workouts, enrollment, isRunning ->
+        Triple(workouts, enrollment, isRunning)
     }
-    .flatMapLatest { (workouts, enrollment, snapshot) ->
+    .flatMapLatest { (workouts, enrollment, isRunning) ->
         flow {
             val zone = ZoneId.systemDefault()
             val now = Instant.now().atZone(zone)
@@ -95,7 +98,7 @@ class HomeViewModel @Inject constructor(
 
             val sessionStreak = if (activeEnrollment != null) {
                 val allSessions = bootcampRepository.getSessionsForEnrollmentOnce(activeEnrollment.id)
-                computeSessionStreak(allSessions, activeEnrollment.startDate)
+                StreakCalculator.computeSessionStreak(allSessions, activeEnrollment.startDate)
             } else 0
 
             val blePrefs = context.getSharedPreferences("ble_prefs", Context.MODE_PRIVATE)
@@ -107,7 +110,7 @@ class HomeViewModel @Inject constructor(
                 lastWorkout = workouts.firstOrNull(),
                 workoutsThisWeek = thisWeek,
                 weeklyTarget = activeEnrollment?.runsPerWeek ?: 4,
-                isSessionRunning = snapshot.isRunning,
+                isSessionRunning = isRunning,
                 hasActiveBootcamp = activeEnrollment != null,
                 nextSession = nextSession,
                 currentWeekNumber = activeEnrollment?.let {

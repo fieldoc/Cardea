@@ -17,7 +17,6 @@ data class WorkoutSnapshot(
     val paceMinPerKm: Float = 0f,
     val predictedHr: Int = 0,
     val guidanceText: String = "GET HR SIGNAL",
-    val adaptiveLagSec: Float = 0f,
     val projectionReady: Boolean = false,
     val completedWorkoutId: Long? = null,
     val isFreeRun: Boolean = false,

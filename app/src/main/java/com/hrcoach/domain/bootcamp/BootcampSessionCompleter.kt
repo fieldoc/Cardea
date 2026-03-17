@@ -2,12 +2,14 @@ package com.hrcoach.domain.bootcamp
 
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.repository.BootcampRepository
+import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import javax.inject.Inject
 
 class BootcampSessionCompleter @Inject constructor(
-    private val bootcampRepository: BootcampRepository
+    private val bootcampRepository: BootcampRepository,
+    private val achievementEvaluator: AchievementEvaluator
 ) {
 
     data class CompletionResult(
@@ -40,7 +42,8 @@ class BootcampSessionCompleter @Inject constructor(
 
         val completedSession = targetSession.copy(
             status = BootcampSessionEntity.STATUS_COMPLETED,
-            completedWorkoutId = workoutId
+            completedWorkoutId = workoutId,
+            completedAtMs = System.currentTimeMillis()
         )
 
         val simulatedWeek = currentWeekSessions.map { session ->
@@ -71,6 +74,8 @@ class BootcampSessionCompleter @Inject constructor(
                 updatedEnrollment = updatedEnrollment,
                 newSessions = nextWeekEntities
             )
+            val completedWeeks = bootcampRepository.countConsecutiveCompletedWeeks(enrollment.id)
+            achievementEvaluator.evaluateWeeklyGoalStreak(completedWeeks, workoutId)
             CompletionResult(
                 completed = true,
                 weekComplete = true,

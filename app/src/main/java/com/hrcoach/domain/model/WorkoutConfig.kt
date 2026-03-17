@@ -31,15 +31,19 @@ data class WorkoutConfig(
         }
     }
 
-    fun targetHrAtElapsedSeconds(elapsedSeconds: Long): Int? {
+    fun segmentAtElapsed(elapsedSeconds: Long): Pair<Int, HrSegment>? {
         if (segments.isEmpty()) return null
         var cumulative = 0L
-        for (seg in segments) {
-            val dur = seg.durationSeconds?.toLong() ?: continue
+        segments.forEachIndexed { index, seg ->
+            val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
             cumulative += dur
-            if (elapsedSeconds < cumulative) return seg.targetHr
+            if (elapsedSeconds < cumulative) return index to seg
         }
-        return segments.lastOrNull()?.targetHr
+        return segments.lastIndex to segments.last()
+    }
+
+    fun targetHrAtElapsedSeconds(elapsedSeconds: Long): Int? {
+        return segmentAtElapsed(elapsedSeconds)?.second?.targetHr
     }
 
     /** Total target distance in meters, or null if not distance-based. */

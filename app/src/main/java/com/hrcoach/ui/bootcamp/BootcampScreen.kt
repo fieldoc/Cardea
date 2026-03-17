@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.domain.bootcamp.DayPreference
+import com.hrcoach.domain.bootcamp.FitnessLevel
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
@@ -76,6 +77,7 @@ import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
 
@@ -128,6 +130,8 @@ fun BootcampScreen(
                     onMinutesChanged = { viewModel.setOnboardingMinutes(it) },
                     onRunsPerWeekChanged = { viewModel.setOnboardingRunsPerWeek(it) },
                     onFinishingTimeChanged = { viewModel.setOnboardingFinishingTime(it) },
+                    onCycleDayPreference = { viewModel.cycleOnboardingDayPreference(it) },
+                    onToggleBlackoutDay = { viewModel.toggleOnboardingBlackoutDay(it) },
                     onComplete = { viewModel.completeOnboarding() },
                     onBack = onBack
                 )
@@ -543,12 +547,14 @@ private fun OnboardingWizard(
     onMinutesChanged: (Int) -> Unit,
     onRunsPerWeekChanged: (Int) -> Unit,
     onFinishingTimeChanged: (Int) -> Unit,
+    onCycleDayPreference: (Int) -> Unit,
+    onToggleBlackoutDay: (Int) -> Unit,
     onComplete: () -> Unit,
     onBack: () -> Unit
 ) {
     val isRaceGoal = uiState.onboardingGoal != null &&
         FinishingTimeTierMapper.isRaceGoal(uiState.onboardingGoal)
-    val totalSteps = if (isRaceGoal) 4 else 3
+    val totalSteps = if (isRaceGoal) 5 else 4
 
     Column(
         modifier = Modifier
@@ -579,6 +585,7 @@ private fun OnboardingWizard(
         // Steps: for race goals, insert finishing-time step at position 1
         val timeStep = if (isRaceGoal) 2 else 1
         val freqStep = if (isRaceGoal) 3 else 2
+        val daysStep = freqStep + 1
 
         when (step) {
             0 -> OnboardingStep1Goal(
@@ -624,8 +631,16 @@ private fun OnboardingWizard(
             freqStep -> OnboardingStep3Frequency(
                 runsPerWeek = uiState.onboardingRunsPerWeek,
                 onRunsPerWeekChanged = onRunsPerWeekChanged,
-                onComplete = onComplete,
+                onNext = { onStepChange(daysStep) },
                 onBack = { onStepChange(timeStep) }
+            )
+            daysStep -> OnboardingStep4Days(
+                preferredDays = uiState.onboardingPreferredDays,
+                runsPerWeek = uiState.onboardingRunsPerWeek,
+                onCycleDayPreference = onCycleDayPreference,
+                onToggleBlackoutDay = onToggleBlackoutDay,
+                onComplete = onComplete,
+                onBack = { onStepChange(freqStep) }
             )
         }
     }
@@ -897,7 +912,7 @@ private fun OnboardingStep2Time(
 private fun OnboardingStep3Frequency(
     runsPerWeek: Int,
     onRunsPerWeekChanged: (Int) -> Unit,
-    onComplete: () -> Unit,
+    onNext: () -> Unit,
     onBack: () -> Unit
 ) {
     Text(
@@ -955,8 +970,82 @@ private fun OnboardingStep3Frequency(
             Text("Back", color = CardeaTheme.colors.textSecondary)
         }
         CardeaButton(
+            text = "Next",
+            onClick = onNext,
+            modifier = Modifier
+                .weight(2f)
+                .height(48.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun OnboardingStep4Days(
+    preferredDays: List<DayPreference>,
+    runsPerWeek: Int,
+    onCycleDayPreference: (Int) -> Unit,
+    onToggleBlackoutDay: (Int) -> Unit,
+    onComplete: () -> Unit,
+    onBack: () -> Unit
+) {
+    val selectedCount = preferredDays.count {
+        it.level == DaySelectionLevel.AVAILABLE || it.level == DaySelectionLevel.LONG_RUN_BIAS
+    }
+    val isValid = selectedCount == runsPerWeek
+
+    Text(
+        text = "Pick your days",
+        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+        color = CardeaTheme.colors.textPrimary
+    )
+    Text(
+        text = "Tap to toggle, hold to block",
+        style = MaterialTheme.typography.bodyMedium,
+        color = CardeaTheme.colors.textSecondary
+    )
+
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = if (isValid)
+                "Select exactly $runsPerWeek days \u00b7 $selectedCount selected"
+            else
+                "Select exactly $runsPerWeek days \u00b7 $selectedCount selected \u2715",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isValid) CardeaTheme.colors.textSecondary else ZoneRed,
+            modifier = Modifier.padding(bottom = 2.dp)
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            DayLegendChip("open", DaySelectionLevel.NONE)
+            DayLegendChip("run", DaySelectionLevel.AVAILABLE)
+            DayLegendChip("long", DaySelectionLevel.LONG_RUN_BIAS)
+            DayLegendChip("blocked", DaySelectionLevel.BLACKOUT)
+        }
+
+        DayChipRow(
+            days = preferredDays,
+            onCycleDay = onCycleDayPreference,
+            onToggleBlackout = onToggleBlackoutDay
+        )
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
+            Text("Back", color = CardeaTheme.colors.textSecondary)
+        }
+        CardeaButton(
             text = "Start Program",
             onClick = onComplete,
+            enabled = isValid,
             modifier = Modifier
                 .weight(2f)
                 .height(48.dp)
@@ -1593,6 +1682,22 @@ private fun TodayHeroSection(
                             text = "Recovery",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = ZoneGreen
+                        )
+                    }
+                }
+                if (uiState.fitnessLevel != FitnessLevel.UNKNOWN) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(CardeaTheme.colors.glassHighlight)
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = uiState.fitnessLevel.name.lowercase()
+                                .replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+                            color = CardeaTheme.colors.textSecondary
                         )
                     }
                 }

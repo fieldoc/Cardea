@@ -41,6 +41,7 @@ class BootcampViewModelTest {
     private val workoutMetricsRepository: WorkoutMetricsRepository = mockk(relaxed = true)
     private val bootcampSessionCompleter: BootcampSessionCompleter = mockk(relaxed = true)
     private val achievementEvaluator: AchievementEvaluator = mockk(relaxed = true)
+    private val notificationManager: com.hrcoach.service.BootcampNotificationManager = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -61,7 +62,8 @@ class BootcampViewModelTest {
             userProfileRepository = userProfileRepository,
             workoutMetricsRepository = workoutMetricsRepository,
             bootcampSessionCompleter = bootcampSessionCompleter,
-            achievementEvaluator = achievementEvaluator
+            achievementEvaluator = achievementEvaluator,
+            notificationManager = notificationManager
         )
     }
 

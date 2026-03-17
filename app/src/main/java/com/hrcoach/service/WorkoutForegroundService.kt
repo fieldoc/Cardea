@@ -3,12 +3,14 @@ package com.hrcoach.service
 import android.content.Intent
 import android.location.Location
 import android.os.IBinder
+import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.AutoPauseSettingsRepository
 import com.hrcoach.domain.engine.AdaptivePaceController
@@ -71,6 +73,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var autoPauseSettingsRepository: AutoPauseSettingsRepository
+
+    @Inject
+    lateinit var userProfileRepository: UserProfileRepository
 
     @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
@@ -136,7 +141,7 @@ class WorkoutForegroundService : LifecycleService() {
                 runCatching {
                     startWorkout(parsedConfig, deviceAddress)
                 }.onFailure {
-                    handleStartFailure("Unable to start workout.")
+                    handleStartFailure("Unable to start workout.", it)
                 }
                 return START_NOT_STICKY
             }
@@ -237,13 +242,12 @@ class WorkoutForegroundService : LifecycleService() {
                         isPaused = false,
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
                         guidanceText = "GET HR SIGNAL",
-                        adaptiveLagSec = adaptiveController?.currentLagSec() ?: 0f,
                         autoPauseEnabled = sessionAutoPauseEnabled,
                     )
                 )
                 observeWorkoutTicks(workoutConfig)
             }.onFailure {
-                handleStartFailure("Workout start failed. Check permissions and try again.")
+                handleStartFailure("Workout start failed. Check permissions and try again.", it)
             }
         }
     }
@@ -378,7 +382,6 @@ class WorkoutForegroundService : LifecycleService() {
                 paceMinPerKm = adaptiveResult?.currentPaceMinPerKm ?: current.paceMinPerKm,
                 predictedHr = adaptiveResult?.predictedHr ?: 0,
                 guidanceText = guidance,
-                adaptiveLagSec = adaptive?.currentLagSec() ?: 0f,
                 projectionReady = adaptiveResult?.hasProjectionConfidence ?: false,
                 isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN,
                 avgHr = sessionAvgHr
@@ -498,128 +501,141 @@ class WorkoutForegroundService : LifecycleService() {
 
             if (workoutId > 0L) {
                 val now = System.currentTimeMillis()
-                val session = adaptiveController?.finishSession(workoutId = workoutId, endedAtMs = now)
 
-                // --- Calibration pass ---
-                var currentProfile = session?.updatedProfile ?: adaptiveProfileRepository.getProfile()
-
-                // hrMax: only update if cadence lock was NOT suspected
-                val newHrMax = HrCalibrator.detectNewHrMax(
-                    currentHrMax = currentProfile.hrMax ?: 180,
-                    recentSamples = hrSessionSamples.toList(),
-                    cadenceLockSuspected = cadenceLockSuspected
-                )
-                if (newHrMax != null) {
-                    currentProfile = currentProfile.copy(hrMax = newHrMax, hrMaxIsCalibrated = true)
-                }
-
-                // Load track points once — shared by metrics calculation and hrRest calibration
-                val trackPoints = repository.getTrackPoints(workoutId)
-
-                // hrRest: lower only when a plausible early-session proxy is found
-                val restingProxy = MetricsCalculator.computeRestingHrProxy(trackPoints)
-                if (restingProxy != null) {
-                    val updatedRest = HrCalibrator.updateHrRest(
-                        currentHrRest = currentProfile.hrRest ?: restingProxy,
-                        candidate = restingProxy
-                    )
-                    currentProfile = currentProfile.copy(hrRest = updatedRest)
-                }
-
-                adaptiveProfileRepository.saveProfile(currentProfile)
-                // --------------------------------
-
-                val currentWorkout = repository.getWorkoutById(workoutId)
-                if (currentWorkout != null) {
-                    repository.updateWorkout(
-                        currentWorkout.copy(
-                            endTime = now,
-                            totalDistanceMeters = WorkoutState.snapshot.value.distanceMeters
+                // Essential: save workout end state — must succeed even if metrics crash
+                runCatching {
+                    val currentWorkout = repository.getWorkoutById(workoutId)
+                    if (currentWorkout != null) {
+                        repository.updateWorkout(
+                            currentWorkout.copy(
+                                endTime = now,
+                                totalDistanceMeters = WorkoutState.snapshot.value.distanceMeters
+                            )
                         )
-                    )
+                    }
+                }.onFailure { e ->
+                    Log.e("WorkoutService", "Failed to save essential workout data", e)
                 }
 
-                val canonicalMetrics = MetricsCalculator.deriveFullMetrics(
-                    workoutId = workoutId,
-                    recordedAtMs = now,
-                    trackPoints = trackPoints
-                )
-                val metricsToSave = when {
-                    canonicalMetrics != null && session != null -> canonicalMetrics.copy(
-                        settleDownSec = session.metrics.settleDownSec,
-                        settleUpSec = session.metrics.settleUpSec,
-                        longTermHrTrimBpm = session.metrics.longTermHrTrimBpm,
-                        responseLagSec = session.metrics.responseLagSec
-                    )
-                    canonicalMetrics != null -> canonicalMetrics
-                    session != null -> session.metrics
-                    else -> null
-                }
-                // Mark unreliable if cadence lock was detected during the session
-                val reliableMetrics = metricsToSave?.copy(trimpReliable = !cadenceLockSuspected)
+                // Best-effort: metrics derivation, calibration, fitness signals
+                runCatching {
+                    val session = adaptiveController?.finishSession(workoutId = workoutId, endedAtMs = now)
 
-                // --- TRIMP score ---
-                val durationMin = (now - workoutStartMs) / 60_000f
-                val sessionAvgHr = reliableMetrics?.avgHr
-                    ?: if (hrSampleCount > 0) (hrSampleSum.toFloat() / hrSampleCount) else null
-                val hrMaxEst = currentProfile.hrMax?.toFloat() ?: 180f
-                val trimpScore = reliableMetrics?.trimpScore
-                    ?: if (sessionAvgHr != null && durationMin > 0f) {
-                        val intensity = sessionAvgHr / hrMaxEst
-                        durationMin * sessionAvgHr * intensity * intensity
+                    // --- Calibration pass ---
+                    var currentProfile = session?.updatedProfile ?: adaptiveProfileRepository.getProfile()
+
+                    // hrMax: only update if cadence lock was NOT suspected
+                    val newHrMax = HrCalibrator.detectNewHrMax(
+                        currentHrMax = currentProfile.hrMax ?: 180,
+                        recentSamples = hrSessionSamples.toList(),
+                        cadenceLockSuspected = cadenceLockSuspected
+                    )
+                    if (newHrMax != null) {
+                        currentProfile = currentProfile.copy(hrMax = newHrMax, hrMaxIsCalibrated = true)
+                        userProfileRepository.setMaxHr(newHrMax)
+                    }
+
+                    // Load track points once — shared by metrics calculation and hrRest calibration
+                    val trackPoints = repository.getTrackPoints(workoutId)
+
+                    // hrRest: lower only when a plausible early-session proxy is found
+                    val restingProxy = MetricsCalculator.computeRestingHrProxy(trackPoints)
+                    if (restingProxy != null) {
+                        val updatedRest = HrCalibrator.updateHrRest(
+                            currentHrRest = currentProfile.hrRest ?: restingProxy,
+                            candidate = restingProxy
+                        )
+                        currentProfile = currentProfile.copy(hrRest = updatedRest)
+                    }
+
+                    adaptiveProfileRepository.saveProfile(currentProfile)
+                    // --------------------------------
+
+                    val canonicalMetrics = MetricsCalculator.deriveFullMetrics(
+                        workoutId = workoutId,
+                        recordedAtMs = now,
+                        trackPoints = trackPoints,
+                        targetHr = currentProfile.hrMax?.toFloat()
+                    )
+                    val metricsToSave = when {
+                        canonicalMetrics != null && session != null -> canonicalMetrics.copy(
+                            settleDownSec = session.metrics.settleDownSec,
+                            settleUpSec = session.metrics.settleUpSec,
+                            longTermHrTrimBpm = session.metrics.longTermHrTrimBpm,
+                            responseLagSec = session.metrics.responseLagSec
+                        )
+                        canonicalMetrics != null -> canonicalMetrics
+                        session != null -> session.metrics
+                        else -> null
+                    }
+                    // Mark unreliable if cadence lock was detected during the session
+                    val reliableMetrics = metricsToSave?.copy(trimpReliable = !cadenceLockSuspected)
+
+                    // --- TRIMP score ---
+                    val durationMin = (now - workoutStartMs) / 60_000f
+                    val sessionAvgHr = reliableMetrics?.avgHr
+                        ?: if (hrSampleCount > 0) (hrSampleSum.toFloat() / hrSampleCount) else null
+                    val hrMaxEst = currentProfile.hrMax?.toFloat() ?: 180f
+                    val trimpScore = reliableMetrics?.trimpScore
+                        ?: if (sessionAvgHr != null && durationMin > 0f) {
+                            val intensity = sessionAvgHr / hrMaxEst
+                            durationMin * sessionAvgHr * intensity * intensity
+                        } else null
+
+                    // --- Environment flag — compares session pace to recent baseline at similar HR ---
+                    val recentMetricsForEnv = workoutMetricsRepository.getRecentMetrics(42)
+                    val baselinePace: Float? = if (sessionAvgHr != null) {
+                        recentMetricsForEnv
+                            .filter { m ->
+                                m.workoutId != workoutId &&
+                                m.avgHr != null &&
+                                kotlin.math.abs(m.avgHr!! - sessionAvgHr) < 10f &&
+                                m.avgPaceMinPerKm != null
+                            }
+                            .mapNotNull { it.avgPaceMinPerKm }
+                            .sorted()
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { paces -> paces[paces.size / 2] }
                     } else null
 
-                // --- Environment flag — compares session pace to recent baseline at similar HR ---
-                val recentMetricsForEnv = workoutMetricsRepository.getRecentMetrics(42)
-                val baselinePace: Float? = if (sessionAvgHr != null) {
-                    recentMetricsForEnv
-                        .filter { m ->
-                            m.workoutId != workoutId &&
-                            m.avgHr != null &&
-                            kotlin.math.abs(m.avgHr!! - sessionAvgHr) < 10f &&
-                            m.avgPaceMinPerKm != null
-                        }
-                        .mapNotNull { it.avgPaceMinPerKm }
-                        .sorted()
-                        .takeIf { it.isNotEmpty() }
-                        ?.let { paces -> paces[paces.size / 2] }
-                } else null
-
-                val environmentAffected = EnvironmentFlagDetector.isEnvironmentAffected(
-                    aerobicDecoupling = reliableMetrics?.aerobicDecoupling,
-                    sessionAvgGapPace = reliableMetrics?.avgPaceMinPerKm,
-                    baselineGapPaceAtEquivalentHr = baselinePace
-                )
-
-                // Save complete metrics
-                val completeMetrics = reliableMetrics?.copy(
-                    trimpScore = trimpScore,
-                    environmentAffected = environmentAffected
-                )
-                completeMetrics?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
-
-                // --- Update CTL / ATL ---
-                if (trimpScore != null) {
-                    val prevWorkout = repository.getAllWorkoutsOnce()
-                        .sortedByDescending { it.startTime }
-                        .firstOrNull { it.id != workoutId }
-                    val daysSinceLast = if (prevWorkout != null) {
-                        ((now - prevWorkout.startTime) / 86_400_000L).toInt().coerceAtLeast(1)
-                    } else 1
-                    val loadResult = FitnessLoadCalculator.updateLoads(
-                        currentCtl = currentProfile.ctl,
-                        currentAtl = currentProfile.atl,
-                        trimpScore = trimpScore,
-                        daysSinceLast = daysSinceLast
+                    val environmentAffected = EnvironmentFlagDetector.isEnvironmentAffected(
+                        aerobicDecoupling = reliableMetrics?.aerobicDecoupling,
+                        sessionAvgGapPace = reliableMetrics?.avgPaceMinPerKm,
+                        baselineGapPaceAtEquivalentHr = baselinePace
                     )
-                    currentProfile = currentProfile.copy(ctl = loadResult.ctl, atl = loadResult.atl)
-                }
 
-                // --- Fitness signal evaluation → store tuning direction for next Bootcamp session ---
-                val updatedRecentMetrics = workoutMetricsRepository.getRecentMetrics(42)
-                val fitnessEval = FitnessSignalEvaluator.evaluate(currentProfile, updatedRecentMetrics)
-                currentProfile = currentProfile.copy(lastTuningDirection = fitnessEval.tuningDirection)
-                adaptiveProfileRepository.saveProfile(currentProfile)
+                    // Save complete metrics
+                    val completeMetrics = reliableMetrics?.copy(
+                        trimpScore = trimpScore,
+                        environmentAffected = environmentAffected
+                    )
+                    completeMetrics?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
+
+                    // --- Update CTL / ATL ---
+                    if (trimpScore != null) {
+                        val prevWorkout = repository.getAllWorkoutsOnce()
+                            .sortedByDescending { it.startTime }
+                            .firstOrNull { it.id != workoutId }
+                        val daysSinceLast = if (prevWorkout != null) {
+                            ((now - prevWorkout.startTime) / 86_400_000L).toInt().coerceAtLeast(1)
+                        } else 1
+                        val loadResult = FitnessLoadCalculator.updateLoads(
+                            currentCtl = currentProfile.ctl,
+                            currentAtl = currentProfile.atl,
+                            trimpScore = trimpScore,
+                            daysSinceLast = daysSinceLast
+                        )
+                        currentProfile = currentProfile.copy(ctl = loadResult.ctl, atl = loadResult.atl)
+                    }
+
+                    // --- Fitness signal evaluation → store tuning direction for next Bootcamp session ---
+                    val updatedRecentMetrics = workoutMetricsRepository.getRecentMetrics(42)
+                    val fitnessEval = FitnessSignalEvaluator.evaluate(currentProfile, updatedRecentMetrics)
+                    currentProfile = currentProfile.copy(lastTuningDirection = fitnessEval.tuningDirection)
+                    adaptiveProfileRepository.saveProfile(currentProfile)
+                }.onFailure { e ->
+                    Log.e("WorkoutService", "Metrics derivation failed for workout $workoutId", e)
+                }
 
                 WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
             }
@@ -632,14 +648,15 @@ class WorkoutForegroundService : LifecycleService() {
         }
     }
 
-    private fun handleStartFailure(message: String) {
-        runCatching {
-            notificationHelper.update(message)
-        }
+    private fun handleStartFailure(message: String, cause: Throwable? = null) {
+        Log.e("WorkoutService", message, cause)
+        runCatching { notificationHelper.update(message) }
+            .onFailure { Log.w("WorkoutService", "Failed to update notification", it) }
         cleanupManagers()
         WorkoutState.reset()
         WorkoutState.clearCompletedWorkoutId()
         runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
+            .onFailure { Log.w("WorkoutService", "Failed to stop foreground", it) }
         stopSelf()
     }
 
@@ -661,6 +678,22 @@ class WorkoutForegroundService : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        // If a workout was active but stopWorkout never ran, persist what we can
+        if (workoutId > 0L && !isStopping) {
+            Log.w("WorkoutService", "onDestroy called without stopWorkout — saving partial data")
+            runCatching {
+                // onDestroy runs on main thread; Room forbids main-thread DB access.
+                // runBlocking is acceptable here as a last-resort save with a timeout to prevent ANR.
+                kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                    kotlinx.coroutines.withTimeoutOrNull(3000L) {
+                        val workout = repository.getWorkoutById(workoutId)
+                        if (workout != null && workout.endTime == 0L) {
+                            repository.updateWorkout(workout.copy(endTime = System.currentTimeMillis()))
+                        }
+                    }
+                }
+            }.onFailure { Log.e("WorkoutService", "Failed to save partial workout in onDestroy", it) }
+        }
         startupJob?.cancel()
         observationJob?.cancel()
         stopJob?.cancel()

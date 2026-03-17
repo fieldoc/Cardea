@@ -69,6 +69,7 @@ data class BootcampUiState(
     val onboardingTimeCanProceed: Boolean = true,
     val onboardingLongRunMinutes: Int = 0,
     val onboardingWeeklyTotal: Int = 0,
+    val onboardingPreferredDays: List<DayPreference> = emptyList(),
     val onboardingLongRunWarning: String? = null,
     // Gap return
     val welcomeBackMessage: String? = null,

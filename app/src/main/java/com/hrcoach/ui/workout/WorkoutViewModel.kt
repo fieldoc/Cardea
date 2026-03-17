@@ -1,5 +1,6 @@
 package com.hrcoach.ui.workout
 
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
 import com.hrcoach.data.repository.WorkoutRepository
@@ -8,6 +9,7 @@ import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.util.JsonCodec
+import com.hrcoach.util.metersToKm
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -161,6 +163,8 @@ class WorkoutViewModel @Inject constructor(
             workoutStartTimeMs = activeWorkout.startTime.takeIf { it > 0L } ?: workoutStartTimeMs
             val config = runCatching {
                 JsonCodec.gson.fromJson(activeWorkout.targetConfig, WorkoutConfig::class.java)
+            }.onFailure { e ->
+                Log.w("WorkoutVM", "Failed to parse workout config JSON", e)
             }.getOrNull()
 
             _uiState.update { current ->
@@ -193,17 +197,14 @@ class WorkoutViewModel @Inject constructor(
 
     private fun deriveSegmentInfo(config: WorkoutConfig?, elapsed: Long): SegmentInfo {
         if (config == null || !config.isTimeBased()) return SegmentInfo()
+        val result = config.segmentAtElapsed(elapsed) ?: return SegmentInfo()
+        val (index, seg) = result
         var cumulative = 0L
-        config.segments.forEachIndexed { index, seg ->
-            val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
-            cumulative += dur
-            if (elapsed < cumulative) {
-                val nextLabel = config.segments.drop(index + 1).firstOrNull { it.label != null }?.label
-                return SegmentInfo(seg.label, cumulative - elapsed, nextLabel)
-            }
+        for (i in 0..index) {
+            cumulative += config.segments[i].durationSeconds?.toLong() ?: 0L
         }
-        val last = config.segments.lastOrNull()
-        return SegmentInfo(last?.label, 0L, null)
+        val nextLabel = config.segments.drop(index + 1).firstOrNull { it.label != null }?.label
+        return SegmentInfo(seg.label, cumulative - elapsed, nextLabel)
     }
 
     private fun deriveProgressInfo(config: WorkoutConfig?): ProgressInfo {
@@ -223,7 +224,7 @@ class WorkoutViewModel @Inject constructor(
 
             config.mode == WorkoutMode.DISTANCE_PROFILE && config.segments.isNotEmpty() -> {
                 val totalDist = config.segments.lastOrNull()?.distanceMeters
-                val km = totalDist?.let { "%.1f".format(it / 1000f) } ?: "?"
+                val km = totalDist?.let { "%.1f".format(metersToKm(it)) } ?: "?"
                 ProgressInfo(
                     totalDistanceMeters = totalDist,
                     workoutTypeLabel = "$km km \u00b7 Distance profile"

@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -29,20 +30,21 @@ fun CardeaButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     cornerRadius: Dp = 14.dp,
     innerPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
-            .background(CardeaTheme.colors.ctaGradient)
-            .clickable(onClick = onClick)
+            .background(if (enabled) CardeaTheme.colors.ctaGradient else SolidColor(CardeaTheme.colors.glassHighlight))
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(innerPadding),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = CardeaTheme.colors.onGradient,
+            color = if (enabled) CardeaTheme.colors.onGradient else CardeaTheme.colors.textTertiary,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold
         )

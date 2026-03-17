@@ -70,8 +70,11 @@ import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.JsonCodec
 import com.hrcoach.util.asModeLabel
+import com.hrcoach.util.durationMinutes
 import com.hrcoach.util.formatDuration
+import com.hrcoach.util.formatPaceMinPerKm
 import com.hrcoach.util.formatWorkoutDate
+import com.hrcoach.util.metersToKm
 
 private enum class HistoryDetailContentState { LOADING, EMPTY, CONTENT }
 
@@ -462,13 +465,10 @@ private fun StatsCard(
     val fallbackAvg = trackPoints.map { it.heartRate }.filter { it > 0 }
         .takeIf { it.isNotEmpty() }?.average()?.toInt()
     val avgHrValue = avgHr?.toInt() ?: fallbackAvg ?: 0
-    val distanceKm = workout.totalDistanceMeters / 1000f
-    val durationMinutes = (workout.endTime - workout.startTime) / 60_000f
-    val pace = if (distanceKm > 0f && durationMinutes > 0f) {
-        val p = durationMinutes / distanceKm
-        val min = p.toInt()
-        val sec = ((p - min) * 60f).toInt().coerceIn(0, 59)
-        "%d:%02d /km".format(min, sec)
+    val distanceKm = metersToKm(workout.totalDistanceMeters)
+    val durationMin = workout.durationMinutes
+    val pace = if (distanceKm > 0f && durationMin > 0f) {
+        formatPaceMinPerKm(durationMin / distanceKm)
     } else "--"
 
     GlassCard(modifier = modifier, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)) {

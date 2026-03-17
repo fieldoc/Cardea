@@ -28,4 +28,7 @@ interface WorkoutDao {
 
     @Query("SELECT COALESCE(SUM(totalDistanceMeters), 0) / 1000.0 FROM workouts")
     suspend fun sumAllDistanceKm(): Double
+
+    @Query("SELECT * FROM workouts WHERE endTime = 0")
+    suspend fun getOrphanedWorkouts(): List<WorkoutEntity>
 }

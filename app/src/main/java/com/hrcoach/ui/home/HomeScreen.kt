@@ -45,6 +45,7 @@ import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.util.metersToKm
 
 @Composable
 private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
@@ -103,7 +104,7 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
 private fun StatChipsRow(state: HomeUiState, modifier: Modifier = Modifier) {
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (state.hasActiveBootcamp) {
-            val lastKm = state.lastWorkout?.let { "%.1f".format(it.totalDistanceMeters / 1000f) } ?: "—"
+            val lastKm = state.lastWorkout?.let { "%.1f".format(metersToKm(it.totalDistanceMeters)) } ?: "—"
             StatChip(
                 value = "${state.workoutsThisWeek}/${state.weeklyTarget}",
                 label = "GOAL",
@@ -120,7 +121,7 @@ private fun StatChipsRow(state: HomeUiState, modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f)
             )
         } else {
-            val lastKm = state.lastWorkout?.let { "%.1f".format(it.totalDistanceMeters / 1000f) } ?: "—"
+            val lastKm = state.lastWorkout?.let { "%.1f".format(metersToKm(it.totalDistanceMeters)) } ?: "—"
             val lastMin = state.lastWorkout?.let {
                 val mins = ((it.endTime - it.startTime) / 60_000L).coerceAtLeast(0)
                 if (mins == 0L) "< 1 min" else "$mins min"

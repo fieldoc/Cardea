@@ -10,6 +10,8 @@ import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.engine.MetricsCalculator
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
+import com.hrcoach.util.recordedAtMs
+import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -60,23 +62,19 @@ class HistoryViewModel @Inject constructor(
                 _selectedMetrics.value = workout?.let { candidate ->
                     val stored = workoutMetricsRepository.getWorkoutMetrics(candidate.id)
                     stored ?: run {
-                        val recordedAtMs = if (candidate.endTime > candidate.startTime) {
-                            candidate.endTime
-                        } else {
-                            candidate.startTime
-                        }
                         MetricsCalculator.deriveFullMetrics(
                             workoutId = candidate.id,
-                            recordedAtMs = recordedAtMs,
+                            recordedAtMs = candidate.recordedAtMs,
                             trackPoints = points
                         )?.also { workoutMetricsRepository.saveWorkoutMetrics(it) }
                     }
                 }
-            }.onFailure {
+            }.onFailure { e ->
+                Log.e("HistoryVM", "Failed to load workout detail", e)
                 _selectedWorkout.value = null
                 _trackPoints.value = emptyList()
                 _selectedMetrics.value = null
-                _detailError.value = "Unable to load workout details."
+                _detailError.value = e.message ?: "Unable to load workout details."
             }
             _isDetailLoading.value = false
         }
@@ -84,11 +82,17 @@ class HistoryViewModel @Inject constructor(
 
     fun deleteWorkout(workoutId: Long) {
         viewModelScope.launch {
-            repository.deleteWorkout(workoutId)
-            workoutMetricsRepository.deleteWorkoutMetrics(workoutId)
-            _selectedWorkout.value = null
-            _trackPoints.value = emptyList()
-            _selectedMetrics.value = null
+            runCatching {
+                repository.deleteWorkout(workoutId)
+                workoutMetricsRepository.deleteWorkoutMetrics(workoutId)
+            }.onSuccess {
+                _selectedWorkout.value = null
+                _trackPoints.value = emptyList()
+                _selectedMetrics.value = null
+            }.onFailure { e ->
+                Log.e("HistoryVM", "Failed to delete workout", e)
+                _detailError.value = e.message ?: "Unable to delete workout."
+            }
         }
     }
 

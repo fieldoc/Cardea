@@ -217,4 +217,15 @@ class BootcampRepository @Inject constructor(
             }
         }
     }
+
+    suspend fun countConsecutiveCompletedWeeks(enrollmentId: Long): Int {
+        val weeks = bootcampDao.getCompletedWeekNumbers(enrollmentId)
+        if (weeks.isEmpty()) return 0
+        var count = 1
+        for (i in 0 until weeks.lastIndex) {
+            if (weeks[i] - weeks[i + 1] != 1) break
+            count++
+        }
+        return count
+    }
 }
