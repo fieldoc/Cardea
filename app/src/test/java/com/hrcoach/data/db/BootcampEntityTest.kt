@@ -1,5 +1,7 @@
 package com.hrcoach.data.db
 
+import com.hrcoach.domain.bootcamp.DayPreference
+import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -11,7 +13,7 @@ class BootcampEntityTest {
             goalType = "MARATHON",
             targetMinutesPerRun = 45,
             runsPerWeek = 4,
-            preferredDays = "[1,3,5,6]",
+            preferredDays = listOf(1, 3, 5, 6).map { DayPreference(it, DaySelectionLevel.AVAILABLE) },
             startDate = 1000L
         )
         assertEquals(0L, enrollment.id)

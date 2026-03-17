@@ -1,5 +1,7 @@
 package com.hrcoach.data.repository
 
+import com.hrcoach.domain.bootcamp.DayPreference
+import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.BootcampGoal
 import org.junit.Assert.*
 import org.junit.Test
@@ -12,13 +14,14 @@ class BootcampRepositoryTest {
             goal = BootcampGoal.MARATHON,
             targetMinutesPerRun = 45,
             runsPerWeek = 4,
-            preferredDays = listOf(1, 3, 5, 6),
+            preferredDays = listOf(1, 3, 5, 6).map { DayPreference(it, DaySelectionLevel.AVAILABLE) },
             startDate = 1709424000000L
         )
         assertEquals("MARATHON", entity.goalType)
         assertEquals(45, entity.targetMinutesPerRun)
         assertEquals(4, entity.runsPerWeek)
-        assertEquals("[1,3,5,6]", entity.preferredDays)
+        assertEquals(4, entity.preferredDays.size)
+        assertEquals(listOf(1, 3, 5, 6), entity.preferredDays.map { it.day })
         assertEquals("ACTIVE", entity.status)
         assertEquals(0, entity.currentPhaseIndex)
         assertEquals(0, entity.currentWeekInPhase)

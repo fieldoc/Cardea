@@ -98,4 +98,66 @@ class SessionSelectorTest {
         assertEquals("Threshold (Z4)", SessionType.displayLabelForPreset("lactate_threshold"))
         assertEquals("Tempo (Z3)", SessionType.displayLabelForPreset("aerobic_tempo"))
     }
+
+    @Test
+    fun `tierIndex 0 demotes RACE_5K to baseAerobicWeek`() {
+        // RACE_5K goal.tier=2, tierIndex=0 → effectiveTier=1 → baseAerobicWeek path
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 30,
+            tierIndex = 0
+        )
+        assertTrue(sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
+        assertFalse(sessions.any { it.type == SessionType.TEMPO })
+        assertFalse(sessions.any { it.type == SessionType.INTERVAL })
+    }
+
+    @Test
+    fun `tierIndex 2 promotes RACE_5K to 2 quality sessions in PEAK`() {
+        // RACE_5K goal.tier=2, tierIndex=2 → effectiveTier=3 → 2 quality in PEAK
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 35,
+            tierIndex = 2
+        )
+        val qualityTypes = setOf(SessionType.TEMPO, SessionType.INTERVAL)
+        val qualityCount = sessions.count { it.type in qualityTypes }
+        assertEquals(2, qualityCount)
+    }
+
+    @Test
+    fun `tierIndex 0 removes strides from BUILD for tier-2 goal`() {
+        // effectiveTier=1 → baseAerobicWeek, strides require effectiveTier>=2
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 30,
+            tierIndex = 0
+        )
+        assertFalse(sessions.any { it.type == SessionType.STRIDES })
+    }
+
+    @Test
+    fun `tierIndex 1 preserves current behavior for RACE_5K BUILD`() {
+        // tierIndex=1 is neutral: effectiveTier = goal.tier = 2. Same as default.
+        val withTier = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 30,
+            tierIndex = 1
+        )
+        val withoutTier = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 30
+        )
+        assertEquals(withoutTier.map { it.type }, withTier.map { it.type })
+    }
 }

@@ -10,8 +10,10 @@ object SessionSelector {
         phase: TrainingPhase,
         goal: BootcampGoal,
         runsPerWeek: Int,
-        targetMinutes: Int
+        targetMinutes: Int,
+        tierIndex: Int = 1
     ): List<PlannedSession> {
+        val effectiveTier = (goal.tier + tierIndex - 1).coerceIn(1, 4)
         val effectiveMinutes = if (phase == TrainingPhase.TAPER) {
             (targetMinutes * 0.7f).toInt()
         } else {
@@ -21,8 +23,8 @@ object SessionSelector {
         val longMinutes = durations.longMinutes
 
         return when {
-            goal.tier <= 1 -> baseAerobicWeek(phase, runsPerWeek, effectiveMinutes, longMinutes, durations)
-            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, longMinutes, durations)
+            effectiveTier <= 1 -> baseAerobicWeek(phase, runsPerWeek, effectiveMinutes, longMinutes, durations)
+            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, longMinutes, durations, effectiveTier)
         }
     }
 
@@ -51,15 +53,16 @@ object SessionSelector {
         runsPerWeek: Int,
         minutes: Int,
         longMinutes: Int,
-        durations: DurationScaler.WeekDurations
+        durations: DurationScaler.WeekDurations,
+        effectiveTier: Int
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
-        val includeStrides = phase == TrainingPhase.BUILD && goal.tier >= 2 && runsPerWeek >= 4
+        val includeStrides = phase == TrainingPhase.BUILD && effectiveTier >= 2 && runsPerWeek >= 4
 
         val qualitySessions = when (phase) {
             TrainingPhase.BASE -> 0
             TrainingPhase.BUILD -> 1
-            TrainingPhase.PEAK -> if (goal.tier >= 3) 2 else 1
+            TrainingPhase.PEAK -> if (effectiveTier >= 3) 2 else 1
             TrainingPhase.TAPER -> 1
         }
 
@@ -82,7 +85,7 @@ object SessionSelector {
             TrainingPhase.BUILD -> {
                 sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 if (includeStrides) {
-                    val stridesPreset = if (goal.tier >= 3) {
+                    val stridesPreset = if (effectiveTier >= 3) {
                         SessionPresetArray.stridesTier3().presetAt(0)
                     } else {
                         SessionPresetArray.stridesTier2().presetAt(0)
@@ -97,12 +100,12 @@ object SessionSelector {
                 }
             }
             TrainingPhase.PEAK -> {
-                if (goal.tier >= 4) {
+                if (effectiveTier >= 4) {
                     sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
                     if (qualitySessions >= 2) {
                         sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                     }
-                } else if (goal.tier >= 3) {
+                } else if (effectiveTier >= 3) {
                     sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                     if (qualitySessions >= 2) {
                         sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
@@ -122,8 +125,8 @@ object SessionSelector {
 
         // Long run
         if (hasLong) {
-            val longPreset = if (phase == TrainingPhase.PEAK && goal.tier >= 3) null else "zone2_base"
-            val longType = if (phase == TrainingPhase.PEAK && goal.tier >= 3) SessionType.RACE_SIM else SessionType.LONG
+            val longPreset = if (phase == TrainingPhase.PEAK && effectiveTier >= 3) null else "zone2_base"
+            val longType = if (phase == TrainingPhase.PEAK && effectiveTier >= 3) SessionType.RACE_SIM else SessionType.LONG
             sessions.add(PlannedSession(longType, longMinutes, longPreset))
         }
 

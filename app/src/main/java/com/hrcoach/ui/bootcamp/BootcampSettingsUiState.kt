@@ -18,6 +18,10 @@ data class BootcampSettingsUiState(
     val editRunsPerWeek: Int = 3,
     val editTargetMinutesPerRun: Int = 30,
     val editTierIndex: Int = 0,
+    val targetFinishingTimeMinutes: Int? = null,
+    val editTargetFinishingTimeMinutes: Int? = null,
+    val editTimeWarning: String? = null,
+    val editTimeCanProceed: Boolean = true,
     val editStartDateMs: Long = System.currentTimeMillis(),
     val editHrMaxInput: String = "",
     val hrMaxValidationError: String? = null,
@@ -49,6 +53,9 @@ data class BootcampSettingsUiState(
     val hasTierChanges: Boolean
         get() = editTierIndex != tierIndex
 
+    val hasFinishingTimeChanges: Boolean
+        get() = editTargetFinishingTimeMinutes != targetFinishingTimeMinutes
+
     val hasStartDateChanges: Boolean
         get() = editStartDateMs != startDateMs
 
@@ -61,6 +68,7 @@ data class BootcampSettingsUiState(
             hasRunsPerWeekChanges ||
             hasTargetMinutesChanges ||
             hasTierChanges ||
+            hasFinishingTimeChanges ||
             hasStartDateChanges ||
             hasHrMaxChanges
 

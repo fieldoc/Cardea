@@ -10,6 +10,7 @@ import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.service.WorkoutState
+import android.content.Context
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -34,12 +35,14 @@ class HomeViewModelTest {
 
     private lateinit var workoutRepository: WorkoutRepository
     private lateinit var bootcampRepository: BootcampRepository
+    private lateinit var context: Context
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         workoutRepository = mockk(relaxed = true)
         bootcampRepository = mockk(relaxed = true)
+        context = mockk(relaxed = true)
     }
 
     @After
@@ -49,7 +52,7 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel(): HomeViewModel {
-        return HomeViewModel(workoutRepository, bootcampRepository)
+        return HomeViewModel(workoutRepository, bootcampRepository, context)
     }
 
     @Test

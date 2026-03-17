@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 14,
-    "identityHash": "c9a543711dfc0d8bac8fa6adfe799222",
+    "version": 15,
+    "identityHash": "87302a41f5b91f9cef429d97c0bb42ad",
     "entities": [
       {
         "tableName": "workouts",
@@ -290,7 +290,7 @@
       },
       {
         "tableName": "bootcamp_enrollments",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalType` TEXT NOT NULL, `targetMinutesPerRun` INTEGER NOT NULL, `runsPerWeek` INTEGER NOT NULL, `preferredDays` TEXT NOT NULL, `startDate` INTEGER NOT NULL, `currentPhaseIndex` INTEGER NOT NULL, `currentWeekInPhase` INTEGER NOT NULL, `status` TEXT NOT NULL, `tierIndex` INTEGER NOT NULL, `tierPromptSnoozedUntilMs` INTEGER NOT NULL, `tierPromptDismissCount` INTEGER NOT NULL, `illnessPromptSnoozedUntilMs` INTEGER NOT NULL, `pausedAtMs` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `goalType` TEXT NOT NULL, `targetMinutesPerRun` INTEGER NOT NULL, `runsPerWeek` INTEGER NOT NULL, `preferredDays` TEXT NOT NULL, `startDate` INTEGER NOT NULL, `currentPhaseIndex` INTEGER NOT NULL, `currentWeekInPhase` INTEGER NOT NULL, `status` TEXT NOT NULL, `tierIndex` INTEGER NOT NULL, `tierPromptSnoozedUntilMs` INTEGER NOT NULL, `tierPromptDismissCount` INTEGER NOT NULL, `illnessPromptSnoozedUntilMs` INTEGER NOT NULL, `pausedAtMs` INTEGER NOT NULL, `targetFinishingTimeMinutes` INTEGER)",
         "fields": [
           {
             "fieldPath": "id",
@@ -375,6 +375,12 @@
             "columnName": "pausedAtMs",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "targetFinishingTimeMinutes",
+            "columnName": "targetFinishingTimeMinutes",
+            "affinity": "INTEGER",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -388,7 +394,7 @@
       },
       {
         "tableName": "bootcamp_sessions",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `enrollmentId` INTEGER NOT NULL, `weekNumber` INTEGER NOT NULL, `dayOfWeek` INTEGER NOT NULL, `sessionType` TEXT NOT NULL, `targetMinutes` INTEGER NOT NULL, `presetId` TEXT, `status` TEXT NOT NULL DEFAULT 'SCHEDULED', `completedWorkoutId` INTEGER, `presetIndex` INTEGER, `completedAtMs` INTEGER, FOREIGN KEY(`enrollmentId`) REFERENCES `bootcamp_enrollments`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `enrollmentId` INTEGER NOT NULL, `weekNumber` INTEGER NOT NULL, `dayOfWeek` INTEGER NOT NULL, `sessionType` TEXT NOT NULL, `targetMinutes` INTEGER NOT NULL, `presetId` TEXT, `status` TEXT NOT NULL DEFAULT 'SCHEDULED', `completedWorkoutId` INTEGER, `presetIndex` INTEGER, `completedAtMs` INTEGER, FOREIGN KEY(`enrollmentId`) REFERENCES `bootcamp_enrollments`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`completedWorkoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -473,6 +479,15 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_bootcamp_sessions_enrollmentId` ON `${TABLE_NAME}` (`enrollmentId`)"
+          },
+          {
+            "name": "index_bootcamp_sessions_completedWorkoutId",
+            "unique": false,
+            "columnNames": [
+              "completedWorkoutId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bootcamp_sessions_completedWorkoutId` ON `${TABLE_NAME}` (`completedWorkoutId`)"
           }
         ],
         "foreignKeys": [
@@ -482,6 +497,17 @@
             "onUpdate": "NO ACTION",
             "columns": [
               "enrollmentId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "workouts",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "completedWorkoutId"
             ],
             "referencedColumns": [
               "id"
@@ -562,7 +588,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c9a543711dfc0d8bac8fa6adfe799222')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '87302a41f5b91f9cef429d97c0bb42ad')"
     ]
   }
 }

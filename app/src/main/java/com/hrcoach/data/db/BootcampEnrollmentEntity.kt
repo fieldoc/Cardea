@@ -20,7 +20,8 @@ data class BootcampEnrollmentEntity(
     val tierPromptSnoozedUntilMs: Long = 0,
     val tierPromptDismissCount: Int = 0,
     val illnessPromptSnoozedUntilMs: Long = 0,
-    val pausedAtMs: Long = 0
+    val pausedAtMs: Long = 0,
+    val targetFinishingTimeMinutes: Int? = null
 ) {
     companion object {
         const val STATUS_ACTIVE = "ACTIVE"

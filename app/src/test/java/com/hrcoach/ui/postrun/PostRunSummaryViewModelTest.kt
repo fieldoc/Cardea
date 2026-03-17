@@ -83,11 +83,7 @@ class PostRunSummaryViewModelTest {
         return PostRunSummaryViewModel(
             savedStateHandle = savedState(workoutId, fresh),
             workoutRepository = workoutRepository,
-            workoutMetricsRepository = workoutMetricsRepository,
-            bootcampSessionCompleter = bootcampSessionCompleter,
-            achievementEvaluator = achievementEvaluator,
-            achievementDao = achievementDao,
-            bootcampRepository = bootcampRepository
+            workoutMetricsRepository = workoutMetricsRepository
         )
     }
 
