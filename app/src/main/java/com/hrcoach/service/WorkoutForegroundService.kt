@@ -762,6 +762,7 @@ class WorkoutForegroundService : LifecycleService() {
         observationJob?.cancel()
         stopJob?.cancel()
         cleanupManagers()
+        WorkoutState.reset()
     }
 
     private data class WorkoutTick(

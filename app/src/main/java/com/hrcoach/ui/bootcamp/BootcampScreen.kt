@@ -69,6 +69,7 @@ import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.model.BootcampGoal
+import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
@@ -1761,7 +1762,7 @@ private fun TodayHeroSection(
                         androidx.compose.material3.Button(
                             onClick = {
                                 onBootcampWorkoutStarting()
-                                onStartWorkout(buildConfigJson(today.session))
+                                onStartWorkout(buildConfigJson(today.session, uiState.maxHr))
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2476,16 +2477,17 @@ private fun goalDisplayName(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.MARATHON -> "Marathon"
 }
 
-private fun buildConfigJson(session: PlannedSession): String {
+private fun buildConfigJson(session: PlannedSession, maxHr: Int?): String {
     val presetId = session.presetId
-    return if (presetId != null) {
-        org.json.JSONObject().apply {
-            put("mode", WorkoutMode.DISTANCE_PROFILE.name)
-            put("presetId", presetId)
-        }.toString()
-    } else {
-        org.json.JSONObject().apply {
-            put("mode", WorkoutMode.FREE_RUN.name)
-        }.toString()
+    if (presetId != null && maxHr != null) {
+        val preset = com.hrcoach.domain.preset.PresetLibrary.ALL.firstOrNull { it.id == presetId }
+        if (preset != null) {
+            val config = preset.buildConfig(maxHr)
+            return com.hrcoach.util.JsonCodec.gson.toJson(config)
+        }
     }
+    // Fallback: free run if preset not found or maxHr unknown
+    return com.hrcoach.util.JsonCodec.gson.toJson(
+        WorkoutConfig(mode = WorkoutMode.FREE_RUN)
+    )
 }
