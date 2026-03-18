@@ -10,12 +10,13 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import kotlinx.coroutines.flow.MutableStateFlow
+import com.hrcoach.domain.simulation.LocationDataSource
 import kotlinx.coroutines.flow.StateFlow
 
 /** Minimum acceptable horizontal accuracy (metres). Fixes worse than this are discarded. */
 private const val MIN_ACCURACY_METERS = 20f
 
-class GpsDistanceTracker(context: Context) {
+class GpsDistanceTracker(context: Context) : LocationDataSource {
 
     private val fusedClient = LocationServices.getFusedLocationProviderClient(context)
     private var lastLocation: Location? = null
@@ -30,13 +31,13 @@ class GpsDistanceTracker(context: Context) {
     private var isMoving: Boolean = true
 
     private val _distanceMeters = MutableStateFlow(0f)
-    val distanceMeters: StateFlow<Float> = _distanceMeters
+    override val distanceMeters: StateFlow<Float> = _distanceMeters
 
     private val _currentLocation = MutableStateFlow<Location?>(null)
-    val currentLocation: StateFlow<Location?> = _currentLocation
+    override val currentLocation: StateFlow<Location?> = _currentLocation
 
     private val _currentSpeed = MutableStateFlow<Float?>(null)
-    val currentSpeed: StateFlow<Float?> = _currentSpeed
+    override val currentSpeed: StateFlow<Float?> = _currentSpeed
 
     /** Background thread that receives location callbacks off the main thread. */
     private var locationThread: HandlerThread? = null
@@ -63,12 +64,12 @@ class GpsDistanceTracker(context: Context) {
     }
 
     /** Call with false when auto-paused; true when moving again. */
-    fun setMoving(moving: Boolean) {
+    override fun setMoving(moving: Boolean) {
         isMoving = moving
     }
 
     @SuppressLint("MissingPermission")
-    fun start() {
+    override fun start() {
         if (isRunning) return
         isRunning = true
         isMoving = true
@@ -97,7 +98,7 @@ class GpsDistanceTracker(context: Context) {
         }
     }
 
-    fun stop() {
+    override fun stop() {
         if (!isRunning) return
         isRunning = false
         runCatching {

@@ -25,9 +25,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.hrcoach.domain.simulation.HrDataSource
 import java.util.UUID
 
-class BleHrManager(context: Context) {
+class BleHrManager(context: Context) : HrDataSource {
 
     companion object {
         val HR_SERVICE_UUID: UUID = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
@@ -72,10 +73,10 @@ class BleHrManager(context: Context) {
     private var reconnectAttempts: Int = 0
 
     private val _heartRate = MutableStateFlow(0)
-    val heartRate: StateFlow<Int> = _heartRate
+    override val heartRate: StateFlow<Int> = _heartRate
 
     private val _isConnected = MutableStateFlow(false)
-    val isConnected: StateFlow<Boolean> = _isConnected
+    override val isConnected: StateFlow<Boolean> = _isConnected
 
     /** True once all reconnect attempts have been exhausted; cleared on a fresh connectToDevice call. */
     private val _connectionFailed = MutableStateFlow(false)
