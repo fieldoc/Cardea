@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.service.simulation.SimulationController
 
-private val SPEED_OPTIONS = listOf(1f, 5f, 10f, 50f)
+internal val SPEED_OPTIONS = listOf(1f, 5f, 10f, 50f)
 
 @Composable
 fun SimulationOverlay(modifier: Modifier = Modifier) {

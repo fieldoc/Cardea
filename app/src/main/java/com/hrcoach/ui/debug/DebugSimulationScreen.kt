@@ -48,7 +48,6 @@ fun DebugSimulationScreen(
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // Header
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
@@ -58,7 +57,6 @@ fun DebugSimulationScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // Status
         if (state.isSimActive) {
             Row(
                 modifier = Modifier
@@ -75,7 +73,6 @@ fun DebugSimulationScreen(
             Spacer(Modifier.height(16.dp))
         }
 
-        // Scenario Picker
         Text("SCENARIO", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
 
@@ -112,7 +109,6 @@ fun DebugSimulationScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // Speed
         Text("SPEED", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
 
@@ -120,7 +116,7 @@ fun DebugSimulationScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            listOf(1f, 5f, 10f, 50f).forEach { speed ->
+            SPEED_OPTIONS.forEach { speed ->
                 val isSelected = state.speedMultiplier == speed
                 Text(
                     text = "${speed.toInt()}x",
@@ -138,7 +134,6 @@ fun DebugSimulationScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // Toggle
         Button(
             onClick = {
                 viewModel.toggleSimulation()

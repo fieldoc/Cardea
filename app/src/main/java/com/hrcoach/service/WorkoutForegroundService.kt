@@ -223,12 +223,12 @@ class WorkoutForegroundService : LifecycleService() {
 
         notificationHelper.startForeground(this, "Starting workout...")
 
-        // Choose data source factory based on simulation mode
-        val factory = if (SimulationController.isActive) {
-            val simState = SimulationController.state.value
+        // Choose data source factory based on simulation mode — single atomic snapshot
+        val simState = SimulationController.state.value
+        val factory = if (simState.isActive && simState.scenario != null) {
             val simClock = SimulationClock(MutableStateFlow(simState.speedMultiplier))
             SimulationController.attachClock(simClock)
-            SimulatedDataSourceFactory(simState.scenario!!, simClock)
+            SimulatedDataSourceFactory(simState.scenario, simClock)
         } else {
             realDataSourceFactory
         }
@@ -525,6 +525,7 @@ class WorkoutForegroundService : LifecycleService() {
             startupJob = null
 
             simTickJob?.cancel()
+            simTickJob?.join()
             simTickJob = null
             observationJob?.cancel()
             observationJob?.join()
@@ -692,7 +693,9 @@ class WorkoutForegroundService : LifecycleService() {
 
             cleanupManagers()
             WorkoutState.reset()
-            SimulationController.deactivate()
+            if (SimulationController.isActive) {
+                SimulationController.deactivate()
+            }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             isStopping = false

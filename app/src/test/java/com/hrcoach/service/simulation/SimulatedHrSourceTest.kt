@@ -14,17 +14,14 @@ class SimulatedHrSourceTest {
 
     @Test
     fun `initial state is connected with zero HR`() {
-        val clock = SimulationClock()
-        val source = SimulatedHrSource(clock, scenario)
+        val source = SimulatedHrSource(scenario)
         assertEquals(0, source.heartRate.value)
         assertTrue(source.isConnected.value)
     }
 
     @Test
     fun `updateForTime sets HR from scenario interpolation`() {
-        val clock = SimulationClock()
-        val source = SimulatedHrSource(clock, scenario)
-        // Use a seeded Random approach - just check within noise range
+        val source = SimulatedHrSource(scenario)
         source.updateForTime(0f)
         assertTrue("HR at t=0 should be ~100, was ${source.heartRate.value}",
             source.heartRate.value in 94..106)
@@ -38,8 +35,7 @@ class SimulatedHrSourceTest {
         val scenarioWithLoss = scenario.copy(
             events = listOf(SimEvent.SignalLoss(atSeconds = 10, durationSeconds = 10))
         )
-        val clock = SimulationClock()
-        val source = SimulatedHrSource(clock, scenarioWithLoss)
+        val source = SimulatedHrSource(scenarioWithLoss)
 
         source.updateForTime(9f)
         assertTrue(source.isConnected.value)

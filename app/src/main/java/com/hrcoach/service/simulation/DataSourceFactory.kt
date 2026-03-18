@@ -32,7 +32,7 @@ class SimulatedDataSourceFactory(
     private val scenario: SimulationScenario,
     private val clock: SimulationClock
 ) : DataSourceFactory {
-    override fun createHrSource(): HrDataSource = SimulatedHrSource(clock, scenario)
+    override fun createHrSource(): HrDataSource = SimulatedHrSource(scenario)
     override fun createLocationSource(): LocationDataSource = SimulatedLocationSource(clock, scenario)
     override fun getClock(): WorkoutClock = clock
 }

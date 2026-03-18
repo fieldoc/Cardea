@@ -7,36 +7,37 @@ data class SimulationScenario(
     val paceProfile: List<PaceDataPoint>,
     val events: List<SimEvent> = emptyList()
 ) {
-    fun interpolateHr(timeSeconds: Float): Int {
-        if (hrProfile.isEmpty()) return 0
-        if (timeSeconds <= hrProfile.first().timeSeconds) return hrProfile.first().hr
-        if (timeSeconds >= hrProfile.last().timeSeconds) return hrProfile.last().hr
-        val idx = hrProfile.indexOfLast { it.timeSeconds <= timeSeconds }
-        val a = hrProfile[idx]
-        val b = hrProfile.getOrNull(idx + 1) ?: return a.hr
-        val t = (timeSeconds - a.timeSeconds) / (b.timeSeconds - a.timeSeconds)
-        return (a.hr + t * (b.hr - a.hr)).toInt()
+    fun interpolateHr(timeSeconds: Float): Int =
+        interpolate(hrProfile, timeSeconds, default = 0f, time = { it.timeSeconds.toFloat() }, value = { it.hr.toFloat() }).toInt()
+
+    fun interpolatePace(timeSeconds: Float): Float =
+        interpolate(paceProfile, timeSeconds, default = 6.0f, time = { it.timeSeconds.toFloat() }, value = { it.paceMinPerKm })
+
+    fun isSignalLost(timeSeconds: Float): Boolean = hasActiveEvent<SimEvent.SignalLoss>(timeSeconds)
+
+    fun isGpsDropout(timeSeconds: Float): Boolean = hasActiveEvent<SimEvent.GpsDropout>(timeSeconds)
+
+    fun isStopped(timeSeconds: Float): Boolean = hasActiveEvent<SimEvent.Stop>(timeSeconds)
+
+    private inline fun <reified T : SimEvent> hasActiveEvent(timeSeconds: Float): Boolean =
+        events.any { it is T && timeSeconds >= it.atSeconds && timeSeconds < it.atSeconds + it.durationSeconds }
+
+    private fun <T> interpolate(
+        points: List<T>,
+        timeSeconds: Float,
+        default: Float,
+        time: (T) -> Float,
+        value: (T) -> Float
+    ): Float {
+        if (points.isEmpty()) return default
+        if (timeSeconds <= time(points.first())) return value(points.first())
+        if (timeSeconds >= time(points.last())) return value(points.last())
+        val idx = points.indexOfLast { time(it) <= timeSeconds }
+        val a = points[idx]
+        val b = points.getOrNull(idx + 1) ?: return value(a)
+        val t = (timeSeconds - time(a)) / (time(b) - time(a))
+        return value(a) + t * (value(b) - value(a))
     }
-
-    fun interpolatePace(timeSeconds: Float): Float {
-        if (paceProfile.isEmpty()) return 6.0f
-        if (timeSeconds <= paceProfile.first().timeSeconds) return paceProfile.first().paceMinPerKm
-        if (timeSeconds >= paceProfile.last().timeSeconds) return paceProfile.last().paceMinPerKm
-        val idx = paceProfile.indexOfLast { it.timeSeconds <= timeSeconds }
-        val a = paceProfile[idx]
-        val b = paceProfile.getOrNull(idx + 1) ?: return a.paceMinPerKm
-        val t = (timeSeconds - a.timeSeconds) / (b.timeSeconds - a.timeSeconds)
-        return a.paceMinPerKm + t * (b.paceMinPerKm - a.paceMinPerKm)
-    }
-
-    fun isSignalLost(timeSeconds: Float): Boolean =
-        events.any { it is SimEvent.SignalLoss && timeSeconds >= it.atSeconds && timeSeconds < it.atSeconds + it.durationSeconds }
-
-    fun isGpsDropout(timeSeconds: Float): Boolean =
-        events.any { it is SimEvent.GpsDropout && timeSeconds >= it.atSeconds && timeSeconds < it.atSeconds + it.durationSeconds }
-
-    fun isStopped(timeSeconds: Float): Boolean =
-        events.any { it is SimEvent.Stop && timeSeconds >= it.atSeconds && timeSeconds < it.atSeconds + it.durationSeconds }
 
     companion object {
         val EASY_STEADY_RUN = SimulationScenario(
@@ -139,11 +140,8 @@ data class PaceDataPoint(
     val paceMinPerKm: Float
 )
 
-sealed class SimEvent {
-    abstract val atSeconds: Int
-    abstract val durationSeconds: Int
-
-    data class SignalLoss(override val atSeconds: Int, override val durationSeconds: Int) : SimEvent()
-    data class GpsDropout(override val atSeconds: Int, override val durationSeconds: Int) : SimEvent()
-    data class Stop(override val atSeconds: Int, override val durationSeconds: Int) : SimEvent()
+sealed class SimEvent(val atSeconds: Int, val durationSeconds: Int) {
+    class SignalLoss(atSeconds: Int, durationSeconds: Int) : SimEvent(atSeconds, durationSeconds)
+    class GpsDropout(atSeconds: Int, durationSeconds: Int) : SimEvent(atSeconds, durationSeconds)
+    class Stop(atSeconds: Int, durationSeconds: Int) : SimEvent(atSeconds, durationSeconds)
 }

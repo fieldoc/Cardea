@@ -1,12 +1,15 @@
 package com.hrcoach.ui.debug
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.hrcoach.domain.simulation.SimulationScenario
 import com.hrcoach.service.simulation.SimulationController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class DebugSimUiState(
@@ -22,12 +25,20 @@ class DebugSimulationViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(DebugSimUiState(isSimActive = SimulationController.isActive))
     val uiState: StateFlow<DebugSimUiState> = _uiState.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            SimulationController.state.collect { simState ->
+                _uiState.update { it.copy(isSimActive = simState.isActive) }
+            }
+        }
+    }
+
     fun selectScenario(index: Int) {
-        _uiState.value = _uiState.value.copy(selectedScenarioIndex = index)
+        _uiState.update { it.copy(selectedScenarioIndex = index) }
     }
 
     fun setSpeed(speed: Float) {
-        _uiState.value = _uiState.value.copy(speedMultiplier = speed)
+        _uiState.update { it.copy(speedMultiplier = speed) }
         if (SimulationController.isActive) {
             SimulationController.setSpeed(speed)
         }
@@ -36,12 +47,12 @@ class DebugSimulationViewModel @Inject constructor() : ViewModel() {
     fun toggleSimulation() {
         if (SimulationController.isActive) {
             SimulationController.deactivate()
-            _uiState.value = _uiState.value.copy(isSimActive = false)
+            _uiState.update { it.copy(isSimActive = false) }
         } else {
             val state = _uiState.value
             val scenario = state.scenarios[state.selectedScenarioIndex]
             SimulationController.activate(scenario, state.speedMultiplier)
-            _uiState.value = state.copy(isSimActive = true)
+            _uiState.update { it.copy(isSimActive = true) }
         }
     }
 }

@@ -1,8 +1,6 @@
 package com.hrcoach.service.simulation
 
 import com.hrcoach.data.repository.AdaptiveProfileRepository
-import com.hrcoach.data.repository.WorkoutMetricsRepository
-import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.engine.AdaptivePaceController
 import com.hrcoach.domain.engine.ZoneEngine
 import com.hrcoach.domain.model.AdaptiveProfile
@@ -26,9 +24,7 @@ data class BatchResult(
 )
 
 class BatchSimulator @Inject constructor(
-    private val adaptiveProfileRepository: AdaptiveProfileRepository,
-    private val workoutRepository: WorkoutRepository,
-    private val workoutMetricsRepository: WorkoutMetricsRepository
+    private val adaptiveProfileRepository: AdaptiveProfileRepository
 ) {
     companion object {
         private const val TICK_INTERVAL_MS = 2_000L
@@ -40,7 +36,7 @@ class BatchSimulator @Inject constructor(
             initialProfile: AdaptiveProfile
         ): SingleRunResult {
             val clock = SimulationClock(MutableStateFlow(1f))
-            val hrSource = SimulatedHrSource(clock, scenario)
+            val hrSource = SimulatedHrSource(scenario)
             val locSource = SimulatedLocationSource(clock, scenario)
 
             val zoneEngine = ZoneEngine(config)

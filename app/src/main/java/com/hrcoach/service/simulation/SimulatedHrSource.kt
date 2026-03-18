@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import java.util.Random
 
 class SimulatedHrSource(
-    private val clock: SimulationClock,
     private val scenario: SimulationScenario
 ) : HrDataSource {
 
