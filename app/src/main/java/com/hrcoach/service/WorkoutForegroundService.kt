@@ -26,7 +26,17 @@ import com.hrcoach.domain.engine.ZoneEngine
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
+import com.hrcoach.domain.simulation.HrDataSource
+import com.hrcoach.domain.simulation.LocationDataSource
+import com.hrcoach.domain.simulation.RealClock
+import com.hrcoach.domain.simulation.WorkoutClock
 import com.hrcoach.service.audio.CoachingAudioManager
+import com.hrcoach.service.simulation.RealDataSourceFactory
+import com.hrcoach.service.simulation.SimulatedDataSourceFactory
+import com.hrcoach.service.simulation.SimulatedHrSource
+import com.hrcoach.service.simulation.SimulatedLocationSource
+import com.hrcoach.service.simulation.SimulationClock
+import com.hrcoach.service.simulation.SimulationController
 import com.hrcoach.service.workout.AlertPolicy
 import com.hrcoach.service.workout.CoachingEventRouter
 import com.hrcoach.service.workout.TrackPointRecorder
@@ -36,6 +46,8 @@ import com.hrcoach.util.PermissionGate
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -80,10 +92,15 @@ class WorkoutForegroundService : LifecycleService() {
     @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
 
+    @Inject
+    lateinit var realDataSourceFactory: RealDataSourceFactory
+
     private val gson = JsonCodec.gson
     private lateinit var notificationHelper: WorkoutNotificationHelper
 
-    private var gpsTracker: GpsDistanceTracker? = null
+    private var locationSource: LocationDataSource? = null
+    private var hrSource: HrDataSource? = null
+    private var clock: WorkoutClock = RealClock()
     private var coachingAudioManager: CoachingAudioManager? = null
     private var zoneEngine: ZoneEngine? = null
     private var adaptiveController: AdaptivePaceController? = null
@@ -93,6 +110,7 @@ class WorkoutForegroundService : LifecycleService() {
     private val trackPointRecorder = TrackPointRecorder(TRACK_POINT_INTERVAL_MS)
 
     private var observationJob: Job? = null
+    private var simTickJob: Job? = null
     private var stopJob: Job? = null
     private var startupJob: Job? = null
 
@@ -133,7 +151,7 @@ class WorkoutForegroundService : LifecycleService() {
                 val parsedConfig = runCatching {
                     gson.fromJson(configJson, WorkoutConfig::class.java)
                 }.getOrNull() ?: return START_NOT_STICKY
-                if (!PermissionGate.hasAllRuntimePermissions(this)) {
+                if (!SimulationController.isActive && !PermissionGate.hasAllRuntimePermissions(this)) {
                     handleStartFailure("Missing required permissions.")
                     return START_NOT_STICKY
                 }
@@ -171,9 +189,9 @@ class WorkoutForegroundService : LifecycleService() {
                 if (!sessionAutoPauseEnabled) {
                     // If currently auto-paused when toggled off, resume everything cleanly
                     if (WorkoutState.snapshot.value.isAutoPaused) {
-                        totalAutoPausedMs += System.currentTimeMillis() - autoPauseStartMs
+                        totalAutoPausedMs += clock.now() - autoPauseStartMs
                         autoPauseStartMs = 0L
-                        gpsTracker?.setMoving(true)
+                        locationSource?.setMoving(true)
                     }
                     autoPauseDetector?.reset()
                     WorkoutState.update { it.copy(isAutoPaused = false, autoPauseEnabled = false) }
@@ -205,7 +223,19 @@ class WorkoutForegroundService : LifecycleService() {
 
         notificationHelper.startForeground(this, "Starting workout...")
 
-        gpsTracker = GpsDistanceTracker(this)
+        // Choose data source factory based on simulation mode
+        val factory = if (SimulationController.isActive) {
+            val simState = SimulationController.state.value
+            val simClock = SimulationClock(MutableStateFlow(simState.speedMultiplier))
+            SimulationController.attachClock(simClock)
+            SimulatedDataSourceFactory(simState.scenario!!, simClock)
+        } else {
+            realDataSourceFactory
+        }
+
+        clock = factory.getClock()
+        hrSource = factory.createHrSource()
+        locationSource = factory.createLocationSource()
         coachingAudioManager = CoachingAudioManager(this, audioSettingsRepository.getAudioSettings())
         zoneEngine = ZoneEngine(workoutConfig)
         adaptiveController = AdaptivePaceController(
@@ -218,21 +248,23 @@ class WorkoutForegroundService : LifecycleService() {
             runCatching {
                 workoutId = repository.createWorkout(
                     WorkoutEntity(
-                        startTime = System.currentTimeMillis(),
+                        startTime = clock.now(),
                         mode = workoutConfig.mode.name,
                         targetConfig = gson.toJson(workoutConfig)
                     )
                 )
-                workoutStartMs = System.currentTimeMillis()
-                gpsTracker?.start()
+                workoutStartMs = clock.now()
+                locationSource?.start()
 
-                val alreadyConnected = bleCoordinator.isConnected.value
-                if (!alreadyConnected) {
-                    val connected = deviceAddress?.let { address ->
-                        bleCoordinator.connectToAddress(address)
-                    } ?: false
-                    if (!connected) {
-                        bleCoordinator.startScan()
+                if (!SimulationController.isActive) {
+                    val alreadyConnected = bleCoordinator.isConnected.value
+                    if (!alreadyConnected) {
+                        val connected = deviceAddress?.let { address ->
+                            bleCoordinator.connectToAddress(address)
+                        } ?: false
+                        if (!connected) {
+                            bleCoordinator.startScan()
+                        }
                     }
                 }
 
@@ -241,7 +273,7 @@ class WorkoutForegroundService : LifecycleService() {
                         isRunning = true,
                         isPaused = false,
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
-                        guidanceText = "GET HR SIGNAL",
+                        guidanceText = if (SimulationController.isActive) "SIM STARTING" else "GET HR SIGNAL",
                         autoPauseEnabled = sessionAutoPauseEnabled,
                         pendingBootcampSessionId = current.pendingBootcampSessionId,
                     )
@@ -254,17 +286,30 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun observeWorkoutTicks(workoutConfig: WorkoutConfig) {
-        val hrManager = bleCoordinator.managerForWorkout()
-        val tracker = gpsTracker ?: return
+        val hr = hrSource ?: return
+        val loc = locationSource ?: return
+
+        // Drive simulated sources if in sim mode
+        if (hr is SimulatedHrSource && loc is SimulatedLocationSource) {
+            simTickJob?.cancel()
+            simTickJob = lifecycleScope.launch(Dispatchers.IO) {
+                while (true) {
+                    val elapsedSec = (clock.now() - workoutStartMs) / 1000f
+                    hr.updateForTime(elapsedSec)
+                    loc.updateForTime(elapsedSec)
+                    delay(100) // 100ms real time between ticks
+                }
+            }
+        }
 
         observationJob?.cancel()
         observationJob = lifecycleScope.launch(Dispatchers.IO) {
             combine(
-                hrManager.heartRate,
-                hrManager.isConnected,
-                tracker.distanceMeters,
-                tracker.currentLocation,
-                tracker.currentSpeed
+                hr.heartRate,
+                hr.isConnected,
+                loc.distanceMeters,
+                loc.currentLocation,
+                loc.currentSpeed
             ) { values ->
                 @Suppress("UNCHECKED_CAST")
                 WorkoutTick(
@@ -284,20 +329,20 @@ class WorkoutForegroundService : LifecycleService() {
         val engine = zoneEngine ?: return
         val adaptive = adaptiveController
         latestTick = tick
-        val nowMs = System.currentTimeMillis()
+        val nowMs = clock.now()
 
         // Auto-pause detection: run before elapsed-time math so state is fresh this tick
         if (sessionAutoPauseEnabled) {
             when (autoPauseDetector?.update(tick.speed, nowMs)) {
                 AutoPauseEvent.PAUSED -> {
                     autoPauseStartMs = nowMs
-                    gpsTracker?.setMoving(false)
+                    locationSource?.setMoving(false)
                     WorkoutState.update { it.copy(isAutoPaused = true) }
                 }
                 AutoPauseEvent.RESUMED -> {
                     totalAutoPausedMs += nowMs - autoPauseStartMs
                     autoPauseStartMs = 0L
-                    gpsTracker?.setMoving(true)
+                    locationSource?.setMoving(true)
                     WorkoutState.update { it.copy(isAutoPaused = false) }
                 }
                 else -> Unit
@@ -447,13 +492,13 @@ class WorkoutForegroundService : LifecycleService() {
             }
         }
         if (didPause) {
-            pauseStartMs = System.currentTimeMillis()
+            pauseStartMs = clock.now()
         }
         notificationHelper.update("Workout paused")
     }
 
     private fun resumeWorkout() {
-        val nowMs = System.currentTimeMillis()
+        val nowMs = clock.now()
         var didResume = false
         WorkoutState.update { current ->
             if (!current.isRunning || !current.isPaused) current else {
@@ -479,6 +524,8 @@ class WorkoutForegroundService : LifecycleService() {
             startupJob?.join()
             startupJob = null
 
+            simTickJob?.cancel()
+            simTickJob = null
             observationJob?.cancel()
             observationJob?.join()
             observationJob = null
@@ -487,7 +534,7 @@ class WorkoutForegroundService : LifecycleService() {
             if (finalTick != null) {
                 trackPointRecorder.saveIfNeeded(
                     workoutId = workoutId,
-                    timestampMs = System.currentTimeMillis(),
+                    timestampMs = clock.now(),
                     latitude = finalTick.location?.latitude,
                     longitude = finalTick.location?.longitude,
                     heartRate = finalTick.hr,
@@ -497,11 +544,13 @@ class WorkoutForegroundService : LifecycleService() {
                 )
             }
 
-            gpsTracker?.stop()
-            bleCoordinator.disconnect()
+            locationSource?.stop()
+            if (!SimulationController.isActive) {
+                bleCoordinator.disconnect()
+            }
 
             if (workoutId > 0L) {
-                val now = System.currentTimeMillis()
+                val now = clock.now()
 
                 // Essential: save workout end state — must succeed even if metrics crash
                 runCatching {
@@ -643,6 +692,7 @@ class WorkoutForegroundService : LifecycleService() {
 
             cleanupManagers()
             WorkoutState.reset()
+            SimulationController.deactivate()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             isStopping = false
@@ -669,8 +719,10 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun cleanupManagers() {
-        gpsTracker?.stop()
-        gpsTracker = null
+        locationSource?.stop()
+        locationSource = null
+        hrSource = null
+        clock = RealClock()
         coachingAudioManager?.destroy()
         coachingAudioManager = null
         zoneEngine = null
@@ -696,13 +748,14 @@ class WorkoutForegroundService : LifecycleService() {
                     kotlinx.coroutines.withTimeoutOrNull(3000L) {
                         val workout = repository.getWorkoutById(workoutId)
                         if (workout != null && workout.endTime == 0L) {
-                            repository.updateWorkout(workout.copy(endTime = System.currentTimeMillis()))
+                            repository.updateWorkout(workout.copy(endTime = clock.now()))
                         }
                     }
                 }
             }.onFailure { Log.e("WorkoutService", "Failed to save partial workout in onDestroy", it) }
         }
         startupJob?.cancel()
+        simTickJob?.cancel()
         observationJob?.cancel()
         stopJob?.cancel()
         cleanupManagers()
