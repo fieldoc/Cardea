@@ -81,6 +81,7 @@ import com.hrcoach.ui.theme.DarkCardeaColors
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.LocalCardeaColors
 import androidx.compose.runtime.CompositionLocalProvider
+import com.hrcoach.ui.debug.DebugSimulationScreen
 import com.hrcoach.ui.workout.ActiveWorkoutScreen
 import com.hrcoach.util.PermissionGate
 
@@ -95,6 +96,7 @@ object Routes {
     const val HISTORY          = "history"
     const val ACCOUNT          = "account"
     const val BOOTCAMP         = "bootcamp"
+    const val SIMULATION        = "simulation"
     const val BOOTCAMP_SETTINGS = "bootcamp_settings"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
@@ -442,7 +444,12 @@ fun HrCoachNavGraph(
             ) {
                 AccountScreen(
                     onThemeModeChanged = onThemeModeChanged,
-                    currentThemeMode = currentThemeMode
+                    currentThemeMode = currentThemeMode,
+                    onNavigateToSimulation = {
+                        navController.navigate(Routes.SIMULATION) {
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
@@ -493,6 +500,22 @@ fun HrCoachNavGraph(
                 exitTransition = { defaultExit(1) }
             ) {
                 com.hrcoach.ui.bootcamp.BootcampSettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.SIMULATION,
+                enterTransition = { defaultEnter(1) },
+                exitTransition = { defaultExit(1) }
+            ) {
+                DebugSimulationScreen(
+                    onNavigateToSetup = {
+                        navController.navigate(Routes.SETUP) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                        }
+                    },
                     onBack = { navController.popBackStack() }
                 )
             }

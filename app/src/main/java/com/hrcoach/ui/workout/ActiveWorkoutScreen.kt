@@ -71,9 +71,12 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.service.simulation.SimulationController
+import com.hrcoach.ui.debug.SimulationOverlay
 import com.hrcoach.util.formatDistanceKm
 import com.hrcoach.util.formatDurationSeconds
 import com.hrcoach.util.formatPaceMinPerKm
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 
 @Composable
@@ -134,6 +137,10 @@ fun ActiveWorkoutScreen(
                 )
             }
     ) {
+        if (SimulationController.isActive) {
+            SimulationOverlay(modifier = Modifier.align(Alignment.TopCenter).zIndex(10f))
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

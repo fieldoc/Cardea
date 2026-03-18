@@ -69,6 +69,7 @@ import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.BuildConfig
 import com.hrcoach.ui.theme.ZoneRed
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +77,7 @@ import com.hrcoach.ui.theme.ZoneRed
 fun AccountScreen(
     onThemeModeChanged: (ThemeMode) -> Unit = {},
     currentThemeMode: ThemeMode = ThemeMode.SYSTEM,
+    onNavigateToSimulation: () -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -343,6 +345,51 @@ fun AccountScreen(
                     checked = state.autoPauseEnabled,
                     onCheckedChange = viewModel::setAutoPauseEnabled
                 )
+            }
+
+            // ── Simulation (debug only) ────────────────────────────────────
+            if (BuildConfig.DEBUG) {
+                Spacer(modifier = Modifier.height(20.dp))
+                SectionLabel("Simulation")
+                Spacer(modifier = Modifier.height(6.dp))
+
+                GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onNavigateToSimulation)
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
+                                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = null,
+                                tint = CardeaTheme.colors.textSecondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Simulation Environment",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = CardeaTheme.colors.textPrimary
+                            )
+                            Text(
+                                text = "Test workouts with simulated HR & GPS",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTheme.colors.textTertiary
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(32.dp))

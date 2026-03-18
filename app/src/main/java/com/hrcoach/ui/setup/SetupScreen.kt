@@ -89,6 +89,7 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.service.simulation.SimulationController
 import kotlin.math.roundToInt
 
 // ── WorkoutMode display helpers ───────────────────────────────────────────────
@@ -186,6 +187,38 @@ fun SetupScreen(
                 color = CardeaTheme.colors.textPrimary,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
+
+            // ── Simulation badge ─────────────────────────────────────────────
+            if (SimulationController.isActive) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0x33FF5A5F))
+                        .border(1.dp, Color(0xFFFF5A5F), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFFFF5A5F), CircleShape)
+                    )
+                    Text(
+                        text = "SIM MODE",
+                        color = Color(0xFFFF5A5F),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = SimulationController.state.value.scenario?.name ?: "",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                }
+            }
 
             // ── Bootcamp hero ──────────────────────────────────────────────────
             BootcampEntryCard(onClick = onGoToBootcamp)
