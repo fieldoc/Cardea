@@ -568,6 +568,22 @@ class WorkoutForegroundService : LifecycleService() {
                     Log.e("WorkoutService", "Failed to save essential workout data", e)
                 }
 
+                // Discard runs that are too short to be meaningful (< 200m or < 1 min)
+                val finalDistance = WorkoutState.snapshot.value.distanceMeters
+                val durationMs = now - workoutStartMs
+                if (finalDistance < 200f || durationMs < 60_000L) {
+                    Log.i("WorkoutService", "Discarding short run: ${finalDistance}m, ${durationMs}ms")
+                    runCatching { repository.deleteWorkout(workoutId) }
+                    WorkoutState.setPendingBootcampSessionId(null)
+                    cleanupManagers()
+                    WorkoutState.reset()
+                    if (SimulationController.isActive) SimulationController.deactivate()
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                    isStopping = false
+                    return@launch
+                }
+
                 // Best-effort: metrics derivation, calibration, fitness signals
                 runCatching {
                     val session = adaptiveController?.finishSession(workoutId = workoutId, endedAtMs = now)
@@ -749,9 +765,15 @@ class WorkoutForegroundService : LifecycleService() {
                 // runBlocking is acceptable here as a last-resort save with a timeout to prevent ANR.
                 kotlinx.coroutines.runBlocking(Dispatchers.IO) {
                     kotlinx.coroutines.withTimeoutOrNull(3000L) {
-                        val workout = repository.getWorkoutById(workoutId)
-                        if (workout != null && workout.endTime == 0L) {
-                            repository.updateWorkout(workout.copy(endTime = clock.now()))
+                        val finalDist = WorkoutState.snapshot.value.distanceMeters
+                        val durationMs = clock.now() - workoutStartMs
+                        if (finalDist < 200f || durationMs < 60_000L) {
+                            repository.deleteWorkout(workoutId)
+                        } else {
+                            val workout = repository.getWorkoutById(workoutId)
+                            if (workout != null && workout.endTime == 0L) {
+                                repository.updateWorkout(workout.copy(endTime = clock.now()))
+                            }
                         }
                     }
                 }
