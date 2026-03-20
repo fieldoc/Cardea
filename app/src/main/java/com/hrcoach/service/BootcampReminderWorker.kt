@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.hrcoach.MainActivity
+import com.hrcoach.R
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -82,7 +83,8 @@ class BootcampReminderWorker(
         }
 
         val notification = NotificationCompat.Builder(applicationContext, BootcampNotificationManager.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setSmallIcon(R.drawable.ic_notif_cardea)
+            .setColor(ContextCompat.getColor(applicationContext, R.color.cardea_notif_accent))
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

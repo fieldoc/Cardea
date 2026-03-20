@@ -8,7 +8,9 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.hrcoach.MainActivity
+import com.hrcoach.R
 
 class WorkoutNotificationHelper(
     private val context: Context,
@@ -28,7 +30,7 @@ class WorkoutNotificationHelper(
     private fun createChannelIfNeeded() {
         val channel = NotificationChannel(
             channelId,
-            "Workout",
+            "Cardea Workout",
             NotificationManager.IMPORTANCE_LOW
         ).apply {
             description = "Active workout tracking"
@@ -46,9 +48,10 @@ class WorkoutNotificationHelper(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         return NotificationCompat.Builder(context, channelId)
-            .setContentTitle("HR Coach")
+            .setContentTitle("Cardea")
             .setContentText(text)
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation)
+            .setSmallIcon(R.drawable.ic_notif_cardea)
+            .setColor(ContextCompat.getColor(context, R.color.cardea_notif_accent))
             .setContentIntent(pendingIntent)
             .setOnlyAlertOnce(true)
             .setOngoing(true)

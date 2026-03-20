@@ -1,3 +1,4 @@
 <resources>
     <color name="splash_background">#0B0F17</color>
+    <color name="cardea_notif_accent">#FF4D5A</color>
 </resources>

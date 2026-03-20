@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Cardea heart silhouette — same bezier curves as CardeaLogo -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,21.6 C12,21.6 1.92,14.88 1.92,9.12 C1.92,3.36 6.72,1.44 12,7.2 C17.28,1.44 22.08,3.36 22.08,9.12 C22.08,14.88 12,21.6 12,21.6Z" />
+</vector>
