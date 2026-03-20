@@ -40,8 +40,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.domain.coaching.CoachingIcon
@@ -68,21 +75,25 @@ private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
 
 @Composable
 private fun StatChip(value: String, label: String, modifier: Modifier = Modifier) {
-    Box(
+    val gradient = CardeaTheme.colors.gradient
+    Column(
         modifier = modifier
-            .background(
-                color = CardeaTheme.colors.glassHighlight,
-                shape = RoundedCornerShape(14.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = CardeaTheme.colors.glassBorder,
-                shape = RoundedCornerShape(14.dp)
-            )
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        contentAlignment = Alignment.Center
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp)),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Cardea gradient accent bar
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(gradient)
+        )
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineSmall.copy(
@@ -90,7 +101,13 @@ private fun StatChip(value: String, label: String, modifier: Modifier = Modifier
                     fontSize = 20.sp,
                     lineHeight = 20.sp
                 ),
-                color = CardeaTheme.colors.textPrimary
+                color = Color.White, // base color; gradient paints over
+                modifier = Modifier
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(brush = gradient, blendMode = BlendMode.SrcIn)
+                    }
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -163,66 +180,96 @@ private fun BootcampProgressRing(
     val textSecondary = CardeaTheme.colors.textSecondary
     val trackColor = CardeaTheme.colors.glassBorder
 
-    Column(
+    // Animated sweep for a polished entrance
+    val animatedPercent by animateFloatAsState(
+        targetValue = percentComplete,
+        animationSpec = tween(durationMillis = 1200),
+        label = "ringProgress"
+    )
+
+    Box(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(CardeaTheme.colors.glassHighlight)
+            .background(
+                Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0x0DFF2DA6),
+                        1f to Color(0x085B5BFF)
+                    )
+                )
+            )
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "BOOTCAMP",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp
-            ),
-            color = textSecondary
+        // Radial glow behind ring
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .align(Alignment.Center)
+                .offset(y = 8.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0x30FF2DA6), Color.Transparent)
+                    ),
+                    shape = CircleShape
+                )
         )
-        Spacer(Modifier.height(12.dp))
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(88.dp)) {
-            Canvas(modifier = Modifier.size(88.dp)) {
-                val strokeWidth = 6.dp.toPx()
-                drawArc(
-                    color = trackColor,
-                    startAngle = -90f,
-                    sweepAngle = 360f,
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
-                drawArc(
-                    brush = Brush.sweepGradient(
-                        colors = listOf(gradientPink, gradientPurple)
-                    ),
-                    startAngle = -90f,
-                    sweepAngle = 360f * percentComplete.coerceIn(0f, 1f),
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
+        Column(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "BOOTCAMP",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.5.sp
+                ),
+                color = textSecondary
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(88.dp)) {
+                Canvas(modifier = Modifier.size(88.dp)) {
+                    val strokeWidth = 7.dp.toPx()
+                    drawArc(
+                        color = trackColor,
+                        startAngle = -90f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+                    drawArc(
+                        brush = Brush.sweepGradient(
+                            colors = listOf(gradientPink, gradientPurple, gradientPink)
+                        ),
+                        startAngle = -90f,
+                        sweepAngle = 360f * animatedPercent.coerceIn(0f, 1f),
+                        useCenter = false,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "W$currentWeek",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Black,
+                            fontSize = 20.sp,
+                            lineHeight = 20.sp
+                        ),
+                        color = textPrimary
+                    )
+                    Text(
+                        text = "of $totalWeeks",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textSecondary
+                    )
+                }
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "W$currentWeek",
-                    style = MaterialTheme.typography.headlineSmall.copy(
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp,
-                        lineHeight = 20.sp
-                    ),
-                    color = textPrimary
-                )
-                Text(
-                    text = "of $totalWeeks",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = textSecondary
-                )
-            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "${(percentComplete * 100).toInt()}% complete",
+                style = MaterialTheme.typography.labelSmall,
+                color = textSecondary
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "${(percentComplete * 100).toInt()}% complete",
-            style = MaterialTheme.typography.labelSmall,
-            color = textSecondary
-        )
     }
 }
 
@@ -231,7 +278,14 @@ private fun WeeklyVolumeCard(state: HomeUiState, modifier: Modifier = Modifier) 
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(CardeaTheme.colors.glassHighlight)
+            .background(
+                Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0x0D5B5BFF),
+                        1f to Color(0x0800D1FF)
+                    )
+                )
+            )
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
@@ -298,15 +352,15 @@ private fun VolumeBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
                 .background(CardeaTheme.colors.glassBorder)
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(progress.coerceIn(0f, 1f))
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
                     .background(Brush.linearGradient(gradientColors))
             )
         }
@@ -323,47 +377,65 @@ private fun CoachingInsightCard(insight: CoachingInsight, modifier: Modifier = M
         CoachingIcon.HEART     -> "\u2764\uFE0F"
     }
 
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            Color(0xFF5B5BFF).copy(alpha = 0.3f),
-                            Color(0xFF00D1FF).copy(alpha = 0.2f)
-                        )
+            .background(
+                Brush.linearGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0x105B5BFF),
+                        1f to Color(0x0800D1FF)
                     )
-                ),
-            contentAlignment = Alignment.Center
+                )
+            )
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(text = iconEmoji, fontSize = 18.sp)
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = insight.title,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                ),
-                color = CardeaTheme.colors.textPrimary
+            // Gradient left accent bar
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(CardeaTheme.colors.gradient)
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = insight.subtitle,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                color = CardeaTheme.colors.textSecondary
-            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                Color(0xFF5B5BFF).copy(alpha = 0.35f),
+                                Color(0xFF00D1FF).copy(alpha = 0.25f)
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = iconEmoji, fontSize = 20.sp)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = insight.title,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    ),
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = insight.subtitle,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = CardeaTheme.colors.textSecondary
+                )
+            }
         }
     }
 }
@@ -699,7 +771,9 @@ fun HomeScreen(
 
                 // Progress ring + Weekly volume side by side
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (state.hasActiveBootcamp) {
