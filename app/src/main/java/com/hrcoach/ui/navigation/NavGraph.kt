@@ -283,23 +283,28 @@ fun HrCoachNavGraph(
                         navController.navigate(Routes.PROGRESS) {
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     onGoToHistory = {
                         navController.navigate(Routes.HISTORY) {
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     onGoToAccount = {
                         navController.navigate(Routes.ACCOUNT) {
                             popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     onGoToBootcamp = {
                         navController.navigate(Routes.BOOTCAMP) {
+                            popUpTo(Routes.HOME) { saveState = true }
                             launchSingleTop = true
+                            restoreState = true
                         }
                     },
                     onGoToWorkout = {
