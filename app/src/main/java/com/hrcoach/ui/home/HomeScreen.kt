@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -670,20 +669,18 @@ fun HomeScreen(
         )
     }
 
-    Scaffold(containerColor = Color.Transparent) { padding ->
-        Box(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundBrush)
+    ) {
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundBrush)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
                 // Active session banner — unchanged
                 if (state.isSessionRunning) {
                     ActiveSessionCard(onClick = onGoToWorkout)
@@ -794,9 +791,7 @@ fun HomeScreen(
                 state.coachingInsight?.let { insight ->
                     CoachingInsightCard(insight = insight)
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
-}
+
