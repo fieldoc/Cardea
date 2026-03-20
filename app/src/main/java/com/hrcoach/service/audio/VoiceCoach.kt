@@ -28,23 +28,36 @@ class VoiceCoach(private val context: Context) {
         } ?: return
 
         // Stop any in-progress playback (QUEUE_FLUSH equivalent)
-        mediaPlayer?.run {
-            if (isPlaying) stop()
-            release()
-        }
+        releasePlayer()
 
         mediaPlayer = MediaPlayer.create(context, resId, audioAttributes, 0)?.also { mp ->
-            mp.setOnCompletionListener { it.release() }
+            mp.setOnCompletionListener {
+                it.release()
+                mediaPlayer = null
+            }
             mp.start()
         }
     }
 
     fun destroy() {
-        mediaPlayer?.run {
-            if (isPlaying) stop()
-            release()
-        }
+        releasePlayer()
+    }
+
+    private fun releasePlayer() {
+        val mp = mediaPlayer
         mediaPlayer = null
+        if (mp != null) {
+            try {
+                if (mp.isPlaying) mp.stop()
+            } catch (_: IllegalStateException) {
+                // MediaPlayer already released or in error state
+            }
+            try {
+                mp.release()
+            } catch (_: IllegalStateException) {
+                // Already released
+            }
+        }
     }
 
     private fun minimalResFor(event: CoachingEvent): Int? {
