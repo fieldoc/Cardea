@@ -32,10 +32,15 @@ import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
+import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.WorkoutState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothDevice
+import android.util.Log
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,7 +61,8 @@ class BootcampViewModel @Inject constructor(
     private val workoutMetricsRepository: WorkoutMetricsRepository,
     private val bootcampSessionCompleter: BootcampSessionCompleter,
     private val achievementEvaluator: AchievementEvaluator,
-    private val notificationManager: BootcampNotificationManager
+    private val notificationManager: BootcampNotificationManager,
+    private val bleCoordinator: BleConnectionCoordinator
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -65,6 +71,8 @@ class BootcampViewModel @Inject constructor(
     private var welcomeBackDismissed = false
     private var illnessPromptSnoozedUntilMs = 0L
     private var loadJob: Job? = null
+    private var bleCollectJob: Job? = null
+    private var scanTimeoutJob: Job? = null
 
     init {
         loadBootcampState()
@@ -1028,6 +1036,169 @@ class BootcampViewModel @Inject constructor(
         minutes = targetMinutes,
         presetId = presetId
     )
+
+    // ─── BLE connection (pre-start dialog) ─────────────────────────────
+
+    fun showHrConnectDialog(configJson: String) {
+        val lastDevice = bleCoordinator.getLastKnownDevice()
+        _uiState.update {
+            it.copy(
+                showHrConnectDialog = true,
+                pendingConfigJson = configJson,
+                bleLastKnownDeviceName = lastDevice?.name,
+                bleLastKnownDeviceAddress = lastDevice?.address
+            )
+        }
+        startBleCollectors()
+        // Auto-reconnect to last known device if available
+        if (!bleCoordinator.isConnected.value && lastDevice != null) {
+            reconnectLastDevice(lastDevice.address)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun reconnectLastDevice(address: String) {
+        val connected = runCatching {
+            bleCoordinator.connectToAddress(address)
+        }.getOrDefault(false)
+        if (!connected) {
+            // Fallback to scanning if reconnect fails
+            startBleScan()
+        }
+    }
+
+    fun dismissHrConnectDialog() {
+        bleCollectJob?.cancel()
+        scanTimeoutJob?.cancel()
+        _uiState.update {
+            it.copy(
+                showHrConnectDialog = false,
+                pendingConfigJson = null,
+                bleIsScanning = false,
+                bleDiscoveredDevices = emptyList(),
+                bleConnectionError = null
+            )
+        }
+    }
+
+    private fun startBleCollectors() {
+        bleCollectJob?.cancel()
+        bleCollectJob = viewModelScope.launch {
+            launch {
+                bleCoordinator.discoveredDevices.collect { devices ->
+                    _uiState.update {
+                        it.copy(
+                            bleDiscoveredDevices = devices,
+                            bleIsScanning = it.bleIsScanning && !it.bleIsConnected
+                        )
+                    }
+                }
+            }
+            launch {
+                bleCoordinator.isConnected.collect { connected ->
+                    _uiState.update {
+                        it.copy(
+                            bleIsConnected = connected,
+                            bleIsScanning = if (connected) false else it.bleIsScanning,
+                            bleConnectionError = if (connected) null else it.bleConnectionError,
+                            bleConnectedDeviceName = if (connected && it.bleConnectedDeviceName.isBlank()) {
+                                it.bleLastKnownDeviceName ?: "HR Monitor"
+                            } else {
+                                it.bleConnectedDeviceName
+                            }
+                        )
+                    }
+                }
+            }
+            launch {
+                bleCoordinator.heartRate.collect { hr ->
+                    _uiState.update { it.copy(bleLiveHr = hr) }
+                }
+            }
+        }
+    }
+
+    fun startBleScan() {
+        runCatching {
+            bleCoordinator.startScan()
+        }.onSuccess {
+            scanTimeoutJob?.cancel()
+            scanTimeoutJob = viewModelScope.launch {
+                delay(16_000)
+                if (!_uiState.value.bleIsConnected) {
+                    _uiState.update { it.copy(bleIsScanning = false) }
+                }
+            }
+            _uiState.update {
+                it.copy(
+                    bleIsScanning = true,
+                    bleDiscoveredDevices = emptyList(),
+                    bleConnectionError = null
+                )
+            }
+        }.onFailure { throwable ->
+            Log.e("BootcampVM", "BLE scan failed", throwable)
+            _uiState.update {
+                it.copy(
+                    bleIsScanning = false,
+                    bleConnectionError = when (throwable) {
+                        is SecurityException -> "Bluetooth permission required. Check Settings."
+                        else -> "Unable to scan. Check Bluetooth and permissions."
+                    }
+                )
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun connectToDevice(device: BluetoothDevice) {
+        runCatching {
+            bleCoordinator.connectToDevice(device)
+        }.onSuccess {
+            scanTimeoutJob?.cancel()
+            _uiState.update {
+                it.copy(
+                    bleIsScanning = false,
+                    bleConnectedDeviceName = device.name ?: device.address,
+                    bleConnectedDeviceAddress = device.address,
+                    bleConnectionError = null
+                )
+            }
+        }.onFailure { t ->
+            Log.e("BootcampVM", "BLE connect failed", t)
+            _uiState.update {
+                it.copy(bleConnectionError = "Unable to connect to selected device.")
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun disconnectDevice() {
+        bleCoordinator.disconnect()
+        _uiState.update {
+            it.copy(
+                bleIsConnected = false,
+                bleConnectedDeviceName = "",
+                bleConnectedDeviceAddress = "",
+                bleLiveHr = 0
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun handoffConnectedDeviceAddress(): String? {
+        val address = _uiState.value.bleConnectedDeviceAddress.takeIf { it.isNotBlank() }
+        val activeAddress = bleCoordinator.handoffConnectedDeviceAddress(address)
+        bleCollectJob?.cancel()
+        scanTimeoutJob?.cancel()
+        _uiState.update {
+            it.copy(
+                showHrConnectDialog = false,
+                bleIsScanning = false
+            )
+        }
+        return activeAddress
+    }
 
     companion object {
         private const val RECENT_METRICS_DAYS = 42

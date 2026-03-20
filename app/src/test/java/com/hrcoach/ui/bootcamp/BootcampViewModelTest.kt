@@ -11,8 +11,11 @@ import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.AdaptiveProfile
 import com.hrcoach.domain.model.BootcampGoal
+import android.bluetooth.BluetoothDevice
+import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.service.WorkoutState
+import kotlinx.coroutines.flow.MutableStateFlow
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -42,9 +45,13 @@ class BootcampViewModelTest {
     private val bootcampSessionCompleter: BootcampSessionCompleter = mockk(relaxed = true)
     private val achievementEvaluator: AchievementEvaluator = mockk(relaxed = true)
     private val notificationManager: com.hrcoach.service.BootcampNotificationManager = mockk(relaxed = true)
+    private val bleCoordinator: BleConnectionCoordinator = mockk(relaxed = true)
 
     @Before
     fun setUp() {
+        every { bleCoordinator.heartRate } returns MutableStateFlow(0)
+        every { bleCoordinator.isConnected } returns MutableStateFlow(false)
+        every { bleCoordinator.discoveredDevices } returns MutableStateFlow(emptyList<BluetoothDevice>())
         Dispatchers.setMain(testDispatcher)
         WorkoutState.set(WorkoutSnapshot())
     }
@@ -63,7 +70,8 @@ class BootcampViewModelTest {
             workoutMetricsRepository = workoutMetricsRepository,
             bootcampSessionCompleter = bootcampSessionCompleter,
             achievementEvaluator = achievementEvaluator,
-            notificationManager = notificationManager
+            notificationManager = notificationManager,
+            bleCoordinator = bleCoordinator
         )
     }
 

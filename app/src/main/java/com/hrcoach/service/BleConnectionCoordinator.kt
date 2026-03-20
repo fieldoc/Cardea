@@ -42,5 +42,7 @@ class BleConnectionCoordinator @Inject constructor(
         return manager.currentDeviceAddress() ?: fallbackAddress
     }
 
+    fun getLastKnownDevice(): BleHrManager.LastKnownDevice? = manager.getLastKnownDevice()
+
     fun managerForWorkout(): BleHrManager = manager
 }

@@ -461,7 +461,7 @@ fun HrCoachNavGraph(
                 val isTabRoot = navController.previousBackStackEntry?.destination?.route == null ||
                     navController.previousBackStackEntry?.destination?.route == Routes.HOME
                 BootcampScreen(
-                    onStartWorkout = { configJson ->
+                    onStartWorkout = { configJson, deviceAddress ->
                         if (!PermissionGate.hasAllRuntimePermissions(context)) {
                             Toast.makeText(
                                 context,
@@ -472,6 +472,7 @@ fun HrCoachNavGraph(
                             val intent = Intent(context, WorkoutForegroundService::class.java).apply {
                                 action = WorkoutForegroundService.ACTION_START
                                 putExtra(WorkoutForegroundService.EXTRA_CONFIG_JSON, configJson)
+                                putExtra(WorkoutForegroundService.EXTRA_DEVICE_ADDRESS, deviceAddress)
                             }
                             runCatching {
                                 context.startForegroundService(intent)

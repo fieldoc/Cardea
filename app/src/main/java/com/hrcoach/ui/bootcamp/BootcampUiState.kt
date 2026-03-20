@@ -1,5 +1,6 @@
 package com.hrcoach.ui.bootcamp
 
+import android.bluetooth.BluetoothDevice
 import com.hrcoach.domain.bootcamp.FitnessLevel
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.PlannedSession
@@ -95,7 +96,19 @@ data class BootcampUiState(
     // Goal detail sheet
     val showGoalDetail: Boolean = false,
     val goalProgressPercentage: Int = 0,
-    val maxHr: Int? = null
+    val maxHr: Int? = null,
+    // BLE connection (pre-start dialog)
+    val showHrConnectDialog: Boolean = false,
+    val bleIsScanning: Boolean = false,
+    val bleDiscoveredDevices: List<BluetoothDevice> = emptyList(),
+    val bleIsConnected: Boolean = false,
+    val bleConnectedDeviceName: String = "",
+    val bleConnectedDeviceAddress: String = "",
+    val bleLiveHr: Int = 0,
+    val bleConnectionError: String? = null,
+    val pendingConfigJson: String? = null,
+    val bleLastKnownDeviceName: String? = null,
+    val bleLastKnownDeviceAddress: String? = null
 )
 
 data class SessionUiItem(

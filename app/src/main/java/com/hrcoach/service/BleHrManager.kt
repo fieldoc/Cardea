@@ -340,6 +340,15 @@ class BleHrManager(context: Context) : HrDataSource {
         return synchronized(stateLock) { lastDeviceAddress }
     }
 
+    data class LastKnownDevice(val address: String, val name: String)
+
+    fun getLastKnownDevice(): LastKnownDevice? {
+        val prefs = appContext.getSharedPreferences("ble_prefs", Context.MODE_PRIVATE)
+        val address = prefs.getString("last_device_address", null) ?: return null
+        val name = prefs.getString("last_device_name", null) ?: "HR Monitor"
+        return LastKnownDevice(address, name)
+    }
+
     fun destroy() {
         disconnect()
         scope.cancel()

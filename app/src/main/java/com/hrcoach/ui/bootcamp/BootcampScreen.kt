@@ -87,13 +87,20 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.offset
+import android.annotation.SuppressLint
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 
 @Composable
 fun BootcampScreen(
-    onStartWorkout: (configJson: String) -> Unit,
+    onStartWorkout: (configJson: String, deviceAddress: String?) -> Unit,
     onBack: () -> Unit,
     onGoToSettings: () -> Unit,
     onGoToManualSetup: (() -> Unit)? = null,
@@ -147,11 +154,12 @@ fun BootcampScreen(
             else -> {
                 ActiveBootcampDashboard(
                     uiState = uiState,
-                    onStartWorkout = onStartWorkout,
+                    onStartWorkout = { configJson ->
+                        viewModel.showHrConnectDialog(configJson)
+                    },
                     onPause = { viewModel.pauseBootcamp() },
                     onResume = { viewModel.resumeBootcamp() },
                     onEndProgram = { viewModel.showDeleteConfirmDialog() },
-                    onBootcampWorkoutStarting = viewModel::onBootcampWorkoutStarting,
                     onDismissTierPrompt = viewModel::dismissTierPrompt,
                     onAcceptTierChange = viewModel::acceptTierChange,
                     onConfirmIllness = viewModel::confirmIllness,
@@ -167,6 +175,28 @@ fun BootcampScreen(
                     onPreferredDaysClick = { showDaysSheet = true },
                     onGoToManualSetup = onGoToManualSetup
                 )
+
+                if (uiState.showHrConnectDialog) {
+                    HrConnectDialog(
+                        uiState = uiState,
+                        onScan = viewModel::startBleScan,
+                        onConnect = viewModel::connectToDevice,
+                        onDisconnect = viewModel::disconnectDevice,
+                        onStartWithMonitor = {
+                            val configJson = uiState.pendingConfigJson ?: return@HrConnectDialog
+                            viewModel.onBootcampWorkoutStarting()
+                            val deviceAddress = viewModel.handoffConnectedDeviceAddress()
+                            onStartWorkout(configJson, deviceAddress)
+                        },
+                        onStartWithout = {
+                            val configJson = uiState.pendingConfigJson ?: return@HrConnectDialog
+                            viewModel.onBootcampWorkoutStarting()
+                            viewModel.dismissHrConnectDialog()
+                            onStartWorkout(configJson, null)
+                        },
+                        onDismiss = viewModel::dismissHrConnectDialog
+                    )
+                }
             }
         }
 
@@ -1148,7 +1178,6 @@ private fun ActiveBootcampDashboard(
     onPause: () -> Unit,
     onResume: () -> Unit,
     onEndProgram: () -> Unit,
-    onBootcampWorkoutStarting: () -> Unit,
     onDismissTierPrompt: () -> Unit,
     onAcceptTierChange: (TierPromptDirection) -> Unit,
     onConfirmIllness: () -> Unit,
@@ -1173,7 +1202,6 @@ private fun ActiveBootcampDashboard(
         TodayHeroSection(
             uiState = uiState,
             onStartWorkout = onStartWorkout,
-            onBootcampWorkoutStarting = onBootcampWorkoutStarting,
             onReschedule = todaySessionId?.let { id -> { onReschedule(id) } },
             onSwapTodayForRest = onSwapTodayForRest,
             onGoalClick = onGoalClick,
@@ -1551,7 +1579,6 @@ private object SessionDescription {
 private fun TodayHeroSection(
     uiState: BootcampUiState,
     onStartWorkout: (configJson: String) -> Unit,
-    onBootcampWorkoutStarting: () -> Unit,
     onReschedule: (() -> Unit)?,
     onSwapTodayForRest: () -> Unit,
     onGoalClick: () -> Unit,
@@ -1761,7 +1788,6 @@ private fun TodayHeroSection(
                         Spacer(modifier = Modifier.height(16.dp))
                         androidx.compose.material3.Button(
                             onClick = {
-                                onBootcampWorkoutStarting()
                                 onStartWorkout(buildConfigJson(today.session, uiState.maxHr))
                             },
                             modifier = Modifier
@@ -2490,4 +2516,297 @@ private fun buildConfigJson(session: PlannedSession, maxHr: Int?): String {
     return com.hrcoach.util.JsonCodec.gson.toJson(
         WorkoutConfig(mode = WorkoutMode.FREE_RUN)
     )
+}
+
+// ─── HR Monitor Connection Sheet ────────────────────────────────────────────
+
+@SuppressLint("MissingPermission")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HrConnectDialog(
+    uiState: BootcampUiState,
+    onScan: () -> Unit,
+    onConnect: (android.bluetooth.BluetoothDevice) -> Unit,
+    onDisconnect: () -> Unit,
+    onStartWithMonitor: () -> Unit,
+    onStartWithout: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = CardeaTheme.colors.bgPrimary,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = {
+            Box(
+                Modifier
+                    .padding(vertical = 12.dp)
+                    .width(32.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(CardeaTheme.colors.glassBorder)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // ── Title ────────────────────────────────────────────
+            Text(
+                text = "HR Monitor",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTheme.colors.textPrimary
+            )
+
+            if (uiState.bleIsConnected) {
+                // ── Connected state ──────────────────────────────
+                HrConnectedCard(uiState, onDisconnect)
+
+                // ── Start CTA ────────────────────────────────────
+                CardeaButton(
+                    text = "Start Run",
+                    onClick = onStartWithMonitor,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                )
+            } else {
+                // ── Reconnecting indicator ───────────────────────
+                if (uiState.bleLastKnownDeviceName != null && !uiState.bleIsScanning &&
+                    uiState.bleDiscoveredDevices.isEmpty()
+                ) {
+                    HrReconnectingCard(uiState.bleLastKnownDeviceName)
+                }
+
+                // ── Scanning indicator ───────────────────────────
+                if (uiState.bleIsScanning) {
+                    HrScanningIndicator()
+                }
+
+                // ── Discovered devices ───────────────────────────
+                if (uiState.bleDiscoveredDevices.isNotEmpty()) {
+                    GlassCard(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "NEARBY DEVICES",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                letterSpacing = 1.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = CardeaTheme.colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        uiState.bleDiscoveredDevices.forEachIndexed { index, device ->
+                            if (index > 0) {
+                                HorizontalDivider(color = CardeaTheme.colors.glassBorder)
+                            }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { onConnect(device) }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = GradientPink,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = device.name ?: "Unknown Device",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.Medium
+                                        ),
+                                        color = CardeaTheme.colors.textPrimary
+                                    )
+                                    Text(
+                                        text = device.address,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = CardeaTheme.colors.textTertiary
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = "Connect",
+                                    tint = CardeaTheme.colors.textTertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ── Error ────────────────────────────────────────
+                uiState.bleConnectionError?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ZoneRed,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ── Scan button ──────────────────────────────────
+                if (!uiState.bleIsScanning) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
+                            .background(CardeaTheme.colors.glassHighlight)
+                            .clickable(onClick = onScan),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = CardeaTheme.colors.textSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = if (uiState.bleDiscoveredDevices.isNotEmpty()) "Scan Again" else "Scan for Monitors",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = CardeaTheme.colors.textPrimary
+                            )
+                        }
+                    }
+                }
+
+                // ── Skip CTA ─────────────────────────────────────
+                TextButton(onClick = onStartWithout) {
+                    Text(
+                        text = "Start without monitor",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HrConnectedCard(uiState: BootcampUiState, onDisconnect: () -> Unit) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Pulsing green dot
+            val pulseAnim = androidx.compose.animation.core.rememberInfiniteTransition(label = "hrPulse")
+            val pulseScale by pulseAnim.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.4f,
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    animation = androidx.compose.animation.core.tween(800),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "pulse"
+            )
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .scale(pulseScale)
+                    .clip(CircleShape)
+                    .background(CardeaTheme.colors.zoneGreen)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = uiState.bleConnectedDeviceName.ifBlank { "HR Monitor" },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Text(
+                    text = if (uiState.bleLiveHr > 0) "${uiState.bleLiveHr} bpm" else "Waiting for signal\u2026",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (uiState.bleLiveHr > 0) CardeaTheme.colors.zoneGreen
+                    else CardeaTheme.colors.textSecondary
+                )
+            }
+            TextButton(onClick = onDisconnect) {
+                Text("Disconnect", color = CardeaTheme.colors.textTertiary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HrReconnectingCard(deviceName: String) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = GradientPink
+            )
+            Column {
+                Text(
+                    text = "Reconnecting\u2026",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Text(
+                    text = deviceName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HrScanningIndicator() {
+    val scanAnim = androidx.compose.animation.core.rememberInfiniteTransition(label = "scanPulse")
+    val alpha by scanAnim.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1000),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "scanAlpha"
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier
+                .size(16.dp)
+                .graphicsLayer { this.alpha = alpha },
+            strokeWidth = 2.dp,
+            color = GradientPink
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = "Scanning for nearby monitors\u2026",
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTheme.colors.textSecondary,
+            modifier = Modifier.graphicsLayer { this.alpha = alpha }
+        )
+    }
 }
