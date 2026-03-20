@@ -1,5 +1,6 @@
 package com.hrcoach.ui.home
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,8 +40,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.data.db.BootcampSessionEntity
+import com.hrcoach.domain.coaching.CoachingIcon
+import com.hrcoach.domain.coaching.CoachingInsight
 import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
@@ -140,6 +145,224 @@ private fun StatChipsRow(state: HomeUiState, modifier: Modifier = Modifier) {
                 value = lastMin,
                 label = "DURATION",
                 modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun BootcampProgressRing(
+    currentWeek: Int,
+    totalWeeks: Int,
+    percentComplete: Float,
+    modifier: Modifier = Modifier
+) {
+    val gradientPink = Color(0xFFFF2DA6)
+    val gradientPurple = Color(0xFF5B5BFF)
+    val textPrimary = CardeaTheme.colors.textPrimary
+    val textSecondary = CardeaTheme.colors.textSecondary
+    val trackColor = CardeaTheme.colors.glassBorder
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "BOOTCAMP",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp
+            ),
+            color = textSecondary
+        )
+        Spacer(Modifier.height(12.dp))
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.size(88.dp)) {
+            Canvas(modifier = Modifier.size(88.dp)) {
+                val strokeWidth = 6.dp.toPx()
+                drawArc(
+                    color = trackColor,
+                    startAngle = -90f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+                drawArc(
+                    brush = Brush.sweepGradient(
+                        colors = listOf(gradientPink, gradientPurple)
+                    ),
+                    startAngle = -90f,
+                    sweepAngle = 360f * percentComplete.coerceIn(0f, 1f),
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "W$currentWeek",
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 20.sp,
+                        lineHeight = 20.sp
+                    ),
+                    color = textPrimary
+                )
+                Text(
+                    text = "of $totalWeeks",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = textSecondary
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "${(percentComplete * 100).toInt()}% complete",
+            style = MaterialTheme.typography.labelSmall,
+            color = textSecondary
+        )
+    }
+}
+
+@Composable
+private fun WeeklyVolumeCard(state: HomeUiState, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "THIS WEEK",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp
+            ),
+            color = CardeaTheme.colors.textSecondary
+        )
+        Spacer(Modifier.height(14.dp))
+        VolumeBar(
+            label = "Distance",
+            value = "%.1f / %.0f km".format(
+                metersToKm(state.totalDistanceThisWeekMeters.toFloat()),
+                state.weeklyDistanceTargetKm
+            ),
+            progress = (metersToKm(state.totalDistanceThisWeekMeters.toFloat()) / state.weeklyDistanceTargetKm).toFloat(),
+            gradientColors = listOf(Color(0xFFFF5A5F), Color(0xFFFF2DA6))
+        )
+        Spacer(Modifier.height(14.dp))
+        VolumeBar(
+            label = "Time",
+            value = "${state.totalTimeThisWeekMinutes} / ${state.weeklyTimeTargetMinutes} min",
+            progress = (state.totalTimeThisWeekMinutes.toFloat() / state.weeklyTimeTargetMinutes.coerceAtLeast(1)).coerceIn(0f, 1f),
+            gradientColors = listOf(Color(0xFF5B5BFF), Color(0xFF00D1FF))
+        )
+        Spacer(Modifier.height(14.dp))
+        VolumeBar(
+            label = "Runs",
+            value = "${state.workoutsThisWeek} / ${state.weeklyTarget}",
+            progress = (state.workoutsThisWeek.toFloat() / state.weeklyTarget.coerceAtLeast(1)).coerceIn(0f, 1f),
+            gradientColors = listOf(Color(0xFF00D1FF), Color(0xFF4DFF88))
+        )
+    }
+}
+
+@Composable
+private fun VolumeBar(
+    label: String,
+    value: String,
+    progress: Float,
+    gradientColors: List<Color>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textSecondary
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTheme.colors.textPrimary
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(CardeaTheme.colors.glassBorder)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Brush.linearGradient(gradientColors))
+            )
+        }
+    }
+}
+
+@Composable
+private fun CoachingInsightCard(insight: CoachingInsight, modifier: Modifier = Modifier) {
+    val iconEmoji = when (insight.icon) {
+        CoachingIcon.LIGHTBULB -> "\uD83D\uDCA1"
+        CoachingIcon.CHART_UP  -> "\uD83D\uDCC8"
+        CoachingIcon.TROPHY    -> "\uD83C\uDFC6"
+        CoachingIcon.WARNING   -> "\u26A0\uFE0F"
+        CoachingIcon.HEART     -> "\u2764\uFE0F"
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF5B5BFF).copy(alpha = 0.3f),
+                            Color(0xFF00D1FF).copy(alpha = 0.2f)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = iconEmoji, fontSize = 18.sp)
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = insight.title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                ),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = insight.subtitle,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                color = CardeaTheme.colors.textSecondary
             )
         }
     }
@@ -473,6 +696,30 @@ fun HomeScreen(
 
                 // Stat chips
                 StatChipsRow(state = state)
+
+                // Progress ring + Weekly volume side by side
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (state.hasActiveBootcamp) {
+                        BootcampProgressRing(
+                            currentWeek = state.currentWeekNumber,
+                            totalWeeks = state.bootcampTotalWeeks,
+                            percentComplete = state.bootcampPercentComplete,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    WeeklyVolumeCard(
+                        state = state,
+                        modifier = if (state.hasActiveBootcamp) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Coaching insight
+                state.coachingInsight?.let { insight ->
+                    CoachingInsightCard(insight = insight)
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
