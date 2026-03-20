@@ -162,9 +162,7 @@ class HomeViewModel @Inject constructor(
                 isSessionRunning = isRunning,
                 hasActiveBootcamp = activeEnrollment != null,
                 nextSession = nextSession,
-                currentWeekNumber = activeEnrollment?.let {
-                    (it.currentPhaseIndex * 4) + it.currentWeekInPhase + 1
-                } ?: 1,
+                currentWeekNumber = currentAbsoluteWeek,
                 sessionStreak = sessionStreak,
                 isNextSessionToday = isNextSessionToday,
                 nextSessionDayLabel = nextSessionDayLabel,
