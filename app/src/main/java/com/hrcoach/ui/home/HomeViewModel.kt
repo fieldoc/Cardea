@@ -8,6 +8,10 @@ import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.achievement.StreakCalculator
+import com.hrcoach.domain.bootcamp.PhaseEngine
+import com.hrcoach.domain.coaching.CoachingInsight
+import com.hrcoach.domain.coaching.CoachingInsightEngine
+import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.service.WorkoutState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +46,13 @@ data class HomeUiState(
     val nextSessionDayLabel: String = "",
     val sensorName: String? = null,
     val sensorLastSeenMs: Long? = null,
+    val totalDistanceThisWeekMeters: Double = 0.0,
+    val totalTimeThisWeekMinutes: Long = 0,
+    val weeklyDistanceTargetKm: Double = 15.0,
+    val weeklyTimeTargetMinutes: Long = 90,
+    val bootcampTotalWeeks: Int = 12,
+    val bootcampPercentComplete: Float = 0f,
+    val coachingInsight: CoachingInsight? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -67,6 +78,12 @@ class HomeViewModel @Inject constructor(
                 .toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
             val thisWeek = workouts.count { it.startTime >= weekStart }
 
+            val thisWeekWorkouts = workouts.filter { it.startTime >= weekStart }
+            val totalDistanceM = thisWeekWorkouts.sumOf { it.totalDistanceMeters.toDouble() }
+            val totalTimeMin = thisWeekWorkouts.sumOf {
+                ((it.endTime - it.startTime) / 60_000L).coerceAtLeast(0)
+            }
+
             val greeting = when (now.hour) {
                 in 0..11  -> "Good morning"
                 in 12..17 -> "Good afternoon"
@@ -77,6 +94,38 @@ class HomeViewModel @Inject constructor(
             val activeEnrollment = enrollment?.takeIf {
                 it.status == BootcampEnrollmentEntity.STATUS_ACTIVE
             }
+
+            val bootcampGoal = activeEnrollment?.let {
+                runCatching { BootcampGoal.valueOf(it.goalType) }.getOrNull()
+            }
+            val phaseEngine = bootcampGoal?.let {
+                PhaseEngine(
+                    goal = it,
+                    phaseIndex = activeEnrollment.currentPhaseIndex,
+                    weekInPhase = activeEnrollment.currentWeekInPhase,
+                    runsPerWeek = activeEnrollment.runsPerWeek,
+                    targetMinutes = activeEnrollment.targetMinutesPerRun
+                )
+            }
+            val bootcampTotalWeeks = phaseEngine?.totalWeeks ?: 12
+            val currentAbsoluteWeek = phaseEngine?.absoluteWeek ?: 1
+            val bootcampPercentComplete = currentAbsoluteWeek.toFloat() / bootcampTotalWeeks
+
+            val weeklyDistanceTargetKm = if (activeEnrollment != null) {
+                activeEnrollment.targetMinutesPerRun * activeEnrollment.runsPerWeek * 0.15
+            } else 15.0
+
+            val weeklyTimeTargetMin = if (activeEnrollment != null) {
+                (activeEnrollment.targetMinutesPerRun * activeEnrollment.runsPerWeek).toLong()
+            } else 90L
+
+            val coachingInsight = CoachingInsightEngine.generate(
+                workouts = workouts,
+                workoutsThisWeek = thisWeek,
+                weeklyTarget = activeEnrollment?.runsPerWeek ?: 4,
+                hasBootcamp = activeEnrollment != null,
+                nowMs = System.currentTimeMillis()
+            )
 
             val nextSession = activeEnrollment?.let {
                 bootcampRepository.getNextSession(it.id)
@@ -121,6 +170,13 @@ class HomeViewModel @Inject constructor(
                 nextSessionDayLabel = nextSessionDayLabel,
                 sensorName = sensorName,
                 sensorLastSeenMs = sensorLastSeen,
+                totalDistanceThisWeekMeters = totalDistanceM,
+                totalTimeThisWeekMinutes = totalTimeMin,
+                weeklyDistanceTargetKm = weeklyDistanceTargetKm,
+                weeklyTimeTargetMinutes = weeklyTimeTargetMin,
+                bootcampTotalWeeks = bootcampTotalWeeks,
+                bootcampPercentComplete = bootcampPercentComplete,
+                coachingInsight = coachingInsight,
             ))
         }
     }
