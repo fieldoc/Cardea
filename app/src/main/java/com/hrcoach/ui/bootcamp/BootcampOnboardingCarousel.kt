@@ -181,7 +181,7 @@ private fun CarouselPageProblem() {
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
-            text = "Your brain remembers your old pace. Your heart isn\u2019t ready.",
+            text = "Most runners push too hard on easy days.",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
             color = CardeaTheme.colors.textPrimary,
@@ -194,7 +194,7 @@ private fun CarouselPageProblem() {
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Text(
-                text = "Cardea watches your heart rate in real time and keeps you in the right zone \u2014 so effort matches fitness, not memory.",
+                text = "Pace alone doesn\u2019t tell you what\u2019s happening inside. Cardea tracks your heart rate in real time and keeps effort where it should be \u2014 so easy days stay easy and hard days count.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = CardeaTheme.colors.textSecondary,
                 textAlign = TextAlign.Center,
