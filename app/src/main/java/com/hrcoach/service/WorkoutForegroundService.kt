@@ -514,6 +514,8 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun stopWorkout() {
+        val finalHrSampleSum = hrSampleSum
+        val finalHrSampleCount = hrSampleCount
         hrSampleSum = 0L
         hrSampleCount = 0
         if (isStopping) return
@@ -568,10 +570,10 @@ class WorkoutForegroundService : LifecycleService() {
                     Log.e("WorkoutService", "Failed to save essential workout data", e)
                 }
 
-                // Discard runs that are too short to be meaningful (< 200m or < 1 min)
+                // Discard runs that are too short to be meaningful (< 200m AND < 1 min)
                 val finalDistance = WorkoutState.snapshot.value.distanceMeters
                 val durationMs = now - workoutStartMs
-                if (finalDistance < 200f || durationMs < 60_000L) {
+                if (finalDistance < 200f && durationMs < 60_000L) {
                     Log.i("WorkoutService", "Discarding short run: ${finalDistance}m, ${durationMs}ms")
                     runCatching { repository.deleteWorkout(workoutId) }
                     WorkoutState.setPendingBootcampSessionId(null)
@@ -641,7 +643,7 @@ class WorkoutForegroundService : LifecycleService() {
                     // --- TRIMP score ---
                     val durationMin = (now - workoutStartMs) / 60_000f
                     val sessionAvgHr = reliableMetrics?.avgHr
-                        ?: if (hrSampleCount > 0) (hrSampleSum.toFloat() / hrSampleCount) else null
+                        ?: if (finalHrSampleCount > 0) (finalHrSampleSum.toFloat() / finalHrSampleCount) else null
                     val hrMaxEst = currentProfile.hrMax?.toFloat() ?: 180f
                     val trimpScore = reliableMetrics?.trimpScore
                         ?: if (sessionAvgHr != null && durationMin > 0f) {
