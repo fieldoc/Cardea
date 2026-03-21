@@ -800,11 +800,19 @@ class BootcampViewModel @Inject constructor(
 
         val filteredPrefs = preferredDays
             .filter { it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.NONE && it.level != com.hrcoach.domain.bootcamp.DaySelectionLevel.BLACKOUT }
-        val availableDays = filteredPrefs.map { it.day }
+        val allAvailableDays = filteredPrefs.map { it.day }
+
+        // Don't create sessions for days already past — prevents false "missed" alerts
+        // when enrolling mid-week or when sessions are first generated after the week started.
+        val today = LocalDate.now().dayOfWeek.value
+        val availableDays = allAvailableDays.filter { it >= today }
+        if (availableDays.isEmpty()) return emptyList()
 
         // Reorder planned sessions so LONG-type lands on the LONG_RUN_BIAS day if one exists
+        // Use filtered prefs matching only future/today days for bias index lookup
+        val futureFilteredPrefs = filteredPrefs.filter { it.day >= today }
         val orderedSessions = run {
-            val biasIndex = filteredPrefs.indexOfFirst { it.level == com.hrcoach.domain.bootcamp.DaySelectionLevel.LONG_RUN_BIAS }
+            val biasIndex = futureFilteredPrefs.indexOfFirst { it.level == com.hrcoach.domain.bootcamp.DaySelectionLevel.LONG_RUN_BIAS }
             val longIndex = plannedSessions.indexOfFirst { it.type == com.hrcoach.domain.bootcamp.SessionType.LONG }
             if (biasIndex >= 0 && longIndex >= 0 && biasIndex != longIndex && biasIndex < plannedSessions.size) {
                 plannedSessions.toMutableList().apply {
@@ -817,7 +825,10 @@ class BootcampViewModel @Inject constructor(
             }
         }
 
-        val entities = orderedSessions.mapIndexed { index, session ->
+        // Only create as many sessions as we have remaining days for
+        val sessionsToCreate = orderedSessions.take(availableDays.size)
+
+        val entities = sessionsToCreate.mapIndexed { index, session ->
             BootcampRepository.buildSessionEntity(
                 enrollmentId = enrollment.id,
                 weekNumber = weekNumber,
