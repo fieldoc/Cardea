@@ -75,13 +75,14 @@ class BootcampSettingsViewModel @Inject constructor(
     }
 
     fun setRunsPerWeek(runsPerWeek: Int) {
+        val clamped = runsPerWeek.coerceIn(2, 6)
         _uiState.update { state ->
             val normalizedDays = normalizePreferredDays(
                 currentDays = state.editPreferredDays,
-                runsPerWeek = runsPerWeek
+                runsPerWeek = clamped
             )
             state.copy(
-                editRunsPerWeek = runsPerWeek,
+                editRunsPerWeek = clamped,
                 editPreferredDays = normalizedDays,
                 saveError = null
             )
@@ -330,7 +331,7 @@ class BootcampSettingsViewModel @Inject constructor(
         currentDays: List<DayPreference>,
         runsPerWeek: Int
     ): List<DayPreference> {
-        val cappedRuns = runsPerWeek.coerceIn(2, 5)
+        val cappedRuns = runsPerWeek.coerceIn(2, 6)
         val deduped = currentDays
             .sortedBy { it.day }
             .distinctBy { it.day }

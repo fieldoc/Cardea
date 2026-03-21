@@ -128,14 +128,19 @@ class BootcampSessionCompleter @Inject constructor(
         if (plannedSessions.isEmpty()) return emptyList()
 
         val availableDays = preferredDays
-            .filter { it.level != DaySelectionLevel.NONE }
+            .filter { it.level == DaySelectionLevel.AVAILABLE || it.level == DaySelectionLevel.LONG_RUN_BIAS }
             .map { it.day }
+        val longRunBiasDay = preferredDays
+            .firstOrNull { it.level == DaySelectionLevel.LONG_RUN_BIAS }
+            ?.day
 
-        return plannedSessions.mapIndexed { index, session ->
+        val assigned = SessionDayAssigner.assign(plannedSessions, availableDays, longRunBiasDay)
+
+        return assigned.map { (session, day) ->
             BootcampRepository.buildSessionEntity(
                 enrollmentId = enrollmentId,
                 weekNumber = nextEngine.absoluteWeek,
-                dayOfWeek = availableDays.getOrElse(index) { index + 1 }.coerceIn(1, 7),
+                dayOfWeek = day,
                 sessionType = session.type.name,
                 targetMinutes = session.minutes,
                 presetId = session.presetId

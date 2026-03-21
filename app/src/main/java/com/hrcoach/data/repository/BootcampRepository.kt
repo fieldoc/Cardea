@@ -160,7 +160,7 @@ class BootcampRepository @Inject constructor(
             return BootcampEnrollmentEntity(
                 goalType = goal.name,
                 targetMinutesPerRun = targetMinutesPerRun,
-                runsPerWeek = runsPerWeek,
+                runsPerWeek = runsPerWeek.coerceIn(2, 6),
                 preferredDays = preferredDays,
                 startDate = startDate,
                 tierIndex = tierIndex,

@@ -47,7 +47,7 @@ data class PhaseEngine(
         currentPresetIndices: Map<String, Int> = emptyMap()
     ): List<PlannedSession> {
         val effectiveMinutes = if (isRecoveryWeek) {
-            (targetMinutes * 0.8f).toInt()
+            (targetMinutes * 0.65f).toInt()
         } else {
             targetMinutes
         }
