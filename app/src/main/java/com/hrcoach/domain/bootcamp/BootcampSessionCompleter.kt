@@ -40,6 +40,12 @@ class BootcampSessionCompleter @Inject constructor(
         val targetSession = currentWeekSessions.firstOrNull { it.id == pendingSessionId }
             ?: return CompletionResult(completed = false)
 
+        // Status guard: only SCHEDULED or DEFERRED sessions can be completed
+        if (targetSession.status != BootcampSessionEntity.STATUS_SCHEDULED &&
+            targetSession.status != BootcampSessionEntity.STATUS_DEFERRED) {
+            return CompletionResult(completed = false)
+        }
+
         val completedSession = targetSession.copy(
             status = BootcampSessionEntity.STATUS_COMPLETED,
             completedWorkoutId = workoutId,
@@ -50,7 +56,11 @@ class BootcampSessionCompleter @Inject constructor(
             if (session.id == completedSession.id) completedSession else session
         }
         val weekComplete = simulatedWeek.isNotEmpty() &&
-            simulatedWeek.all { it.status == BootcampSessionEntity.STATUS_COMPLETED }
+            simulatedWeek.all {
+                it.status == BootcampSessionEntity.STATUS_COMPLETED ||
+                it.status == BootcampSessionEntity.STATUS_SKIPPED ||
+                it.status == BootcampSessionEntity.STATUS_DEFERRED
+            }
 
         return if (weekComplete) {
             val nextEngine = if (engine.shouldAdvancePhase()) {

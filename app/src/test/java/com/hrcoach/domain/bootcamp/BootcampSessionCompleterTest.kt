@@ -91,6 +91,54 @@ class BootcampSessionCompleterTest {
         assertTrue(dao.getSessionsForWeek(1L, 2).isNotEmpty())
     }
 
+    @Test
+    fun weekAdvancesWhenRemainingSessionsAreSkipped() = runTest {
+        val dao = FakeBootcampDao(
+            activeEnrollment = makeEnrollment(runsPerWeek = 3),
+            sessionsByWeek = mutableMapOf(
+                1 to mutableListOf(
+                    makeSession(id = 10L, dayOfWeek = 1, status = BootcampSessionEntity.STATUS_COMPLETED),
+                    makeSession(id = 11L, dayOfWeek = 3, status = BootcampSessionEntity.STATUS_SKIPPED),
+                    makeSession(id = 12L, dayOfWeek = 5)
+                )
+            )
+        )
+        val completer = makeCompleter(dao)
+        val result = completer.complete(workoutId = 100L, pendingSessionId = 12L)
+        assertTrue(result.completed)
+        assertTrue("Week should advance with skipped session", result.weekComplete)
+    }
+
+    @Test
+    fun completingAlreadyCompletedSessionReturnsFalse() = runTest {
+        val dao = FakeBootcampDao(
+            activeEnrollment = makeEnrollment(),
+            sessionsByWeek = mutableMapOf(
+                1 to mutableListOf(
+                    makeSession(id = 10L, dayOfWeek = 2, status = BootcampSessionEntity.STATUS_COMPLETED)
+                )
+            )
+        )
+        val completer = makeCompleter(dao)
+        val result = completer.complete(workoutId = 100L, pendingSessionId = 10L)
+        assertFalse("Already-completed session should not re-complete", result.completed)
+    }
+
+    @Test
+    fun completingSkippedSessionReturnsFalse() = runTest {
+        val dao = FakeBootcampDao(
+            activeEnrollment = makeEnrollment(),
+            sessionsByWeek = mutableMapOf(
+                1 to mutableListOf(
+                    makeSession(id = 10L, dayOfWeek = 2, status = BootcampSessionEntity.STATUS_SKIPPED)
+                )
+            )
+        )
+        val completer = makeCompleter(dao)
+        val result = completer.complete(workoutId = 100L, pendingSessionId = 10L)
+        assertFalse("Skipped session should not be completable", result.completed)
+    }
+
     private fun makeEnrollment(
         id: Long = 1L,
         runsPerWeek: Int = 2,
@@ -119,7 +167,8 @@ class BootcampSessionCompleterTest {
         id: Long = 10L,
         enrollmentId: Long = 1L,
         weekNumber: Int = 1,
-        dayOfWeek: Int = 2
+        dayOfWeek: Int = 2,
+        status: String = BootcampSessionEntity.STATUS_SCHEDULED
     ) = BootcampSessionEntity(
         id = id,
         enrollmentId = enrollmentId,
@@ -127,7 +176,7 @@ class BootcampSessionCompleterTest {
         dayOfWeek = dayOfWeek,
         sessionType = "EASY",
         targetMinutes = 30,
-        status = BootcampSessionEntity.STATUS_SCHEDULED,
+        status = status,
         completedWorkoutId = null,
         presetId = null
     )
