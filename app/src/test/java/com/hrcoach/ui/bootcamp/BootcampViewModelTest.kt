@@ -140,6 +140,9 @@ class BootcampViewModelTest {
         val vm = createViewModel()
 
         vm.startOnboarding()
+        assertTrue(vm.uiState.value.showCarousel)
+
+        vm.dismissCarousel()
         assertTrue(vm.uiState.value.showOnboarding)
         assertEquals(0, vm.uiState.value.onboardingStep)
 
