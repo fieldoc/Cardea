@@ -71,7 +71,8 @@ class PhaseEngineTest {
     fun `advancePhase increments phase index and resets week`() {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 0, weekInPhase = 4)
         val next = engine.advancePhase()
-        assertEquals(1, next.phaseIndex)
+        assertNotNull(next)
+        assertEquals(1, next!!.phaseIndex)
         assertEquals(0, next.weekInPhase)
     }
 
@@ -80,8 +81,33 @@ class PhaseEngineTest {
         // Cardio health has 2 phases (BASE, BUILD). At index 1, it should wrap to 0.
         val engine = PhaseEngine(goal = BootcampGoal.CARDIO_HEALTH, phaseIndex = 1, weekInPhase = 5)
         val next = engine.advancePhase()
-        assertEquals(0, next.phaseIndex)
+        assertNotNull("Cardio health should wrap", next)
+        assertEquals(0, next!!.phaseIndex)
         assertEquals(0, next.weekInPhase)
+    }
+
+    @Test
+    fun `advancePhase returns null when final phase is complete for race goals`() {
+        val engine = PhaseEngine(
+            goal = BootcampGoal.RACE_5K,
+            phaseIndex = 3, // TAPER (last phase for 5K)
+            weekInPhase = 1 // past midpoint
+        )
+        assertTrue(engine.shouldAdvancePhase())
+        assertNull("Should return null at end of arc, not wrap", engine.advancePhase())
+    }
+
+    @Test
+    fun `advancePhase wraps for CARDIO_HEALTH`() {
+        val engine = PhaseEngine(
+            goal = BootcampGoal.CARDIO_HEALTH,
+            phaseIndex = 1, // BUILD (last phase for cardio health)
+            weekInPhase = 5
+        )
+        assertTrue(engine.shouldAdvancePhase())
+        val next = engine.advancePhase()
+        assertNotNull("Cardio health should wrap", next)
+        assertEquals(0, next!!.phaseIndex)
     }
 
     @Test

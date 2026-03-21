@@ -64,9 +64,17 @@ data class PhaseEngine(
     fun shouldAdvancePhase(): Boolean =
         weekInPhase >= phaseMidpointWeeks(currentPhase)
 
-    fun advancePhase(): PhaseEngine {
-        val nextIndex = if (phaseIndex + 1 >= goal.phaseArc.size) 0 else phaseIndex + 1
-        return copy(phaseIndex = nextIndex, weekInPhase = 0)
+    fun advancePhase(): PhaseEngine? {
+        val nextIndex = phaseIndex + 1
+        return if (nextIndex >= goal.phaseArc.size) {
+            if (goal == BootcampGoal.CARDIO_HEALTH) {
+                copy(phaseIndex = 0, weekInPhase = 0) // Cardio Health cycles
+            } else {
+                null // Race goals graduate
+            }
+        } else {
+            copy(phaseIndex = nextIndex, weekInPhase = 0)
+        }
     }
 
     fun lookaheadWeeks(count: Int, tierIndex: Int = 1): List<WeekLookahead> {
@@ -75,7 +83,7 @@ data class PhaseEngine(
         var cursor = this
         repeat(count) {
             cursor = if (cursor.shouldAdvancePhase()) {
-                cursor.advancePhase()
+                cursor.advancePhase() ?: return result // graduated — stop lookahead
             } else {
                 cursor.copy(weekInPhase = cursor.weekInPhase + 1)
             }

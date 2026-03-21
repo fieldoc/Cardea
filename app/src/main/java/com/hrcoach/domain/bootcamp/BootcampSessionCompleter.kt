@@ -68,6 +68,18 @@ class BootcampSessionCompleter @Inject constructor(
             } else {
                 engine.copy(weekInPhase = engine.weekInPhase + 1)
             }
+
+            if (nextEngine == null) {
+                // Race goal completed — graduate the enrollment
+                bootcampRepository.completeSessionOnly(completedSession)
+                bootcampRepository.graduateEnrollment(enrollment.id)
+                return CompletionResult(
+                    completed = true,
+                    weekComplete = true,
+                    progressLabel = "Program complete! You're race-ready."
+                )
+            }
+
             val updatedEnrollment = enrollment.copy(
                 currentPhaseIndex = nextEngine.phaseIndex,
                 currentWeekInPhase = nextEngine.weekInPhase
