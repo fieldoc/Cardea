@@ -45,6 +45,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__plugin_serena_serena__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "count=$(wmic process where \"commandline like '%KotlinLspServerKt%'\" get Handle 2>/dev/null | grep -c '[0-9]' || echo 0); if [ \"$count\" -gt 1 ]; then wmic process where \"commandline like '%KotlinLspServerKt%'\" delete 2>/dev/null; fi; true"
+          }
+        ]
+      }
     ]
   }
 }

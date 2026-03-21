@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea — Functional System Map</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0B0F17;
+    --bg2: #0F1623;
+    --glass: rgba(255,255,255,0.04);
+    --glass-border: rgba(255,255,255,0.06);
+    --glass-hi: rgba(255,255,255,0.08);
+    --text: #E0E4EC;
+    --text-dim: #8890A0;
+    --text-bright: #FFFFFF;
+    --accent-red: #FF5A5F;
+    --accent-pink: #FF2DA6;
+    --accent-blue: #5B5BFF;
+    --accent-cyan: #00D1FF;
+    --trim-color: #FF8F3F;
+    --tier-color: #A78BFA;
+    --coaching-color: #34D399;
+    --sensor-color: #60A5FA;
+    --fitness-color: #F472B6;
+    --plan-color: #FBBF24;
+    --quality-color: #94A3B8;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── Header ─── */
+  .header {
+    text-align: center;
+    padding: 48px 24px 16px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-red), var(--accent-pink), var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .header p {
+    color: var(--text-dim);
+    font-size: 14px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ─── Legend ─── */
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 16px 24px 32px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ─── Phase Banners ─── */
+  .phase-banner {
+    text-align: center;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative;
+    margin: 0 auto;
+    max-width: 1200px;
+  }
+  .phase-banner::before {
+    content: '';
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 50%;
+    height: 1px;
+    z-index: 0;
+  }
+  .phase-banner span {
+    position: relative;
+    z-index: 1;
+    padding: 4px 16px;
+    border-radius: 12px;
+    font-size: 11px;
+  }
+  .phase-live .phase-banner::before { background: linear-gradient(90deg, transparent, var(--accent-cyan), transparent); }
+  .phase-live .phase-banner span { background: rgba(0,209,255,0.1); border: 1px solid rgba(0,209,255,0.2); color: var(--accent-cyan); }
+  .phase-between .phase-banner::before { background: linear-gradient(90deg, transparent, var(--accent-pink), transparent); }
+  .phase-between .phase-banner span { background: rgba(255,45,166,0.1); border: 1px solid rgba(255,45,166,0.2); color: var(--accent-pink); }
+
+  /* ─── Cycle arrow ─── */
+  .cycle-arrow {
+    text-align: center;
+    padding: 20px 0;
+    position: relative;
+  }
+  .cycle-arrow .arrow-line {
+    width: 2px;
+    height: 40px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .cycle-arrow .arrow-line::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+  }
+  .cycle-arrow.down .arrow-line { background: linear-gradient(to bottom, var(--accent-cyan), var(--accent-blue)); }
+  .cycle-arrow.down .arrow-line::after { border-top: 8px solid var(--accent-blue); }
+  .cycle-arrow.up .arrow-line { background: linear-gradient(to bottom, var(--accent-pink), var(--accent-cyan)); }
+  .cycle-arrow.up .arrow-line::after { border-top: 8px solid var(--accent-cyan); }
+
+  .cycle-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* ─── System Map Container ─── */
+  .map-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 64px;
+  }
+
+  /* ─── Flow rows ─── */
+  .flow-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  /* ─── Down arrows between rows ─── */
+  .row-connector {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+  }
+  .row-connector svg {
+    display: block;
+  }
+
+  /* ─── System Cards ─── */
+  .system-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    width: 340px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .system-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    border-radius: 16px 16px 0 0;
+  }
+  .system-card:hover {
+    background: var(--glass-hi);
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+  .system-card.expanded {
+    background: var(--glass-hi);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  /* Color accents per system family */
+  .card-trim::before { background: linear-gradient(90deg, var(--trim-color), #FF6B2D); }
+  .card-trim { border-color: rgba(255,143,63,0.15); }
+  .card-trim:hover, .card-trim.expanded { border-color: rgba(255,143,63,0.3); }
+
+  .card-tier::before { background: linear-gradient(90deg, var(--tier-color), #8B5CF6); }
+  .card-tier { border-color: rgba(167,139,250,0.15); }
+  .card-tier:hover, .card-tier.expanded { border-color: rgba(167,139,250,0.3); }
+
+  .card-coaching::before { background: linear-gradient(90deg, var(--coaching-color), #10B981); }
+  .card-coaching { border-color: rgba(52,211,153,0.15); }
+  .card-coaching:hover, .card-coaching.expanded { border-color: rgba(52,211,153,0.3); }
+
+  .card-sensor::before { background: linear-gradient(90deg, var(--sensor-color), #3B82F6); }
+  .card-sensor { border-color: rgba(96,165,250,0.15); }
+  .card-sensor:hover, .card-sensor.expanded { border-color: rgba(96,165,250,0.3); }
+
+  .card-fitness::before { background: linear-gradient(90deg, var(--fitness-color), #EC4899); }
+  .card-fitness { border-color: rgba(244,114,182,0.15); }
+  .card-fitness:hover, .card-fitness.expanded { border-color: rgba(244,114,182,0.3); }
+
+  .card-plan::before { background: linear-gradient(90deg, var(--plan-color), #F59E0B); }
+  .card-plan { border-color: rgba(251,191,36,0.15); }
+  .card-plan:hover, .card-plan.expanded { border-color: rgba(251,191,36,0.3); }
+
+  .card-quality::before { background: linear-gradient(90deg, var(--quality-color), #64748B); }
+  .card-quality { border-color: rgba(148,163,184,0.15); }
+  .card-quality:hover, .card-quality.expanded { border-color: rgba(148,163,184,0.3); }
+
+  .card-wide { width: 700px; }
+  .card-full { width: 100%; max-width: 1080px; }
+
+  .card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .card-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+  }
+  .card-title-group { flex: 1; }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 2px;
+  }
+  .card-subtitle {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+  .card-toggle {
+    font-size: 14px;
+    color: var(--text-dim);
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .system-card.expanded .card-toggle {
+    transform: rotate(180deg);
+  }
+
+  /* ─── Expandable Detail ─── */
+  .card-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0;
+  }
+  .system-card.expanded .card-detail {
+    max-height: 1200px;
+    opacity: 1;
+  }
+  .detail-content {
+    padding-top: 16px;
+    margin-top: 16px;
+    border-top: 1px solid var(--glass-border);
+  }
+
+  /* Sub-function items */
+  .sub-fn {
+    display: flex;
+    gap: 10px;
+    padding: 8px 0;
+    align-items: flex-start;
+  }
+  .sub-fn + .sub-fn {
+    border-top: 1px solid rgba(255,255,255,0.03);
+  }
+  .sub-fn-marker {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 7px;
+  }
+  .sub-fn-text {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .sub-fn-text strong {
+    color: var(--text-bright);
+    font-weight: 600;
+  }
+  .sub-fn-text .dim {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  /* Connection annotations */
+  .connection-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 4px 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 8px;
+    display: inline-block;
+    margin: 0 auto;
+    letter-spacing: 0.3px;
+  }
+
+  /* ─── Flow direction indicators ─── */
+  .flow-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+  .flow-indicator .arrow {
+    font-size: 16px;
+    opacity: 0.5;
+  }
+  .flow-indicator .label {
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  /* ─── Data pill annotations on arrows ─── */
+  .data-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim);
+  }
+
+  /* ─── Wrap-around loop visual ─── */
+  .loop-section {
+    position: relative;
+    margin: 32px auto;
+    max-width: 1080px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255,45,166,0.03), rgba(0,209,255,0.03));
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  .loop-section .loop-icon {
+    font-size: 28px;
+    opacity: 0.6;
+  }
+  .loop-section .loop-text {
+    text-align: center;
+  }
+  .loop-section .loop-text h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+  }
+  .loop-section .loop-text p {
+    font-size: 12px;
+    color: var(--text-dim);
+    max-width: 500px;
+  }
+
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .system-card, .card-wide, .card-full {
+      width: 100%;
+    }
+    .header h1 { font-size: 24px; }
+    .flow-row { flex-direction: column; align-items: center; }
+  }
+
+  /* ─── Pulse animation for active data ─── */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0,209,255,0); }
+    50% { box-shadow: 0 0 12px 2px rgba(0,209,255,0.15); }
+  }
+  .system-card.highlighted {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  /* ─── Intro hint ─── */
+  .hint {
+    text-align: center;
+    padding: 0 24px 24px;
+    font-size: 12px;
+    color: var(--text-dim);
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Cardea Functional System Map</h1>
+  <p>How the adaptive coaching engine works — from heartbeat to training plan. Click any card to see how it works inside.</p>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--sensor-color)"></div>Sensors</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--quality-color)"></div>Data Quality</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--trim-color)"></div>Adaptive Prediction</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--coaching-color)"></div>Coaching</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--fitness-color)"></div>Fitness Signals</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--tier-color)"></div>Tier System</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--plan-color)"></div>Training Plan</div>
+</div>
+
+<div class="hint">Click any card to expand details</div>
+
+<div class="map-container">
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- PHASE 1: DURING A RUN                                    -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="phase-live">
+    <div class="phase-banner"><span>During a Run</span></div>
+  </div>
+
+  <div style="height: 16px"></div>
+
+  <!-- Row 1: Sensors -->
+  <div class="flow-row">
+    <div class="system-card card-sensor" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">💓</div>
+        <div class="card-title-group">
+          <div class="card-title">Heart Rate Sensing</div>
+          <div class="card-subtitle">Bluetooth chest strap reads your heartbeat once per second</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--sensor-color)"></div>
+          <div class="sub-fn-text"><strong>BLE connection</strong> — pairs with a Bluetooth Low Energy heart rate monitor (e.g. Coospo H808S chest strap). Reconnects automatically if signal drops.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--sensor-color)"></div>
+          <div class="sub-fn-text"><strong>HR stream</strong> — delivers a real-time stream of heart rate values (beats per minute) that feeds every downstream system.</div>
+        </div>
+      </div></div>
+    </div>
+    <div class="system-card card-sensor" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">📍</div>
+        <div class="card-title-group">
+          <div class="card-title">GPS Tracking</div>
+          <div class="card-subtitle">Phone GPS tracks distance, pace, and route</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--sensor-color)"></div>
+          <div class="sub-fn-text"><strong>Distance accumulation</strong> — tracks total distance run in meters, used to determine which workout segment you're in.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--sensor-color)"></div>
+          <div class="sub-fn-text"><strong>Pace calculation</strong> — computes smoothed pace (min/km) from GPS speed, using a weighted moving average (72% previous, 28% instant) to filter GPS jitter.</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="flow-indicator">
+    <div class="arrow">↓</div>
+    <div class="data-pill">raw HR + GPS every 1-5s</div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <!-- Row 2: Quality Filters -->
+  <div class="flow-row">
+    <div class="system-card card-quality card-full" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">🛡️</div>
+        <div class="card-title-group">
+          <div class="card-title">Data Quality Filters</div>
+          <div class="card-subtitle">Three guards that catch bad sensor data before it reaches the coaching brain</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--quality-color)"></div>
+          <div class="sub-fn-text"><strong>Cadence Lock Detector</strong> — optical HR sensors sometimes "lock" onto your arm swing rhythm instead of your heartbeat. Detects this by looking for a sudden HR jump (25+ bpm) followed by an unnaturally flat plateau (±3 bpm for 8+ seconds). <span class="dim">When detected: suppresses HRmax auto-calibration and flags TRIMP as unreliable.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--quality-color)"></div>
+          <div class="sub-fn-text"><strong>Auto-Pause Detector</strong> — uses a Schmitt trigger on GPS speed to detect when you've stopped (e.g. at a traffic light). <span class="dim">Stops at &lt;1.8 km/h for 3 seconds, resumes at &gt;3.6 km/h. Pauses distance/time tracking so your metrics aren't diluted by standing still.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--quality-color)"></div>
+          <div class="sub-fn-text"><strong>Environment Flag</strong> — after the run, checks if heat, humidity, or altitude skewed your HR data. <span class="dim">If aerobic decoupling is abnormally high AND pace is slower than your baseline at the same HR, the session is flagged so the learning engine ignores it when assessing your fitness trend.</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="flow-indicator">
+    <div class="arrow">↓</div>
+    <div class="data-pill">clean HR + distance + pace</div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <!-- Row 3: Zone Evaluation + Adaptive Prediction (side by side) -->
+  <div class="flow-row">
+    <div class="system-card card-coaching" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">🎯</div>
+        <div class="card-title-group">
+          <div class="card-title">Zone Evaluation</div>
+          <div class="card-subtitle">"Am I above, below, or in my target heart rate zone right now?"</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Target zone</strong> — your current target HR comes from the workout config. In steady-state mode it's one fixed number; in interval/distance mode it changes per segment. The zone is target ± a buffer (typically 3-5 bpm).</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Hysteresis</strong> — once you're IN the zone, you get 2 extra bpm of leeway before being declared OUT. This prevents rapid zone-flipping when your HR hovers near the boundary.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Result</strong> → <span style="color:#34D399">IN_ZONE</span>, <span style="color:#FF5A5F">ABOVE_ZONE</span>, <span style="color:#60A5FA">BELOW_ZONE</span>, or <span style="color:#94A3B8">NO_DATA</span></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="system-card card-trim" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">🧠</div>
+        <div class="card-title-group">
+          <div class="card-title">Adaptive Prediction Engine</div>
+          <div class="card-subtitle">"Where will my HR be in 10-15 seconds?" — the core learning system</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>HR Slope Tracking</strong> — measures whether your heart rate is currently rising or falling, and how fast. <span class="dim">Smoothed exponentially (75/25 blend). A slope of +2 bpm/min means "HR is climbing steadily."</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Pace-HR Lookup</strong> — remembers what heart rate your body typically produces at each pace. Groups paces into buckets (e.g. "6:00-6:15 min/km → avg 148 bpm"). <span class="dim">If your current pace usually makes your HR run high, the prediction accounts for that.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Short-Term Trim</strong> — a within-workout correction that tracks how wrong recent predictions have been and nudges future predictions to compensate. <span class="dim">Decays at 86% per tick — it reacts quickly but forgets quickly. Captures things like "I'm warming up, HR is running higher than model expects."</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Long-Term Trim</strong> — a cross-session correction that persists between runs. If your HR consistently runs 3 bpm higher than targets, the trim learns this bias and bakes it into all future predictions. <span class="dim">Decays at 92% per session — very slow, very stable. Capped at ±20 bpm.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Response Lag</strong> — how many seconds your HR takes to respond after you change pace. <span class="dim">Measured by timing how long it takes to return to zone after drifting out. Starts at 25s, refined each session. Typical range: 8-90s. Controls the prediction horizon (how far ahead we look).</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Projection Confidence</strong> — how much to trust the prediction. <span class="dim">LOW (first 1-2 sessions): no projection shown. MEDIUM (2-4 sessions): hedged language like "may drift up." HIGH (4+ sessions): confident language like "drifting up."</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>The Prediction Formula</strong> — <code style="color:var(--trim-color);font-size:12px">projected HR = current HR + (slope × horizon) + (short trim × 0.35) + long trim + pace bias</code></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="flow-indicator">
+    <div class="arrow">↓</div>
+    <div class="data-pill">zone status + projected zone + guidance text</div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <!-- Row 4: Coaching Language -->
+  <div class="flow-row">
+    <div class="system-card card-coaching card-full" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">🗣️</div>
+        <div class="card-title-group">
+          <div class="card-title">Coaching Language System</div>
+          <div class="card-subtitle">Decides what to say, when to say it, and how urgently — three layers working together</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+
+        <div style="margin-bottom:12px;font-size:13px;font-weight:600;color:var(--coaching-color)">Layer 1: Guidance Text Generation</div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Context-sensitive language</strong> — the text you see on screen is generated by combining your actual zone, projected zone, and HR trend. Examples:
+            <div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12px">
+              <span style="color:var(--text-dim)">Above zone, HR falling:</span><span>"HR settling back — hold steady"</span>
+              <span style="color:var(--text-dim)">Above zone, HR not falling:</span><span>"Above zone — ease off now"</span>
+              <span style="color:var(--text-dim)">In zone, projected above (high confidence):</span><span>"HR drifting up — ease off slightly"</span>
+              <span style="color:var(--text-dim)">In zone, projected above (medium):</span><span>"HR may drift up — ease off slightly"</span>
+              <span style="color:var(--text-dim)">In zone, stable, high pace bias:</span><span>"This pace usually runs high"</span>
+              <span style="color:var(--text-dim)">In zone, low confidence:</span><span>"Learning your patterns — hold steady"</span>
+              <span style="color:var(--text-dim)">In zone, stable:</span><span>"Pace looks good — hold steady"</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin:16px 0 12px;font-size:13px;font-weight:600;color:var(--coaching-color)">Layer 2: Event Routing (When + What to Say)</div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Alert timing</strong> — you must be out of zone for 15 seconds before the first alert. After an alert, there's a 30-second cooldown before the next one. This prevents nagging.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Coaching events</strong> — the system recognizes 11 distinct situations:
+            <div style="margin-top:6px;font-size:12px;columns:2;column-gap:16px">
+              <div>🔴 SLOW_DOWN — above zone too long</div>
+              <div>🔵 SPEED_UP — below zone too long</div>
+              <div>✅ RETURN_TO_ZONE — back in zone</div>
+              <div>⚠️ PREDICTIVE_WARNING — in zone but drifting</div>
+              <div>🔀 SEGMENT_CHANGE — new interval started</div>
+              <div>❌ SIGNAL_LOST — HR monitor disconnected</div>
+              <div>📡 SIGNAL_REGAINED — HR reconnected</div>
+              <div>⏳ HALFWAY — 50% of workout done</div>
+              <div>📏 KM_SPLIT — passed another kilometer</div>
+              <div>🏁 WORKOUT_COMPLETE — target reached</div>
+              <div>😌 IN_ZONE_CONFIRM — every 3 min of silence</div>
+            </div>
+          </div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Predictive warnings</strong> — unique to Cardea: when you're currently IN zone but the prediction engine sees you drifting out, you get a gentle heads-up <em>before</em> you actually leave the zone. <span class="dim">Fires at most once per 60 seconds. Only when confidence is MEDIUM or HIGH.</span></div>
+        </div>
+
+        <div style="margin:16px 0 12px;font-size:13px;font-weight:600;color:var(--coaching-color)">Layer 3: Audio Delivery (How Urgently)</div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Escalation ladder</strong> — the more you ignore alerts, the more insistent they become:
+            <div style="margin-top:6px;font-size:12px">
+              <div style="padding:3px 0">1st alert: <strong>Earcon only</strong> — a short musical tone. Subtle.</div>
+              <div style="padding:3px 0">2nd alert: <strong>Earcon + Voice</strong> — tone followed by a spoken instruction ("Speed up" / "Slow down")</div>
+              <div style="padding:3px 0">3rd+ alert: <strong>Earcon + Voice + Vibration</strong> — adds a haptic pulse to your phone</div>
+            </div>
+            <span class="dim">Resets to level 1 when you return to zone.</span>
+          </div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Voice verbosity</strong> — user chooses OFF (no voice ever), MINIMAL (only speed up/slow down/segment change/signal lost), or FULL (all events including return-to-zone, predictive warnings, km splits, halfway, and workout complete).</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--coaching-color)"></div>
+          <div class="sub-fn-text"><strong>Music-friendly</strong> — audio plays over the navigation channel, layering on top of music without pausing it or stealing audio focus.</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- ═══ Transition: Run ends ═══ -->
+  <div class="loop-section">
+    <div class="loop-icon">🏃‍♂️→🏠</div>
+    <div class="loop-text">
+      <h3>Run Ends — Learning Begins</h3>
+      <p>The workout data is saved. Now the system analyzes what happened, updates its model of your body, and plans what's next.</p>
+    </div>
+    <div class="loop-icon">📊</div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!-- PHASE 2: BETWEEN RUNS                                    -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <div class="phase-between">
+    <div class="phase-banner"><span>Between Runs</span></div>
+  </div>
+
+  <div style="height: 16px"></div>
+
+  <!-- Row 5: Post-run Learning -->
+  <div class="flow-row">
+    <div class="system-card card-trim card-wide" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">📈</div>
+        <div class="card-title-group">
+          <div class="card-title">Post-Run Learning</div>
+          <div class="card-subtitle">The adaptive profile absorbs what happened this run — becoming a better model of your body</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Long-term trim update</strong> — if your average HR ran higher than your average target, the trim shifts upward so next time the system predicts your HR more accurately. <span class="dim">Blends 92% old + 8% session error. After 10+ sessions, this captures your personal HR bias very precisely.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Response lag refinement</strong> — averages how long it took you to settle back into zone this session, and blends it with the stored lag estimate. <span class="dim">85% old + 15% observed. Captures changes in your cardiovascular fitness over time.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Pace-HR bucket merge</strong> — your running pace is divided into buckets (0.25 min/km wide). Each bucket stores the average HR you produce at that pace. Session data is merged with your lifetime profile, building a personal pace-HR curve.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>HRmax auto-calibration</strong> — if 8+ consecutive seconds of HR exceed your current max (and it's not a cadence lock artifact), your HRmax is updated. <span class="dim">This means all %HRmax workout targets become more accurate over time.</span></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="system-card card-trim" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div class="card-title-group">
+          <div class="card-title">Metrics Derived</div>
+          <div class="card-subtitle">Performance numbers computed from the raw run data</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Efficiency Factor</strong> — speed ÷ heart rate. Higher = more fit. <span class="dim">Calculated as (meters/min) / HR. A rising EF over weeks means you're getting faster at the same heart rate.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>Aerobic Decoupling</strong> — how much your EF drops in the second half vs. the first half. <span class="dim">&lt;5% = excellent aerobic base. &gt;10% = your aerobic system fatigues quickly.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>TRIMP</strong> — "training impulse" score combining duration and intensity. <span class="dim">Feeds the CTL/ATL training load tracker.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--trim-color)"></div>
+          <div class="sub-fn-text"><strong>HRR1</strong> — heart rate recovery: how many bpm your HR drops in the first minute after stopping. <span class="dim">A declining HRR1 over time can signal overtraining or illness.</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="flow-indicator">
+    <div class="arrow">↓</div>
+    <div class="data-pill">updated profile + metrics history</div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <!-- Row 6: Fitness Signal Evaluation -->
+  <div class="flow-row">
+    <div class="system-card card-fitness card-full" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">⚖️</div>
+        <div class="card-title-group">
+          <div class="card-title">Fitness Signal Evaluation</div>
+          <div class="card-subtitle">"Should your training get harder, easier, or stay the same?" — analyzes trends across your recent runs</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--fitness-color)"></div>
+          <div class="sub-fn-text"><strong>Training Stress Balance (TSB)</strong> — your "freshness" score. Compares your long-term fitness load (CTL) against your short-term fatigue (ATL).
+            <div style="margin-top:4px;font-size:12px;color:var(--text-dim)">
+              TSB &lt; -25 → you're overtrained → <strong style="color:#FF5A5F">EASE BACK</strong><br>
+              TSB &gt; +5 AND fitness is rising → you're fresh and adapting → <strong style="color:#34D399">PUSH HARDER</strong><br>
+              Otherwise → <strong style="color:var(--text)">HOLD</strong>
+            </div>
+          </div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--fitness-color)"></div>
+          <div class="sub-fn-text"><strong>Efficiency Factor trend</strong> — is your EF rising or falling over recent reliable sessions? Rising + fresh = green light to push. Falling may signal overreaching.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--fitness-color)"></div>
+          <div class="sub-fn-text"><strong>HRR1 trend</strong> — is your recovery speed declining? A drop of 10+ bpm in HRR1 across sessions triggers EASE_BACK regardless of other signals. <span class="dim">This is a strong early warning of overtraining or illness.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--fitness-color)"></div>
+          <div class="sub-fn-text"><strong>Illness detection</strong> — the killer feature of this system. If you're <em>rested</em> (TSB positive) but both your EF and HRR1 are crashing simultaneously, the most likely explanation isn't overtraining — it's that you're getting sick. <span class="dim">SOFT tier = HRR1 crash alone. FULL tier = HRR1 + EF crash together. Full illness flag overrides everything → EASE_BACK.</span></div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--fitness-color)"></div>
+          <div class="sub-fn-text"><strong>Output</strong> → <span style="color:#34D399;font-weight:600">PUSH_HARDER</span>, <span style="font-weight:600">HOLD</span>, or <span style="color:#FF5A5F;font-weight:600">EASE_BACK</span> — this signal flows directly into the tier system and training plan.</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="flow-indicator">
+    <div class="arrow">↓</div>
+    <div class="data-pill">tuning direction: push / hold / ease</div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <!-- Row 7: Tier System -->
+  <div class="flow-row">
+    <div class="system-card card-tier card-full" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">🏔️</div>
+        <div class="card-title-group">
+          <div class="card-title">The Tier System</div>
+          <div class="card-subtitle">Controls workout complexity — how hard and varied your training gets. Four tiers from "easy runs only" to "full periodized racing."</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--tier-color)"></div>
+          <div class="sub-fn-text"><strong>How your tier is set</strong> — your goal sets a <em>base tier</em>: Cardio Health = 1, 5K/10K race = 2, Half Marathon = 3, Marathon = 4. A <em>tier index</em> (starting at 0) adjusts up or down from there. Effective tier = goal.tier + tierIndex - 1, clamped to 1-4.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--tier-color)"></div>
+          <div class="sub-fn-text"><strong>What each tier unlocks:</strong>
+            <div style="margin-top:8px;display:grid;grid-template-columns:80px 1fr;gap:8px;font-size:12px">
+              <div style="color:var(--tier-color);font-weight:700">Tier 1</div>
+              <div>All easy runs + long runs. Pure aerobic base-building. No quality sessions.</div>
+              <div style="color:var(--tier-color);font-weight:700">Tier 2</div>
+              <div>Adds <strong>tempo runs</strong> (Z3 pace) + <strong>strides</strong> during BUILD phase. Long runs get proportionally longer.</div>
+              <div style="color:var(--tier-color);font-weight:700">Tier 3</div>
+              <div>Adds <strong>threshold runs</strong> (Z4) + <strong>VO2max intervals</strong> (Norwegian 4x4). Long runs become <strong>race simulations</strong> in PEAK phase. Two quality sessions per week during PEAK.</div>
+              <div style="color:var(--tier-color);font-weight:700">Tier 4</div>
+              <div>Full periodization — VO2max intervals take priority, threshold as secondary quality session. Maximum workout variety and intensity.</div>
+            </div>
+          </div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--tier-color)"></div>
+          <div class="sub-fn-text"><strong>Tier movement</strong> — driven by the Fitness Signal Evaluator's tuning direction. If your body is adapting well (PUSH_HARDER), the system can recommend moving you up a tier. If you're struggling (EASE_BACK), it can dial you back down.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--tier-color)"></div>
+          <div class="sub-fn-text"><strong>Finishing time connection</strong> — your target finishing time (stored on enrollment) can also influence tier placement, anchoring difficulty to your race goals.</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Arrow -->
+  <div class="flow-indicator">
+    <div class="arrow">↓</div>
+    <div class="data-pill">effective tier + tuning direction</div>
+    <div class="arrow">↓</div>
+  </div>
+
+  <!-- Row 8: Training Plan -->
+  <div class="flow-row">
+    <div class="system-card card-plan" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">📅</div>
+        <div class="card-title-group">
+          <div class="card-title">Training Plan Engine</div>
+          <div class="card-subtitle">Generates your weekly schedule — what to run, how long, and which preset workout to use</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--plan-color)"></div>
+          <div class="sub-fn-text"><strong>Phase periodization</strong> — training cycles through 4 phases, each lasting several weeks:
+            <div style="margin-top:6px;font-size:12px">
+              <strong>BASE</strong> (3-6 wk): all easy running — builds aerobic foundation<br>
+              <strong>BUILD</strong> (4-6 wk): introduces quality sessions — tempo, strides<br>
+              <strong>PEAK</strong> (2-3 wk): highest intensity — intervals, race sims<br>
+              <strong>TAPER</strong> (1-2 wk): reduced volume — sharpening for race day
+            </div>
+          </div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--plan-color)"></div>
+          <div class="sub-fn-text"><strong>Duration scaling</strong> — uses Daniels' Running Formula ratios to compute session lengths from your target minutes:
+            <div style="margin-top:4px;font-size:12px;color:var(--text-dim)">
+              Long run: 1.25-1.5× easy run (bigger spike when fewer runs/week)<br>
+              Tempo: 10% of weekly total, capped 15-40 min<br>
+              Interval: 8% of weekly total, capped 12-35 min<br>
+              Easy runs absorb the remainder to keep weekly total constant
+            </div>
+          </div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--plan-color)"></div>
+          <div class="sub-fn-text"><strong>Recovery weeks</strong> — every 3rd week automatically reduces volume to 80%. Prevents burnout accumulation.</div>
+        </div>
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--plan-color)"></div>
+          <div class="sub-fn-text"><strong>Preset workouts</strong> — each planned session maps to a specific workout preset (Zone 2 Base, Aerobic Tempo, Lactate Threshold, Norwegian 4x4, etc.) which defines exact HR targets as %HRmax with segment structure.</div>
+        </div>
+      </div></div>
+    </div>
+    <div class="system-card card-plan" onclick="toggleCard(this)">
+      <div class="card-header">
+        <div class="card-icon">🔄</div>
+        <div class="card-title-group">
+          <div class="card-title">Absence Recovery</div>
+          <div class="card-subtitle">Graduated rollback when life gets in the way</div>
+        </div>
+        <div class="card-toggle">▼</div>
+      </div>
+      <div class="card-detail"><div class="detail-content">
+        <div class="sub-fn">
+          <div class="sub-fn-marker" style="background:var(--plan-color)"></div>
+          <div class="sub-fn-text"><strong>Gap assessment</strong> — measures days since your last run and applies a proportional response:
+            <div style="margin-top:6px;font-size:12px;display:grid;grid-template-columns:100px 1fr;gap:4px 12px">
+              <span style="color:var(--plan-color)">≤3 days</span><span>On track — no changes</span>
+              <span style="color:var(--plan-color)">4-7 days</span><span>Minor slip — continue as normal</span>
+              <span style="color:var(--plan-color)">8-14 days</span><span>Short break — inserts an easy "return" run</span>
+              <span style="color:var(--plan-color)">15-28 days</span><span>Meaningful break — rewinds 1 week + return run</span>
+              <span style="color:var(--plan-color)">29-60 days</span><span>Extended break — restarts current phase from week 1</span>
+              <span style="color:var(--plan-color)">61-120 days</span><span>Long absence — restarts from BASE phase + recalibration run</span>
+              <span style="color:var(--plan-color)">&gt;120 days</span><span>Full reset — starts completely fresh with a Discovery Run</span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- Loop back -->
+  <div class="loop-section">
+    <div class="loop-icon">🔁</div>
+    <div class="loop-text">
+      <h3>Next Run Generated</h3>
+      <p>The plan produces a specific workout config (target HR zones, segments, duration) → which feeds the Zone Engine and Adaptive Prediction → which generates real-time coaching. The cycle continues, getting smarter each time.</p>
+    </div>
+    <div class="loop-icon">🏃‍♂️</div>
+  </div>
+
+  <!-- ═══ Cross-cutting connections summary ═══ -->
+  <div style="height: 32px"></div>
+  <div class="phase-between">
+    <div class="phase-banner"><span>How Systems Connect</span></div>
+  </div>
+  <div style="height: 16px"></div>
+
+  <div class="flow-row">
+    <div class="system-card card-trim" style="cursor:default; width: 520px">
+      <div class="card-header">
+        <div class="card-icon">🔗</div>
+        <div class="card-title-group">
+          <div class="card-title">Key Cross-System Connections</div>
+        </div>
+      </div>
+      <div style="padding-top:12px;font-size:12px;line-height:1.7;color:var(--text-dim)">
+        <div style="margin-bottom:8px"><span style="color:var(--trim-color)">Adaptive Profile</span> → <span style="color:var(--fitness-color)">Fitness Signals</span> — the profile's CTL/ATL values (training load) are the primary input for determining whether to push or ease.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--fitness-color)">Fitness Signals</span> → <span style="color:var(--tier-color)">Tier System</span> — the tuning direction (push/hold/ease) decides if your tier goes up, stays, or goes down.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--tier-color)">Tier</span> → <span style="color:var(--plan-color)">Training Plan</span> — your effective tier determines which workout types appear in your weekly schedule.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--plan-color)">Training Plan</span> → <span style="color:var(--coaching-color)">Zone Engine</span> — the plan's workout config (target HR, segments, buffer) defines the zone boundaries the engine evaluates against.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--coaching-color)">Zone Engine</span> → <span style="color:var(--trim-color)">Adaptive Prediction</span> → <span style="color:var(--coaching-color)">Coaching Language</span> — zone status feeds into prediction, prediction feeds into guidance text and warning events.</div>
+        <div><span style="color:var(--quality-color)">Quality Filters</span> → <span style="color:var(--trim-color)">Learning</span> — sessions flagged as environment-affected or artifact-contaminated are excluded from fitness trend analysis, protecting the model from bad data.</div>
+      </div>
+    </div>
+    <div class="system-card card-coaching" style="cursor:default; width: 520px">
+      <div class="card-header">
+        <div class="card-icon">⏱️</div>
+        <div class="card-title-group">
+          <div class="card-title">Timescales</div>
+        </div>
+      </div>
+      <div style="padding-top:12px;font-size:12px;line-height:1.7;color:var(--text-dim)">
+        <div style="margin-bottom:8px"><span style="color:var(--coaching-color)">Milliseconds</span> — HR sampling, zone evaluation, guidance text updates. The tightest feedback loop.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--trim-color)">Seconds</span> — short-term trim reacts within a single run. HR slope tracks moment-to-moment trends. Alert cooldowns operate on 15-30 second timers.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--trim-color)">Sessions</span> — long-term trim, response lag, and pace-HR buckets update after each run. Gets noticeably better after 4+ sessions.</div>
+        <div style="margin-bottom:8px"><span style="color:var(--fitness-color)">Weeks</span> — fitness signals (CTL/ATL/TSB, EF trend, HRR1 trend) evaluate over the last 42 days. Tuning direction changes weekly.</div>
+        <div><span style="color:var(--plan-color)">Months</span> — phase periodization (Base → Build → Peak → Taper) unfolds over 10-17 weeks. Tier adjustments happen at week boundaries.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function toggleCard(el) {
+  el.classList.toggle('expanded');
+}
+
+// Expand all on double-click header
+document.querySelector('.header').addEventListener('dblclick', () => {
+  const cards = document.querySelectorAll('.system-card');
+  const allExpanded = [...cards].every(c => c.classList.contains('expanded'));
+  cards.forEach(c => {
+    if (allExpanded) c.classList.remove('expanded');
+    else c.classList.add('expanded');
+  });
+});
+</script>
+
+</body>
+</html>
