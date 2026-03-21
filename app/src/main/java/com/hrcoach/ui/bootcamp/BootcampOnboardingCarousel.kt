@@ -226,7 +226,7 @@ private fun CarouselPagePhases() {
 
         // Phase blocks
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             PhaseBlock("BASE", GradientCyan)
@@ -298,7 +298,7 @@ private fun PhaseBlock(label: String, color: Color) {
             .clip(RoundedCornerShape(10.dp))
             .background(color.copy(alpha = 0.12f))
             .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 8.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
