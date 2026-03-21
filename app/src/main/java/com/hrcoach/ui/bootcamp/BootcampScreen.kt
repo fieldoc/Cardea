@@ -129,6 +129,13 @@ fun BootcampScreen(
                 }
             }
 
+            uiState.showCarousel -> {
+                BootcampOnboardingCarousel(
+                    onStartSetup = { viewModel.dismissCarousel() },
+                    onSkip = { viewModel.dismissCarousel() }
+                )
+            }
+
             uiState.showOnboarding -> {
                 OnboardingWizard(
                     uiState = uiState,
@@ -635,7 +642,7 @@ private fun OnboardingWizard(
                 )
             } else {
                 OnboardingStep2Time(
-                    minutes = uiState.onboardingMinutes,
+                    minutes = uiState.onboardingAvailableMinutes,
                     warning = uiState.onboardingTimeWarning,
                     canProceed = uiState.onboardingTimeCanProceed,
                     longRunMinutes = uiState.onboardingLongRunMinutes,
@@ -648,7 +655,7 @@ private fun OnboardingWizard(
             }
             timeStep -> if (isRaceGoal && step == 2) {
                 OnboardingStep2Time(
-                    minutes = uiState.onboardingMinutes,
+                    minutes = uiState.onboardingAvailableMinutes,
                     warning = uiState.onboardingTimeWarning,
                     canProceed = uiState.onboardingTimeCanProceed,
                     longRunMinutes = uiState.onboardingLongRunMinutes,

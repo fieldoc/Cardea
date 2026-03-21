@@ -316,10 +316,18 @@ class BootcampViewModel @Inject constructor(
         return ((now - lastDate) / TimeUnit.DAYS.toMillis(1)).toInt().coerceAtLeast(0)
     }
 
-    // --- Onboarding ---
+    // --- Carousel & Onboarding ---
+
+    fun startCarousel() {
+        _uiState.update { it.copy(showCarousel = true) }
+    }
+
+    fun dismissCarousel() {
+        _uiState.update { it.copy(showCarousel = false, showOnboarding = true, onboardingStep = 0) }
+    }
 
     fun startOnboarding() {
-        _uiState.update { it.copy(showOnboarding = true, onboardingStep = 0) }
+        _uiState.update { it.copy(showCarousel = true) }
     }
 
     fun setOnboardingStep(step: Int) {
@@ -347,7 +355,7 @@ class BootcampViewModel @Inject constructor(
         val finishingTime = FinishingTimeTierMapper.bracketsFor(goal)?.defaultMinutes
         val derivedTier = if (finishingTime != null) FinishingTimeTierMapper.tierFromFinishingTime(goal, finishingTime) else 0
         val recommendedMin = FinishingTimeTierMapper.recommendedRunMinutes(goal, derivedTier)
-        val minutes = if (FinishingTimeTierMapper.isRaceGoal(goal)) recommendedMin else state.onboardingMinutes
+        val minutes = if (FinishingTimeTierMapper.isRaceGoal(goal)) recommendedMin else state.onboardingAvailableMinutes
         val validation = FinishingTimeTierMapper.validateTimeCommitment(goal, derivedTier, minutes)
         val (longRun, weekly, longWarning) = computeOnboardingDurationState(
             minutes, state.onboardingRunsPerWeek, goal
@@ -356,7 +364,7 @@ class BootcampViewModel @Inject constructor(
             it.copy(
                 onboardingGoal = goal,
                 onboardingTargetFinishingTime = finishingTime,
-                onboardingMinutes = minutes,
+                onboardingAvailableMinutes = minutes,
                 onboardingTimeWarning = validation.warningMessage,
                 onboardingTimeCanProceed = validation.canProceed,
                 onboardingLongRunMinutes = longRun,
@@ -384,7 +392,7 @@ class BootcampViewModel @Inject constructor(
         )
         _uiState.update {
             it.copy(
-                onboardingMinutes = minutes,
+                onboardingAvailableMinutes = minutes,
                 onboardingTimeWarning = warning,
                 onboardingTimeCanProceed = validation?.canProceed ?: true,
                 onboardingLongRunMinutes = longRun,
@@ -405,7 +413,7 @@ class BootcampViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 onboardingTargetFinishingTime = minutes,
-                onboardingMinutes = recommendedMin,
+                onboardingAvailableMinutes = recommendedMin,
                 onboardingTimeWarning = validation.warningMessage,
                 onboardingTimeCanProceed = validation.canProceed,
                 onboardingLongRunMinutes = longRun,
@@ -418,7 +426,7 @@ class BootcampViewModel @Inject constructor(
     fun setOnboardingRunsPerWeek(runs: Int) {
         val state = _uiState.value
         val (longRun, weekly, longWarning) = computeOnboardingDurationState(
-            state.onboardingMinutes, runs, state.onboardingGoal
+            state.onboardingAvailableMinutes, runs, state.onboardingGoal
         )
         _uiState.update {
             it.copy(
@@ -484,7 +492,7 @@ class BootcampViewModel @Inject constructor(
             val startDate = firstPreferredDayAfterMs(preferredDays.map { it.day })
             bootcampRepository.createEnrollment(
                 goal = goal,
-                targetMinutesPerRun = state.onboardingMinutes,
+                targetMinutesPerRun = state.onboardingAvailableMinutes,
                 runsPerWeek = state.onboardingRunsPerWeek,
                 preferredDays = preferredDays,
                 startDate = startDate,

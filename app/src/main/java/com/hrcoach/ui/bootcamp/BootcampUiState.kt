@@ -60,10 +60,11 @@ data class BootcampUiState(
     val upcomingWeeks: List<UpcomingWeekItem> = emptyList(),
     val swapRestMessage: String? = null,
     // Onboarding
+    val showCarousel: Boolean = false,
     val showOnboarding: Boolean = false,
     val onboardingStep: Int = 0,
     val onboardingGoal: BootcampGoal? = null,
-    val onboardingMinutes: Int = 30,
+    val onboardingAvailableMinutes: Int = 30,
     val onboardingRunsPerWeek: Int = 3,
     val onboardingTargetFinishingTime: Int? = null,
     val onboardingTimeWarning: String? = null,
@@ -72,6 +73,7 @@ data class BootcampUiState(
     val onboardingWeeklyTotal: Int = 0,
     val onboardingPreferredDays: List<DayPreference> = emptyList(),
     val onboardingLongRunWarning: String? = null,
+    val onboardingPreviewSessions: List<PlannedSession> = emptyList(),
     // Gap return
     val welcomeBackMessage: String? = null,
     val needsCalibration: Boolean = false,
