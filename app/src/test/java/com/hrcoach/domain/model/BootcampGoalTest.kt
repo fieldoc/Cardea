@@ -6,11 +6,12 @@ import org.junit.Test
 class BootcampGoalTest {
 
     @Test
-    fun `each goal has correct tier`() {
-        assertEquals(1, BootcampGoal.CARDIO_HEALTH.tier)
-        assertEquals(2, BootcampGoal.RACE_5K.tier)
-        assertEquals(3, BootcampGoal.HALF_MARATHON.tier)
-        assertEquals(4, BootcampGoal.MARATHON.tier)
+    fun `each goal has correct maxLongRunMinutes`() {
+        assertEquals(60, BootcampGoal.CARDIO_HEALTH.maxLongRunMinutes)
+        assertEquals(60, BootcampGoal.RACE_5K.maxLongRunMinutes)
+        assertEquals(75, BootcampGoal.RACE_10K.maxLongRunMinutes)
+        assertEquals(120, BootcampGoal.HALF_MARATHON.maxLongRunMinutes)
+        assertEquals(150, BootcampGoal.MARATHON.maxLongRunMinutes)
     }
 
     @Test

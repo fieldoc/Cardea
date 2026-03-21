@@ -15,7 +15,6 @@ object SessionSelector {
         tierIndex: Int = 1,
         tuningDirection: TuningDirection = TuningDirection.HOLD
     ): List<PlannedSession> {
-        val effectiveTier = (goal.tier + tierIndex - 1).coerceIn(1, 4)
         val tuningFactor = when (tuningDirection) {
             TuningDirection.PUSH_HARDER -> 1.05f
             TuningDirection.EASE_BACK -> 0.90f
@@ -27,23 +26,23 @@ object SessionSelector {
             (targetMinutes * tuningFactor).toInt()
         }
         val durations = DurationScaler.compute(runsPerWeek, effectiveMinutes)
-        val longMinutes = durations.longMinutes
 
         return when {
-            effectiveTier <= 1 -> baseAerobicWeek(phase, runsPerWeek, effectiveMinutes, longMinutes, durations)
-            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, longMinutes, durations, effectiveTier)
+            tierIndex <= 0 -> baseAerobicWeek(phase, goal, runsPerWeek, effectiveMinutes, durations)
+            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex)
         }
     }
 
     private fun baseAerobicWeek(
         phase: TrainingPhase,
+        goal: BootcampGoal,
         runsPerWeek: Int,
         minutes: Int,
-        longMinutes: Int,
         durations: DurationScaler.WeekDurations
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
         val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.BASE
+        val longMinutes = durations.longMinutes.coerceAtMost(goal.maxLongRunMinutes)
         val easyCount = if (hasLong) runsPerWeek - 1 else runsPerWeek
         repeat(easyCount) {
             sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
@@ -59,21 +58,21 @@ object SessionSelector {
         goal: BootcampGoal,
         runsPerWeek: Int,
         minutes: Int,
-        longMinutes: Int,
         durations: DurationScaler.WeekDurations,
-        effectiveTier: Int
+        tierIndex: Int
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
-        val includeStrides = phase == TrainingPhase.BUILD && effectiveTier >= 2 && runsPerWeek >= 4
+        val includeStrides = phase == TrainingPhase.BUILD && tierIndex >= 2 && runsPerWeek >= 4
 
         val qualitySessions = when (phase) {
             TrainingPhase.BASE -> 0
             TrainingPhase.BUILD -> 1
-            TrainingPhase.PEAK -> if (effectiveTier >= 3) 2 else 1
+            TrainingPhase.PEAK -> if (tierIndex >= 2) 2 else 1
             TrainingPhase.TAPER -> 1
         }
 
         val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.TAPER
+        val longMinutes = durations.longMinutes.coerceAtMost(goal.maxLongRunMinutes)
         val easyCount = (
             runsPerWeek -
                 qualitySessions -
@@ -92,7 +91,7 @@ object SessionSelector {
             TrainingPhase.BUILD -> {
                 sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 if (includeStrides) {
-                    val stridesPreset = if (effectiveTier >= 3) {
+                    val stridesPreset = if (tierIndex >= 3) {
                         SessionPresetArray.stridesTier3().presetAt(0)
                     } else {
                         SessionPresetArray.stridesTier2().presetAt(0)
@@ -107,22 +106,37 @@ object SessionSelector {
                 }
             }
             TrainingPhase.PEAK -> {
-                if (effectiveTier >= 4) {
-                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
-                    if (qualitySessions >= 2) {
-                        sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
+                when {
+                    tierIndex >= 2 -> {
+                        // Goal determines primary quality type
+                        when (goal) {
+                            BootcampGoal.RACE_5K -> {
+                                sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
+                                if (qualitySessions >= 2) {
+                                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
+                                }
+                            }
+                            BootcampGoal.RACE_10K -> {
+                                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
+                                if (qualitySessions >= 2) {
+                                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
+                                }
+                            }
+                            BootcampGoal.HALF_MARATHON, BootcampGoal.MARATHON -> {
+                                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
+                                if (qualitySessions >= 2) {
+                                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+                                }
+                            }
+                            BootcampGoal.CARDIO_HEALTH -> {
+                                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+                            }
+                        }
                     }
-                } else if (effectiveTier >= 3) {
-                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
-                    if (qualitySessions >= 2) {
-                        sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
+                    else -> {
+                        // tierIndex 1: aerobic tempo for all goals
+                        sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                     }
-                } else if (goal == BootcampGoal.RACE_5K) {
-                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
-                } else if (goal == BootcampGoal.RACE_10K) {
-                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
-                } else {
-                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 }
             }
             TrainingPhase.TAPER -> {
@@ -132,8 +146,10 @@ object SessionSelector {
 
         // Long run
         if (hasLong) {
-            val longPreset = if (phase == TrainingPhase.PEAK && effectiveTier >= 3) null else "zone2_base"
-            val longType = if (phase == TrainingPhase.PEAK && effectiveTier >= 3) SessionType.RACE_SIM else SessionType.LONG
+            val isRaceSim = phase == TrainingPhase.PEAK && tierIndex >= 2 &&
+                goal != BootcampGoal.CARDIO_HEALTH
+            val longType = if (isRaceSim) SessionType.RACE_SIM else SessionType.LONG
+            val longPreset = if (isRaceSim) null else "zone2_base"
             sessions.add(PlannedSession(longType, longMinutes, longPreset))
         }
 

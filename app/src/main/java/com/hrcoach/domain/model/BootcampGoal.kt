@@ -10,51 +10,51 @@ enum class TrainingPhase(val weeksRange: IntRange) {
 }
 
 enum class BootcampGoal(
-    val tier: Int,
     val suggestedMinMinutes: Int,
     val warnBelowMinutes: Int,
     val neverPrescribeBelowMinutes: Int,
     val minLongRunMinutes: Int,
+    val maxLongRunMinutes: Int,
     val phaseArc: List<TrainingPhase>
 ) {
     CARDIO_HEALTH(
-        tier = 1,
         suggestedMinMinutes = 20,
         warnBelowMinutes = 15,
         neverPrescribeBelowMinutes = 10,
         minLongRunMinutes = 20,
+        maxLongRunMinutes = 60,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD)
     ),
     RACE_5K(
-        tier = 2,
         suggestedMinMinutes = 25,
         warnBelowMinutes = 20,
         neverPrescribeBelowMinutes = 15,
         minLongRunMinutes = 30,
+        maxLongRunMinutes = 60,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
     ),
     RACE_10K(
-        tier = 2,
         suggestedMinMinutes = 30,
         warnBelowMinutes = 20,
         neverPrescribeBelowMinutes = 15,
         minLongRunMinutes = 40,
+        maxLongRunMinutes = 75,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
     ),
     HALF_MARATHON(
-        tier = 3,
         suggestedMinMinutes = 30,
         warnBelowMinutes = 25,
         neverPrescribeBelowMinutes = 20,
         minLongRunMinutes = 60,
+        maxLongRunMinutes = 120,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
     ),
     MARATHON(
-        tier = 4,
         suggestedMinMinutes = 45,
         warnBelowMinutes = 30,
         neverPrescribeBelowMinutes = 20,
         minLongRunMinutes = 90,
+        maxLongRunMinutes = 150,
         phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
     )
 }

@@ -33,14 +33,14 @@ class SessionSelectorTest {
     }
 
     @Test
-    fun `peak phase for marathon includes interval session`() {
+    fun `peak phase for marathon at tier 1 includes tempo session`() {
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.PEAK,
             goal = BootcampGoal.MARATHON,
             runsPerWeek = 4,
             targetMinutes = 45
         )
-        assertTrue(sessions.any { it.type == SessionType.INTERVAL })
+        assertTrue(sessions.any { it.type == SessionType.TEMPO })
     }
 
     @Test
@@ -88,7 +88,8 @@ class SessionSelectorTest {
             phase = TrainingPhase.BUILD,
             goal = BootcampGoal.RACE_5K,
             runsPerWeek = 4,
-            targetMinutes = 35
+            targetMinutes = 35,
+            tierIndex = 2
         )
         assertTrue(sessions.any { it.type == SessionType.STRIDES })
     }
@@ -101,7 +102,7 @@ class SessionSelectorTest {
 
     @Test
     fun `tierIndex 0 demotes RACE_5K to baseAerobicWeek`() {
-        // RACE_5K goal.tier=2, tierIndex=0 → effectiveTier=1 → baseAerobicWeek path
+        // tierIndex=0 → baseAerobicWeek path (all easy + optional long)
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.BUILD,
             goal = BootcampGoal.RACE_5K,
@@ -116,7 +117,7 @@ class SessionSelectorTest {
 
     @Test
     fun `tierIndex 2 promotes RACE_5K to 2 quality sessions in PEAK`() {
-        // RACE_5K goal.tier=2, tierIndex=2 → effectiveTier=3 → 2 quality in PEAK
+        // tierIndex=2 → 2 quality sessions in PEAK
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.PEAK,
             goal = BootcampGoal.RACE_5K,
@@ -131,7 +132,7 @@ class SessionSelectorTest {
 
     @Test
     fun `tierIndex 0 removes strides from BUILD for tier-2 goal`() {
-        // effectiveTier=1 → baseAerobicWeek, strides require effectiveTier>=2
+        // tierIndex=0 → baseAerobicWeek, no strides possible
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.BUILD,
             goal = BootcampGoal.RACE_5K,
@@ -144,7 +145,7 @@ class SessionSelectorTest {
 
     @Test
     fun `tierIndex 1 preserves current behavior for RACE_5K BUILD`() {
-        // tierIndex=1 is neutral: effectiveTier = goal.tier = 2. Same as default.
+        // tierIndex=1 is the default — explicit and implicit should match.
         val withTier = SessionSelector.weekSessions(
             phase = TrainingPhase.BUILD,
             goal = BootcampGoal.RACE_5K,
@@ -159,5 +160,52 @@ class SessionSelectorTest {
             targetMinutes = 30
         )
         assertEquals(withoutTier.map { it.type }, withTier.map { it.type })
+    }
+
+    // ── New safety tests ──────────────────────────
+
+    @Test
+    fun `marathon tier 0 gets only easy and long sessions in all phases`() {
+        for (phase in TrainingPhase.entries) {
+            val sessions = SessionSelector.weekSessions(
+                phase = phase, goal = BootcampGoal.MARATHON,
+                runsPerWeek = 4, targetMinutes = 40, tierIndex = 0
+            )
+            val types = sessions.map { it.type }.toSet()
+            assertTrue("Marathon T0 $phase should have no TEMPO", SessionType.TEMPO !in types)
+            assertTrue("Marathon T0 $phase should have no INTERVAL", SessionType.INTERVAL !in types)
+            assertTrue("Marathon T0 $phase should have no RACE_SIM", SessionType.RACE_SIM !in types)
+        }
+    }
+
+    @Test
+    fun `tier 1 BUILD gets tempo but not intervals for any goal`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD, goal = BootcampGoal.RACE_10K,
+            runsPerWeek = 4, targetMinutes = 35, tierIndex = 1
+        )
+        val types = sessions.map { it.type }.toSet()
+        assertTrue("T1 BUILD should have TEMPO", SessionType.TEMPO in types)
+        assertTrue("T1 BUILD should NOT have INTERVAL", SessionType.INTERVAL !in types)
+    }
+
+    @Test
+    fun `tier 2 PEAK 5K gets intervals as primary quality session`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK, goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4, targetMinutes = 35, tierIndex = 2
+        )
+        val types = sessions.map { it.type }.toSet()
+        assertTrue("5K T2 PEAK should have INTERVAL", SessionType.INTERVAL in types)
+    }
+
+    @Test
+    fun `tier 2 PEAK marathon gets LT tempo as primary quality session`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK, goal = BootcampGoal.MARATHON,
+            runsPerWeek = 4, targetMinutes = 50, tierIndex = 2
+        )
+        val types = sessions.map { it.type }.toSet()
+        assertTrue("Marathon T2 PEAK should have TEMPO", SessionType.TEMPO in types)
     }
 }
