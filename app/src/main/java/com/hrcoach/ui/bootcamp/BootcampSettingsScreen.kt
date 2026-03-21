@@ -215,7 +215,7 @@ fun BootcampSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Easy run",
+                            text = "Time per run",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = CardeaTheme.colors.textSecondary
                         )
@@ -254,29 +254,11 @@ fun BootcampSettingsScreen(
                         Text("90 min", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textTertiary)
                     }
                     Spacer(Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Long run: ~${state.editLongRunMinutes} min",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTheme.colors.textSecondary
-                        )
-                        Text(
-                            text = "Weekly: ~${state.editWeeklyTotal} min",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTheme.colors.textTertiary
-                        )
-                    }
-                    state.longRunWarning?.let { warning ->
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = warning,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTheme.colors.zoneAmber
-                        )
-                    }
+                    Text(
+                        text = "Sessions will be prescribed within this time limit.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
 
                     HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 14.dp))
 
@@ -285,8 +267,8 @@ fun BootcampSettingsScreen(
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = CardeaTheme.colors.textSecondary
                     )
-                    val runOptions = listOf(2, 3, 4, 5)
-                    val runLabels = listOf("2", "3", "4", "5+")
+                    val runOptions = listOf(2, 3, 4, 5, 6)
+                    val runLabels = listOf("2", "3", "4", "5", "6")
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
