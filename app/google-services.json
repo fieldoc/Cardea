@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "471429338135",
+    "project_id": "cardea-1c8fc",
+    "storage_bucket": "cardea-1c8fc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:471429338135:android:027681c99f4c607d78b852",
+        "android_client_info": {
+          "package_name": "com.hrcoach"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwXoQ5wdxhNVDfapTKohxuT85V6z7VejU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

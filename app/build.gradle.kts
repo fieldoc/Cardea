@@ -5,6 +5,8 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
     id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.appdistribution")
 }
 
 android {
@@ -91,6 +93,10 @@ dependencies {
     implementation("com.google.maps.android:maps-compose:6.2.1")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.code.gson:gson:2.11.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
+    implementation("com.google.firebase:firebase-analytics")
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
