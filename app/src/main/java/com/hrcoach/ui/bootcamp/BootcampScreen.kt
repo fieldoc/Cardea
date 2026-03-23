@@ -4,6 +4,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Arrangement
@@ -78,6 +84,7 @@ import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
@@ -109,6 +116,15 @@ fun BootcampScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhaseDetail by remember { mutableStateOf(false) }
     var showDaysSheet by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show swap-rest confirmation
+    LaunchedEffect(uiState.swapRestMessage) {
+        uiState.swapRestMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSwapRestMessage()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -228,7 +244,12 @@ fun BootcampScreen(
         if (uiState.showSessionDetail && uiState.sessionDetailItem != null) {
             SessionDetailSheet(
                 session = uiState.sessionDetailItem!!,
-                onDismiss = viewModel::dismissSessionDetail
+                maxHr = uiState.maxHr,
+                onDismiss = viewModel::dismissSessionDetail,
+                onReschedule = { id -> viewModel.rescheduleFromDetail(id) },
+                onSkip = { id -> viewModel.skipSession(id) },
+                onStartRun = { configJson -> viewModel.startRunFromDetail(configJson) },
+                onRestToday = viewModel::swapTodayForRestFromDetail
             )
         }
 
@@ -264,6 +285,11 @@ fun BootcampScreen(
                 onDismiss   = { viewModel.dismissRescheduleSheet() }
             )
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp)
+        )
     }
 }
 
@@ -395,7 +421,8 @@ private fun FeatureBullet(
 @Composable
 private fun WeekStripCard(
     days: List<WeekDayItem>,
-    dateRange: String
+    dateRange: String,
+    onSessionClick: (SessionUiItem) -> Unit = {}
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         // Header: "This Week" + date range
@@ -424,7 +451,10 @@ private fun WeekStripCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             days.forEach { day ->
-                WeekDayPill(day = day)
+                WeekDayPill(
+                    day = day,
+                    onClick = day.session?.let { session -> { onSessionClick(session) } }
+                )
             }
         }
 
@@ -481,10 +511,21 @@ private fun WeekStripCard(
 }
 
 @Composable
-private fun WeekDayPill(day: WeekDayItem) {
+private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pillScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.90f else 1f,
+        label = "pillPress"
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp)
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+        modifier = (if (onClick != null) Modifier.clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick
+        ) else Modifier).scale(pillScale)
     ) {
         // Day letter
         Text(
@@ -534,6 +575,30 @@ private fun WeekDayPill(day: WeekDayItem) {
                     Icon(
                         Icons.Default.Check, contentDescription = null,
                         tint = ZoneGreen, modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+            session.isDeferred -> {
+                // Deferred: amber tint to signal "needs attention"
+                dotBackground = ZoneAmber.copy(alpha = 0.12f)
+                dotBorder = ZoneAmber.copy(alpha = 0.35f)
+                dotContent = {
+                    Text(
+                        text = "?",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = ZoneAmber
+                    )
+                }
+            }
+            session.isPast && !session.isCompleted -> {
+                // Missed: past day, still scheduled — subtle red
+                dotBackground = ZoneRed.copy(alpha = 0.10f)
+                dotBorder = ZoneRed.copy(alpha = 0.30f)
+                dotContent = {
+                    Text(
+                        text = "!",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = ZoneRed.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -1201,7 +1266,7 @@ private fun ActiveBootcampDashboard(
     onGoToManualSetup: (() -> Unit)? = null
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        var missedDismissed by remember { mutableStateOf(false) }
+        var missedDismissedIds by remember { mutableStateOf(emptySet<Long>()) }
 
         val todaySessionId = uiState.currentWeekDays.find { it.isToday }?.session?.sessionId
 
@@ -1211,6 +1276,8 @@ private fun ActiveBootcampDashboard(
             onStartWorkout = onStartWorkout,
             onReschedule = todaySessionId?.let { id -> { onReschedule(id) } },
             onSwapTodayForRest = onSwapTodayForRest,
+            onPullForward = { sessionId -> onReschedule(sessionId) },
+            onGoToManualSetup = onGoToManualSetup,
             onGoalClick = onGoalClick,
             onProgressClick = onProgressClick,
             onPreferredDaysClick = onPreferredDaysClick,
@@ -1230,21 +1297,21 @@ private fun ActiveBootcampDashboard(
         ) {
             WeekStripCard(
                 days = uiState.currentWeekDays,
-                dateRange = uiState.currentWeekDateRange
+                dateRange = uiState.currentWeekDateRange,
+                onSessionClick = onSessionClick
             )
 
             if (uiState.isPaused) {
                 PausedCard(onResume = onResume)
             }
 
-            if (uiState.missedSession && !missedDismissed) {
-                val todayDow = uiState.currentWeekDays.firstOrNull { it.isToday }?.dayOfWeek ?: 8
-                val missedId = uiState.currentWeekDays
-                    .firstOrNull { it.dayOfWeek < todayDow && it.session != null && !it.session.isCompleted }
-                    ?.session?.sessionId
+            // Show missed/deferred card for sessions needing attention
+            val unresolvedIds = uiState.missedSessionIds.filterNot { it in missedDismissedIds }
+            if (unresolvedIds.isNotEmpty()) {
                 MissedSessionCard(
-                    onDismiss = { missedDismissed = true },
-                    onReschedule = { if (missedId != null) onReschedule(missedId) }
+                    count = unresolvedIds.size,
+                    onDismiss = { missedDismissedIds = missedDismissedIds + unresolvedIds.first() },
+                    onReschedule = { onReschedule(unresolvedIds.first()) }
                 )
             }
 
@@ -1308,6 +1375,7 @@ private fun StatusCard(
 
 @Composable
 private fun MissedSessionCard(
+    count: Int,
     onDismiss: () -> Unit,
     onReschedule: () -> Unit
 ) {
@@ -1315,13 +1383,16 @@ private fun MissedSessionCard(
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(end = 32.dp)) {
                 Text(
-                    text = "Missed session detected",
+                    text = if (count == 1) "Session to reschedule" else "$count sessions to reschedule",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = CardeaTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "You have at least one earlier session this week that is still incomplete.",
+                    text = if (count == 1)
+                        "You have a session that needs your attention."
+                    else
+                        "You have $count sessions that are missed or deferred.",
                     style = MaterialTheme.typography.bodySmall,
                     color = CardeaTheme.colors.textSecondary
                 )
@@ -1491,8 +1562,21 @@ private fun GraduationCard(onGraduateGoal: () -> Unit) {
 @Composable
 private fun SessionDetailSheet(
     session: SessionUiItem,
-    onDismiss: () -> Unit
+    maxHr: Int?,
+    onDismiss: () -> Unit,
+    onReschedule: ((Long) -> Unit)? = null,
+    onSkip: ((Long) -> Unit)? = null,
+    onStartRun: ((String) -> Unit)? = null,
+    onRestToday: (() -> Unit)? = null
 ) {
+    val sessionId = session.sessionId
+    // Determine which actions to show based on session state
+    val canAct = sessionId != null && !session.isCompleted
+    val showStartRun = canAct && session.isToday && onStartRun != null
+    val showReschedule = canAct && onReschedule != null
+    val showSkip = canAct && onSkip != null
+    val showRestToday = canAct && session.isToday && onRestToday != null
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = CardeaTheme.colors.bgPrimary,
@@ -1522,18 +1606,48 @@ private fun SessionDetailSheet(
                         color = CardeaTheme.colors.textSecondary
                     )
                 }
-                if (session.isCompleted) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(ZoneGreen.copy(alpha = 0.1f))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = "Completed",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = ZoneGreen
-                        )
+                when {
+                    session.isCompleted -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ZoneGreen.copy(alpha = 0.1f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Completed",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = ZoneGreen
+                            )
+                        }
+                    }
+                    session.isDeferred -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ZoneAmber.copy(alpha = 0.1f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Deferred",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = ZoneAmber
+                            )
+                        }
+                    }
+                    session.isPast -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ZoneRed.copy(alpha = 0.08f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Missed",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = ZoneRed.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 }
             }
@@ -1553,11 +1667,84 @@ private fun SessionDetailSheet(
                 color = CardeaTheme.colors.textTertiary
             )
 
-            CardeaButton(
-                text = "Close",
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth().height(48.dp)
-            )
+            // ── Contextual action buttons ────────────────────────────
+            if (showStartRun) {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        val configJson = buildConfigJson(
+                            PlannedSession(
+                                type = runCatching { SessionType.valueOf(session.rawTypeName) }
+                                    .getOrDefault(SessionType.EASY),
+                                minutes = session.minutes,
+                                presetId = session.presetId
+                            ),
+                            maxHr
+                        )
+                        onStartRun!!.invoke(configJson)
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent
+                    ),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CardeaCtaGradient),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Start run",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = CardeaTheme.colors.onGradient
+                        )
+                    }
+                }
+            }
+
+            if (showReschedule || showSkip || showRestToday) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (showReschedule) {
+                        CardeaButton(
+                            text = "Reschedule",
+                            onClick = { onReschedule!!(sessionId!!) },
+                            modifier = Modifier.weight(1f).height(44.dp)
+                        )
+                    }
+                    if (showRestToday) {
+                        TextButton(onClick = onRestToday!!) {
+                            Text(
+                                text = "Rest today",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTheme.colors.textTertiary
+                            )
+                        }
+                    }
+                    if (showSkip && !showRestToday) {
+                        TextButton(onClick = { onSkip!!(sessionId!!) }) {
+                            Text(
+                                text = "Skip",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTheme.colors.textTertiary
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (!showStartRun && !showReschedule && !showSkip) {
+                CardeaButton(
+                    text = "Close",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                )
+            }
         }
     }
 }
@@ -1588,6 +1775,8 @@ private fun TodayHeroSection(
     onStartWorkout: (configJson: String) -> Unit,
     onReschedule: (() -> Unit)?,
     onSwapTodayForRest: () -> Unit,
+    onPullForward: ((Long) -> Unit)? = null,
+    onGoToManualSetup: (() -> Unit)? = null,
     onGoalClick: () -> Unit,
     onProgressClick: () -> Unit,
     onPreferredDaysClick: () -> Unit,
@@ -1859,7 +2048,7 @@ private fun TodayHeroSection(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "✓",
+                                text = "\u2713",
                                 style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
                                 color = ZoneGreen
                             )
@@ -1885,6 +2074,20 @@ private fun TodayHeroSection(
                             color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+                        // ── Pull forward next run ────────────────────────
+                        if (today.nextFutureSessionId != null && onPullForward != null) {
+                            TextButton(
+                                onClick = { onPullForward(today.nextFutureSessionId) },
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Pull forward next run",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CardeaTheme.colors.textSecondary
+                                )
+                            }
+                        }
                     }
 
                     is TodayState.RestDay -> {
@@ -1909,6 +2112,38 @@ private fun TodayHeroSection(
                             color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+                        // ── Action row: pull forward + manual run ────────
+                        if (today.nextFutureSessionId != null || onGoToManualSetup != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (today.nextFutureSessionId != null && onPullForward != null) {
+                                    TextButton(
+                                        onClick = { onPullForward(today.nextFutureSessionId) },
+                                        contentPadding = PaddingValues(horizontal = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Pull forward next run",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CardeaTheme.colors.textSecondary
+                                        )
+                                    }
+                                }
+                                if (onGoToManualSetup != null) {
+                                    TextButton(
+                                        onClick = onGoToManualSetup,
+                                        contentPadding = PaddingValues(horizontal = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Manual run \u2192",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CardeaTheme.colors.textTertiary
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }

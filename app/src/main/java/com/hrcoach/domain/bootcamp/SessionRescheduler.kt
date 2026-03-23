@@ -38,7 +38,9 @@ object SessionRescheduler {
             .map { it.dayOfWeek }
             .toSet()
 
-        return (req.todayDayOfWeek + 1..7).filter { candidate ->
+        return (req.todayDayOfWeek..7).filter { candidate ->
+            // Never "reschedule" to the session's own day (no-op move)
+            if (candidate == req.session.dayOfWeek) return@filter false
             val pref = prefs.find { it.day == candidate }
             val isRunnable = pref != null &&
                 pref.level != DaySelectionLevel.NONE &&
@@ -65,7 +67,7 @@ object SessionRescheduler {
     private fun dropPriority(type: String): Int = when (type) {
         "EASY"      -> 0
         "TEMPO"     -> 1
-        "INTERVALS" -> 2
+        "INTERVAL", "INTERVALS" -> 2
         "LONG_RUN"  -> 3
         else        -> 1
     }
