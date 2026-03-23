@@ -1,5 +1,6 @@
 package com.hrcoach.ui.account
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.domain.model.ThemeMode
@@ -81,6 +83,7 @@ fun AccountScreen(
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var showProfileSheet by remember { mutableStateOf(false) }
 
     if (showProfileSheet) {
@@ -139,6 +142,29 @@ fun AccountScreen(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+
+            // ── Accountability Partner ─────────────────────────────────────────
+            PartnerSection(
+                isPaired = state.isPaired,
+                partnerName = state.partnerName,
+                partnerAvatar = state.partnerAvatar,
+                inviteCode = state.inviteCode,
+                isGeneratingCode = state.isGeneratingCode,
+                isJoining = state.isJoining,
+                pairError = state.pairError,
+                onGenerateInvite = viewModel::generateInviteCode,
+                onAcceptInvite = viewModel::acceptInvite,
+                onDisconnect = viewModel::disconnectPartner,
+                onShareCode = { code ->
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT,
+                            "Join me on Cardea! Use code $code or tap: https://cardea.app/pair/$code")
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share invite"))
+                }
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             // ── Appearance ────────────────────────────────────────────────────
             SectionLabel("Appearance")

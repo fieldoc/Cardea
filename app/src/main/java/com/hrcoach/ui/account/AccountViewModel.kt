@@ -9,6 +9,7 @@ import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.AutoPauseSettingsRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
 import com.hrcoach.data.repository.UserProfileRepository
+import com.hrcoach.data.firebase.PartnerRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.VoiceVerbosity
@@ -41,6 +42,13 @@ data class AccountUiState(
     val maxHrError: String? = null,
     val autoPauseEnabled: Boolean = true,
     val achievements: List<AchievementEntity> = emptyList(),
+    val isPaired: Boolean = false,
+    val partnerName: String? = null,
+    val partnerAvatar: String? = null,
+    val inviteCode: String? = null,
+    val isGeneratingCode: Boolean = false,
+    val isJoining: Boolean = false,
+    val pairError: String? = null,
 )
 
 @HiltViewModel
@@ -52,6 +60,7 @@ class AccountViewModel @Inject constructor(
     private val autoPauseRepo: AutoPauseSettingsRepository,
     private val achievementDao: AchievementDao,
     private val adaptiveProfileRepo: AdaptiveProfileRepository,
+    private val partnerRepo: PartnerRepository,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -74,6 +83,14 @@ class AccountViewModel @Inject constructor(
     private val _displayName = MutableStateFlow("Runner")
     private val _avatarSymbol = MutableStateFlow("\u2665")
 
+    private val _isPaired = MutableStateFlow(false)
+    private val _partnerName = MutableStateFlow<String?>(null)
+    private val _partnerAvatar = MutableStateFlow<String?>(null)
+    private val _inviteCode = MutableStateFlow<String?>(null)
+    private val _isGeneratingCode = MutableStateFlow(false)
+    private val _isJoining = MutableStateFlow(false)
+    private val _pairError = MutableStateFlow<String?>(null)
+
     init {
         viewModelScope.launch {
             _mapsKey.value = mapsRepo.getMapsApiKey()
@@ -91,6 +108,21 @@ class AccountViewModel @Inject constructor(
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
+
+        // Observe partner state
+        viewModelScope.launch {
+            partnerRepo.observePartnerId().collect { partnerId ->
+                _isPaired.value = partnerId != null
+                if (partnerId != null) {
+                    val info = partnerRepo.getPartnerInfo(partnerId)
+                    _partnerName.value = info?.displayName
+                    _partnerAvatar.value = info?.avatarSymbol
+                } else {
+                    _partnerName.value = null
+                    _partnerAvatar.value = null
+                }
+            }
+        }
     }
 
     val uiState: StateFlow<AccountUiState> = combine(
@@ -139,6 +171,23 @@ class AccountViewModel @Inject constructor(
         base.copy(displayName = name, avatarSymbol = avatar)
     }.combine(achievementDao.getAllAchievements()) { base, achievements ->
         base.copy(achievements = achievements)
+    }.combine(
+        combine(_isPaired, _partnerName, _partnerAvatar, _inviteCode) { paired, name, avatar, code ->
+            listOf<Any?>(paired, name, avatar, code)
+        }
+    ) { base, parts ->
+        base.copy(
+            isPaired = parts[0] as Boolean,
+            partnerName = parts[1] as String?,
+            partnerAvatar = parts[2] as String?,
+            inviteCode = parts[3] as String?,
+        )
+    }.combine(
+        combine(_isGeneratingCode, _isJoining, _pairError) { gen, join, err ->
+            Triple(gen, join, err)
+        }
+    ) { base, (gen, join, err) ->
+        base.copy(isGeneratingCode = gen, isJoining = join, pairError = err)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
     fun setMapsApiKey(key: String) {
@@ -216,5 +265,45 @@ class AccountViewModel @Inject constructor(
         adaptiveProfileRepo.saveProfile(profile.copy(hrMax = value))
         _maxHr.value = value
         _maxHrSaved.value = true
+    }
+
+    fun generateInviteCode() {
+        _isGeneratingCode.value = true
+        _pairError.value = null
+        viewModelScope.launch {
+            try {
+                val code = partnerRepo.createInvite()
+                _inviteCode.value = code
+            } catch (e: Exception) {
+                _pairError.value = e.message ?: "Failed to generate code"
+            } finally {
+                _isGeneratingCode.value = false
+            }
+        }
+    }
+
+    fun acceptInvite(code: String) {
+        _isJoining.value = true
+        _pairError.value = null
+        viewModelScope.launch {
+            try {
+                partnerRepo.acceptInvite(code)
+                // Partner observation flow will update state automatically
+            } catch (e: Exception) {
+                _pairError.value = e.message ?: "Failed to join"
+            } finally {
+                _isJoining.value = false
+            }
+        }
+    }
+
+    fun disconnectPartner() {
+        viewModelScope.launch {
+            try {
+                partnerRepo.disconnect()
+            } catch (e: Exception) {
+                _pairError.value = e.message ?: "Failed to disconnect"
+            }
+        }
     }
 }

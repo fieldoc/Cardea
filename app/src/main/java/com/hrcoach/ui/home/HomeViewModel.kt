@@ -12,23 +12,30 @@ import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.coaching.CoachingInsight
 import com.hrcoach.domain.coaching.CoachingInsightEngine
 import com.hrcoach.domain.model.BootcampGoal
+import com.hrcoach.data.firebase.PartnerRepository
+import com.hrcoach.domain.sharing.DayState
+import com.hrcoach.domain.sharing.WeekStripState
 import com.hrcoach.service.WorkoutState
+import com.hrcoach.ui.partner.PartnerCardState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 import android.content.Context
+import androidx.compose.ui.graphics.Color
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
@@ -53,6 +60,7 @@ data class HomeUiState(
     val bootcampTotalWeeks: Int = 12,
     val bootcampPercentComplete: Float = 0f,
     val coachingInsight: CoachingInsight? = null,
+    val partnerState: PartnerCardState? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -60,17 +68,24 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val bootcampRepository: BootcampRepository,
+    private val partnerRepository: PartnerRepository,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
         workoutRepository.getAllWorkouts(),
         bootcampRepository.getActiveEnrollment(),
-        WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged()
-    ) { workouts, enrollment, isRunning ->
-        Triple(workouts, enrollment, isRunning)
+        WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged(),
+        partnerRepository.observePartnerId()
+    ) { workouts, enrollment, isRunning, partnerId ->
+        arrayOf(workouts, enrollment, isRunning, partnerId)
     }
-    .flatMapLatest { (workouts, enrollment, isRunning) ->
+    .flatMapLatest { args ->
+        @Suppress("UNCHECKED_CAST")
+        val workouts = args[0] as List<WorkoutEntity>
+        val enrollment = args[1] as BootcampEnrollmentEntity?
+        val isRunning = args[2] as Boolean
+        val partnerId = args[3] as String?
         flow {
             val zone = ZoneId.systemDefault()
             val now = Instant.now().atZone(zone)
@@ -154,6 +169,32 @@ class HomeViewModel @Inject constructor(
             val sensorName = blePrefs.getString("last_device_name", null)
             val sensorLastSeen = blePrefs.getLong("last_connected_ms", 0L).takeIf { it > 0L }
 
+            // Partner state (if paired)
+            val partnerCardState = if (partnerId != null) {
+                try {
+                    val info = partnerRepository.getPartnerInfo(partnerId)
+                    val completions = partnerRepository.getPartnerCompletions(partnerId)
+                    val todayDow = LocalDate.now().dayOfWeek.value
+                    val dayStates = WeekStripState.compute(completions, todayDow)
+                    val todayCompletion = completions.firstOrNull { it.weekDay == todayDow }
+                    val statusText = if (todayCompletion != null) {
+                        "Ran today \u00B7 %.1f km".format(todayCompletion.distanceMeters / 1000.0)
+                    } else "Rest day"
+                    val statusColor = if (todayCompletion != null) Color(0xFF4ADE80)
+                    else Color.White.copy(alpha = 0.4f)
+                    PartnerCardState(
+                        displayName = info?.displayName ?: "Runner",
+                        avatarSymbol = info?.avatarSymbol ?: "\u2665",
+                        statusText = statusText,
+                        statusColor = statusColor,
+                        streakCount = completions.firstOrNull()?.streakCount ?: 0,
+                        dayStates = dayStates,
+                        programPhase = completions.firstOrNull()?.programPhase,
+                        latestCompletionId = null
+                    )
+                } catch (_: Exception) { null }
+            } else null
+
             emit(HomeUiState(
                 greeting = greeting,
                 lastWorkout = workouts.firstOrNull(),
@@ -175,8 +216,31 @@ class HomeViewModel @Inject constructor(
                 bootcampTotalWeeks = bootcampTotalWeeks,
                 bootcampPercentComplete = bootcampPercentComplete,
                 coachingInsight = coachingInsight,
+                partnerState = partnerCardState,
             ))
         }
     }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    fun refreshPartnerData() {
+        viewModelScope.launch {
+            val pid = partnerRepository.observePartnerId().first() ?: return@launch
+            // The combine flow will re-emit since observePartnerId is a snapshot listener.
+            // This method just ensures we re-read completions from Firestore.
+            try {
+                val info = partnerRepository.getPartnerInfo(pid)
+                val completions = partnerRepository.getPartnerCompletions(pid)
+                val todayDow = LocalDate.now().dayOfWeek.value
+                val dayStates = WeekStripState.compute(completions, todayDow)
+                val todayCompletion = completions.firstOrNull { it.weekDay == todayDow }
+                val statusText = if (todayCompletion != null) {
+                    "Ran today \u00B7 %.1f km".format(todayCompletion.distanceMeters / 1000.0)
+                } else "Rest day"
+                val statusColor = if (todayCompletion != null) Color(0xFF4ADE80)
+                else Color.White.copy(alpha = 0.4f)
+                // No direct state mutation — the Firestore snapshot listener on partnerId
+                // triggers the combine pipeline. This call refreshes the server-side cache.
+            } catch (_: Exception) { /* silent */ }
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package com.hrcoach.data.firebase
 
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
@@ -37,4 +38,14 @@ class FirebaseAuthManager @Inject constructor(
             .update("fcmToken", token)
             .await()
     }
+
+    /** Link anonymous account to Google for recovery across devices. */
+    suspend fun linkGoogleAccount(idToken: String) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        auth.currentUser?.linkWithCredential(credential)?.await()
+    }
+
+    /** Whether the current account is linked to a Google identity. */
+    val isLinkedToGoogle: Boolean
+        get() = auth.currentUser?.providerData?.any { it.providerId == "google.com" } == true
 }

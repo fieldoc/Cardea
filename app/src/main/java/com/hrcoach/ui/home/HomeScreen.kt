@@ -55,6 +55,7 @@ import com.hrcoach.domain.coaching.CoachingInsight
 import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaLogo
+import com.hrcoach.ui.partner.PartnerHeroCard
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.util.metersToKm
 
@@ -656,6 +657,7 @@ fun HomeScreen(
     onGoToAccount: () -> Unit,
     onGoToBootcamp: () -> Unit,
     onGoToWorkout: () -> Unit,
+    onGoToPartnerDetail: (String?) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -744,9 +746,16 @@ fun HomeScreen(
                     }
                 }
 
-                // Hero section
+                // Hero section — partner card wins if paired
+                val partnerState = state.partnerState
                 val nextSession = state.nextSession
-                if (state.hasActiveBootcamp && nextSession != null) {
+                if (partnerState != null) {
+                    PartnerHeroCard(
+                        state = partnerState,
+                        onClick = { onGoToPartnerDetail(partnerState.latestCompletionId) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else if (state.hasActiveBootcamp && nextSession != null) {
                     BootcampHeroCard(
                         session = nextSession,
                         weekNumber = state.currentWeekNumber,
