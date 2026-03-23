@@ -96,6 +96,40 @@ class SessionReschedulerTest {
         assertTrue(result is RescheduleResult.Dropped)
     }
 
+    @Test fun offers_today_when_not_occupied() {
+        val req = RescheduleRequest(
+            session = session(day = 4),       // rescheduling Thursday's session
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,   // today (Wed)
+                4 to DaySelectionLevel.AVAILABLE,
+                6 to DaySelectionLevel.AVAILABLE
+            )),
+            todayDayOfWeek = 3,               // it's Wednesday
+            occupiedDaysThisWeek = setOf(1, 4, 6), // Mon, Thu, Sat have sessions
+            allSessionsThisWeek = listOf(session(1), session(4), session(6))
+        )
+        val result = SessionRescheduler.availableDays(req)
+        assertTrue("Today (3) should be offered", 3 in result)
+    }
+
+    @Test fun excludes_today_when_occupied() {
+        val req = RescheduleRequest(
+            session = session(day = 4),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,
+                4 to DaySelectionLevel.AVAILABLE,
+                6 to DaySelectionLevel.AVAILABLE
+            )),
+            todayDayOfWeek = 3,
+            occupiedDaysThisWeek = setOf(1, 3, 4, 6), // today IS occupied
+            allSessionsThisWeek = listOf(session(1), session(3), session(4), session(6))
+        )
+        val result = SessionRescheduler.availableDays(req)
+        assertFalse("Today (3) should NOT be offered when occupied", 3 in result)
+    }
+
     @Test fun skips_none_level_days() {
         val req = RescheduleRequest(
             session = session(day = 1),

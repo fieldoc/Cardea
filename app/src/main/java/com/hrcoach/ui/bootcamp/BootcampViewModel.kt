@@ -194,12 +194,13 @@ class BootcampViewModel @Inject constructor(
             it.status == BootcampSessionEntity.STATUS_SCHEDULED
         }
 
-        val missedSession = scheduledSessions.any {
-            it.dayOfWeek < today &&
-                it.status != BootcampSessionEntity.STATUS_COMPLETED &&
-                it.status != BootcampSessionEntity.STATUS_SKIPPED &&
-                it.status != BootcampSessionEntity.STATUS_DEFERRED
+        // Collect all sessions needing attention: missed (past + still SCHEDULED) and DEFERRED
+        val missedOrDeferredSessions = scheduledSessions.filter {
+            (it.dayOfWeek < today && it.status == BootcampSessionEntity.STATUS_SCHEDULED) ||
+                it.status == BootcampSessionEntity.STATUS_DEFERRED
         }
+        val missedSessionCount = missedOrDeferredSessions.size
+        val missedSessionIds = missedOrDeferredSessions.map { it.id }
 
         // Build 7-day strip items: one WeekDayItem per day M–S
         val weekStart = LocalDate.now().with(DayOfWeek.MONDAY)
@@ -216,8 +217,11 @@ class BootcampViewModel @Inject constructor(
                         typeName = sessionTypeDisplayName(it.sessionType, it.presetId),
                         rawTypeName = it.sessionType,
                         minutes = it.targetMinutes,
-                        isCompleted = it.status != BootcampSessionEntity.STATUS_SCHEDULED,
+                        isCompleted = it.status == BootcampSessionEntity.STATUS_COMPLETED ||
+                            it.status == BootcampSessionEntity.STATUS_SKIPPED,
                         isToday = it.dayOfWeek == today,
+                        isPast = it.dayOfWeek < today,
+                        isDeferred = it.status == BootcampSessionEntity.STATUS_DEFERRED,
                         sessionId = it.id,
                         presetId = it.presetId
                     )
@@ -231,6 +235,10 @@ class BootcampViewModel @Inject constructor(
         val nextRelLabel = nextScheduledSession?.let {
             computeRelativeLabel(it.dayOfWeek, today)
         }
+        // Find the next future session (after today) for pull-forward CTA
+        val nextFutureSessionId = scheduledSessions.firstOrNull {
+            it.dayOfWeek > today && it.status == BootcampSessionEntity.STATUS_SCHEDULED
+        }?.id
         val todayState: TodayState = when (dayKind) {
             DayKind.RUN_UPCOMING -> TodayState.RunUpcoming(
                 session = scheduledSessions.first { it.dayOfWeek == today }.toPlannedSession()
@@ -238,12 +246,14 @@ class BootcampViewModel @Inject constructor(
             DayKind.RUN_DONE -> TodayState.RunDone(
                 nextSession = nextScheduledSession?.toPlannedSession(),
                 nextSessionDayLabel = nextDayLabel,
-                nextSessionRelativeLabel = nextRelLabel
+                nextSessionRelativeLabel = nextRelLabel,
+                nextFutureSessionId = nextFutureSessionId
             )
             DayKind.REST -> TodayState.RestDay(
                 nextSession = nextScheduledSession?.toPlannedSession(),
                 nextSessionDayLabel = nextDayLabel,
-                nextSessionRelativeLabel = nextRelLabel
+                nextSessionRelativeLabel = nextRelLabel,
+                nextFutureSessionId = nextFutureSessionId
             )
         }
 
@@ -294,7 +304,8 @@ class BootcampViewModel @Inject constructor(
             illnessFlag = illnessFlag,
             tierPromptDirection = tierPromptDirection,
             tierPromptEvidence = tierPromptEvidence,
-            missedSession = missedSession,
+            missedSessionCount = missedSessionCount,
+            missedSessionIds = missedSessionIds,
             swapRestMessage = null,
             goalProgressPercentage = progressPercentage,
             maxHr = userProfileRepository.getMaxHr()
@@ -540,6 +551,33 @@ class BootcampViewModel @Inject constructor(
 
     fun dismissSessionDetail() {
         _uiState.update { it.copy(showSessionDetail = false, sessionDetailItem = null) }
+    }
+
+    fun skipSession(sessionId: Long) {
+        viewModelScope.launch {
+            bootcampRepository.dropSession(sessionId)
+            dismissSessionDetail()
+            loadBootcampState()
+        }
+    }
+
+    fun rescheduleFromDetail(sessionId: Long) {
+        dismissSessionDetail()
+        requestReschedule(sessionId)
+    }
+
+    fun startRunFromDetail(configJson: String) {
+        dismissSessionDetail()
+        showHrConnectDialog(configJson)
+    }
+
+    fun swapTodayForRestFromDetail() {
+        dismissSessionDetail()
+        swapTodayForRest()
+    }
+
+    fun clearSwapRestMessage() {
+        _uiState.update { it.copy(swapRestMessage = null) }
     }
 
     fun showGoalDetail() {

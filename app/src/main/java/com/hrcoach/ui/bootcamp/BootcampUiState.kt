@@ -19,14 +19,16 @@ sealed class TodayState {
     data class RunDone(
         val nextSession: PlannedSession?,
         val nextSessionDayLabel: String?,       // e.g. "Wed"
-        val nextSessionRelativeLabel: String?   // e.g. "in 2 days"
+        val nextSessionRelativeLabel: String?,  // e.g. "in 2 days"
+        val nextFutureSessionId: Long? = null   // for "pull forward" CTA
     ) : TodayState()
 
     /** Today has no session scheduled (rest day or all sessions done). */
     data class RestDay(
         val nextSession: PlannedSession?,
         val nextSessionDayLabel: String?,
-        val nextSessionRelativeLabel: String?
+        val nextSessionRelativeLabel: String?,
+        val nextFutureSessionId: Long? = null   // for "pull forward" CTA
     ) : TodayState()
 }
 
@@ -83,7 +85,8 @@ data class BootcampUiState(
     val illnessFlag: Boolean = false,
     val tierPromptDirection: TierPromptDirection = TierPromptDirection.NONE,
     val tierPromptEvidence: String? = null,
-    val missedSession: Boolean = false,
+    val missedSessionCount: Int = 0,
+    val missedSessionIds: List<Long> = emptyList(),
     val showDeleteConfirmDialog: Boolean = false,
     // Reschedule bottom sheet
     val rescheduleSheetSessionId: Long? = null,
@@ -120,6 +123,8 @@ data class SessionUiItem(
     val minutes: Int,
     val isCompleted: Boolean,
     val isToday: Boolean,
+    val isPast: Boolean = false,
+    val isDeferred: Boolean = false,
     val sessionId: Long? = null,
     val presetId: String? = null
 )
