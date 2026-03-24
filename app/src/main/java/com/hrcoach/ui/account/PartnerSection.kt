@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -86,36 +87,54 @@ fun PartnerSection(
         }
     }
 
-    if (showInviteDialog && inviteCode != null) {
+    if (showInviteDialog) {
         AlertDialog(
             onDismissRequest = { showInviteDialog = false },
             title = { Text("Your Invite Code", color = CardeaTheme.colors.textPrimary) },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = inviteCode,
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 4.sp
-                        ),
-                        color = CardeaTheme.colors.textPrimary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "Share this code with your running partner. It expires in 24 hours.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTheme.colors.textSecondary,
-                        textAlign = TextAlign.Center
-                    )
+                    if (isGeneratingCode) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            color = GradientRed
+                        )
+                    } else if (inviteCode == null) {
+                        if (pairError != null) {
+                            Text(
+                                text = pairError,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ZoneRed,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = inviteCode,
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 4.sp
+                            ),
+                            color = CardeaTheme.colors.textPrimary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "Share this code with your running partner. It expires in 24 hours.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTheme.colors.textSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    onShareCode(inviteCode)
-                    showInviteDialog = false
-                }) { Text("Share") }
+                if (inviteCode != null) {
+                    TextButton(onClick = {
+                        onShareCode(inviteCode)
+                        showInviteDialog = false
+                    }) { Text("Share") }
+                }
             },
             dismissButton = {
                 TextButton(onClick = { showInviteDialog = false }) { Text("Close") }

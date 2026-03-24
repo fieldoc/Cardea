@@ -1,9 +1,9 @@
 package com.hrcoach.data.firebase
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
-import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -20,7 +20,6 @@ data class PartnerInfo(
 @Singleton
 class PartnerRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val functions: FirebaseFunctions,
     val authManager: FirebaseAuthManager
 ) {
     suspend fun syncUserProfile(displayName: String, avatarSymbol: String) {
@@ -34,19 +33,41 @@ class PartnerRepository @Inject constructor(
 
     suspend fun createInvite(): String {
         val uid = authManager.uid ?: throw IllegalStateException("Not signed in")
-        val result = functions.getHttpsCallable("createInvite")
-            .call(mapOf("uid" to uid))
-            .await()
-        @Suppress("UNCHECKED_CAST")
-        val data = result.getData() as Map<String, Any>
-        return data["code"] as String
+        val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        val expiresAt = Timestamp(System.currentTimeMillis() / 1000 + 24 * 60 * 60, 0)
+        repeat(3) {
+            val code = (1..6).map { chars.random() }.joinToString("")
+            val docRef = firestore.collection("pairings").document(code)
+            val existing = docRef.get().await()
+            if (!existing.exists()) {
+                docRef.set(mapOf(
+                    "creatorId" to uid,
+                    "createdAt" to Timestamp.now(),
+                    "expiresAt" to expiresAt,
+                )).await()
+                return code
+            }
+        }
+        throw IllegalStateException("Could not generate a unique code, please try again")
     }
 
     suspend fun acceptInvite(code: String) {
         val uid = authManager.uid ?: throw IllegalStateException("Not signed in")
-        functions.getHttpsCallable("acceptInvite")
-            .call(mapOf("uid" to uid, "code" to code))
-            .await()
+        firestore.runTransaction { tx ->
+            val pairingRef = firestore.collection("pairings").document(code)
+            val pairing = tx.get(pairingRef)
+            if (!pairing.exists()) throw IllegalArgumentException("Code not found")
+            val expiresAt = pairing.getTimestamp("expiresAt")?.toDate()
+            if (expiresAt != null && expiresAt.before(java.util.Date())) {
+                throw IllegalArgumentException("Code has expired")
+            }
+            val creatorId = pairing.getString("creatorId")
+                ?: throw IllegalArgumentException("Invalid code")
+            if (creatorId == uid) throw IllegalArgumentException("Cannot pair with yourself")
+            tx.update(firestore.collection("users").document(creatorId), "partnerId", uid)
+            tx.update(firestore.collection("users").document(uid), "partnerId", creatorId)
+            tx.delete(pairingRef)
+        }.await()
     }
 
     suspend fun disconnect() {
