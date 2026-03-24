@@ -308,9 +308,10 @@ fun PartnerSection(
             )
             Spacer(Modifier.height(14.dp))
 
+            val buttonHeight = 44.dp
             if (!showJoinInput) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().height(buttonHeight),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     CardeaButton(
@@ -325,11 +326,11 @@ fun PartnerSection(
                             }
                         },
                         enabled = !isGeneratingCode,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).height(buttonHeight)
                     )
-                    // Outlined secondary button (matches "Details" button pattern from HomeScreen)
                     Box(
                         modifier = Modifier
+                            .height(buttonHeight)
                             .border(
                                 width = 1.dp,
                                 color = CardeaTheme.colors.glassSurface,
@@ -337,7 +338,7 @@ fun PartnerSection(
                             )
                             .clip(RoundedCornerShape(14.dp))
                             .clickable(onClick = { showJoinInput = true })
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(horizontal = 20.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
