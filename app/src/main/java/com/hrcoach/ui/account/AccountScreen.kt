@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -64,13 +63,20 @@ import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import com.hrcoach.ui.theme.CardeaCtaGradient
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.BuildConfig
+import com.hrcoach.ui.components.EmblemIconWithRing
+import com.hrcoach.ui.components.EmblemPicker
 import com.hrcoach.ui.theme.ZoneRed
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,22 +84,63 @@ fun AccountScreen(
     onThemeModeChanged: (ThemeMode) -> Unit = {},
     currentThemeMode: ThemeMode = ThemeMode.SYSTEM,
     onNavigateToSimulation: () -> Unit = {},
+    onNavigateToAuth: () -> Unit = {},
+    onSignOut: () -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showProfileSheet by remember { mutableStateOf(false) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
 
     if (showProfileSheet) {
         ProfileEditBottomSheet(
             displayName = state.displayName,
-            avatarSymbol = state.avatarSymbol,
+            avatarEmblemId = state.avatarEmblemId,
+            bio = state.bio,
+            canChangeName = state.canChangeName,
+            nameChangeDaysRemaining = state.nameChangeDaysRemaining,
             onNameChange = viewModel::setDisplayName,
-            onAvatarChange = viewModel::setAvatarSymbol,
+            onAvatarChange = viewModel::setAvatarEmblemId,
+            onBioChange = viewModel::setBio,
             onSave = {
                 viewModel.saveProfile()
                 showProfileSheet = false
             },
             onDismiss = { showProfileSheet = false }
+        )
+    }
+
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            containerColor = CardeaTheme.colors.bgSecondary,
+            title = {
+                Text(
+                    "Sign out of Cardea?",
+                    color = CardeaTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Your workout data stays on this device.",
+                    color = CardeaTheme.colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutDialog = false
+                    viewModel.signOut()
+                    onSignOut()
+                }) {
+                    Text("Sign Out", color = CardeaTheme.colors.accentPink)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel", color = CardeaTheme.colors.textSecondary)
+                }
+            }
         )
     }
 
@@ -127,8 +174,11 @@ fun AccountScreen(
             // ── Profile hero ─────────────────────────────────────────────────
             ProfileHeroCard(
                 displayName = state.displayName,
-                avatarSymbol = state.avatarSymbol,
+                avatarEmblemId = state.avatarEmblemId,
+                bio = state.bio,
                 runCount = state.totalWorkouts,
+                runnerLevel = state.runnerLevel,
+                memberSinceMs = state.memberSinceMs,
                 onClick = { showProfileSheet = true }
             )
 
@@ -392,6 +442,81 @@ fun AccountScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // ── Account ───────────────────────────────────────────────────────
+            SectionLabel("Account")
+            Spacer(modifier = Modifier.height(6.dp))
+
+            if (state.isAuthenticated) {
+                GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
+                    Text(
+                        text = state.userEmail ?: "Signed in",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (state.isWorkoutActive) CardeaTheme.colors.glassHighlight
+                                else CardeaTheme.colors.glassHighlight
+                            )
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
+                            .clickable(
+                                enabled = !state.isWorkoutActive,
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { showSignOutDialog = true }
+                            )
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (state.isWorkoutActive) "Stop your workout before signing out" else "Sign Out",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = if (state.isWorkoutActive) CardeaTheme.colors.textTertiary else CardeaTheme.colors.textSecondary
+                        )
+                    }
+                }
+            } else {
+                GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp)) {
+                    Text(
+                        text = "Sign in to claim your profile",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Sync your data and secure your progress",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CardeaCtaGradient)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onNavigateToAuth
+                            )
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Sign In",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                            color = CardeaTheme.colors.onGradient
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
 
             // ── About ─────────────────────────────────────────────────────────
@@ -413,8 +538,11 @@ fun AccountScreen(
 @Composable
 private fun ProfileHeroCard(
     displayName: String,
-    avatarSymbol: String,
+    avatarEmblemId: String,
+    bio: String,
     runCount: Int,
+    runnerLevel: String,
+    memberSinceMs: Long,
     onClick: () -> Unit,
 ) {
     Box(
@@ -436,28 +564,11 @@ private fun ProfileHeroCard(
             .padding(horizontal = 18.dp, vertical = 20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Gradient ring with unicode symbol
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(CardeaGradient),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(CardeaTheme.colors.bgPrimary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = avatarSymbol,
-                        fontSize = 24.sp,
-                        color = CardeaTheme.colors.accentPink
-                    )
-                }
-            }
+            EmblemIconWithRing(
+                emblemId = avatarEmblemId,
+                ringSize = 56.dp,
+                iconSize = 28.dp
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -470,31 +581,57 @@ private fun ProfileHeroCard(
                     ),
                     color = CardeaTheme.colors.textPrimary
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "$runCount runs recorded",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTheme.colors.textSecondary
-                )
+                if (bio.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = bio,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textTertiary,
+                        maxLines = 1
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Runner level badge
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                CardeaTheme.colors.glassHighlight,
+                                RoundedCornerShape(4.dp)
+                            )
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = runnerLevel,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = CardeaTheme.colors.accentPink
+                        )
+                    }
+                    Text(
+                        text = "$runCount runs",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                }
+                if (memberSinceMs > 0) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    val dateStr = remember(memberSinceMs) {
+                        SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(memberSinceMs))
+                    }
+                    Text(
+                        text = "Member since $dateStr",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                }
             }
         }
     }
 }
-
-// ── Avatar symbols ────────────────────────────────────────────────────────────
-
-private val AVATAR_SYMBOLS = listOf(
-    "\u2665", // ♥
-    "\u2605", // ★
-    "\u26A1", // ⚡
-    "\u25C6", // ◆
-    "\u25B2", // ▲
-    "\u25CF", // ●
-    "\u2726", // ✦
-    "\u2666", // ♦
-    "\u2191", // ↑
-    "\u221E", // ∞
-)
 
 // ── Profile edit bottom sheet ─────────────────────────────────────────────────
 
@@ -502,9 +639,13 @@ private val AVATAR_SYMBOLS = listOf(
 @Composable
 private fun ProfileEditBottomSheet(
     displayName: String,
-    avatarSymbol: String,
+    avatarEmblemId: String,
+    bio: String,
+    canChangeName: Boolean,
+    nameChangeDaysRemaining: Int,
     onNameChange: (String) -> Unit,
     onAvatarChange: (String) -> Unit,
+    onBioChange: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -541,6 +682,37 @@ private fun ProfileEditBottomSheet(
                 value = displayName,
                 onValueChange = { if (it.length <= 20) onNameChange(it) },
                 singleLine = true,
+                enabled = canChangeName,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = CardeaTheme.colors.accentPink,
+                    unfocusedBorderColor = CardeaTheme.colors.textTertiary,
+                    cursorColor = CardeaTheme.colors.accentPink,
+                    focusedTextColor = CardeaTheme.colors.textPrimary,
+                    unfocusedTextColor = CardeaTheme.colors.textPrimary,
+                    disabledTextColor = CardeaTheme.colors.textTertiary,
+                    disabledBorderColor = CardeaTheme.colors.textTertiary,
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+            if (!canChangeName && nameChangeDaysRemaining > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Editable in $nameChangeDaysRemaining days",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textTertiary
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Bio field
+            Text("Bio", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(
+                value = bio,
+                onValueChange = { if (it.length <= 40) onBioChange(it) },
+                singleLine = true,
+                placeholder = { Text("Short bio (optional)", color = CardeaTheme.colors.textTertiary) },
+                supportingText = { Text("${bio.length}/40", color = CardeaTheme.colors.textTertiary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = CardeaTheme.colors.accentPink,
                     unfocusedBorderColor = CardeaTheme.colors.textTertiary,
@@ -550,57 +722,18 @@ private fun ProfileEditBottomSheet(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Avatar picker
+            // Emblem picker
             Text("Avatar", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
             Spacer(modifier = Modifier.height(10.dp))
+            EmblemPicker(
+                selected = avatarEmblemId,
+                onSelect = onAvatarChange,
+                modifier = Modifier.heightIn(max = 300.dp)
+            )
 
-            // 5x2 grid
-            for (row in AVATAR_SYMBOLS.chunked(5)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    row.forEach { symbol ->
-                        val selected = symbol == avatarSymbol
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (selected) CardeaGradient
-                                    else Brush.linearGradient(
-                                        listOf(
-                                            CardeaTheme.colors.textTertiary.copy(alpha = 0.3f),
-                                            CardeaTheme.colors.textTertiary.copy(alpha = 0.1f)
-                                        )
-                                    )
-                                )
-                                .clickable { onAvatarChange(symbol) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(CardeaTheme.colors.bgPrimary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = symbol,
-                                    fontSize = 20.sp,
-                                    color = if (selected) CardeaTheme.colors.accentPink
-                                            else CardeaTheme.colors.textTertiary
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             GradientSaveButton(onClick = onSave)
         }
     }

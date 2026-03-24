@@ -13,11 +13,13 @@ import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.VoiceVerbosity
+import com.hrcoach.service.WorkoutState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -25,7 +27,16 @@ import javax.inject.Inject
 
 data class AccountUiState(
     val displayName: String = "Runner",
-    val avatarSymbol: String = "pulse",
+    val avatarEmblemId: String = "pulse",
+    val bio: String = "",
+    val isProfileClaimed: Boolean = false,
+    val memberSinceMs: Long = 0,
+    val nameChangeDaysRemaining: Int = 0,
+    val canChangeName: Boolean = true,
+    val runnerLevel: String = "Beginner",
+    val isAuthenticated: Boolean = false,
+    val userEmail: String? = null,
+    val isWorkoutActive: Boolean = false,
     val totalWorkouts: Int = 0,
     val mapsApiKey: String = "",
     val mapsApiKeySaved: Boolean = false,
@@ -42,7 +53,11 @@ data class AccountUiState(
     val maxHrError: String? = null,
     val autoPauseEnabled: Boolean = true,
     val achievements: List<AchievementEntity> = emptyList(),
-)
+) {
+    // Keep backward compat alias
+    @Deprecated("Use avatarEmblemId", replaceWith = ReplaceWith("avatarEmblemId"))
+    val avatarSymbol: String get() = avatarEmblemId
+}
 
 @HiltViewModel
 class AccountViewModel @Inject constructor(
@@ -74,7 +89,8 @@ class AccountViewModel @Inject constructor(
     private val _autoPauseEnabled = MutableStateFlow(true)
 
     private val _displayName = MutableStateFlow("Runner")
-    private val _avatarSymbol = MutableStateFlow("pulse")
+    private val _avatarEmblemId = MutableStateFlow("pulse")
+    private val _bio = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
@@ -89,10 +105,18 @@ class AccountViewModel @Inject constructor(
             _inZoneConfirm.value = settings.enableInZoneConfirm != false
             _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
             _displayName.value = userProfileRepo.getDisplayName()
-            _avatarSymbol.value = userProfileRepo.getAvatarEmblemId()
+            _avatarEmblemId.value = userProfileRepo.getAvatarEmblemId()
+            _bio.value = userProfileRepo.getBio()
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
+    }
+
+    private fun computeRunnerLevel(count: Int): String = when {
+        count >= 200 -> "Elite"
+        count >= 50  -> "Advanced"
+        count >= 10  -> "Intermediate"
+        else         -> "Beginner"
     }
 
     val uiState: StateFlow<AccountUiState> = combine(
@@ -136,9 +160,27 @@ class AccountViewModel @Inject constructor(
     }.combine(_autoPauseEnabled) { base, autoPause ->
         base.copy(autoPauseEnabled = autoPause)
     }.combine(
-        combine(_displayName, _avatarSymbol) { name, avatar -> name to avatar }
-    ) { base, (name, avatar) ->
-        base.copy(displayName = name, avatarSymbol = avatar)
+        combine(_displayName, _avatarEmblemId, _bio) { name, emblem, bio ->
+            Triple(name, emblem, bio)
+        }
+    ) { base, (name, emblem, bio) ->
+        val count = base.totalWorkouts
+        base.copy(
+            displayName = name,
+            avatarEmblemId = emblem,
+            bio = bio,
+            isProfileClaimed = userProfileRepo.isProfileClaimed(),
+            memberSinceMs = userProfileRepo.getProfileClaimedAtMs(),
+            canChangeName = userProfileRepo.canChangeName(),
+            nameChangeDaysRemaining = userProfileRepo.daysUntilNameChange(),
+            runnerLevel = computeRunnerLevel(count),
+            isAuthenticated = authRepository.isAuthenticated(),
+            userEmail = authRepository.currentUser.value?.email
+        )
+    }.combine(
+        WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged()
+    ) { base, isRunning ->
+        base.copy(isWorkoutActive = isRunning)
     }.combine(achievementDao.getAllAchievements(authRepository.effectiveUserId)) { base, achievements ->
         base.copy(achievements = achievements)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
@@ -193,13 +235,29 @@ class AccountViewModel @Inject constructor(
         _displayName.value = name.trim().take(20).ifBlank { "Runner" }
     }
 
-    fun setAvatarSymbol(symbol: String) {
-        _avatarSymbol.value = symbol
+    fun setAvatarEmblemId(emblemId: String) {
+        _avatarEmblemId.value = emblemId
+    }
+
+    @Deprecated("Use setAvatarEmblemId", replaceWith = ReplaceWith("setAvatarEmblemId(symbol)"))
+    fun setAvatarSymbol(symbol: String) = setAvatarEmblemId(symbol)
+
+    fun setBio(bio: String) {
+        _bio.value = bio.take(40)
+    }
+
+    fun saveBio() {
+        userProfileRepo.setBio(_bio.value)
     }
 
     fun saveProfile() {
         userProfileRepo.setDisplayName(_displayName.value)
-        userProfileRepo.setAvatarEmblemId(_avatarSymbol.value)
+        userProfileRepo.setAvatarEmblemId(_avatarEmblemId.value)
+        userProfileRepo.setBio(_bio.value)
+    }
+
+    fun signOut() {
+        authRepository.signOut()
     }
 
     fun saveMaxHr() {
