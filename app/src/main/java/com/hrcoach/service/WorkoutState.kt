@@ -24,6 +24,7 @@ data class WorkoutSnapshot(
     val pendingBootcampSessionId: Long? = null,
     val isAutoPaused: Boolean = false,
     val autoPauseEnabled: Boolean = true,
+    val showClaimPrompt: Boolean = false,
 )
 
 object WorkoutState {
@@ -52,12 +53,17 @@ object WorkoutState {
         _snapshot.update { current ->
             WorkoutSnapshot(
                 completedWorkoutId = current.completedWorkoutId,
-                pendingBootcampSessionId = current.pendingBootcampSessionId
+                pendingBootcampSessionId = current.pendingBootcampSessionId,
+                showClaimPrompt = current.showClaimPrompt
             )
         }
     }
 
     fun clearCompletedWorkoutId() {
         _snapshot.update { it.copy(completedWorkoutId = null) }
+    }
+
+    fun clearClaimPrompt() {
+        _snapshot.update { it.copy(showClaimPrompt = false) }
     }
 }

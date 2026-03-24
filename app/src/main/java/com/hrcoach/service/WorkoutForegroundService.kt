@@ -10,6 +10,7 @@ import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.data.repository.AuthRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.AutoPauseSettingsRepository
@@ -85,6 +86,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var autoPauseSettingsRepository: AutoPauseSettingsRepository
+
+    @Inject
+    lateinit var authRepository: AuthRepository
 
     @Inject
     lateinit var userProfileRepository: UserProfileRepository
@@ -707,6 +711,11 @@ class WorkoutForegroundService : LifecycleService() {
                 }
 
                 WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
+
+                // Prompt unclaimed users to claim their profile after first workout
+                if (!userProfileRepository.isProfileClaimed()) {
+                    WorkoutState.update { it.copy(showClaimPrompt = true) }
+                }
             }
 
             cleanupManagers()
