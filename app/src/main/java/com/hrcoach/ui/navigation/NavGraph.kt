@@ -64,6 +64,7 @@ import com.hrcoach.service.WorkoutState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import com.hrcoach.ui.account.AccountScreen
+import com.hrcoach.ui.account.ProfileClaimSheet
 import com.hrcoach.ui.bootcamp.BootcampScreen
 import com.hrcoach.ui.bootcamp.BootcampStatusViewModel
 import com.hrcoach.ui.history.HistoryDetailScreen
@@ -593,6 +594,12 @@ fun HrCoachNavGraph(
                 val workoutId = backStackEntry.arguments?.getLong("workoutId") ?: return@composable
                 val postRunViewModel: PostRunSummaryViewModel = hiltViewModel()
                 val postRunState by postRunViewModel.uiState.collectAsStateWithLifecycle()
+                val showClaimPrompt by remember {
+                    WorkoutState.snapshot
+                        .map { it.showClaimPrompt }
+                        .distinctUntilChanged()
+                }.collectAsStateWithLifecycle(false)
+
                 PostRunSummaryScreen(
                     workoutId = workoutId,
                     onViewProgress = {
@@ -630,6 +637,13 @@ fun HrCoachNavGraph(
                     },
                     viewModel = postRunViewModel
                 )
+
+                if (showClaimPrompt) {
+                    ProfileClaimSheet(
+                        onClaimed = { WorkoutState.clearClaimPrompt() },
+                        onDismiss = { WorkoutState.clearClaimPrompt() }
+                    )
+                }
             }
         }
     }
