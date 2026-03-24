@@ -1,6 +1,7 @@
 package com.hrcoach
 
 import android.app.Application
+import com.hrcoach.data.firebase.FirebaseAuthManager
 import com.hrcoach.data.repository.WorkoutRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -19,6 +20,7 @@ class HrCoachApp : Application() {
     @InstallIn(SingletonComponent::class)
     interface AppEntryPoint {
         fun workoutRepository(): WorkoutRepository
+        fun firebaseAuthManager(): FirebaseAuthManager
     }
 
     override fun onCreate() {
@@ -28,6 +30,8 @@ class HrCoachApp : Application() {
                 this@HrCoachApp, AppEntryPoint::class.java
             )
             entryPoint.workoutRepository().cleanupOrphanedWorkouts()
+            // Fire-and-forget anonymous sign-in + FCM token sync
+            runCatching { entryPoint.firebaseAuthManager().ensureSignedIn() }
         }
     }
 }

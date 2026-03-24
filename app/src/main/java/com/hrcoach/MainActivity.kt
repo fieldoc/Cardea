@@ -78,6 +78,8 @@ class MainActivity : ComponentActivity() {
             permissionLauncher.launch(missingPermissions.toTypedArray())
         }
 
+        handleDeepLinkIntent(intent)
+
         setContent {
             val themeMode by _themeMode.collectAsStateWithLifecycle()
             val isDark = when (themeMode) {
@@ -95,6 +97,23 @@ class MainActivity : ComponentActivity() {
                     currentThemeMode = themeMode
                 )
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleDeepLinkIntent(intent)
+    }
+
+    private fun handleDeepLinkIntent(intent: Intent?) {
+        val pairCode = intent?.getStringExtra("EXTRA_PAIR_CODE")
+            ?: intent?.data?.pathSegments?.let { segments ->
+                if (segments.size >= 2 && segments[0] == "pair") segments[1] else null
+            }
+        if (pairCode != null) {
+            // Store for navigation — the AccountScreen will pick this up
+            getSharedPreferences("deep_link", MODE_PRIVATE)
+                .edit().putString("pending_pair_code", pairCode).apply()
         }
     }
 }

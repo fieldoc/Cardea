@@ -6,8 +6,14 @@ import android.os.IBinder
 import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.firebase.PartnerRepository
+import com.hrcoach.data.firebase.RunCompletionPayload
 import com.hrcoach.data.repository.AdaptiveProfileRepository
+import com.hrcoach.domain.bootcamp.PhaseEngine
+import com.hrcoach.domain.model.BootcampGoal
+import com.hrcoach.domain.sharing.PartnerStreakCalculator
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.UserProfileRepository
@@ -88,6 +94,12 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var userProfileRepository: UserProfileRepository
+
+    @Inject
+    lateinit var partnerRepository: PartnerRepository
+
+    @Inject
+    lateinit var bootcampDao: BootcampDao
 
     @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
@@ -707,6 +719,82 @@ class WorkoutForegroundService : LifecycleService() {
                 }
 
                 WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
+
+                // --- Post run completion to Firestore for partner sharing ---
+                runCatching {
+                    val snapshot = WorkoutState.snapshot.value
+                    val trackPoints = repository.getTrackPoints(workoutId)
+                    val polyline = com.google.maps.android.PolyUtil.encode(
+                        trackPoints.mapNotNull { tp ->
+                            if (tp.latitude != null && tp.longitude != null)
+                                com.google.android.gms.maps.model.LatLng(tp.latitude, tp.longitude)
+                            else null
+                        }
+                    )
+
+                    // Determine bootcamp context
+                    val pendingSessionId = snapshot.pendingBootcampSessionId
+                    var programPhase: String? = null
+                    var sessionLabel: String? = null
+                    var wasScheduled = false
+                    var originalScheduledWeekDay: Int? = null
+
+                    if (pendingSessionId != null) {
+                        val bSession = bootcampDao.getSessionById(pendingSessionId)
+                        val enrollment = bSession?.let { bootcampDao.getActiveEnrollmentOnce() }
+                        if (bSession != null && enrollment != null) {
+                            wasScheduled = true
+                            // Build phase label from PhaseEngine
+                            val goal = runCatching { BootcampGoal.valueOf(enrollment.goalType) }.getOrNull()
+                            val phaseName = if (goal != null) {
+                                val engine = PhaseEngine(
+                                    goal = goal,
+                                    phaseIndex = enrollment.currentPhaseIndex,
+                                    weekInPhase = enrollment.currentWeekInPhase,
+                                    runsPerWeek = enrollment.runsPerWeek,
+                                    targetMinutes = enrollment.targetMinutesPerRun
+                                )
+                                engine.currentPhase.name
+                            } else "BASE"
+                            programPhase = "Week ${bSession.weekNumber} · $phaseName"
+                            sessionLabel = bSession.sessionType.replace("_", " ")
+                            // If session's dayOfWeek differs from today, this is a makeup run
+                            val todayDow = java.time.LocalDate.now().dayOfWeek.value
+                            if (bSession.dayOfWeek != todayDow) {
+                                originalScheduledWeekDay = bSession.dayOfWeek
+                            }
+                        }
+                    }
+
+                    // Compute streak
+                    val streakCount = if (wasScheduled) {
+                        val enrollment = bootcampDao.getActiveEnrollmentOnce()
+                        val sessions = enrollment?.let { bootcampDao.getSessionsForEnrollmentOnce(it.id) } ?: emptyList()
+                        PartnerStreakCalculator.computeBootcampStreak(
+                            sessions,
+                            enrollment?.startDate ?: 0L
+                        )
+                    } else {
+                        val allWorkouts = repository.getAllWorkoutsOnce()
+                        PartnerStreakCalculator.computeFreeRunnerStreak(allWorkouts)
+                    }
+
+                    val payload = RunCompletionPayload(
+                        userId = partnerRepository.authManager.uid ?: "",
+                        timestamp = System.currentTimeMillis(),
+                        distanceMeters = snapshot.distanceMeters.toDouble(),
+                        routePolyline = polyline,
+                        streakCount = streakCount,
+                        programPhase = programPhase,
+                        sessionLabel = sessionLabel,
+                        wasScheduled = wasScheduled,
+                        originalScheduledWeekDay = originalScheduledWeekDay,
+                        weekDay = java.time.LocalDate.now().dayOfWeek.value
+                    )
+                    partnerRepository.postRunCompletion(payload)
+                }.onFailure { e ->
+                    Log.e("WorkoutService", "Failed to post run completion", e)
+                }
             }
 
             cleanupManagers()

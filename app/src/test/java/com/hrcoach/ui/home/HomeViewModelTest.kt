@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.firebase.PartnerRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.bootcamp.DayPreference
@@ -35,6 +36,7 @@ class HomeViewModelTest {
 
     private lateinit var workoutRepository: WorkoutRepository
     private lateinit var bootcampRepository: BootcampRepository
+    private lateinit var partnerRepository: PartnerRepository
     private lateinit var context: Context
 
     @Before
@@ -42,6 +44,8 @@ class HomeViewModelTest {
         Dispatchers.setMain(testDispatcher)
         workoutRepository = mockk(relaxed = true)
         bootcampRepository = mockk(relaxed = true)
+        partnerRepository = mockk(relaxed = true)
+        every { partnerRepository.observePartnerId() } returns flowOf(null)
         context = mockk(relaxed = true)
     }
 
@@ -52,7 +56,7 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel(): HomeViewModel {
-        return HomeViewModel(workoutRepository, bootcampRepository, context)
+        return HomeViewModel(workoutRepository, bootcampRepository, partnerRepository, context)
     }
 
     @Test

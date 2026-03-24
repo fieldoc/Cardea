@@ -1,5 +1,6 @@
 package com.hrcoach.ui.account
 
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -50,8 +51,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -60,7 +59,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.domain.model.ThemeMode
@@ -156,6 +155,31 @@ fun AccountScreen(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+
+            // ── Accountability Partner ─────────────────────────────────────────
+            SectionLabel("Accountability Partner")
+            Spacer(modifier = Modifier.height(6.dp))
+            PartnerSection(
+                isPaired = state.isPaired,
+                partnerName = state.partnerName,
+                partnerAvatar = state.partnerAvatar,
+                inviteCode = state.inviteCode,
+                isGeneratingCode = state.isGeneratingCode,
+                isJoining = state.isJoining,
+                pairError = state.pairError,
+                onGenerateInvite = viewModel::generateInviteCode,
+                onAcceptInvite = viewModel::acceptInvite,
+                onDisconnect = viewModel::disconnectPartner,
+                onShareCode = { code ->
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT,
+                            "Join me on Cardea! Use code $code or tap: https://cardea.app/pair/$code")
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Share invite"))
+                }
+            )
+            Spacer(modifier = Modifier.height(20.dp))
 
             // ── Appearance ────────────────────────────────────────────────────
             SectionLabel("Appearance")
@@ -406,90 +430,6 @@ fun AccountScreen(
                             )
                         }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── Connected Services ────────────────────────────────────────────
-            SectionLabel("Connected Services")
-            Spacer(modifier = Modifier.height(6.dp))
-
-            GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                ConnectedServiceRow(
-                    iconChar = "S",
-                    iconColor = Color(0xFFFC4C02),
-                    name = "Strava",
-                    subtitle = "Sync runs automatically",
-                    onClick = { Toast.makeText(context, "Strava integration coming soon", Toast.LENGTH_SHORT).show() }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                ConnectedServiceRow(
-                    iconChar = "G",
-                    iconColor = Color(0xFF007CC3),
-                    name = "Garmin Connect",
-                    subtitle = "Import HR & activity data",
-                    onClick = { Toast.makeText(context, "Garmin Connect integration coming soon", Toast.LENGTH_SHORT).show() }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                ConnectedServiceRow(
-                    iconChar = "\u2665",
-                    iconColor = Color(0xFFFF2D55),
-                    name = "Apple Health",
-                    subtitle = "Share workout metrics",
-                    onClick = { Toast.makeText(context, "Apple Health integration coming soon", Toast.LENGTH_SHORT).show() }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                // Export row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            Toast.makeText(context, "Data export coming soon", Toast.LENGTH_SHORT).show()
-                        }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
-                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FileDownload,
-                            contentDescription = null,
-                            tint = CardeaTheme.colors.textSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Export Workouts",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = CardeaTheme.colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Download all workout data as CSV",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTheme.colors.textTertiary
-                        )
-                    }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = CardeaTheme.colors.textTertiary,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
 
@@ -878,56 +818,3 @@ private fun InfoCueToggle(
     }
 }
 
-// ── Connected service row ────────────────────────────────────────────────────
-
-@Composable
-private fun ConnectedServiceRow(
-    iconChar: String,
-    iconColor: Color,
-    name: String,
-    subtitle: String,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .background(iconColor.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                .border(1.dp, iconColor.copy(alpha = 0.30f), RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = iconChar,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = iconColor
-            )
-        }
-        Spacer(modifier = Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTheme.colors.textPrimary
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTheme.colors.textTertiary
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = CardeaTheme.colors.textTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-    }
-}

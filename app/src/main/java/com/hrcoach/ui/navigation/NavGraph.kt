@@ -69,6 +69,7 @@ import com.hrcoach.ui.bootcamp.BootcampStatusViewModel
 import com.hrcoach.ui.history.HistoryDetailScreen
 import com.hrcoach.ui.history.HistoryListScreen
 import com.hrcoach.ui.home.HomeScreen
+import com.hrcoach.ui.partner.PartnerDetailScreen
 import com.hrcoach.ui.postrun.PostRunSummaryScreen
 import com.hrcoach.ui.postrun.PostRunSummaryViewModel
 import com.hrcoach.ui.progress.ProgressScreen
@@ -100,9 +101,11 @@ object Routes {
     const val BOOTCAMP_SETTINGS = "bootcamp_settings"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
+    const val PARTNER_DETAIL   = "partnerDetail/{completionId}"
 
     fun historyDetail(workoutId: Long): String = "history/$workoutId"
     fun postRunSummary(workoutId: Long, fresh: Boolean = false): String = "postrun/$workoutId?fresh=$fresh"
+    fun partnerDetail(completionId: String? = null): String = "partnerDetail/${completionId ?: "latest"}"
 }
 
 @Composable
@@ -309,6 +312,11 @@ fun HrCoachNavGraph(
                     },
                     onGoToWorkout = {
                         navController.navigate(Routes.WORKOUT) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onGoToPartnerDetail = { completionId ->
+                        navController.navigate(Routes.partnerDetail(completionId)) {
                             launchSingleTop = true
                         }
                     }
@@ -554,6 +562,20 @@ fun HrCoachNavGraph(
                         }
                     },
                     onDeleteWorkout = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.PARTNER_DETAIL,
+                arguments = listOf(navArgument("completionId") {
+                    type = NavType.StringType
+                    defaultValue = "latest"
+                }),
+                enterTransition = { defaultEnter(1) },
+                exitTransition = { defaultExit(1) }
+            ) {
+                PartnerDetailScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
