@@ -1,5 +1,6 @@
 package com.hrcoach.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.hrcoach.domain.bootcamp.DayPreference
@@ -21,7 +22,8 @@ data class BootcampEnrollmentEntity(
     val tierPromptDismissCount: Int = 0,
     val illnessPromptSnoozedUntilMs: Long = 0,
     val pausedAtMs: Long = 0,
-    val targetFinishingTimeMinutes: Int? = null
+    val targetFinishingTimeMinutes: Int? = null,
+    @ColumnInfo(defaultValue = "") val userId: String = ""
 ) {
     companion object {
         const val STATUS_ACTIVE = "ACTIVE"

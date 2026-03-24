@@ -22,5 +22,6 @@ data class AchievementEntity(
     val prestigeLevel: Int,
     val earnedAtMs: Long,
     val triggerWorkoutId: Long? = null,
-    @ColumnInfo(defaultValue = "0") val shown: Boolean = false
+    @ColumnInfo(defaultValue = "0") val shown: Boolean = false,
+    @ColumnInfo(defaultValue = "") val userId: String = ""
 )
