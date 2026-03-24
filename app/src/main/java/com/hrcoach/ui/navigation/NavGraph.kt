@@ -81,6 +81,7 @@ import com.hrcoach.ui.theme.DarkCardeaColors
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.LocalCardeaColors
 import androidx.compose.runtime.CompositionLocalProvider
+import com.hrcoach.ui.auth.AuthScreen
 import com.hrcoach.ui.debug.DebugSimulationScreen
 import com.hrcoach.ui.workout.ActiveWorkoutScreen
 import com.hrcoach.util.PermissionGate
@@ -97,6 +98,7 @@ object Routes {
     const val ACCOUNT          = "account"
     const val BOOTCAMP         = "bootcamp"
     const val SIMULATION        = "simulation"
+    const val AUTH              = "auth"
     const val BOOTCAMP_SETTINGS = "bootcamp_settings"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
@@ -454,6 +456,17 @@ fun HrCoachNavGraph(
                         navController.navigate(Routes.SIMULATION) {
                             launchSingleTop = true
                         }
+                    },
+                    onNavigateToAuth = {
+                        navController.navigate(Routes.AUTH) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onSignOut = {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.HOME) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -523,6 +536,14 @@ fun HrCoachNavGraph(
                         }
                     },
                     onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable("auth") {
+                AuthScreen(
+                    onAuthSuccess = {
+                        navController.popBackStack()
+                    }
                 )
             }
 
