@@ -15,11 +15,11 @@ interface BootcampDao {
     suspend fun deleteEnrollment(enrollment: BootcampEnrollmentEntity)
 
     // Changed: was status = 'ACTIVE', now includes PAUSED so paused dashboards stay visible
-    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') ORDER BY id DESC LIMIT 1")
-    fun getActiveEnrollment(): Flow<BootcampEnrollmentEntity?>
+    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') AND userId = :userId ORDER BY id DESC LIMIT 1")
+    fun getActiveEnrollment(userId: String): Flow<BootcampEnrollmentEntity?>
 
-    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') ORDER BY id DESC LIMIT 1")
-    suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity?
+    @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') AND userId = :userId ORDER BY id DESC LIMIT 1")
+    suspend fun getActiveEnrollmentOnce(userId: String): BootcampEnrollmentEntity?
 
     @Query("SELECT * FROM bootcamp_enrollments WHERE id = :id")
     suspend fun getEnrollment(id: Long): BootcampEnrollmentEntity?
@@ -98,4 +98,7 @@ interface BootcampDao {
         ORDER BY weekNumber DESC
     """)
     suspend fun getCompletedWeekNumbers(enrollmentId: Long): List<Int>
+
+    @Query("UPDATE bootcamp_enrollments SET userId = :userId WHERE userId = ''")
+    suspend fun claimOrphanedEnrollments(userId: String)
 }

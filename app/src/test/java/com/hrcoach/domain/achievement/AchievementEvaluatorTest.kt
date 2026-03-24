@@ -3,6 +3,9 @@ package com.hrcoach.domain.achievement
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.AchievementType
+import com.hrcoach.data.repository.AuthRepository
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -15,11 +18,12 @@ class FakeAchievementDao : AchievementDao {
     val inserted = mutableListOf<AchievementEntity>()
 
     override suspend fun insert(achievement: AchievementEntity) { inserted.add(achievement) }
-    override suspend fun getUnshownAchievements(): List<AchievementEntity> = inserted.filter { !it.shown }
-    override fun getAllAchievements(): Flow<List<AchievementEntity>> = flowOf(inserted.toList())
-    override fun getAchievementsByType(type: String): Flow<List<AchievementEntity>> = flowOf(inserted.filter { it.type == type })
-    override suspend fun hasAchievement(type: String, milestone: String): Boolean = inserted.any { it.type == type && it.milestone == milestone }
+    override fun getUnshownAchievements(userId: String): Flow<List<AchievementEntity>> = flowOf(inserted.filter { !it.shown })
+    override fun getAllAchievements(userId: String): Flow<List<AchievementEntity>> = flowOf(inserted.toList())
+    override fun getAchievementsByType(type: String, userId: String): Flow<List<AchievementEntity>> = flowOf(inserted.filter { it.type == type })
+    override suspend fun hasAchievement(type: String, milestone: String, userId: String): Boolean = inserted.any { it.type == type && it.milestone == milestone }
     override suspend fun markShown(ids: List<Long>) { /* no-op for tests */ }
+    override suspend fun claimOrphanedAchievements(userId: String) { /* no-op for tests */ }
 }
 
 class AchievementEvaluatorTest {
@@ -30,7 +34,9 @@ class AchievementEvaluatorTest {
     @Before
     fun setup() {
         dao = FakeAchievementDao()
-        evaluator = AchievementEvaluator(dao)
+        val authRepository = mockk<AuthRepository>()
+        every { authRepository.effectiveUserId } returns ""
+        evaluator = AchievementEvaluator(dao, authRepository)
     }
 
     @Test

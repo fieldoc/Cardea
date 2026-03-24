@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.repository.AuthRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
@@ -22,6 +23,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.util.Log
 import javax.inject.Inject
@@ -58,7 +60,8 @@ class PostRunSummaryViewModel @Inject constructor(
     private val workoutMetricsRepository: WorkoutMetricsRepository,
     private val bootcampSessionCompleter: BootcampSessionCompleter,
     private val achievementEvaluator: AchievementEvaluator,
-    private val achievementDao: AchievementDao
+    private val achievementDao: AchievementDao,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostRunSummaryUiState())
@@ -139,7 +142,7 @@ class PostRunSummaryViewModel @Inject constructor(
                     achievementEvaluator.evaluateStreak(streak, id)
 
                     // Surface newly earned achievements
-                    val newAchievements = achievementDao.getUnshownAchievements()
+                    val newAchievements = achievementDao.getUnshownAchievements(authRepository.effectiveUserId).first()
                     if (newAchievements.isNotEmpty()) {
                         achievementDao.markShown(newAchievements.map { it.id })
                         _uiState.value = _uiState.value.copy(

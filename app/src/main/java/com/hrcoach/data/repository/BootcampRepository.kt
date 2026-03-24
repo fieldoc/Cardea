@@ -10,13 +10,14 @@ import javax.inject.Singleton
 
 @Singleton
 class BootcampRepository @Inject constructor(
-    private val bootcampDao: BootcampDao
+    private val bootcampDao: BootcampDao,
+    private val authRepository: AuthRepository
 ) {
     fun getActiveEnrollment(): Flow<BootcampEnrollmentEntity?> =
-        bootcampDao.getActiveEnrollment()
+        bootcampDao.getActiveEnrollment(authRepository.effectiveUserId)
 
     suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity? =
-        bootcampDao.getActiveEnrollmentOnce()
+        bootcampDao.getActiveEnrollmentOnce(authRepository.effectiveUserId)
 
     suspend fun createEnrollment(
         goal: BootcampGoal,
@@ -27,7 +28,7 @@ class BootcampRepository @Inject constructor(
         targetFinishingTimeMinutes: Int? = null
     ): Long {
         val entity = buildEnrollmentEntity(goal, targetMinutesPerRun, runsPerWeek, preferredDays, startDate, targetFinishingTimeMinutes)
-        return bootcampDao.insertEnrollment(entity)
+        return bootcampDao.insertEnrollment(entity.copy(userId = authRepository.effectiveUserId))
     }
 
     suspend fun updateEnrollment(enrollment: BootcampEnrollmentEntity) =

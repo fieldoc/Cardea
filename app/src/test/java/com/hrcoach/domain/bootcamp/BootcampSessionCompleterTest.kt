@@ -5,9 +5,12 @@ import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.repository.AuthRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.model.BootcampGoal
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
@@ -19,17 +22,22 @@ import org.junit.Test
 
 class BootcampSessionCompleterTest {
 
+    private val authRepository = mockk<AuthRepository>().also {
+        every { it.effectiveUserId } returns ""
+    }
+
     private val noopAchievementEvaluator = AchievementEvaluator(object : AchievementDao {
         override suspend fun insert(achievement: AchievementEntity) {}
-        override suspend fun hasAchievement(type: String, milestone: String): Boolean = false
-        override fun getAllAchievements(): Flow<List<AchievementEntity>> = emptyFlow()
-        override fun getAchievementsByType(type: String): Flow<List<AchievementEntity>> = emptyFlow()
-        override suspend fun getUnshownAchievements(): List<AchievementEntity> = emptyList()
+        override suspend fun hasAchievement(type: String, milestone: String, userId: String): Boolean = false
+        override fun getAllAchievements(userId: String): Flow<List<AchievementEntity>> = emptyFlow()
+        override fun getAchievementsByType(type: String, userId: String): Flow<List<AchievementEntity>> = emptyFlow()
+        override fun getUnshownAchievements(userId: String): Flow<List<AchievementEntity>> = emptyFlow()
         override suspend fun markShown(ids: List<Long>) {}
-    })
+        override suspend fun claimOrphanedAchievements(userId: String) {}
+    }, authRepository)
 
     private fun makeCompleter(dao: FakeBootcampDao) =
-        BootcampSessionCompleter(BootcampRepository(dao), noopAchievementEvaluator)
+        BootcampSessionCompleter(BootcampRepository(dao, authRepository), noopAchievementEvaluator)
 
     @Test
     fun completeReturnsFalseWhenNoPendingSessionId() = runTest {
@@ -202,9 +210,9 @@ private class FakeBootcampDao(
         }
     }
 
-    override fun getActiveEnrollment(): Flow<BootcampEnrollmentEntity?> = emptyFlow()
+    override fun getActiveEnrollment(userId: String): Flow<BootcampEnrollmentEntity?> = emptyFlow()
 
-    override suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity? = activeEnrollment
+    override suspend fun getActiveEnrollmentOnce(userId: String): BootcampEnrollmentEntity? = activeEnrollment
 
     override suspend fun getEnrollment(id: Long): BootcampEnrollmentEntity? =
         activeEnrollment?.takeIf { it.id == id }
@@ -285,4 +293,6 @@ private class FakeBootcampDao(
             }
             .map { it.key }
             .sortedDescending()
+
+    override suspend fun claimOrphanedEnrollments(userId: String) { /* no-op for tests */ }
 }

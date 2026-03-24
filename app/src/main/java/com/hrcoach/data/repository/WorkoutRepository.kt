@@ -11,14 +11,19 @@ import javax.inject.Singleton
 @Singleton
 class WorkoutRepository @Inject constructor(
     private val workoutDao: WorkoutDao,
-    private val trackPointDao: TrackPointDao
+    private val trackPointDao: TrackPointDao,
+    private val authRepository: AuthRepository
 ) {
-    fun getAllWorkouts(): Flow<List<WorkoutEntity>> = workoutDao.getAllWorkouts()
-    suspend fun getAllWorkoutsOnce(): List<WorkoutEntity> = workoutDao.getAllWorkoutsOnce()
+    fun getAllWorkouts(): Flow<List<WorkoutEntity>> =
+        workoutDao.getAllWorkouts(authRepository.effectiveUserId)
+
+    suspend fun getAllWorkoutsOnce(): List<WorkoutEntity> =
+        workoutDao.getAllWorkoutsOnce(authRepository.effectiveUserId)
 
     suspend fun getWorkoutById(id: Long): WorkoutEntity? = workoutDao.getById(id)
 
-    suspend fun createWorkout(workout: WorkoutEntity): Long = workoutDao.insert(workout)
+    suspend fun createWorkout(workout: WorkoutEntity): Long =
+        workoutDao.insert(workout.copy(userId = authRepository.effectiveUserId))
 
     suspend fun updateWorkout(workout: WorkoutEntity) = workoutDao.update(workout)
 
@@ -32,7 +37,8 @@ class WorkoutRepository @Inject constructor(
     suspend fun getTrackPointsForWorkouts(workoutIds: List<Long>): Map<Long, List<TrackPointEntity>> =
         trackPointDao.getTrackPointsForWorkouts(workoutIds).groupBy { it.workoutId }
 
-    suspend fun sumAllDistanceKm(): Double = workoutDao.sumAllDistanceKm()
+    suspend fun sumAllDistanceKm(): Double =
+        workoutDao.sumAllDistanceKm(authRepository.effectiveUserId)
 
     suspend fun cleanupOrphanedWorkouts() {
         val orphans = workoutDao.getOrphanedWorkouts()

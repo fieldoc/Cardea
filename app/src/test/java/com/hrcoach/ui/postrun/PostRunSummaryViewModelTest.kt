@@ -3,6 +3,7 @@ package com.hrcoach.ui.postrun
 import androidx.lifecycle.SavedStateHandle
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.repository.AuthRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.WorkoutRepository
@@ -12,8 +13,10 @@ import com.hrcoach.service.WorkoutState
 import com.hrcoach.service.WorkoutSnapshot
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -40,6 +43,7 @@ class PostRunSummaryViewModelTest {
     private val achievementEvaluator: AchievementEvaluator = mockk(relaxed = true)
     private val achievementDao: AchievementDao = mockk(relaxed = true)
     private val bootcampRepository: BootcampRepository = mockk(relaxed = true)
+    private val authRepository: AuthRepository = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -71,7 +75,8 @@ class PostRunSummaryViewModelTest {
         coEvery { workoutRepository.sumAllDistanceKm() } returns 10.0
         coEvery { workoutMetricsRepository.getWorkoutMetrics(workoutId) } returns null
         coEvery { bootcampRepository.getActiveEnrollmentOnce() } returns null
-        coEvery { achievementDao.getUnshownAchievements() } returns emptyList()
+        every { authRepository.effectiveUserId } returns ""
+        every { achievementDao.getUnshownAchievements(any()) } returns flowOf(emptyList())
         coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } returns
             BootcampSessionCompleter.CompletionResult(completed = false)
     }
@@ -86,7 +91,8 @@ class PostRunSummaryViewModelTest {
             workoutMetricsRepository = workoutMetricsRepository,
             bootcampSessionCompleter = bootcampSessionCompleter,
             achievementEvaluator = achievementEvaluator,
-            achievementDao = achievementDao
+            achievementDao = achievementDao,
+            authRepository = authRepository
         )
     }
 
