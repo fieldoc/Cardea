@@ -1,7 +1,7 @@
 # Account Upgrade Design
 
 **Date:** 2026-03-23
-**Status:** Draft
+**Status:** Approved
 **Scope:** Firebase Auth, profile claim flow, emblem avatar system, per-user data isolation
 
 ---
@@ -243,17 +243,15 @@ All repositories that use DAOs must receive the current userId. Two approaches:
 - Achievements — accessed via `AchievementDao` directly from ViewModels (no repository wrapper exists). The DAO itself gains `userId` parameters; ViewModels obtain the userId from `AuthRepository` and pass it. No new repository wrapper needed — keep the existing direct-DAO pattern.
 
 **SharedPreferences scoping:**
-`UserProfileRepository` already uses a single prefs file. Change key format to include UID:
-```
-"display_name" → "display_name_$uid"
-"avatar_symbol" → "avatar_emblem_id_$uid"
-"max_hr" → "max_hr_$uid"
-```
-Similarly for `AudioSettingsRepository`, `AutoPauseSettingsRepository`, `MapsSettingsRepository`, and `AdaptiveProfileRepository` (critical — pace-HR adaptive models must not bleed between users).
 
-Alternatively, use a separate SharedPreferences file per user: `getSharedPreferences("user_profile_$uid", ...)`. This is cleaner but requires clearing the old unscoped prefs on migration.
+Use a separate SharedPreferences file per user: `getSharedPreferences("user_profile_$uid", ...)`. This provides clean isolation without key-suffix clutter. Applies to all prefs-backed repositories:
+- `UserProfileRepository`
+- `AudioSettingsRepository`
+- `AutoPauseSettingsRepository`
+- `MapsSettingsRepository`
+- `AdaptiveProfileRepository` (critical — pace-HR adaptive models must not bleed between users)
 
-**Recommendation:** Separate prefs file per user — cleaner isolation.
+On first authenticated login, migrate the old unscoped prefs into the user's new prefs file, then leave the old file in place (harmless, avoids data loss if migration is interrupted).
 
 ### 5. Account Screen Changes
 
@@ -321,7 +319,7 @@ Alternatively, use a separate SharedPreferences file per user: `getSharedPrefere
 | `data/repository/BootcampRepository.kt` | Inject AuthRepository, scope by userId |
 | `ui/account/AccountScreen.kt` | EmblemIcon, EmblemPicker, auth section, upgraded hero card |
 | `ui/account/AccountViewModel.kt` | Emblem IDs, bio, claim state, name cooldown logic |
-| `ui/navigation/NavGraph.kt` | Add `auth` route, conditional start destination |
+| `ui/navigation/NavGraph.kt` | Add `auth` route (splash remains start destination) |
 | `service/WorkoutForegroundService.kt` | Attach userId to workouts, claim flow trigger |
 | `di/AppModule.kt` | Provide AuthRepository |
 
