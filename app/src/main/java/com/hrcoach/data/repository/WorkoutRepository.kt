@@ -41,7 +41,7 @@ class WorkoutRepository @Inject constructor(
         workoutDao.sumAllDistanceKm(authRepository.effectiveUserId)
 
     suspend fun cleanupOrphanedWorkouts() {
-        val orphans = workoutDao.getOrphanedWorkouts()
+        val orphans = workoutDao.getOrphanedWorkouts(authRepository.effectiveUserId)
         for (orphan in orphans) {
             val trackPoints = getTrackPoints(orphan.id)
             val estimatedEnd = trackPoints.maxOfOrNull { it.timestamp } ?: orphan.startTime
