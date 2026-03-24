@@ -89,6 +89,7 @@ fun AccountScreen(
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val showOrphanClaimDialog by viewModel.showOrphanClaimDialog.collectAsStateWithLifecycle()
     var showProfileSheet by remember { mutableStateOf(false) }
     var showSignOutDialog by remember { mutableStateOf(false) }
 
@@ -139,6 +140,36 @@ fun AccountScreen(
             dismissButton = {
                 TextButton(onClick = { showSignOutDialog = false }) {
                     Text("Cancel", color = CardeaTheme.colors.textSecondary)
+                }
+            }
+        )
+    }
+
+    if (showOrphanClaimDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissOrphanClaim() },
+            containerColor = CardeaTheme.colors.bgSecondary,
+            title = {
+                Text(
+                    "Existing Data Found",
+                    color = CardeaTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "We found existing workout data on this device. Claim it as yours?",
+                    color = CardeaTheme.colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.claimOrphanedData() }) {
+                    Text("Claim", color = CardeaTheme.colors.accentPink)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissOrphanClaim() }) {
+                    Text("Skip", color = CardeaTheme.colors.textSecondary)
                 }
             }
         )

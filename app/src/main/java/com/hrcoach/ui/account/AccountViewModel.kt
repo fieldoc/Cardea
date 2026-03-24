@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.db.BootcampDao
+import com.hrcoach.data.db.WorkoutDao
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.AuthRepository
@@ -18,6 +20,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -69,6 +72,8 @@ class AccountViewModel @Inject constructor(
     private val achievementDao: AchievementDao,
     private val adaptiveProfileRepo: AdaptiveProfileRepository,
     private val authRepository: AuthRepository,
+    private val workoutDao: WorkoutDao,
+    private val bootcampDao: BootcampDao,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -92,6 +97,9 @@ class AccountViewModel @Inject constructor(
     private val _avatarEmblemId = MutableStateFlow("pulse")
     private val _bio = MutableStateFlow("")
 
+    private val _showOrphanClaimDialog = MutableStateFlow(false)
+    val showOrphanClaimDialog: StateFlow<Boolean> = _showOrphanClaimDialog.asStateFlow()
+
     init {
         viewModelScope.launch {
             _mapsKey.value = mapsRepo.getMapsApiKey()
@@ -110,6 +118,16 @@ class AccountViewModel @Inject constructor(
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
+
+        // Check for orphaned data when authenticated
+        viewModelScope.launch {
+            if (authRepository.isAuthenticated()) {
+                val orphanCount = workoutDao.countWorkouts("")
+                if (orphanCount > 0) {
+                    _showOrphanClaimDialog.value = true
+                }
+            }
+        }
     }
 
     private fun computeRunnerLevel(count: Int): String = when {
@@ -254,6 +272,20 @@ class AccountViewModel @Inject constructor(
         userProfileRepo.setDisplayName(_displayName.value)
         userProfileRepo.setAvatarEmblemId(_avatarEmblemId.value)
         userProfileRepo.setBio(_bio.value)
+    }
+
+    fun claimOrphanedData() {
+        viewModelScope.launch {
+            val uid = authRepository.effectiveUserId
+            workoutDao.claimOrphanedWorkouts(uid)
+            bootcampDao.claimOrphanedEnrollments(uid)
+            achievementDao.claimOrphanedAchievements(uid)
+            _showOrphanClaimDialog.value = false
+        }
+    }
+
+    fun dismissOrphanClaim() {
+        _showOrphanClaimDialog.value = false
     }
 
     fun signOut() {
