@@ -18,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.clickable
@@ -534,12 +536,20 @@ private fun ProfileEditBottomSheet(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Name field
+            // Name field — select-all on open so user can immediately type a replacement
             Text("Name", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
             Spacer(modifier = Modifier.height(6.dp))
+            var nameField by remember {
+                mutableStateOf(TextFieldValue(displayName, selection = TextRange(0, displayName.length)))
+            }
             OutlinedTextField(
-                value = displayName,
-                onValueChange = { if (it.length <= 20) onNameChange(it) },
+                value = nameField,
+                onValueChange = { tfv ->
+                    if (tfv.text.length <= 20) {
+                        nameField = tfv
+                        onNameChange(tfv.text)
+                    }
+                },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = CardeaTheme.colors.accentPink,

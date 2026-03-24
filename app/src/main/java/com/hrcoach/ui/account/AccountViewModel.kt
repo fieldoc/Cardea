@@ -188,7 +188,7 @@ class AccountViewModel @Inject constructor(
     }
 
     fun setDisplayName(name: String) {
-        _displayName.value = name.trim().take(20).ifBlank { "Runner" }
+        _displayName.value = name.take(20)
     }
 
     fun setAvatarSymbol(symbol: String) {
