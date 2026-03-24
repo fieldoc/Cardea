@@ -25,7 +25,7 @@ import javax.inject.Inject
 
 data class AccountUiState(
     val displayName: String = "Runner",
-    val avatarSymbol: String = "\u2665", // ♥
+    val avatarSymbol: String = "pulse",
     val totalWorkouts: Int = 0,
     val mapsApiKey: String = "",
     val mapsApiKeySaved: Boolean = false,
@@ -74,7 +74,7 @@ class AccountViewModel @Inject constructor(
     private val _autoPauseEnabled = MutableStateFlow(true)
 
     private val _displayName = MutableStateFlow("Runner")
-    private val _avatarSymbol = MutableStateFlow("\u2665")
+    private val _avatarSymbol = MutableStateFlow("pulse")
 
     init {
         viewModelScope.launch {
@@ -89,7 +89,7 @@ class AccountViewModel @Inject constructor(
             _inZoneConfirm.value = settings.enableInZoneConfirm != false
             _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
             _displayName.value = userProfileRepo.getDisplayName()
-            _avatarSymbol.value = userProfileRepo.getAvatarSymbol()
+            _avatarSymbol.value = userProfileRepo.getAvatarEmblemId()
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
@@ -199,7 +199,7 @@ class AccountViewModel @Inject constructor(
 
     fun saveProfile() {
         userProfileRepo.setDisplayName(_displayName.value)
-        userProfileRepo.setAvatarSymbol(_avatarSymbol.value)
+        userProfileRepo.setAvatarEmblemId(_avatarSymbol.value)
     }
 
     fun saveMaxHr() {
