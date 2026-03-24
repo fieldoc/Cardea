@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.google.firebase.auth.FirebaseAuth
 import com.hrcoach.data.db.AppDatabase
 import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.TrackPointDao
@@ -72,4 +73,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAchievementDao(db: AppDatabase): AchievementDao = db.achievementDao()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 }
