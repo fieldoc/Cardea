@@ -48,24 +48,44 @@ The current account system is a "cardboard sham":
 - Methods: `signInWithEmail()`, `signUpWithEmail()`, `signInWithGoogle()`, `signOut()`, `isAuthenticated(): Boolean`
 - Singleton via Hilt `@Singleton`
 
-**Auth state flow:**
+**Auth state flow (soft onboarding):**
+
+The app is fully usable without authentication. Auth is only required at profile claim time (after first workout). This means:
+
 ```
 App launch
-  → Check FirebaseAuth.currentUser
-    → null → Show AuthScreen (sign in / sign up)
-    → non-null → Normal app flow, scoped to UID
+  → SplashScreen (existing)
+    → Always navigates to `home` (no auth gate)
+    → App works in "anonymous" mode until claim
+
+First workout completes
+  → Post-run summary shows "Claim Your Profile" prompt
+  → Claim sheet includes sign-up (email/password or Google)
+  → On successful auth + claim → userId attached to all data going forward
+
+Subsequent launches
+  → If FirebaseAuth.currentUser != null → scoped to UID
+  → If null (signed out or never signed in) → show sign-in prompt on account tab
 ```
+
+**Anonymous mode behavior:**
+- All workout data written with `userId = ''` (unclaimed)
+- Profile defaults apply (name="Runner", avatar="pulse")
+- Account tab shows a "Sign in" card instead of auth details
+- All features work normally — BLE, GPS, zones, bootcamp
 
 **AuthScreen** (`ui/auth/AuthScreen.kt` + `AuthViewModel.kt`)
 - Email/password sign-in form with toggle to sign-up mode
 - Google Sign-In button
 - Error handling (invalid email, wrong password, network errors)
-- On success → navigate to `home`
+- On success → navigate back to previous screen (or `home`)
+- NOT a start destination — only shown when user taps "Sign in" on account tab or during claim flow
 
 **Navigation changes:**
-- New `auth` route added before `home` in NavGraph
-- Start destination: `auth` if not authenticated, `home` if authenticated
-- `signOut()` navigates back to `auth` and clears backstack
+- New `auth` route added to NavGraph (not as start destination)
+- `splash` remains start destination → always routes to `home`
+- Account tab shows sign-in prompt if not authenticated
+- `signOut()` navigates to `home` (not back to an auth gate) and clears backstack
 
 ### 2. Profile Claim Flow
 
@@ -153,8 +173,30 @@ New file: `ui/components/EmblemPicker.kt`
 **Migration from Unicode symbols:**
 - `AVATAR_SYMBOLS` list in `AccountScreen.kt` → deleted
 - `avatarSymbol: String` in `UserProfileRepository` → renamed to `avatarEmblemId: String`
-- Existing Unicode values mapped to closest emblem: `"♥"` → `"heart"`, `"⚡"` → `"bolt"`, `"★"` → `"nova"`, etc.
 - Default for new profiles: `"pulse"` (the heartbeat — most Cardea-branded)
+- Complete Unicode-to-emblem mapping for all 10 existing symbols:
+
+| Unicode | Symbol | Emblem ID |
+|---------|--------|-----------|
+| `\u2665` | ♥ | `heart` |
+| `\u2605` | ★ | `nova` |
+| `\u26A1` | ⚡ | `bolt` |
+| `\u25C6` | ◆ | `diamond` |
+| `\u25B2` | ▲ | `ascent` |
+| `\u25CF` | ● | `ripple` |
+| `\u2726` | ✦ | `compass` |
+| `\u2666` | ♦ | `prism` |
+| `\u2191` | ↑ | `flame` |
+| `\u221E` | ∞ | `infinity` |
+
+Migration runs on first read: if stored value matches a Unicode symbol, it's replaced with the mapped emblem ID and saved back. Unmapped values (shouldn't exist) fall back to `"pulse"`.
+
+**Existing `getUserId()` UUID deprecation:**
+The current `UserProfileRepository.getUserId()` generates a random local UUID. This is replaced by Firebase UID as the canonical identity. Migration:
+- `getUserId()` method is removed
+- All code calling `getUserId()` switches to `AuthRepository.currentUserId`
+- The `PREF_USER_ID` key in SharedPreferences is left in place (not deleted) but never read again
+- For unclaimed data migration, the orphan detection uses `userId = ''` in Room tables, not the old UUID
 
 ### 4. Data Isolation
 
@@ -163,7 +205,7 @@ New file: `ui/components/EmblemPicker.kt`
 **Tables requiring `userId` column:**
 1. `workouts` — `userId TEXT NOT NULL DEFAULT ''`
 2. `track_points` — inherits isolation via FK to workouts (no separate column needed)
-3. `workout_metrics` — inherits isolation via FK to workouts (no separate column needed)
+3. `workout_metrics` — inherits isolation via FK CASCADE to workouts (no separate column needed). `WorkoutMetricsDao.getByWorkoutId()` takes a workoutId that is only obtainable from a userId-filtered workout query. Risk accepted: a direct call with a guessed workoutId could read cross-user metrics, but all access paths in the app go through userId-filtered workout lookups first.
 4. `bootcamp_enrollments` — `userId TEXT NOT NULL DEFAULT ''`
 5. `bootcamp_sessions` — inherits isolation via FK to enrollments (no separate column needed)
 6. `achievements` — `userId TEXT NOT NULL DEFAULT ''`
@@ -193,6 +235,13 @@ All repositories that use DAOs must receive the current userId. Two approaches:
 
 **Recommendation: Approach A.** Repositories inject `AuthRepository`, and internally scope all DAO calls. This keeps the userId concern out of ViewModels and prevents forgotten-parameter bugs.
 
+**Repository scoping details:**
+- `WorkoutRepository` — injects `AuthRepository`, passes userId to all DAO queries
+- `WorkoutMetricsRepository` — accesses `WorkoutMetricsDao` which queries by `workoutId`. Since workoutIds are globally unique and `WorkoutMetricsRepository` is always called downstream of a userId-filtered workout query (never browsed independently), no direct userId scoping needed. However, any future direct-access patterns must go through a userId-filtered workout lookup first.
+- `BootcampRepository` — injects `AuthRepository`, passes userId to enrollment/session queries
+- `AdaptiveProfileRepository` — uses SharedPreferences; must switch to per-UID prefs file (same pattern as other prefs repositories). **This is critical** — two users sharing pace-HR models would corrupt coaching quality.
+- Achievements — accessed via `AchievementDao` directly from ViewModels (no repository wrapper exists). The DAO itself gains `userId` parameters; ViewModels obtain the userId from `AuthRepository` and pass it. No new repository wrapper needed — keep the existing direct-DAO pattern.
+
 **SharedPreferences scoping:**
 `UserProfileRepository` already uses a single prefs file. Change key format to include UID:
 ```
@@ -200,7 +249,7 @@ All repositories that use DAOs must receive the current userId. Two approaches:
 "avatar_symbol" → "avatar_emblem_id_$uid"
 "max_hr" → "max_hr_$uid"
 ```
-Similarly for `AudioSettingsRepository`, `AutoPauseSettingsRepository`, `MapsSettingsRepository`.
+Similarly for `AudioSettingsRepository`, `AutoPauseSettingsRepository`, `MapsSettingsRepository`, and `AdaptiveProfileRepository` (critical — pace-HR adaptive models must not bleed between users).
 
 Alternatively, use a separate SharedPreferences file per user: `getSharedPreferences("user_profile_$uid", ...)`. This is cleaner but requires clearing the old unscoped prefs on migration.
 
@@ -224,7 +273,10 @@ Alternatively, use a separate SharedPreferences file per user: `getSharedPrefere
 **New Auth section** at bottom of AccountScreen:
 - Shows authenticated email address
 - "Sign Out" button (with confirmation dialog)
-- Sign out: calls `AuthRepository.signOut()`, clears in-memory state, stops active workout if running, navigates to `auth` route
+- Sign out flow:
+  1. If a workout is currently active, the sign-out button is **disabled** with text "Stop your workout before signing out"
+  2. Confirmation dialog: "Sign out of Cardea? Your workout data stays on this device."
+  3. On confirm: calls `AuthRepository.signOut()`, clears in-memory `WorkoutState`, navigates to `home` (not auth gate — soft onboarding means unauthenticated users see the app normally)
 
 ### 6. Service Layer Changes
 
@@ -265,6 +317,7 @@ Alternatively, use a separate SharedPreferences file per user: `getSharedPrefere
 | `data/repository/AudioSettingsRepository.kt` | Per-UID prefs file |
 | `data/repository/AutoPauseSettingsRepository.kt` | Per-UID prefs file |
 | `data/repository/MapsSettingsRepository.kt` | Per-UID prefs file |
+| `data/repository/AdaptiveProfileRepository.kt` | Per-UID prefs file (critical — pace-HR models must not bleed) |
 | `data/repository/BootcampRepository.kt` | Inject AuthRepository, scope by userId |
 | `ui/account/AccountScreen.kt` | EmblemIcon, EmblemPicker, auth section, upgraded hero card |
 | `ui/account/AccountViewModel.kt` | Emblem IDs, bio, claim state, name cooldown logic |
