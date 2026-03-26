@@ -582,7 +582,7 @@ class WorkoutForegroundService : LifecycleService() {
                     if (SimulationController.isActive) SimulationController.deactivate()
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
-                    isStopping = false
+                    // Keep isStopping=true — see comment at end of stopWorkout()
                     return@launch
                 }
 
@@ -716,7 +716,10 @@ class WorkoutForegroundService : LifecycleService() {
             }
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
-            isStopping = false
+            // Do NOT reset isStopping here. The service is about to be destroyed,
+            // and resetting this flag lets onDestroy() re-enter the orphan-save block
+            // which reads stale WorkoutState (distanceMeters=0 after reset) and
+            // deletes the successfully saved workout.
         }
     }
 
