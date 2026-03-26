@@ -3,6 +3,7 @@ package com.hrcoach.service.audio
 import android.content.Context
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.WorkoutConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +21,8 @@ class CoachingAudioManager(
     private val earconPlayer = EarconPlayer(context)
     private val voiceCoach = VoiceCoach(context)
     private val vibrationManager = VibrationManager(context)
+    private val ttsBriefingPlayer = TtsBriefingPlayer(context)
+    private val startupSequencer = StartupSequencer()
     private val escalationTracker = EscalationTracker()
     private var currentSettings: AudioSettings = settings
 
@@ -31,7 +34,18 @@ class CoachingAudioManager(
         currentSettings = settings
         earconPlayer.setVolume(settings.earconVolume)
         voiceCoach.verbosity = settings.voiceVerbosity
+        ttsBriefingPlayer.verbosity = settings.voiceVerbosity
         vibrationManager.enabled = settings.enableVibration
+    }
+
+    /**
+     * Plays the full startup sequence: 3-2-1-GO countdown beeps followed by
+     * a TTS voice briefing of the workout config. Suspends for the duration
+     * of the countdown (~4s); the TTS briefing plays asynchronously after.
+     */
+    suspend fun playStartSequence(config: WorkoutConfig) {
+        startupSequencer.playCountdown()
+        ttsBriefingPlayer.speakBriefing(config)
     }
 
     fun fireEvent(event: CoachingEvent, guidanceText: String? = null) {
@@ -84,6 +98,7 @@ class CoachingAudioManager(
         scope.cancel()
         earconPlayer.destroy()
         voiceCoach.destroy()
+        ttsBriefingPlayer.destroy()
         vibrationManager.destroy()
     }
 }
