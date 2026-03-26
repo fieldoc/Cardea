@@ -80,9 +80,13 @@ class PostRunSummaryViewModel @Inject constructor(
             return
         }
 
+        val fresh = savedStateHandle.get<Boolean>("fresh") ?: false
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            runCatching {
+
+            // --- 1. Essential: load workout summary (must succeed for screen to display) ---
+            val summaryLoaded = runCatching {
                 val workout = workoutRepository.getWorkoutById(id)
                     ?: error("Workout not found.")
                 val currentMetrics = getOrDeriveMetrics(workout)
@@ -110,53 +114,64 @@ class PostRunSummaryViewModel @Inject constructor(
                     comparisons = comparisons,
                     isHrrActive = isHrrActive,
                 )
+            }.onFailure {
+                Log.e("PostRunSummaryVM", "Failed to load workout summary", it)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = it.message ?: "Unable to load post-run summary."
+                )
+            }.isSuccess
 
-                // Wire bootcamp session completion
-                val fresh = savedStateHandle.get<Boolean>("fresh") ?: false
-                if (fresh) {
-                    val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
-                    if (pendingId != null) {
+            // --- Side effects below run even if summary display failed ---
+            if (fresh) {
+                // 2. Best-effort: complete bootcamp session
+                val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
+                if (pendingId != null) {
+                    runCatching {
                         val result = bootcampSessionCompleter.complete(
                             workoutId = id,
                             pendingSessionId = pendingId
                         )
                         if (result.completed) {
-                            WorkoutState.setPendingBootcampSessionId(null)
                             _uiState.value = _uiState.value.copy(
                                 isBootcampRun = true,
                                 bootcampProgressLabel = result.progressLabel,
                                 bootcampWeekComplete = result.weekComplete
                             )
                         }
+                    }.onFailure {
+                        Log.e("PostRunSummaryVM", "Bootcamp session completion failed", it)
                     }
-
-                    // Evaluate achievements
-                    val allWorkouts = workoutRepository.getAllWorkoutsOnce()
-                    val totalKm = allWorkouts.sumOf { it.totalDistanceMeters.toDouble() } / 1000.0
-                    achievementEvaluator.evaluateDistance(totalKm, id)
-
-                    val streak = computeWorkoutStreak(allWorkouts)
-                    achievementEvaluator.evaluateStreak(streak, id)
-
-                    // Surface newly earned achievements
-                    val newAchievements = achievementDao.getUnshownAchievements()
-                    if (newAchievements.isNotEmpty()) {
-                        achievementDao.markShown(newAchievements.map { it.id })
-                        _uiState.value = _uiState.value.copy(
-                            newAchievements = newAchievements
-                        )
-                    }
-
-                    // Clear stale completedWorkoutId so the next workout start
-                    // triggers a clean LaunchedEffect transition in NavGraph.
-                    WorkoutState.clearCompletedWorkoutId()
+                    // Always clear pending ID — the session either completed or is
+                    // unrecoverable; leaving it set causes stale-state bugs on next run.
+                    WorkoutState.setPendingBootcampSessionId(null)
                 }
-            }.onFailure {
-                Log.e("PostRunSummaryVM", "Failed to load post-run summary", it)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = it.message ?: "Unable to load post-run summary."
-                )
+
+                // 3. Best-effort: evaluate achievements
+                if (summaryLoaded) {
+                    runCatching {
+                        val allWorkouts = workoutRepository.getAllWorkoutsOnce()
+                        val totalKm = allWorkouts.sumOf { it.totalDistanceMeters.toDouble() } / 1000.0
+                        achievementEvaluator.evaluateDistance(totalKm, id)
+
+                        val streak = computeWorkoutStreak(allWorkouts)
+                        achievementEvaluator.evaluateStreak(streak, id)
+
+                        val newAchievements = achievementDao.getUnshownAchievements()
+                        if (newAchievements.isNotEmpty()) {
+                            achievementDao.markShown(newAchievements.map { it.id })
+                            _uiState.value = _uiState.value.copy(
+                                newAchievements = newAchievements
+                            )
+                        }
+                    }.onFailure {
+                        Log.e("PostRunSummaryVM", "Achievement evaluation failed", it)
+                    }
+                }
+
+                // 4. Always: clear stale completedWorkoutId so the next workout start
+                // triggers a clean LaunchedEffect transition in NavGraph.
+                WorkoutState.clearCompletedWorkoutId()
             }
         }
     }
