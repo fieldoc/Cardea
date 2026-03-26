@@ -102,6 +102,11 @@ data class BootcampUiState(
     val showGoalDetail: Boolean = false,
     val goalProgressPercentage: Int = 0,
     val maxHr: Int? = null,
+    // MaxHR gate (blocks workout start until maxHR is set)
+    val showMaxHrGate: Boolean = false,
+    val maxHrGateInput: String = "",
+    val maxHrGateError: String? = null,
+    val pendingGateSession: PlannedSession? = null,
     // BLE connection (pre-start dialog)
     val showHrConnectDialog: Boolean = false,
     val bleIsScanning: Boolean = false,

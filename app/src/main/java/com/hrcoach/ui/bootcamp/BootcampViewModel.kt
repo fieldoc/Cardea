@@ -1094,6 +1094,86 @@ class BootcampViewModel @Inject constructor(
         presetId = presetId
     )
 
+    // ─── MaxHR gate (blocks workout start when maxHR is not set) ────────
+
+    /**
+     * Call instead of buildConfigJson when the user taps "Start Run".
+     * If maxHR is set, builds the config and proceeds to BLE dialog.
+     * If not, shows the maxHR gate sheet first.
+     */
+    fun prepareStartWorkout(session: PlannedSession, onConfigReady: (String) -> Unit) {
+        val currentMaxHr = _uiState.value.maxHr
+        if (currentMaxHr != null) {
+            onConfigReady(buildWorkoutConfig(session, currentMaxHr))
+        } else {
+            _uiState.update {
+                it.copy(
+                    showMaxHrGate = true,
+                    maxHrGateInput = "",
+                    maxHrGateError = null,
+                    pendingGateSession = session
+                )
+            }
+        }
+    }
+
+    fun setMaxHrGateInput(value: String) {
+        _uiState.update { it.copy(maxHrGateInput = value, maxHrGateError = null) }
+    }
+
+    /**
+     * Saves maxHR and returns the config JSON for the pending session,
+     * or null if validation fails.
+     */
+    fun confirmMaxHrGate(): String? {
+        val state = _uiState.value
+        val parsed = state.maxHrGateInput.trim().toIntOrNull()
+        if (parsed == null || parsed !in 100..220) {
+            _uiState.update { it.copy(maxHrGateError = "Enter a value between 100 and 220") }
+            return null
+        }
+        userProfileRepository.setMaxHr(parsed)
+        adaptiveProfileRepository.saveProfile(
+            adaptiveProfileRepository.getProfile().copy(hrMax = parsed)
+        )
+        val session = state.pendingGateSession ?: return null
+        _uiState.update {
+            it.copy(
+                maxHr = parsed,
+                showMaxHrGate = false,
+                pendingGateSession = null,
+                maxHrGateInput = "",
+                maxHrGateError = null
+            )
+        }
+        return buildWorkoutConfig(session, parsed)
+    }
+
+    fun dismissMaxHrGate() {
+        _uiState.update {
+            it.copy(
+                showMaxHrGate = false,
+                pendingGateSession = null,
+                maxHrGateInput = "",
+                maxHrGateError = null
+            )
+        }
+    }
+
+    private fun buildWorkoutConfig(session: PlannedSession, maxHr: Int): String {
+        val presetId = session.presetId
+        if (presetId != null) {
+            val preset = com.hrcoach.domain.preset.PresetLibrary.ALL.firstOrNull { it.id == presetId }
+            if (preset != null) {
+                return com.hrcoach.util.JsonCodec.gson.toJson(preset.buildConfig(maxHr))
+            }
+        }
+        // Timed sessions without a matching preset — free run fallback
+        return com.hrcoach.util.JsonCodec.gson.toJson(
+            com.hrcoach.domain.model.WorkoutConfig(mode = com.hrcoach.domain.model.WorkoutMode.FREE_RUN)
+        )
+    }
+
     // ─── BLE connection (pre-start dialog) ─────────────────────────────
 
     fun showHrConnectDialog(configJson: String) {

@@ -4,6 +4,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.material3.SnackbarHost
@@ -177,8 +180,10 @@ fun BootcampScreen(
             else -> {
                 ActiveBootcampDashboard(
                     uiState = uiState,
-                    onStartWorkout = { configJson ->
-                        viewModel.showHrConnectDialog(configJson)
+                    onRequestSession = { session ->
+                        viewModel.prepareStartWorkout(session) { configJson ->
+                            viewModel.showHrConnectDialog(configJson)
+                        }
                     },
                     onPause = { viewModel.pauseBootcamp() },
                     onResume = { viewModel.resumeBootcamp() },
@@ -198,6 +203,21 @@ fun BootcampScreen(
                     onPreferredDaysClick = { showDaysSheet = true },
                     onGoToManualSetup = onGoToManualSetup
                 )
+
+                if (uiState.showMaxHrGate) {
+                    MaxHrGateSheet(
+                        input = uiState.maxHrGateInput,
+                        error = uiState.maxHrGateError,
+                        onInputChanged = viewModel::setMaxHrGateInput,
+                        onConfirm = {
+                            val configJson = viewModel.confirmMaxHrGate()
+                            if (configJson != null) {
+                                viewModel.showHrConnectDialog(configJson)
+                            }
+                        },
+                        onDismiss = viewModel::dismissMaxHrGate
+                    )
+                }
 
                 if (uiState.showHrConnectDialog) {
                     HrConnectDialog(
@@ -248,7 +268,12 @@ fun BootcampScreen(
                 onDismiss = viewModel::dismissSessionDetail,
                 onReschedule = { id -> viewModel.rescheduleFromDetail(id) },
                 onSkip = { id -> viewModel.skipSession(id) },
-                onStartRun = { configJson -> viewModel.startRunFromDetail(configJson) },
+                onStartRun = { session ->
+                    viewModel.dismissSessionDetail()
+                    viewModel.prepareStartWorkout(session) { configJson ->
+                        viewModel.showHrConnectDialog(configJson)
+                    }
+                },
                 onRestToday = viewModel::swapTodayForRestFromDetail
             )
         }
@@ -1246,7 +1271,7 @@ private fun PhaseDetailRow(label: String, value: String) {
 @Composable
 private fun ActiveBootcampDashboard(
     uiState: BootcampUiState,
-    onStartWorkout: (configJson: String) -> Unit,
+    onRequestSession: (PlannedSession) -> Unit,
     onPause: () -> Unit,
     onResume: () -> Unit,
     onEndProgram: () -> Unit,
@@ -1273,7 +1298,7 @@ private fun ActiveBootcampDashboard(
         // ── Today hero (full-bleed, no horizontal padding) ──────────────────
         TodayHeroSection(
             uiState = uiState,
-            onStartWorkout = onStartWorkout,
+            onRequestSession = onRequestSession,
             onReschedule = todaySessionId?.let { id -> { onReschedule(id) } },
             onSwapTodayForRest = onSwapTodayForRest,
             onPullForward = { sessionId -> onReschedule(sessionId) },
@@ -1566,7 +1591,7 @@ private fun SessionDetailSheet(
     onDismiss: () -> Unit,
     onReschedule: ((Long) -> Unit)? = null,
     onSkip: ((Long) -> Unit)? = null,
-    onStartRun: ((String) -> Unit)? = null,
+    onStartRun: ((PlannedSession) -> Unit)? = null,
     onRestToday: (() -> Unit)? = null
 ) {
     val sessionId = session.sessionId
@@ -1671,16 +1696,14 @@ private fun SessionDetailSheet(
             if (showStartRun) {
                 androidx.compose.material3.Button(
                     onClick = {
-                        val configJson = buildConfigJson(
+                        onStartRun!!.invoke(
                             PlannedSession(
                                 type = runCatching { SessionType.valueOf(session.rawTypeName) }
                                     .getOrDefault(SessionType.EASY),
                                 minutes = session.minutes,
                                 presetId = session.presetId
-                            ),
-                            maxHr
+                            )
                         )
-                        onStartRun!!.invoke(configJson)
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(12.dp),
@@ -1772,7 +1795,7 @@ private object SessionDescription {
 @Composable
 private fun TodayHeroSection(
     uiState: BootcampUiState,
-    onStartWorkout: (configJson: String) -> Unit,
+    onRequestSession: (PlannedSession) -> Unit,
     onReschedule: (() -> Unit)?,
     onSwapTodayForRest: () -> Unit,
     onPullForward: ((Long) -> Unit)? = null,
@@ -1984,7 +2007,7 @@ private fun TodayHeroSection(
                         Spacer(modifier = Modifier.height(16.dp))
                         androidx.compose.material3.Button(
                             onClick = {
-                                onStartWorkout(buildConfigJson(today.session, uiState.maxHr))
+                                onRequestSession(today.session)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2743,6 +2766,87 @@ private fun goalDisplayName(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.RACE_10K -> "10K"
     BootcampGoal.HALF_MARATHON -> "Half Marathon"
     BootcampGoal.MARATHON -> "Marathon"
+}
+
+// ─── MaxHR Gate Sheet ─────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MaxHrGateSheet(
+    input: String,
+    error: String?,
+    onInputChanged: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = CardeaTheme.colors.bgPrimary,
+        scrimColor = Color.Black.copy(alpha = 0.6f),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Set Your Max Heart Rate",
+                style = MaterialTheme.typography.titleMedium,
+                color = CardeaTheme.colors.textPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Text(
+                text = "Your training zones are personalised using max HR. Set it now to get accurate coaching during your run.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = CardeaTheme.colors.textSecondary
+            )
+
+            GlassCard(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = onInputChanged,
+                        label = { Text("Max HR (bpm)") },
+                        placeholder = { Text("e.g. 185") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        isError = error != null,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Text(
+                        text = error
+                            ?: "220 minus your age is a good starting estimate.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (error != null) ZoneRed else CardeaTheme.colors.textTertiary,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CardeaGradient)
+                    .clickable { onConfirm() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Save & Start Run",
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
 }
 
 private fun buildConfigJson(session: PlannedSession, maxHr: Int?): String {
