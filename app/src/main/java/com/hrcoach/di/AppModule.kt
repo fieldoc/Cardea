@@ -45,6 +45,7 @@ object AppModule {
                 AppDatabase.MIGRATION_13_14,
                 AppDatabase.MIGRATION_14_15
             )
+            .fallbackToDestructiveMigrationOnDowngrade()
             .addCallback(object : RoomDatabase.Callback() {
                 override fun onOpen(db: SupportSQLiteDatabase) {
                     db.execSQL("PRAGMA foreign_keys = ON")
