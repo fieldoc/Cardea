@@ -769,12 +769,16 @@ class WorkoutForegroundService : LifecycleService() {
                     kotlinx.coroutines.withTimeoutOrNull(3000L) {
                         val finalDist = WorkoutState.snapshot.value.distanceMeters
                         val durationMs = clock.now() - workoutStartMs
-                        if (finalDist < 200f || durationMs < 60_000L) {
+                        // Must match stopWorkout(): only discard when BOTH short distance AND short time
+                        if (finalDist < 200f && durationMs < 60_000L) {
                             repository.deleteWorkout(workoutId)
                         } else {
                             val workout = repository.getWorkoutById(workoutId)
                             if (workout != null && workout.endTime == 0L) {
-                                repository.updateWorkout(workout.copy(endTime = clock.now()))
+                                repository.updateWorkout(workout.copy(
+                                    endTime = clock.now(),
+                                    totalDistanceMeters = finalDist
+                                ))
                             }
                         }
                     }
