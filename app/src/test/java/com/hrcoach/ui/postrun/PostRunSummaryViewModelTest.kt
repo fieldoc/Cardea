@@ -150,13 +150,107 @@ class PostRunSummaryViewModelTest {
     }
 
     @Test
-    fun `non-fresh workout does not activate HRR`() = runTest {
+    fun `non-fresh workout does not clear completedWorkoutId`() = runTest {
         stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(completedWorkoutId = 1L))
 
-        val vm = buildVm(fresh = false)
+        buildVm(fresh = false)
         advanceUntilIdle()
 
-        // Non-fresh should never set isHrrActive; the countdown never fires
-        assertFalse(vm.uiState.value.isHrrActive)
+        // Non-fresh loads should NOT touch completedWorkoutId
+        assertEquals(1L, WorkoutState.snapshot.value.completedWorkoutId)
+    }
+
+    // --- Issue 6 / Issue 7 regression tests ---
+
+    @Test
+    fun `bootcamp completer crash does not break workout summary`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } throws
+            RuntimeException("DB constraint violation")
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        // Summary should still be visible despite bootcamp crash
+        assertFalse(state.isLoading)
+        assertNull(state.errorMessage)
+        assertTrue("distanceText should contain '5.00'", state.distanceText.contains("5.00"))
+        // Bootcamp status should remain false (completion threw)
+        assertFalse(state.isBootcampRun)
+    }
+
+    @Test
+    fun `completedWorkoutId cleared even when bootcamp completer crashes`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(
+            pendingBootcampSessionId = 42L,
+            completedWorkoutId = 1L
+        ))
+        coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } throws
+            RuntimeException("crash")
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        // completedWorkoutId MUST be cleared regardless of bootcamp failure
+        assertNull(WorkoutState.snapshot.value.completedWorkoutId)
+    }
+
+    @Test
+    fun `pendingBootcampSessionId cleared even when completion returns false`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 99L))
+        coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } returns
+            BootcampSessionCompleter.CompletionResult(completed = false)
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        // Must be cleared to avoid stale-state on next run
+        assertNull(WorkoutState.snapshot.value.pendingBootcampSessionId)
+    }
+
+    @Test
+    fun `pendingBootcampSessionId cleared even when completer throws`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 99L))
+        coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } throws
+            RuntimeException("boom")
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertNull(WorkoutState.snapshot.value.pendingBootcampSessionId)
+    }
+
+    @Test
+    fun `achievement crash does not break workout summary`() = runTest {
+        stubDefaults()
+        coEvery { achievementEvaluator.evaluateDistance(any(), any()) } throws
+            RuntimeException("achievement crash")
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertFalse(state.isLoading)
+        assertNull(state.errorMessage)
+        assertTrue("distanceText should contain '5.00'", state.distanceText.contains("5.00"))
+    }
+
+    @Test
+    fun `summary load failure still clears completedWorkoutId`() = runTest {
+        stubDefaults()
+        coEvery { workoutRepository.getWorkoutById(1L) } returns null
+        WorkoutState.set(WorkoutSnapshot(completedWorkoutId = 1L))
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        // Even when summary fails, completedWorkoutId must be cleared
+        assertNull(WorkoutState.snapshot.value.completedWorkoutId)
     }
 }
