@@ -29,9 +29,9 @@ Even when the preset resolves correctly (maxHr is known), the `zone2_base` prese
 
 In the service tick loop (`WorkoutForegroundService.kt:382`), when `target == null` (FREE_RUN), `zoneStatus` is forced to `NO_DATA`. `AlertPolicy.handle()` immediately returns on `NO_DATA` (line 26), so SLOW_DOWN/SPEED_UP never fire.
 
-### Bonus: Missing `strides_20s` preset
+### Known issue: Missing `strides_20s` preset (out of scope)
 
-`SessionPresetArray.stridesTier2()` and `stridesTier3()` reference `presetId = "strides_20s"`, but `PresetLibrary.ALL` has no entry for it. Any strides bootcamp session silently falls back to FREE_RUN.
+`SessionPresetArray.stridesTier2()` and `stridesTier3()` reference `presetId = "strides_20s"`, but `PresetLibrary.ALL` has no entry for it. Any strides bootcamp session silently falls back to FREE_RUN. However, this is a deeper design issue: `SessionPresetArray` uses the same `"strides_20s"` ID for 4x, 6x, 8x, and 10x variants (varying only the `minutes` field), but `WorkoutPreset.buildConfig` only receives `maxHr` — it cannot dynamically adjust repeat count. Fixing this properly requires either parameterizing `buildConfig` with duration or splitting into separate preset IDs (`strides_4x`, `strides_6x`, etc.). Tracked separately.
 
 ## Solution: Approach A — Fix at the Config-Building Layer
 
@@ -46,7 +46,13 @@ After calling `preset.buildConfig(maxHr)`, if:
 - `steadyStateTargetHr` is non-null
 - `session.minutes > 0`
 
-…then wrap the target HR into a single time-based `HrSegment` and switch mode to `DISTANCE_PROFILE`:
+…then wrap the target HR into a single time-based `HrSegment` and switch mode to `DISTANCE_PROFILE`.
+
+**Guard invariant:** This only triggers for `STEADY_STATE` mode. Presets that already produce `DISTANCE_PROFILE` (norwegian4x4, hiit3030, hillRepeats, race preps) are unaffected — their segments already carry duration/distance info.
+
+**Applies to all STEADY_STATE bootcamp presets**, not just easy runs — `aerobic_tempo` and `lactate_threshold` also benefit from HALFWAY/WORKOUT_COMPLETE cues when launched from bootcamp with a session duration.
+
+**Edge case — `session.minutes == 0`:** The `> 0` guard skips wrapping, so the config passes through as a plain STEADY_STATE with no duration. This means no HALFWAY/WORKOUT_COMPLETE events, but zone-based alerts (SLOW_DOWN/SPEED_UP) still work. This is acceptable — a 0-minute session is not a valid bootcamp state.
 
 ```kotlin
 config = config.copy(
@@ -83,32 +89,21 @@ At both "Start Run" button callsites (~line 1674 session detail card, ~line 1987
 
 This eliminates the silent FREE_RUN degradation path entirely from bootcamp flows.
 
-### Change 3: Add missing `strides_20s` preset
-
-**File:** `domain/preset/PresetLibrary.kt`
-
-Add a `strides20s()` function and include it in the `ALL` list:
-
-- **id:** `"strides_20s"`
-- **Category:** `INTERVAL`
-- **Structure:** Warm-up (5 min, 65% maxHr) → 6x [20s sprint at 90% maxHr + 60s recovery at 62% maxHr] → Cool-down (5 min, 60% maxHr)
-- **Total duration:** ~18 min
-- **Buffer:** 5 BPM
-
 ## Files Changed
 
 | File | Change |
 |------|--------|
 | `ui/bootcamp/BootcampScreen.kt` | `buildConfigJson`: wrap STEADY_STATE + duration into timed segment. Disable start button when maxHr null. |
-| `domain/preset/PresetLibrary.kt` | Add `strides20s()` preset and include in `ALL` |
 
 ## Testing Strategy
 
-1. **Unit test: `buildConfigJson` wrapping** — Verify STEADY_STATE preset + session.minutes → DISTANCE_PROFILE config with correct single segment (durationSeconds = minutes * 60, targetHr = preset target)
-2. **Unit test: CoachingEventRouter with timed segment** — Verify HALFWAY fires at 50% of totalDurationSeconds, WORKOUT_COMPLETE at 100%
-3. **Unit test: AlertPolicy with real zone status** — Confirm SLOW_DOWN fires for ABOVE_ZONE, SPEED_UP for BELOW_ZONE (existing tests, verify no regressions)
-4. **Unit test: strides_20s preset** — Verify buildConfig(maxHr=200) produces correct segment count, durations, and target HRs
-5. **UI test: maxHr gate** — Verify start button is disabled when maxHr is null, enabled when set
+1. **Unit test: config wrapping logic** — Extract the wrapping logic into a testable pure function. Verify:
+   - STEADY_STATE preset (zone2_base) + session.minutes=26 → DISTANCE_PROFILE with single segment (durationSeconds=1560, targetHr=68% of maxHr)
+   - STEADY_STATE preset (aerobic_tempo) + session.minutes=30 → DISTANCE_PROFILE with single segment (durationSeconds=1800, targetHr=84% of maxHr)
+   - DISTANCE_PROFILE preset (norwegian4x4) + session.minutes=35 → unchanged (no wrapping, already has segments)
+   - session.minutes=0 → STEADY_STATE passes through unchanged
+2. **Regression test: CoachingEventRouter with timed segment** — Verify HALFWAY fires at 50% of totalDurationSeconds, WORKOUT_COMPLETE at 100% (existing behavior, regression guard)
+3. **Regression test: AlertPolicy** — Confirm SLOW_DOWN fires for ABOVE_ZONE, SPEED_UP for BELOW_ZONE (existing tests, no regressions)
 
 ## Out of Scope
 
@@ -116,3 +111,4 @@ Add a `strides20s()` function and include it in the `ALL` list:
 - Conservative default maxHr estimation (rejected: inaccurate coaching is worse than no coaching)
 - HR ceiling for FREE_RUN mode (not needed once bootcamp always has proper configs)
 - Freestyle/setup flow changes (those already handle mode selection correctly)
+- `strides_20s` preset (requires design work on parameterized presets — tracked separately)
