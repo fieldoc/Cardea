@@ -69,6 +69,7 @@ class WorkoutForegroundService : LifecycleService() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "workout_channel"
         private const val TRACK_POINT_INTERVAL_MS = 5_000L
+        private const val AUTO_PAUSE_GRACE_MS = 15_000L
     }
 
     @Inject
@@ -118,6 +119,7 @@ class WorkoutForegroundService : LifecycleService() {
     private var sessionAutoPauseEnabled: Boolean = true
     private var autoPauseStartMs: Long = 0L
     private var totalAutoPausedMs: Long = 0L
+    private var autoPauseGraceUntilMs: Long = 0L
 
     private var workoutId: Long = 0L
     private var workoutStartMs: Long = 0L
@@ -214,6 +216,7 @@ class WorkoutForegroundService : LifecycleService() {
         sessionAutoPauseEnabled = autoPauseSettingsRepository.isAutoPauseEnabled()
         autoPauseStartMs = 0L
         totalAutoPausedMs = 0L
+        autoPauseGraceUntilMs = 0L
         alertPolicy.reset()
         coachingEventRouter.reset()
         trackPointRecorder.reset()
@@ -246,14 +249,7 @@ class WorkoutForegroundService : LifecycleService() {
         startupJob?.cancel()
         startupJob = lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
-                workoutId = repository.createWorkout(
-                    WorkoutEntity(
-                        startTime = clock.now(),
-                        mode = workoutConfig.mode.name,
-                        targetConfig = gson.toJson(workoutConfig)
-                    )
-                )
-                workoutStartMs = clock.now()
+                // Start BLE and GPS early so they warm up during countdown
                 locationSource?.start()
 
                 if (!SimulationController.isActive) {
@@ -267,6 +263,23 @@ class WorkoutForegroundService : LifecycleService() {
                         }
                     }
                 }
+
+                // Play 3-2-1-GO countdown (suspends ~4 seconds)
+                coachingAudioManager?.playStartSequence(workoutConfig)
+
+                // NOW start the workout clock — after countdown completes
+                workoutId = repository.createWorkout(
+                    WorkoutEntity(
+                        startTime = clock.now(),
+                        mode = workoutConfig.mode.name,
+                        targetConfig = gson.toJson(workoutConfig)
+                    )
+                )
+                workoutStartMs = clock.now()
+
+                // Suppress auto-pause for 15 seconds so the runner can pocket
+                // their phone and start moving without seeing "Auto-Paused"
+                autoPauseGraceUntilMs = clock.now() + AUTO_PAUSE_GRACE_MS
 
                 WorkoutState.update { current ->
                     WorkoutSnapshot(
@@ -332,7 +345,8 @@ class WorkoutForegroundService : LifecycleService() {
         val nowMs = clock.now()
 
         // Auto-pause detection: run before elapsed-time math so state is fresh this tick
-        if (sessionAutoPauseEnabled) {
+        // Skip during grace period after start so runner can pocket phone without "Auto-Paused"
+        if (sessionAutoPauseEnabled && nowMs >= autoPauseGraceUntilMs) {
             when (autoPauseDetector?.update(tick.speed, nowMs)) {
                 AutoPauseEvent.PAUSED -> {
                     autoPauseStartMs = nowMs
