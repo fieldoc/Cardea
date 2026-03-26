@@ -7,7 +7,11 @@ data class WorkoutConfig(
     val bufferBpm: Int = 5,
     val alertDelaySec: Int = 15,
     val alertCooldownSec: Int = 30,
-    val presetId: String? = null
+    val presetId: String? = null,
+    /** Planned duration in minutes — for display only (e.g. bootcamp timed sessions). */
+    val plannedDurationMinutes: Int? = null,
+    /** Human-readable session label — for display only (e.g. "Easy Run"). */
+    val sessionLabel: String? = null
 ) {
     /**
      * Returns true when every segment is time-based (has [HrSegment.durationSeconds] set and

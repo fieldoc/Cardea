@@ -573,8 +573,12 @@ private fun WorkoutProgressStrip(
 
     val isFreeRun = state.isFreeRun
     val isTimeBased = config.isTimeBased()
+    // A timed free run has a planned duration but no HR segments (bootcamp timed sessions)
+    val isTimedFreeRun = isFreeRun && uiState.totalDurationSeconds != null
     val isDistanceBased = !isTimeBased && !isFreeRun &&
         config.mode == WorkoutMode.DISTANCE_PROFILE && config.segments.isNotEmpty()
+    val showProgressBar = isTimeBased || isDistanceBased || isTimedFreeRun
+    val isOpenFreeRun = isFreeRun && !isTimedFreeRun
 
     Box(
         modifier = Modifier
@@ -582,10 +586,10 @@ private fun WorkoutProgressStrip(
             .clip(RoundedCornerShape(10.dp))
             .background(GlassHighlight)
             .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = if (isFreeRun) 6.dp else 8.dp)
+            .padding(horizontal = 12.dp, vertical = if (isOpenFreeRun) 6.dp else 8.dp)
     ) {
-        if (isFreeRun) {
-            // Free run: just a centered label, no bar
+        if (isOpenFreeRun) {
+            // Open-ended free run: just a centered label, no bar
             Text(
                 text = typeLabel,
                 style = MaterialTheme.typography.labelSmall,
@@ -599,7 +603,7 @@ private fun WorkoutProgressStrip(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    if (isTimeBased) {
+                    if (isTimeBased || isTimedFreeRun) {
                         val totalSec = uiState.totalDurationSeconds ?: 0L
                         val remaining = (totalSec - uiState.elapsedSeconds).coerceAtLeast(0L)
                         Text(
@@ -634,7 +638,7 @@ private fun WorkoutProgressStrip(
 
                 // Progress bar
                 val progress = when {
-                    isTimeBased -> {
+                    isTimeBased || isTimedFreeRun -> {
                         val total = uiState.totalDurationSeconds ?: 1L
                         (uiState.elapsedSeconds.toFloat() / total).coerceIn(0f, 1f)
                     }

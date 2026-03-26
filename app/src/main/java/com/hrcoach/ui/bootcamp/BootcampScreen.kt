@@ -2754,9 +2754,14 @@ private fun buildConfigJson(session: PlannedSession, maxHr: Int?): String {
             return com.hrcoach.util.JsonCodec.gson.toJson(config)
         }
     }
-    // Fallback: free run if preset not found or maxHr unknown
+    // Fallback: free run with bootcamp session metadata for display
+    val label = session.type.name.lowercase().replaceFirstChar { it.uppercase() } + " Run"
     return com.hrcoach.util.JsonCodec.gson.toJson(
-        WorkoutConfig(mode = WorkoutMode.FREE_RUN)
+        WorkoutConfig(
+            mode = WorkoutMode.FREE_RUN,
+            plannedDurationMinutes = session.minutes,
+            sessionLabel = label
+        )
     )
 }
 

@@ -210,8 +210,26 @@ class WorkoutViewModel @Inject constructor(
     private fun deriveProgressInfo(config: WorkoutConfig?): ProgressInfo {
         if (config == null) return ProgressInfo()
         return when {
-            config.mode == WorkoutMode.FREE_RUN ->
-                ProgressInfo(workoutTypeLabel = "Open-ended \u00b7 No target")
+            config.mode == WorkoutMode.FREE_RUN -> {
+                val duration = config.plannedDurationMinutes
+                val label = config.sessionLabel
+                when {
+                    duration != null && label != null ->
+                        ProgressInfo(
+                            totalDurationSeconds = duration.toLong() * 60,
+                            workoutTypeLabel = "$duration min \u00b7 $label"
+                        )
+                    duration != null ->
+                        ProgressInfo(
+                            totalDurationSeconds = duration.toLong() * 60,
+                            workoutTypeLabel = "$duration min \u00b7 Timed run"
+                        )
+                    label != null ->
+                        ProgressInfo(workoutTypeLabel = label)
+                    else ->
+                        ProgressInfo(workoutTypeLabel = "Open-ended \u00b7 No target")
+                }
+            }
 
             config.isTimeBased() -> {
                 val total = config.segments.sumOf { it.durationSeconds?.toLong() ?: 0L }
