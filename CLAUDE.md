@@ -100,6 +100,24 @@ Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, *
 - **Guided workouts implementation plan:** `docs/plans/2026-03-01-preset-workout-profiles.md` — 12-task TDD plan; Tasks 1–2 already done in commit fd3d9d9.
 - Legacy: `docs/plans/2026-02-25-hr-coaching-app-design.md` — superseded; data model and alert behavior sections still valid, UI/UX sections replaced by the 2026-03-02 spec.
 
+## Pre-Commit Checklist (Anti-AI-Pitfall Guard)
+
+REQUIRED before every commit, merge, or push. If asked to commit/merge/push and this hasn't been run in the current session, respond: **"Before we save — want me to run the development checklist first?"** and wait for confirmation.
+
+Verify by **reading actual files**, not from memory. Report as a table: `Check | Finding | Verdict (PASS / FAIL / NOTE)`. Any FAIL blocks the commit.
+
+1. **UI wired, not decorative** — Every new trigger (button, gesture, toggle) in Compose has a real callback that reaches a ViewModel function. No `onClick = {}` no-ops, no TODO lambdas, no orphan composables that render but do nothing. If `isWideLayout` affects the screen, verify the feature works in both branches.
+
+2. **Real logic, not a stub** — The ViewModel function contains actual business logic inside `viewModelScope.launch { ... }`. Data flows end-to-end: **Compose UI → ViewModel → Repository → Room DAO**. Watch for functions that update `_uiState` optimistically but never call a repository method to persist the change.
+
+3. **Data saved and UI refreshed from source of truth** — Writes go through a Repository to Room (e.g., `bootcampRepository.createEnrollment()`, `workoutDao.update()`). After the write, UI refreshes from the database — either via automatic Flow re-emission (the `getActiveEnrollment()` collector pattern) or an explicit reload like `refreshFromEnrollment()` / `loadBootcampState()`. Flag any pattern that updates `_uiState` locally without a corresponding DB write — that state vanishes on process death.
+
+4. **Errors surfaced, not swallowed** — Every `try/catch` and failure path either: sets a user-visible error field (`loadError`, `connectionError`, `maxHrGateError`, `swapRestMessage`), shows a Snackbar, or has an explicit design reason to fail silently (document it in a comment). Flag any bare `catch (e: Exception) { }` or `catch` that only logs. `CancellationException` must always be re-thrown.
+
+5. **No phantom state** — New fields added to a `UiState` data class are actually read somewhere in the corresponding Screen composable. New ViewModel functions are actually called from UI code. Dead fields and unreachable functions are classic AI-generated bloat — delete them.
+
+6. **Filter/query logic tested** — Any new Room DAO query, domain filter (like `SessionRescheduler.availableDays`), or list transformation has at least one unit test covering the happy path and one covering the key exclusion/edge case. AI-generated filter predicates are especially prone to off-by-one and inverted logic.
+
 ## Ralph Loop (ralph-loop skill)
 
 - **Windows caveat:** The `setup-ralph-loop.sh` script fails when the prompt contains special characters like `(`, `×`, `&` — bash eval syntax errors. Keep ralph loop prompts to plain ASCII only.
