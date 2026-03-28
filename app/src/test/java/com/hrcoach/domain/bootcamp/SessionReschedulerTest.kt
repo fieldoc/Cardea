@@ -27,7 +27,7 @@ class SessionReschedulerTest {
             dayOfWeek = day, sessionType = type, targetMinutes = 30, status = status
         )
 
-    @Test fun moves_to_next_available_preferred_day() {
+    @Test fun moves_to_next_available_day() {
         val req = RescheduleRequest(
             session = session(day = 1),
             enrollment = enrollment(),
@@ -37,7 +37,8 @@ class SessionReschedulerTest {
         )
         val result = SessionRescheduler.reschedule(req)
         assertTrue(result is RescheduleResult.Moved)
-        assertEquals(3, (result as RescheduleResult.Moved).newDayOfWeek)
+        // Day 2 (Tue) is now available even though it's not a preferred day
+        assertEquals(2, (result as RescheduleResult.Moved).newDayOfWeek)
     }
 
     @Test fun skips_blackout_days() {
@@ -45,12 +46,15 @@ class SessionReschedulerTest {
             session = session(day = 1),
             enrollment = enrollment(dayPrefs(
                 1 to DaySelectionLevel.AVAILABLE,
+                2 to DaySelectionLevel.BLACKOUT,
                 3 to DaySelectionLevel.BLACKOUT,
+                4 to DaySelectionLevel.BLACKOUT,
+                5 to DaySelectionLevel.BLACKOUT,
                 6 to DaySelectionLevel.AVAILABLE
             )),
             todayDayOfWeek = 1,
             occupiedDaysThisWeek = setOf(1),
-            allSessionsThisWeek = listOf(session(1), session(3), session(6))
+            allSessionsThisWeek = listOf(session(1), session(6))
         )
         val result = SessionRescheduler.reschedule(req)
         assertEquals(6, (result as RescheduleResult.Moved).newDayOfWeek)
@@ -60,9 +64,16 @@ class SessionReschedulerTest {
         val easySession  = session(day = 1, type = "EASY",  status = "SKIPPED")
         val tempoSession = session(day = 3, type = "TEMPO")
         val longSession  = session(day = 6, type = "LONG_RUN")
+        // All remaining days (5,6,7) are either occupied or blackout
         val req = RescheduleRequest(
             session = tempoSession,
-            enrollment = enrollment(),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,
+                5 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.AVAILABLE,
+                7 to DaySelectionLevel.BLACKOUT
+            )),
             todayDayOfWeek = 5,
             occupiedDaysThisWeek = setOf(1, 3, 6),
             allSessionsThisWeek = listOf(easySession, tempoSession, longSession)
@@ -77,12 +88,18 @@ class SessionReschedulerTest {
     }
 
     @Test fun respects_48h_recovery_gap_for_hard_sessions() {
+        // Rescheduling a TEMPO from day 1. Day 2 has a TEMPO, so day 3 violates
+        // recovery gap (adjacent to day 2 hard session). Days 4-7 blackout.
         val req = RescheduleRequest(
             session = session(day = 1, type = "TEMPO"),
             enrollment = enrollment(dayPrefs(
                 1 to DaySelectionLevel.AVAILABLE,
                 2 to DaySelectionLevel.AVAILABLE,
-                3 to DaySelectionLevel.AVAILABLE
+                3 to DaySelectionLevel.AVAILABLE,
+                4 to DaySelectionLevel.BLACKOUT,
+                5 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.BLACKOUT,
+                7 to DaySelectionLevel.BLACKOUT
             )),
             todayDayOfWeek = 1,
             occupiedDaysThisWeek = setOf(1, 2),
@@ -130,19 +147,36 @@ class SessionReschedulerTest {
         assertFalse("Today (3) should NOT be offered when occupied", 3 in result)
     }
 
-    @Test fun skips_none_level_days() {
+    @Test fun allows_non_preferred_days_for_reschedule() {
+        // Preferred days are Mon(1), Wed(3), Sat(6) — but Tue(2) should still
+        // be offered because rescheduling allows any non-BLACKOUT day.
+        val req = RescheduleRequest(
+            session = session(day = 1),
+            enrollment = enrollment(),  // prefs: 1, 3, 6
+            todayDayOfWeek = 1,
+            occupiedDaysThisWeek = setOf(1),
+            allSessionsThisWeek = listOf(session(1), session(3), session(6))
+        )
+        val result = SessionRescheduler.availableDays(req)
+        assertTrue("Non-preferred day 2 (Tue) should be available", 2 in result)
+        assertTrue("Non-preferred day 4 (Thu) should be available", 4 in result)
+        assertTrue("Non-preferred day 5 (Fri) should be available", 5 in result)
+    }
+
+    @Test fun still_skips_none_level_days_that_are_blackout() {
+        // NONE-level days are now allowed, but BLACKOUT days are still excluded.
         val req = RescheduleRequest(
             session = session(day = 1),
             enrollment = enrollment(dayPrefs(
                 1 to DaySelectionLevel.AVAILABLE,
-                4 to DaySelectionLevel.NONE,
+                4 to DaySelectionLevel.BLACKOUT,
                 6 to DaySelectionLevel.AVAILABLE
             )),
             todayDayOfWeek = 1,
             occupiedDaysThisWeek = setOf(1),
             allSessionsThisWeek = listOf(session(1), session(6))
         )
-        val result = SessionRescheduler.reschedule(req)
-        assertEquals(6, (result as RescheduleResult.Moved).newDayOfWeek)
+        val result = SessionRescheduler.availableDays(req)
+        assertFalse("BLACKOUT day 4 should NOT be offered", 4 in result)
     }
 }

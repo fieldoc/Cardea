@@ -42,12 +42,10 @@ object SessionRescheduler {
             // Never "reschedule" to the session's own day (no-op move)
             if (candidate == req.session.dayOfWeek) return@filter false
             val pref = prefs.find { it.day == candidate }
-            val isRunnable = pref != null &&
-                pref.level != DaySelectionLevel.NONE &&
-                pref.level != DaySelectionLevel.BLACKOUT
+            val isBlackout = pref?.level == DaySelectionLevel.BLACKOUT
             val isOccupied = candidate in req.occupiedDaysThisWeek
             val violatesRecovery = hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 }
-            isRunnable && !isOccupied && !violatesRecovery
+            !isBlackout && !isOccupied && !violatesRecovery
         }
     }
 
