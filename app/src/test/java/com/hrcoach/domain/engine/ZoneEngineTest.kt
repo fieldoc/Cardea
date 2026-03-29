@@ -87,8 +87,9 @@ class ZoneEngineTest {
         engine = ZoneEngine(config)
         assertEquals(ZoneStatus.IN_ZONE, engine.evaluate(hr = 140, distanceMeters = 0f))
         assertEquals(ZoneStatus.IN_ZONE, engine.evaluate(hr = 160, distanceMeters = 0f))
-        assertEquals(ZoneStatus.BELOW_ZONE, engine.evaluate(hr = 139, distanceMeters = 0f))
-        assertEquals(ZoneStatus.ABOVE_ZONE, engine.evaluate(hr = 161, distanceMeters = 0f))
+        // After IN_ZONE, hysteresis widens band by HYSTERESIS_BPM (2), so need < 138 / > 162
+        assertEquals(ZoneStatus.BELOW_ZONE, engine.evaluate(hr = 137, distanceMeters = 0f))
+        assertEquals(ZoneStatus.ABOVE_ZONE, engine.evaluate(hr = 163, distanceMeters = 0f))
     }
 
     @Test
@@ -101,8 +102,9 @@ class ZoneEngineTest {
         val engine = ZoneEngine(config)
         assertEquals(ZoneStatus.IN_ZONE,    engine.evaluate(hr = 155, targetHr = 160))
         assertEquals(ZoneStatus.IN_ZONE,    engine.evaluate(hr = 165, targetHr = 160))
-        assertEquals(ZoneStatus.BELOW_ZONE, engine.evaluate(hr = 154, targetHr = 160))
-        assertEquals(ZoneStatus.ABOVE_ZONE, engine.evaluate(hr = 166, targetHr = 160))
+        // After IN_ZONE, hysteresis widens band by HYSTERESIS_BPM (2), so need < 153 / > 167
+        assertEquals(ZoneStatus.BELOW_ZONE, engine.evaluate(hr = 152, targetHr = 160))
+        assertEquals(ZoneStatus.ABOVE_ZONE, engine.evaluate(hr = 168, targetHr = 160))
     }
 
     @Test
