@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea HomeScreen — Bottom Half Explorations</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #050505;
+    --bg-secondary: #0D0D0D;
+    --bg-page: #0A0A0F;
+    --glass-border: rgba(255,255,255,0.10);
+    --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
+    --glass-highlight: rgba(255,255,255,0.04);
+    --text-primary: #FFFFFF;
+    --text-secondary: #A1A1AA;
+    --text-tertiary: #52525B;
+    --gradient-red: #FF4D5A;
+    --gradient-pink: #FF2DA6;
+    --gradient-blue: #4D61FF;
+    --gradient-cyan: #00E5FF;
+    --cardea-gradient: linear-gradient(135deg, #FF4D5A 0%, #FF2DA6 35%, #4D61FF 65%, #00E5FF 100%);
+  }
+
+  body {
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* Page header */
+  .page-header {
+    text-align: center;
+    padding: 48px 20px 16px;
+  }
+  .page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    font-weight: 900;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  .page-header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .tab-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 20px 32px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 9px 20px;
+    border-radius: 100px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+  }
+  .tab-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text-primary); }
+  .tab-btn.active { background: var(--cardea-gradient); border-color: transparent; color: white; font-weight: 600; }
+
+  /* Grid views */
+  .mockup-grid { display: none; justify-content: center; gap: 40px; padding: 0 20px 60px; flex-wrap: wrap; }
+  .mockup-grid.active { display: flex; }
+  .all-grid { display: none; justify-content: center; gap: 28px; padding: 0 20px 60px; flex-wrap: wrap; }
+  .all-grid.active { display: flex; }
+  .all-grid .phone-frame { transform: scale(0.68); transform-origin: top center; }
+  .all-grid .mockup-wrapper { max-width: 280px; }
+  .mockup-wrapper { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+
+  .annotations { max-width: 360px; display: flex; flex-direction: column; gap: 14px; }
+  .annotation { padding: 14px 18px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-highlight); font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+  .annotation strong { color: var(--text-primary); display: block; margin-bottom: 3px; font-weight: 600; }
+  .annotation.highlight { border-color: rgba(255,45,166,0.2); background: rgba(255,45,166,0.04); }
+  .annotation.highlight strong { color: var(--gradient-pink); }
+
+  .mockup-label { text-align: center; padding: 16px 0 4px; }
+  .mockup-label h3 { font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 1px; color: var(--text-primary); font-weight: 600; }
+  .mockup-label p { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+  /* Phone frame — exact iPhone 15 Pro ratio */
+  .phone-frame {
+    width: 393px;
+    height: 852px;
+    border-radius: 44px;
+    overflow: hidden;
+    position: relative;
+    border: 3px solid rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 25px 80px rgba(0,0,0,0.6);
+    flex-shrink: 0;
+  }
+  .phone-inner {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(circle at 50% 20%, var(--bg-secondary) 0%, var(--bg-primary) 70%);
+    overflow: hidden; /* NO SCROLL */
+  }
+
+  /* Status bar */
+  .status-bar {
+    flex: 0 0 52px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: white;
+  }
+
+  /* Greeting */
+  .greeting-row {
+    flex: 0 0 42px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+  }
+  .greeting-text { font-size: 15px; color: var(--text-secondary); font-weight: 500; }
+  .header-icons { display: flex; gap: 10px; align-items: center; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid var(--glass-border); background: var(--glass-highlight);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  /* PULSE HERO — shared across all 4 */
+  .pulse-hero {
+    flex: 0 0 200px;
+    position: relative;
+    padding: 20px 20px 0;
+    overflow: hidden;
+  }
+  .pulse-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,77,90,0.10) 0%, rgba(77,97,255,0.10) 50%, rgba(0,229,255,0.05) 100%);
+  }
+  .pulse-hero .session-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--text-secondary); margin-bottom: 6px;
+    position: relative;
+  }
+  .pulse-hero .session-type {
+    font-size: 28px; font-weight: 700; color: white;
+    margin-bottom: 4px; position: relative;
+  }
+  .pulse-hero .session-detail {
+    font-size: 14px; color: var(--text-secondary);
+    margin-bottom: 10px; position: relative;
+  }
+  .zone-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.5px;
+    position: relative;
+  }
+  .zone-pill.z2 { background: rgba(77,97,255,0.2); color: #7B8FFF; }
+
+  .ecg-container { position: absolute; bottom: 0; left: 0; right: 0; height: 90px; opacity: 0.5; }
+  .ecg-line { stroke: url(#ecg-grad); stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .ecg-glow {
+    position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: 180px; height: 60px;
+    background: radial-gradient(ellipse, rgba(255,45,166,0.2) 0%, transparent 70%);
+    filter: blur(16px);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.7; transform: translateX(-50%) scale(1.12); }
+  }
+
+  /* CTA */
+  .cta-row {
+    flex: 0 0 56px;
+    display: flex;
+    align-items: center;
+    padding: 6px 20px;
+  }
+  .cta-btn {
+    width: 100%; padding: 14px;
+    border-radius: 14px; border: none;
+    background: var(--cardea-gradient);
+    color: white; font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 700;
+    text-align: center; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(255,45,166,0.2);
+  }
+
+  /* ---- DIVIDER: top half above, bottom half below ---- */
+
+  /* Bottom content area — fills remaining space */
+  .bottom-half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Bottom nav */
+  .bottom-nav {
+    flex: 0 0 76px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 6px 16px 18px;
+    border-top: 1px solid var(--glass-border);
+    background: rgba(5,5,5,0.92);
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 3px; font-size: 9px; color: var(--text-tertiary); font-weight: 500;
+  }
+  .nav-item.active { color: var(--text-primary); }
+  .nav-item svg { width: 20px; height: 20px; }
+  .nav-item.active svg { stroke: url(#nav-grad); }
+
+  /* Shared stat chip styles */
+  .stat-chip-mini {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  .stat-chip-mini .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px; font-weight: 600;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stat-chip-mini .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--text-tertiary); letter-spacing: 1px;
+  }
+
+  /* Custom Cardea icons */
+  .cardea-icon { width: 20px; height: 20px; flex-shrink: 0; }
+  .cardea-icon path, .cardea-icon polyline, .cardea-icon line, .cardea-icon circle {
+    stroke: url(#icon-grad);
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .cardea-icon .filled { fill: url(#icon-grad); stroke: none; }
+
+  /* ==========================================
+     BOTTOM E: "Fused Strip" — Everything in
+     two ultra-compact horizontal bands
+     ========================================== */
+  .bottom-e {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 0 0;
+  }
+  .fused-stats {
+    display: flex;
+    justify-content: space-around;
+    padding: 0 20px;
+    align-items: center;
+  }
+  .fused-divider {
+    width: 1px; height: 32px;
+    background: var(--glass-border);
+  }
+  .fused-progress {
+    margin: 0 20px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-highlight);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .fused-bar-area { flex: 1; }
+  .fused-bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .fused-bar-header .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; color: var(--text-tertiary);
+  }
+  .fused-bar-header .pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .fused-bar-track {
+    height: 5px; border-radius: 3px;
+    background: rgba(255,255,255,0.06); overflow: hidden;
+  }
+  .fused-bar-fill {
+    height: 100%; border-radius: 3px;
+    background: var(--cardea-gradient);
+  }
+  .fused-ring-mini {
+    flex: 0 0 48px; height: 48px; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .fused-ring-mini svg { width: 48px; height: 48px; }
+  .fused-ring-mini .mini-label {
+    position: absolute;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  }
+  .fused-coaching {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    margin: 0 20px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-highlight);
+  }
+  .fused-coaching .coach-text {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.35;
+  }
+  .fused-coaching .coach-text strong {
+    color: var(--text-primary); font-weight: 600;
+  }
+  .fused-volume-row {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px;
+  }
+  .fused-vol-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .fused-vol-item .vol-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .fused-vol-item .vol-header .vol-val { color: var(--text-secondary); }
+
+  /* ==========================================
+     BOTTOM F: "Data Tiles" — 2x2 compact grid
+     ========================================== */
+  .bottom-f {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10px 0 0;
+  }
+  .tile-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 0 16px;
+  }
+  .tile {
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-highlight);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tile .tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tile .tile-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; color: var(--text-tertiary);
+  }
+  .tile .tile-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px; font-weight: 600;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .tile .tile-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-tertiary);
+  }
+  .tile.coaching-tile {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+  }
+  .coaching-tile .coach-text {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.35;
+  }
+  .coaching-tile .coach-text strong { color: var(--text-primary); font-weight: 600; }
+
+  /* ==========================================
+     BOTTOM G: "Ambient Bands" — Full-width
+     gradient-accented horizontal bands
+     ========================================== */
+  .bottom-g {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    padding: 6px 0 0;
+  }
+  .band {
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+  }
+  .band-stats {
+    justify-content: space-around;
+    padding: 10px 24px;
+    position: relative;
+  }
+  .band-stats::before {
+    content: '';
+    position: absolute;
+    left: 20px; right: 20px;
+    bottom: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+  }
+  .band-progress {
+    padding: 8px 20px;
+    gap: 12px;
+  }
+  .band-progress-info {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .band-progress-info .bp-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; color: var(--text-tertiary);
+  }
+  .band-progress-info .bp-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 16px; font-weight: 600;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .band-bar-container { flex: 1; }
+  .band-volume {
+    padding: 8px 20px;
+    gap: 16px;
+    position: relative;
+  }
+  .band-volume::after {
+    content: '';
+    position: absolute;
+    left: 20px; right: 20px;
+    bottom: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+  }
+  .bv-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .bv-item .bv-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1px; color: var(--text-tertiary);
+    flex: 0 0 28px;
+  }
+  .bv-item .bv-track {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.06); overflow: hidden;
+  }
+  .bv-item .bv-fill { height: 100%; border-radius: 2px; background: var(--cardea-gradient); }
+  .bv-item .bv-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--text-secondary);
+    flex: 0 0 auto;
+  }
+  .band-coaching {
+    padding: 8px 20px;
+    gap: 10px;
+  }
+  .band-coaching .coach-text { font-size: 13px; color: var(--text-secondary); line-height: 1.35; }
+  .band-coaching .coach-text strong { color: var(--text-primary); font-weight: 600; }
+
+  /* ==========================================
+     BOTTOM H: "Ring Focus" — Centered ring
+     with stats as arc-positioned labels
+     ========================================== */
+  .bottom-h {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0 0;
+  }
+  .ring-focus-area {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ring-focus-svg { width: 180px; height: 180px; }
+  .rf-track { fill: none; stroke: rgba(255,255,255,0.04); stroke-width: 10; }
+  .rf-progress { fill: none; stroke: url(#ring-grad-h); stroke-width: 10; stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; }
+  .rf-center {
+    position: absolute;
+    text-align: center;
+  }
+  .rf-center .rf-pct {
+    font-size: 36px; font-weight: 700;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    line-height: 1;
+  }
+  .rf-center .rf-week {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; color: var(--text-secondary);
+    margin-top: 2px;
+  }
+  .rf-stat {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+  }
+  .rf-stat .rf-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px; font-weight: 600; color: var(--text-primary);
+  }
+  .rf-stat .rf-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; letter-spacing: 1px; color: var(--text-tertiary);
+  }
+  .rf-stat.pos-left { left: -60px; top: 50%; transform: translateY(-50%); }
+  .rf-stat.pos-right { right: -60px; top: 50%; transform: translateY(-50%); }
+  .rf-stat.pos-bottom { bottom: -30px; left: 50%; transform: translateX(-50%); }
+
+  .h-volume-coaching {
+    width: 100%;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .h-volume-strip {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-highlight);
+  }
+  .h-vol-bar-area { flex: 1; }
+  .h-vol-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; color: var(--text-tertiary);
+    margin-bottom: 4px;
+  }
+  .h-vol-header .hvv { color: var(--text-secondary); }
+  .h-vol-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .h-vol-fill { height: 100%; border-radius: 2px; background: var(--cardea-gradient); }
+  .h-coaching-strip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-highlight);
+  }
+  .h-coaching-strip .coach-text { font-size: 13px; color: var(--text-secondary); line-height: 1.3; }
+  .h-coaching-strip .coach-text strong { color: var(--text-primary); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- SVG Defs for gradients and custom icons -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="ecg-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="35%" stop-color="#FF2DA6"/>
+      <stop offset="65%" stop-color="#4D61FF"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="icon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="35%" stop-color="#FF2DA6"/>
+      <stop offset="65%" stop-color="#4D61FF"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="ring-grad-e" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="50%" stop-color="#FF2DA6"/>
+      <stop offset="100%" stop-color="#4D61FF"/>
+    </linearGradient>
+    <linearGradient id="ring-grad-h" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="50%" stop-color="#FF2DA6"/>
+      <stop offset="100%" stop-color="#4D61FF"/>
+    </linearGradient>
+    <linearGradient id="nav-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="100%" stop-color="#4D61FF"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="page-header">
+  <h1>Bottom Half Explorations</h1>
+  <p>PULSE hero (top) is locked. Four layouts for stats + progress + coaching below — all fit without scrolling.</p>
+</div>
+
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="showTab('all')">All 4</button>
+  <button class="tab-btn" onclick="showTab('fused')">E: Fused Strip</button>
+  <button class="tab-btn" onclick="showTab('tiles')">F: Data Tiles</button>
+  <button class="tab-btn" onclick="showTab('bands')">G: Ambient Bands</button>
+  <button class="tab-btn" onclick="showTab('ringfocus')">H: Ring Focus</button>
+</div>
+
+<!-- ALL VIEW -->
+<div id="tab-all" class="all-grid active">
+  <div class="mockup-wrapper">
+    <div class="mockup-label"><h3>E — FUSED STRIP</h3><p>Horizontal compact bands</p></div>
+    <div class="phone-frame" id="phone-e-small"></div>
+  </div>
+  <div class="mockup-wrapper">
+    <div class="mockup-label"><h3>F — DATA TILES</h3><p>2x2 card grid</p></div>
+    <div class="phone-frame" id="phone-f-small"></div>
+  </div>
+  <div class="mockup-wrapper">
+    <div class="mockup-label"><h3>G — AMBIENT BANDS</h3><p>Full-width layered strips</p></div>
+    <div class="phone-frame" id="phone-g-small"></div>
+  </div>
+  <div class="mockup-wrapper">
+    <div class="mockup-label"><h3>H — RING FOCUS</h3><p>Centered ring + peripherals</p></div>
+    <div class="phone-frame" id="phone-h-small"></div>
+  </div>
+</div>
+
+<!-- INDIVIDUAL TABS -->
+<div id="tab-fused" class="mockup-grid">
+  <div class="phone-frame" id="phone-e-big"></div>
+  <div class="annotations">
+    <div class="annotation"><strong>Fused Strip</strong>Everything compressed into three horizontal bands: stats as bare numbers, progress as a single bar with mini ring, coaching as a tight card. Maximum data density, zero scroll.</div>
+    <div class="annotation"><strong>Volume Bars</strong>Distance and time shown as inline progress bars between stats and coaching. Each bar has a subtle gradient fill matching the Cardea spectrum.</div>
+    <div class="annotation highlight"><strong>Custom Icon: Pulse Echo</strong>The coaching icon is a miniature ECG peak — echoing the hero waveform above. Ties the whole screen together as one biometric narrative.</div>
+  </div>
+</div>
+
+<div id="tab-tiles" class="mockup-grid">
+  <div class="phone-frame" id="phone-f-big"></div>
+  <div class="annotations">
+    <div class="annotation"><strong>Data Tiles</strong>A 2x2 grid gives each metric its own breathing room: Goal progress, Streak count, Bootcamp week, and Volume. Coaching insight spans full width at the bottom.</div>
+    <div class="annotation"><strong>Tile Icons</strong>Each tile has a custom Cardea icon in the header — gradient-stroked SVGs that feel native to the design system. No emoji anywhere.</div>
+    <div class="annotation highlight"><strong>Custom Icon: Ascending Flame</strong>The coaching icon is an upward flame — representing momentum and energy. Drawn with the Cardea gradient stroke, not a generic emoji.</div>
+  </div>
+</div>
+
+<div id="tab-bands" class="mockup-grid">
+  <div class="phone-frame" id="phone-g-big"></div>
+  <div class="annotations">
+    <div class="annotation"><strong>Ambient Bands</strong>Full-width horizontal layers separated by subtle gradient hairlines. No cards, no borders — just floating data in clean rows. The most minimal approach.</div>
+    <div class="annotation"><strong>Breathing Room</strong>Space is distributed evenly between bands using flexbox justify-content: space-evenly. The content breathes without feeling sparse.</div>
+    <div class="annotation highlight"><strong>Custom Icon: Compass Rose</strong>A tiny directional compass — representing guidance and direction. The Cardea gradient rotates through its 4-stop spectrum around the compass points.</div>
+  </div>
+</div>
+
+<div id="tab-ringfocus" class="mockup-grid">
+  <div class="phone-frame" id="phone-h-big"></div>
+  <div class="annotations">
+    <div class="annotation"><strong>Ring Focus</strong>The progress ring is the centerpiece of the bottom half — larger than in the original but smaller than ORBIT. Stats float at the cardinal positions (left, right, bottom).</div>
+    <div class="annotation"><strong>Volume + Coaching Collapsed</strong>Two thin strips at the bottom: volume as inline bars, coaching as a one-liner. Everything above the nav without scrolling.</div>
+    <div class="annotation highlight"><strong>Custom Icon: Heart Rate Peak</strong>A stylized HR spike — a single QRS complex from an ECG. The most Cardea-native icon possible, drawn with the 4-stop gradient.</div>
+  </div>
+</div>
+
+<script>
+// ===== Custom Cardea SVG Icons =====
+const ICONS = {
+  // Pulse echo — mini ECG waveform
+  pulseEcho: `<svg class="cardea-icon" viewBox="0 0 20 20"><polyline points="1,10 5,10 7,4 9,16 11,6 13,12 15,10 19,10" stroke="url(#icon-grad)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+
+  // Ascending flame — momentum
+  flame: `<svg class="cardea-icon" viewBox="0 0 20 20"><path d="M10,2 C10,2 14,6 14,10 C14,12.5 12.5,15 10,15 C7.5,15 6,12.5 6,10 C6,8 7,6.5 8,5.5 C8,7.5 9,8.5 10,8 C10,6 10,2 10,2Z" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M10,18 C6.5,18 4,15.5 4,12 C4,9 6,6 8,4" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/></svg>`,
+
+  // Compass rose — guidance
+  compass: `<svg class="cardea-icon" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="url(#icon-grad)" fill="none" stroke-width="1.5"/><polygon points="10,3 11.5,9 10,8 8.5,9" class="filled" fill="url(#icon-grad)" stroke="none"/><polygon points="10,17 8.5,11 10,12 11.5,11" stroke="url(#icon-grad)" fill="none" stroke-width="1" opacity="0.4"/><line x1="10" y1="1" x2="10" y2="3" stroke="url(#icon-grad)" stroke-width="1.5"/><line x1="10" y1="17" x2="10" y2="19" stroke="url(#icon-grad)" stroke-width="1.5"/></svg>`,
+
+  // Heart rate peak — QRS complex
+  hrPeak: `<svg class="cardea-icon" viewBox="0 0 20 20"><polyline points="1,12 6,12 8,12 9,4 10,17 11.5,8 13,12 14,12 19,12" stroke="url(#icon-grad)" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+
+  // Small icons for tiles
+  target: `<svg class="cardea-icon" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" stroke="url(#icon-grad)" fill="none" stroke-width="1.5"/><circle cx="10" cy="10" r="3.5" stroke="url(#icon-grad)" fill="none" stroke-width="1.5"/><circle cx="10" cy="10" r="1" class="filled" fill="url(#icon-grad)"/></svg>`,
+
+  streak: `<svg class="cardea-icon" viewBox="0 0 20 20"><path d="M10,2 L12,7 L17,7 L13,10.5 L14.5,16 L10,12.5 L5.5,16 L7,10.5 L3,7 L8,7 Z" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+
+  calendar: `<svg class="cardea-icon" viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2" stroke="url(#icon-grad)" fill="none" stroke-width="1.5"/><line x1="3" y1="8" x2="17" y2="8" stroke="url(#icon-grad)" stroke-width="1.5"/><line x1="7" y1="2" x2="7" y2="5" stroke="url(#icon-grad)" stroke-width="1.5"/><line x1="13" y1="2" x2="13" y2="5" stroke="url(#icon-grad)" stroke-width="1.5"/></svg>`,
+
+  volume: `<svg class="cardea-icon" viewBox="0 0 20 20"><polyline points="2,14 6,8 10,11 14,5 18,3" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="3" x2="18" y2="7" stroke="url(#icon-grad)" stroke-width="1.5" stroke-linecap="round"/><line x1="18" y1="3" x2="14" y2="3" stroke="url(#icon-grad)" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+
+  sensor: `<svg class="cardea-icon" viewBox="0 0 20 20"><path d="M10,14 C8.3,14 7,12.7 7,11 C7,9.3 8.3,8 10,8 C11.7,8 13,9.3 13,11 C13,12.7 11.7,14 10,14Z" stroke="url(#icon-grad)" fill="none" stroke-width="1.5"/><path d="M5.5,6 C3.5,7.5 2,9.5 2,11" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/><path d="M14.5,6 C16.5,7.5 18,9.5 18,11" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/></svg>`,
+
+  profile: `<svg class="cardea-icon" viewBox="0 0 20 20"><circle cx="10" cy="7" r="3.5" stroke="url(#icon-grad)" fill="none" stroke-width="1.5"/><path d="M3,18 C3,14 6,12 10,12 C14,12 17,14 17,18" stroke="url(#icon-grad)" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>`,
+};
+
+// ===== Shared top half =====
+function topHalf() {
+  return `
+    <div class="status-bar">9:41</div>
+    <div class="greeting-row">
+      <span class="greeting-text">Good morning</span>
+      <div class="header-icons">
+        <div class="icon-btn">${ICONS.sensor}</div>
+        <div class="icon-btn">${ICONS.profile}</div>
+      </div>
+    </div>
+    <div class="pulse-hero">
+      <div class="session-label">TODAY'S SESSION &middot; WEEK 5</div>
+      <div class="session-type">Z2 Easy Run</div>
+      <div class="session-detail">35 min &middot; Aerobic Base</div>
+      <span class="zone-pill z2">Zone 2</span>
+      <div class="ecg-glow"></div>
+      <div class="ecg-container">
+        <svg viewBox="0 0 393 90" preserveAspectRatio="none">
+          <path class="ecg-line" d="M0,55 L80,55 L100,55 L115,20 L130,80 L145,15 L160,65 L175,48 L190,55 L270,55 L290,55 L305,22 L320,78 L335,18 L350,62 L365,50 L380,55 L393,55" />
+        </svg>
+      </div>
+    </div>
+    <div class="cta-row">
+      <button class="cta-btn">Start Session</button>
+    </div>`;
+}
+
+// ===== Bottom nav =====
+function bottomNav() {
+  return `
+    <div class="bottom-nav">
+      <div class="nav-item active"><svg viewBox="0 0 20 20" width="20" height="20"><path d="M3,8 L10,2 L17,8 L17,17 L12,17 L12,12 L8,12 L8,17 L3,17 Z" stroke="url(#nav-grad)" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>Home</div>
+      <div class="nav-item"><svg viewBox="0 0 20 20" width="20" height="20"><polygon points="6,3 17,10 6,17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>Workout</div>
+      <div class="nav-item"><svg viewBox="0 0 20 20" width="20" height="20"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"/><line x1="3" y1="8" x2="17" y2="8" stroke="currentColor" stroke-width="1.5"/></svg>History</div>
+      <div class="nav-item"><svg viewBox="0 0 20 20" width="20" height="20"><polyline points="3,15 7,8 11,11 15,4 18,6" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Progress</div>
+      <div class="nav-item"><svg viewBox="0 0 20 20" width="20" height="20"><circle cx="10" cy="7" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M4,17 C4,13 6.5,11 10,11 C13.5,11 16,13 16,17" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>Account</div>
+    </div>`;
+}
+
+// ===== BOTTOM E: Fused Strip =====
+function bottomE() {
+  const r = 18;
+  const circ = 2 * Math.PI * r;
+  return `
+    <div class="bottom-e">
+      <div class="fused-stats">
+        <div class="stat-chip-mini"><span class="val">3/4</span><span class="lbl">GOAL</span></div>
+        <div class="fused-divider"></div>
+        <div class="stat-chip-mini"><span class="val">4.2</span><span class="lbl">LAST KM</span></div>
+        <div class="fused-divider"></div>
+        <div class="stat-chip-mini"><span class="val">7</span><span class="lbl">STREAK</span></div>
+      </div>
+      <div class="fused-progress">
+        <div class="fused-ring-mini">
+          <svg viewBox="0 0 44 44">
+            <circle cx="22" cy="22" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/>
+            <circle cx="22" cy="22" r="${r}" fill="none" stroke="url(#ring-grad-e)" stroke-width="4" stroke-linecap="round"
+              stroke-dasharray="${circ * 0.42} ${circ * 0.58}" transform="rotate(-90 22 22)"/>
+          </svg>
+          <span class="mini-label">W5</span>
+        </div>
+        <div class="fused-bar-area">
+          <div class="fused-bar-header"><span class="label">BOOTCAMP</span><span class="pct">42%</span></div>
+          <div class="fused-bar-track"><div class="fused-bar-fill" style="width:42%"></div></div>
+        </div>
+      </div>
+      <div class="fused-volume-row">
+        <div class="fused-vol-item">
+          <div class="vol-header"><span>DIST</span><span class="vol-val">12.4/15km</span></div>
+          <div class="fused-bar-track"><div class="fused-bar-fill" style="width:83%"></div></div>
+        </div>
+        <div class="fused-vol-item">
+          <div class="vol-header"><span>TIME</span><span class="vol-val">62/90min</span></div>
+          <div class="fused-bar-track"><div class="fused-bar-fill" style="width:69%"></div></div>
+        </div>
+      </div>
+      <div class="fused-coaching">
+        ${ICONS.pulseEcho}
+        <div class="coach-text"><strong>One more to goal</strong>3 runs done — finish strong this week</div>
+      </div>
+    </div>`;
+}
+
+// ===== BOTTOM F: Data Tiles =====
+function bottomF() {
+  return `
+    <div class="bottom-f">
+      <div class="tile-grid">
+        <div class="tile">
+          <div class="tile-header"><span class="tile-label">GOAL</span>${ICONS.target}</div>
+          <span class="tile-value">3/4</span>
+          <span class="tile-sub">runs this week</span>
+        </div>
+        <div class="tile">
+          <div class="tile-header"><span class="tile-label">STREAK</span>${ICONS.streak}</div>
+          <span class="tile-value">7</span>
+          <span class="tile-sub">no misses</span>
+        </div>
+        <div class="tile">
+          <div class="tile-header"><span class="tile-label">WEEK 5</span>${ICONS.calendar}</div>
+          <span class="tile-value">42%</span>
+          <span class="tile-sub">bootcamp</span>
+        </div>
+        <div class="tile">
+          <div class="tile-header"><span class="tile-label">VOLUME</span>${ICONS.volume}</div>
+          <span class="tile-value">12.4</span>
+          <span class="tile-sub">of 15 km</span>
+        </div>
+        <div class="tile coaching-tile">
+          ${ICONS.flame}
+          <div class="coach-text"><strong>One more to goal</strong> — 3 runs done, finish strong this week</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ===== BOTTOM G: Ambient Bands =====
+function bottomG() {
+  return `
+    <div class="bottom-g">
+      <div class="band band-stats">
+        <div class="stat-chip-mini"><span class="val">3/4</span><span class="lbl">GOAL</span></div>
+        <div class="stat-chip-mini"><span class="val">4.2</span><span class="lbl">LAST KM</span></div>
+        <div class="stat-chip-mini"><span class="val">7</span><span class="lbl">STREAK</span></div>
+      </div>
+      <div class="band band-progress">
+        <div class="band-progress-info">
+          <span class="bp-label">WEEK 5</span>
+          <span class="bp-value">42%</span>
+        </div>
+        <div class="band-bar-container">
+          <div class="fused-bar-track"><div class="fused-bar-fill" style="width:42%"></div></div>
+        </div>
+      </div>
+      <div class="band band-volume">
+        <div class="bv-item">
+          <span class="bv-label">DIST</span>
+          <div class="bv-track"><div class="bv-fill" style="width:83%"></div></div>
+          <span class="bv-val">12.4/15</span>
+        </div>
+        <div class="bv-item">
+          <span class="bv-label">TIME</span>
+          <div class="bv-track"><div class="bv-fill" style="width:69%"></div></div>
+          <span class="bv-val">62/90</span>
+        </div>
+      </div>
+      <div class="band band-coaching">
+        ${ICONS.compass}
+        <div class="coach-text"><strong>One more to goal</strong> — finish strong this week</div>
+      </div>
+    </div>`;
+}
+
+// ===== BOTTOM H: Ring Focus =====
+function bottomH() {
+  const r = 72;
+  const circ = 2 * Math.PI * r;
+  return `
+    <div class="bottom-h">
+      <div class="ring-focus-area">
+        <svg class="ring-focus-svg" viewBox="0 0 180 180">
+          <circle class="rf-track" cx="90" cy="90" r="${r}"/>
+          <circle class="rf-progress" cx="90" cy="90" r="${r}"
+            stroke-dasharray="${circ * 0.42} ${circ * 0.58}"/>
+        </svg>
+        <div class="rf-center">
+          <div class="rf-pct">42%</div>
+          <div class="rf-week">WEEK 5 OF 12</div>
+        </div>
+        <div class="rf-stat pos-left">
+          <span class="rf-val">3/4</span>
+          <span class="rf-lbl">GOAL</span>
+        </div>
+        <div class="rf-stat pos-right">
+          <span class="rf-val">7</span>
+          <span class="rf-lbl">STREAK</span>
+        </div>
+        <div class="rf-stat pos-bottom">
+          <span class="rf-val">4.2 km</span>
+          <span class="rf-lbl">LAST RUN</span>
+        </div>
+      </div>
+      <div class="h-volume-coaching">
+        <div class="h-volume-strip">
+          <div class="h-vol-bar-area">
+            <div class="h-vol-header"><span>DISTANCE</span><span class="hvv">12.4 / 15 km</span></div>
+            <div class="h-vol-track"><div class="h-vol-fill" style="width:83%"></div></div>
+          </div>
+          <div style="width:1px;height:24px;background:var(--glass-border)"></div>
+          <div class="h-vol-bar-area">
+            <div class="h-vol-header"><span>TIME</span><span class="hvv">62 / 90 min</span></div>
+            <div class="h-vol-track"><div class="h-vol-fill" style="width:69%"></div></div>
+          </div>
+        </div>
+        <div class="h-coaching-strip">
+          ${ICONS.hrPeak}
+          <div class="coach-text"><strong>One more to goal</strong> — finish strong this week</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ===== Build phones =====
+function buildPhone(bottomFn) {
+  return `<div class="phone-inner">
+    ${topHalf()}
+    <div class="bottom-half">${bottomFn()}</div>
+    ${bottomNav()}
+  </div>`;
+}
+
+function populatePhones() {
+  const configs = [
+    ['phone-e', bottomE],
+    ['phone-f', bottomF],
+    ['phone-g', bottomG],
+    ['phone-h', bottomH],
+  ];
+  for (const [prefix, fn] of configs) {
+    const small = document.getElementById(prefix + '-small');
+    const big = document.getElementById(prefix + '-big');
+    const html = buildPhone(fn);
+    if (small) small.innerHTML = html;
+    if (big) big.innerHTML = html;
+  }
+}
+
+function showTab(name) {
+  document.querySelectorAll('.mockup-grid, .all-grid').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  const target = document.getElementById('tab-' + name);
+  if (target) target.classList.add('active');
+  event.target.classList.add('active');
+}
+
+populatePhones();
+</script>
+</body>
+</html>
