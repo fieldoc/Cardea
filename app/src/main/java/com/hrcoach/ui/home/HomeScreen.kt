@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -542,21 +543,23 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
 @Composable
 private fun MidRow(state: HomeUiState, modifier: Modifier = Modifier) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         BootcampTile(
             currentWeek = state.currentWeekNumber,
             totalWeeks = state.bootcampTotalWeeks,
             percentComplete = state.bootcampPercentComplete,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         VolumeTile(
             distanceKm = metersToKm(state.totalDistanceThisWeekMeters.toFloat()),
             distanceTargetKm = state.weeklyDistanceTargetKm,
             timeMinutes = state.totalTimeThisWeekMinutes,
             timeTargetMinutes = state.weeklyTimeTargetMinutes,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
     }
 }
