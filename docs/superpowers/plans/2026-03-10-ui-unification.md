@@ -1,5 +1,7 @@
 # UI Unification Implementation Plan
 
+> **Note (2026-03-29):** This plan's uniform gradient-on-all-CTAs approach has been refined. Cardea now uses a 3-tier visual hierarchy: gradient reserved for Tier 1 (single most important metric per screen), glass+white for Tier 2, glass+secondary for Tier 3. See the updated Section 2.3 in `docs/plans/2026-03-02-cardea-ui-ux-design.md`.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Unify the Cardea design system across all screens — eliminate hardcoded legacy colors, Material 3 default leakage, and component duplication identified in the UI/UX critique.

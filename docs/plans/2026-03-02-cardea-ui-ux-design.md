@@ -31,7 +31,7 @@ Glass fill:      linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,25
 Glass border:    rgba(255,255,255,0.06)  [≈ Color(0x0FFFFFFF)]
 Glass highlight: rgba(255,255,255,0.08)  [≈ Color(0x14FFFFFF)]
 Backdrop blur:   12dp blur (via Compose BlurMaskFilter or RenderEffect API 31+)
-Corner radius:   18dp
+Corner radius:   18dp (Tier 1), 14dp (Tier 2), 12dp (Tier 3) — see gradient usage hierarchy below
 ```
 
 ### 2.3 Cardea Core Gradient
@@ -39,7 +39,12 @@ Corner radius:   18dp
 135deg: #FF5A5F → #FF2DA6 → #5B5BFF → #00D1FF
 Stops:  0%        35%        65%        100%
 ```
-Used for: active nav icons, Start Workout button, Efficiency Ring foreground, active recording indicators.
+**Usage hierarchy (updated 2026-03-29):** Gradient is NOT applied uniformly. Use a 3-tier visual hierarchy per screen:
+- **Tier 1 (gradient):** The single most important/actionable metric per screen. Gradient-painted text, gradient borders, or gradient CTA. 18dp corner radius.
+- **Tier 2 (white on glass):** Supporting metrics. Plain glass surface, white numbers. 14dp corner radius.
+- **Tier 3 (secondary on glass):** Ambient info. Glass surface, textSecondary color. 12dp corner radius.
+
+Gradient is still used for: active nav icons, primary CTA button per screen, and one accent metric per screen. It is NOT applied to every CTA, chart line, or ring simultaneously.
 
 ### 2.4 Text Colors
 ```
@@ -95,7 +100,27 @@ ZoneRed   = #EF4444  (out-of-zone)
 - Duration: 1800ms before navigating to Home
 - No progress bar or loading indicator
 
-### 4.2 HomeScreen (new)
+### 4.2 HomeScreen — PULSE Layout (redesigned 2026-03-29)
+
+> **Supersedes** the original scrollable HomeScreen spec below. See `mockups/home-final.html` for the authoritative visual spec and `docs/superpowers/plans/2026-03-29-homescreen-pulse-redesign.md` for the implementation plan.
+
+Layout: **non-scrollable** fixed-height Column with weighted sections. 16dp horizontal padding on bottom half.
+
+**Greeting Row** — Left: "Good [morning/afternoon/evening]" (15sp, textSecondary). Right: 32dp icon buttons (sensor + profile) with custom Canvas-drawn icons, glass borders.
+
+**PULSE Hero** (195dp fixed) — Session info (label, type at 30sp, detail, zone pill) over a Canvas-drawn ECG gradient line at 0.45 opacity with radial glow. Subtle gradient background wash.
+
+**CTA Row** (56dp fixed) — Full-width `CardeaButton`. "Start Session" (bootcamp active) or "Set Up Bootcamp" (no bootcamp).
+
+**Bottom Half** (fills remaining space) — 3-tier visual hierarchy, no scroll:
+- **Tier 1 — Primary Row** (weighted, expands): GoalTile (flex 1.2, gradient border + gradient-painted 40sp number) + StreakTile (flex 0.8, plain glass + white 40sp number). 18dp corners.
+- **Tier 2 — Mid Row** (intrinsic height): BootcampTile (44dp ring + gradient progress bar) + VolumeTile (DST/MIN bars, 20% white fill). 14dp corners. `IntrinsicSize.Min` for matched height.
+- **Tier 3 — Coaching Strip** (intrinsic height): ECG Canvas icon at 0.5 opacity + single-line text in textSecondary. 12dp corners.
+
+**Design principles:** Custom Canvas icons (not emoji/Material), gradient reserved for one accent metric + CTA per screen, size AND color signal importance.
+
+<details><summary>Original spec (superseded — kept for historical reference)</summary>
+
 Layout: vertical scroll, 16dp horizontal padding, 16dp card spacing.
 
 **Section 1 — Header**
@@ -127,6 +152,8 @@ Layout: vertical scroll, 16dp horizontal padding, 16dp card spacing.
 - Mini line graph using Cardea gradient stroke + glow layer
 - Grid lines: rgba(255,255,255,0.04)
 - Data: last 7 days avg HR if available; empty state if no data
+
+</details>
 
 ### 4.3 AccountScreen (new)
 Layout: vertical scroll, 16dp padding, 16dp card spacing.

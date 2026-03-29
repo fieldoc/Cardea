@@ -1,5 +1,7 @@
 # Home Screen Content & Nav Fix — Implementation Plan
 
+> **SUPERSEDED (2026-03-29):** The HomeScreen composables from this plan (BootcampProgressRing, WeeklyVolumeCard, CoachingInsightCard with emoji icons) have been replaced by the PULSE redesign with tiered data tiles and custom Canvas icons. See `docs/superpowers/plans/2026-03-29-homescreen-pulse-redesign.md`. The `CoachingInsightEngine`, ViewModel data fields, and nav fix from this plan are still in use.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Fill the empty bottom half of the home screen with a Bootcamp Progress Ring, Weekly Volume card, and Coaching Insight card, and fix the navigation bug that prevents returning to the Home tab after visiting Bootcamp.
