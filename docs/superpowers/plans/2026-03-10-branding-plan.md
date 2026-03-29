@@ -1,5 +1,7 @@
 # Branding Implementation Plan
 
+> **Note (2026-03-29):** Gradient usage guidance in this plan (gradient on all nav icons + all recording indicators) has been refined. Cardea now uses a 3-tier visual hierarchy — gradient is reserved for Tier 1 elements. Active nav icons still use gradient; other indicators follow the tier system. See `docs/plans/2026-03-02-cardea-ui-ux-design.md` Section 2.3.
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the current CardeaLogo (geometric heart + ECG + orbit ring) with a premium "running route" ribbon heart, update the splash screen copy and animation, and install a real Cardea launcher icon.
