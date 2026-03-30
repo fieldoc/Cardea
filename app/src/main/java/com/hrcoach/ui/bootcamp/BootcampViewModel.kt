@@ -1091,7 +1091,8 @@ class BootcampViewModel @Inject constructor(
     private fun BootcampSessionEntity.toPlannedSession(): PlannedSession = PlannedSession(
         type = runCatching { SessionType.valueOf(sessionType) }.getOrDefault(SessionType.EASY),
         minutes = targetMinutes,
-        presetId = presetId
+        presetId = presetId,
+        weekNumber = weekNumber
     )
 
     // ─── MaxHR gate (blocks workout start when maxHR is not set) ────────
@@ -1171,7 +1172,8 @@ class BootcampViewModel @Inject constructor(
                     plannedDurationMinutes = config.plannedDurationMinutes ?: session.minutes,
                     sessionLabel = config.sessionLabel
                         ?: com.hrcoach.domain.bootcamp.SessionType.displayLabelForPreset(presetId)
-                        ?: session.type.name.lowercase().replaceFirstChar { it.uppercase() }
+                        ?: session.type.name.lowercase().replaceFirstChar { it.uppercase() },
+                    bootcampWeekNumber = session.weekNumber
                 )
                 return com.hrcoach.util.JsonCodec.gson.toJson(enriched)
             }
@@ -1182,7 +1184,8 @@ class BootcampViewModel @Inject constructor(
             com.hrcoach.domain.model.WorkoutConfig(
                 mode = com.hrcoach.domain.model.WorkoutMode.FREE_RUN,
                 plannedDurationMinutes = session.minutes,
-                sessionLabel = label
+                sessionLabel = label,
+                bootcampWeekNumber = session.weekNumber
             )
         )
     }

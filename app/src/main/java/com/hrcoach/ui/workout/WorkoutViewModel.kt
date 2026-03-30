@@ -30,7 +30,8 @@ private data class SegmentInfo(
 private data class ProgressInfo(
     val totalDurationSeconds: Long? = null,
     val totalDistanceMeters: Float? = null,
-    val workoutTypeLabel: String? = null
+    val workoutTypeLabel: String? = null,
+    val bootcampWeekNumber: Int? = null
 )
 
 data class ActiveWorkoutUiState(
@@ -42,7 +43,9 @@ data class ActiveWorkoutUiState(
     val nextSegmentLabel: String? = null,
     val totalDurationSeconds: Long? = null,
     val totalDistanceMeters: Float? = null,
-    val workoutTypeLabel: String? = null
+    val workoutTypeLabel: String? = null,
+    val bootcampWeekNumber: Int? = null,
+    val remainingSeconds: Long? = null
 )
 
 @HiltViewModel
@@ -87,7 +90,9 @@ class WorkoutViewModel @Inject constructor(
                         nextSegmentLabel = seg.nextLabel,
                         totalDurationSeconds = prog.totalDurationSeconds,
                         totalDistanceMeters = prog.totalDistanceMeters,
-                        workoutTypeLabel = prog.workoutTypeLabel
+                        workoutTypeLabel = prog.workoutTypeLabel,
+                        bootcampWeekNumber = prog.bootcampWeekNumber,
+                        remainingSeconds = prog.totalDurationSeconds?.let { (it - newElapsed).coerceAtLeast(0L) }
                     )
                 }
             }
@@ -146,7 +151,9 @@ class WorkoutViewModel @Inject constructor(
                 nextSegmentLabel = seg.nextLabel,
                 totalDurationSeconds = prog.totalDurationSeconds,
                 totalDistanceMeters = prog.totalDistanceMeters,
-                workoutTypeLabel = prog.workoutTypeLabel
+                workoutTypeLabel = prog.workoutTypeLabel,
+                bootcampWeekNumber = prog.bootcampWeekNumber,
+                remainingSeconds = prog.totalDurationSeconds?.let { (it - newElapsed).coerceAtLeast(0L) }
             )
         }
     }
@@ -179,7 +186,9 @@ class WorkoutViewModel @Inject constructor(
                     nextSegmentLabel = seg.nextLabel,
                     totalDurationSeconds = prog.totalDurationSeconds,
                     totalDistanceMeters = prog.totalDistanceMeters,
-                    workoutTypeLabel = prog.workoutTypeLabel
+                    workoutTypeLabel = prog.workoutTypeLabel,
+                    bootcampWeekNumber = prog.bootcampWeekNumber,
+                    remainingSeconds = prog.totalDurationSeconds?.let { (it - newElapsed).coerceAtLeast(0L) }
                 )
             }
         } finally {
@@ -209,6 +218,7 @@ class WorkoutViewModel @Inject constructor(
 
     private fun deriveProgressInfo(config: WorkoutConfig?): ProgressInfo {
         if (config == null) return ProgressInfo()
+        val week = config.bootcampWeekNumber
         return when {
             config.mode == WorkoutMode.FREE_RUN -> {
                 val duration = config.plannedDurationMinutes
@@ -217,15 +227,17 @@ class WorkoutViewModel @Inject constructor(
                     duration != null && label != null ->
                         ProgressInfo(
                             totalDurationSeconds = duration.toLong() * 60,
-                            workoutTypeLabel = "$duration min \u00b7 $label"
+                            workoutTypeLabel = "$duration min \u00b7 $label",
+                            bootcampWeekNumber = week
                         )
                     duration != null ->
                         ProgressInfo(
                             totalDurationSeconds = duration.toLong() * 60,
-                            workoutTypeLabel = "$duration min \u00b7 Timed run"
+                            workoutTypeLabel = "$duration min \u00b7 Timed run",
+                            bootcampWeekNumber = week
                         )
                     label != null ->
-                        ProgressInfo(workoutTypeLabel = label)
+                        ProgressInfo(workoutTypeLabel = label, bootcampWeekNumber = week)
                     else ->
                         ProgressInfo(workoutTypeLabel = "Open-ended \u00b7 No target")
                 }
@@ -236,7 +248,8 @@ class WorkoutViewModel @Inject constructor(
                 val mins = total / 60
                 ProgressInfo(
                     totalDurationSeconds = total,
-                    workoutTypeLabel = "${mins} min \u00b7 Steady-state"
+                    workoutTypeLabel = "${mins} min \u00b7 Steady-state",
+                    bootcampWeekNumber = week
                 )
             }
 
@@ -245,7 +258,8 @@ class WorkoutViewModel @Inject constructor(
                 val km = totalDist?.let { "%.1f".format(metersToKm(it)) } ?: "?"
                 ProgressInfo(
                     totalDistanceMeters = totalDist,
-                    workoutTypeLabel = "$km km \u00b7 Distance profile"
+                    workoutTypeLabel = "$km km \u00b7 Distance profile",
+                    bootcampWeekNumber = week
                 )
             }
 

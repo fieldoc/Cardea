@@ -150,44 +150,39 @@ fun ActiveWorkoutScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header: zone status (left) + elapsed time (right)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(zoneColor, CircleShape)
-                    )
-                    Text(
-                        text = zoneStatusLabel(state),
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = zoneColor
-                    )
-                    if (!state.isFreeRun && state.targetHr > 0) {
-                        Text(
-                            text = "· ${state.targetHr} bpm",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTextTertiary
-                        )
-                    }
-                }
-                Text(
-                    text = formatDurationSeconds(uiState.elapsedSeconds),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = CardeaTextSecondary
-                )
-            }
+            // Mission Card: goal context, zone status, timer, target HR
+            MissionCard(
+                uiState = uiState,
+                modifier = Modifier.padding(top = 8.dp)
+            )
 
-            WorkoutProgressStrip(uiState = uiState, state = state)
+            // Progress bar with halfway turn marker
+            run {
+                val totalDur = uiState.totalDurationSeconds
+                val totalDist = uiState.totalDistanceMeters
+                val showProgress = totalDur != null || totalDist != null
+                if (showProgress) {
+                    val progress = when {
+                        totalDur != null ->
+                            (uiState.elapsedSeconds.toFloat() / totalDur).coerceIn(0f, 1f)
+                        totalDist != null ->
+                            (state.distanceMeters / totalDist).coerceIn(0f, 1f)
+                        else -> 0f
+                    }
+                    val turnLabel = when {
+                        totalDur != null ->
+                            "Turn ${formatDurationSeconds(totalDur / 2)}"
+                        totalDist != null ->
+                            "Turn ${formatDistanceKm(totalDist / 2f)} km"
+                        else -> null
+                    }
+                    ProgressBarWithTurnMarker(
+                        progress = progress,
+                        showTurnMarker = true,
+                        turnLabel = turnLabel
+                    )
+                }
+            }
 
             HrRing(
                 hr = state.currentHr,
@@ -541,126 +536,6 @@ private fun WorkoutButton(
     }
 }
 
-@Composable
-private fun GradientProgressBar(progress: Float, modifier: Modifier = Modifier) {
-    Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(4.dp)
-    ) {
-        val cornerRadius = CornerRadius(2.dp.toPx())
-        drawRoundRect(color = GlassHighlight, cornerRadius = cornerRadius)
-        if (progress > 0f) {
-            drawRoundRect(
-                brush = CardeaGradient,
-                size = Size(size.width * progress.coerceIn(0f, 1f), size.height),
-                cornerRadius = cornerRadius
-            )
-        }
-    }
-}
-
-@Composable
-private fun WorkoutProgressStrip(
-    uiState: ActiveWorkoutUiState,
-    state: WorkoutSnapshot
-) {
-    val config = uiState.workoutConfig
-    val typeLabel = uiState.workoutTypeLabel
-
-    // Nothing to show if no config loaded yet
-    if (config == null || typeLabel == null) return
-
-    val isFreeRun = state.isFreeRun
-    val isTimeBased = config.isTimeBased()
-    // A timed free run has a planned duration but no HR segments (bootcamp timed sessions)
-    val isTimedFreeRun = isFreeRun && uiState.totalDurationSeconds != null
-    val isDistanceBased = !isTimeBased && !isFreeRun &&
-        config.mode == WorkoutMode.DISTANCE_PROFILE && config.segments.isNotEmpty()
-    val showProgressBar = isTimeBased || isDistanceBased || isTimedFreeRun
-    val isOpenFreeRun = isFreeRun && !isTimedFreeRun
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(GlassHighlight)
-            .border(1.dp, GlassBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = if (isOpenFreeRun) 6.dp else 8.dp)
-    ) {
-        if (isOpenFreeRun) {
-            // Open-ended free run: just a centered label, no bar
-            Text(
-                text = typeLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = CardeaTextTertiary,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                // Left/right labels
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    if (isTimeBased || isTimedFreeRun) {
-                        val totalSec = uiState.totalDurationSeconds ?: 0L
-                        val remaining = (totalSec - uiState.elapsedSeconds).coerceAtLeast(0L)
-                        Text(
-                            text = "${formatDurationSeconds(uiState.elapsedSeconds)} elapsed",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CardeaTextTertiary
-                        )
-                        Text(
-                            text = "${formatDurationSeconds(remaining)} remaining",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = CardeaTextSecondary
-                        )
-                    } else if (isDistanceBased) {
-                        val totalDist = uiState.totalDistanceMeters ?: 0f
-                        val remaining = (totalDist - state.distanceMeters).coerceAtLeast(0f)
-                        Text(
-                            text = "${formatDistanceKm(state.distanceMeters)} km covered",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = CardeaTextTertiary
-                        )
-                        Text(
-                            text = "${formatDistanceKm(remaining)} km to go",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold
-                            ),
-                            color = CardeaTextSecondary
-                        )
-                    }
-                }
-
-                // Progress bar
-                val progress = when {
-                    isTimeBased || isTimedFreeRun -> {
-                        val total = uiState.totalDurationSeconds ?: 1L
-                        (uiState.elapsedSeconds.toFloat() / total).coerceIn(0f, 1f)
-                    }
-                    isDistanceBased -> {
-                        val total = uiState.totalDistanceMeters ?: 1f
-                        (state.distanceMeters / total).coerceIn(0f, 1f)
-                    }
-                    else -> 0f
-                }
-                GradientProgressBar(progress = progress)
-
-                // Center label: total + mode type
-                Text(
-                    text = typeLabel,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CardeaTextTertiary,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
-            }
-        }
-    }
-}
 
 @Composable
 private fun GuidanceCard(
@@ -729,12 +604,4 @@ private fun zoneColorFor(state: WorkoutSnapshot): Color {
     }
 }
 
-private fun zoneStatusLabel(state: WorkoutSnapshot): String = when {
-    state.isFreeRun && state.hrConnected -> "Free Run"
-    !state.hrConnected || state.zoneStatus == ZoneStatus.NO_DATA -> "No Signal"
-    state.zoneStatus == ZoneStatus.IN_ZONE -> "In Zone"
-    state.zoneStatus == ZoneStatus.ABOVE_ZONE -> "Above Zone"
-    state.zoneStatus == ZoneStatus.BELOW_ZONE -> "Below Zone"
-    else -> "No Signal"
-}
 
