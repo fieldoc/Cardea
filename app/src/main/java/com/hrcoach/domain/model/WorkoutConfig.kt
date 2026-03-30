@@ -11,7 +11,9 @@ data class WorkoutConfig(
     /** Planned duration in minutes — for display only (e.g. bootcamp timed sessions). */
     val plannedDurationMinutes: Int? = null,
     /** Human-readable session label — for display only (e.g. "Easy Run"). */
-    val sessionLabel: String? = null
+    val sessionLabel: String? = null,
+    /** Bootcamp week number — for display only on the active workout screen. */
+    val bootcampWeekNumber: Int? = null
 ) {
     /**
      * Returns true when every segment is time-based (has [HrSegment.durationSeconds] set and

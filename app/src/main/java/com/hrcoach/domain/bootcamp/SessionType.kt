@@ -26,5 +26,6 @@ enum class SessionType(val presetCategory: PresetCategory?) {
 data class PlannedSession(
     val type: SessionType,
     val minutes: Int,
-    val presetId: String? = null
+    val presetId: String? = null,
+    val weekNumber: Int? = null
 )

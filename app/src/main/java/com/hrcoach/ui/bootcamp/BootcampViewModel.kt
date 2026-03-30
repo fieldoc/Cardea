@@ -1091,7 +1091,8 @@ class BootcampViewModel @Inject constructor(
     private fun BootcampSessionEntity.toPlannedSession(): PlannedSession = PlannedSession(
         type = runCatching { SessionType.valueOf(sessionType) }.getOrDefault(SessionType.EASY),
         minutes = targetMinutes,
-        presetId = presetId
+        presetId = presetId,
+        weekNumber = weekNumber
     )
 
     // ─── MaxHR gate (blocks workout start when maxHR is not set) ────────
@@ -1165,12 +1166,27 @@ class BootcampViewModel @Inject constructor(
         if (presetId != null) {
             val preset = com.hrcoach.domain.preset.PresetLibrary.ALL.firstOrNull { it.id == presetId }
             if (preset != null) {
-                return com.hrcoach.util.JsonCodec.gson.toJson(preset.buildConfig(maxHr))
+                val config = preset.buildConfig(maxHr)
+                // Carry session metadata so the active workout screen can show goal info
+                val enriched = config.copy(
+                    plannedDurationMinutes = config.plannedDurationMinutes ?: session.minutes,
+                    sessionLabel = config.sessionLabel
+                        ?: com.hrcoach.domain.bootcamp.SessionType.displayLabelForPreset(presetId)
+                        ?: session.type.name.lowercase().replaceFirstChar { it.uppercase() },
+                    bootcampWeekNumber = session.weekNumber
+                )
+                return com.hrcoach.util.JsonCodec.gson.toJson(enriched)
             }
         }
-        // Timed sessions without a matching preset — free run fallback
+        // Timed sessions without a matching preset — free run with goal metadata
+        val label = session.type.name.lowercase().replaceFirstChar { it.uppercase() }
         return com.hrcoach.util.JsonCodec.gson.toJson(
-            com.hrcoach.domain.model.WorkoutConfig(mode = com.hrcoach.domain.model.WorkoutMode.FREE_RUN)
+            com.hrcoach.domain.model.WorkoutConfig(
+                mode = com.hrcoach.domain.model.WorkoutMode.FREE_RUN,
+                plannedDurationMinutes = session.minutes,
+                sessionLabel = label,
+                bootcampWeekNumber = session.weekNumber
+            )
         )
     }
 
