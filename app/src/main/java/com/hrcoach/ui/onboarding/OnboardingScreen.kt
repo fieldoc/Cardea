@@ -88,7 +88,11 @@ fun OnboardingScreen(
                         onHrMaxOverrideChanged = viewModel::onHrMaxOverrideChanged,
                         onToggleHrMaxOverride = viewModel::toggleHrMaxOverride,
                     )
-                    2 -> ZonesPage(effectiveHrMax = viewModel.effectiveHrMax())
+                    2 -> ZonesPage(effectiveHrMax = run {
+                        val override = uiState.hrMaxOverride.toIntOrNull()
+                        if (override != null && override in 120..220) override
+                        else uiState.estimatedHrMax
+                    })
                     3 -> BlePage(
                         permissionGranted = uiState.bluetoothPermissionGranted,
                         onPermissionResult = { granted ->
@@ -130,12 +134,15 @@ fun OnboardingScreen(
             ) {
                 // CTA button (not on last page — it has its own CTAs)
                 if (pagerState.currentPage < PAGE_COUNT - 1) {
+                    // Derive from collected uiState so Compose tracks the dependency
+                    // and recomposes when the user types their age.
+                    val ageValid = uiState.age.toIntOrNull()?.let { it in 13..99 } == true
                     val buttonText = when (pagerState.currentPage) {
                         0 -> "Get Started"
-                        1 -> if (viewModel.isAgeValid()) "Next" else "Enter your age to continue"
+                        1 -> if (ageValid) "Next" else "Enter your age to continue"
                         else -> "Next"
                     }
-                    val enabled = pagerState.currentPage != 1 || viewModel.isAgeValid()
+                    val enabled = pagerState.currentPage != 1 || ageValid
 
                     Box(
                         modifier = Modifier
