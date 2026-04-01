@@ -110,3 +110,8 @@ class OnboardingViewModel @Inject constructor(
 }
 
 enum class PermissionType { BLUETOOTH, LOCATION, NOTIFICATION }
+
+@HiltViewModel
+class OnboardingSplashViewModel @Inject constructor(
+    val onboardingRepository: OnboardingRepository,
+) : ViewModel()
