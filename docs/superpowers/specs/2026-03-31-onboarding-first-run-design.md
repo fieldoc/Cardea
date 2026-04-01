@@ -126,22 +126,39 @@ An 8-screen linear onboarding flow shown on first launch, between the splash scr
 - Pre-permission explainer: "Cardea needs notification access to alert you during runs, even when the screen is off."
 - On older Android (< 13): skip permission request, just show the educational content
 
-### Screen 7: Your Tabs
+### Screen 7: Your Tabs (Spotlight Coach-Mark Overlay)
 
-**Purpose:** Quick visual tour of the 5-tab navigation structure, highlighting the Workout tab as the star.
+**Purpose:** Quick visual tour of the 5-tab navigation structure using a production-style spotlight overlay that auto-advances through each tab.
 
 **Content:**
-- Headline: "Find Your Way Around"
-- Five rows, one per tab:
-  - **Home** — "Your dashboard — training status, next session, streaks"
-  - **Workout** — "Start runs, connect your HR monitor, see bootcamp sessions" *(highlighted with gradient text and accent border — Tier 1 treatment)*
+- The actual bottom navigation bar is rendered at the bottom of the screen
+- A semi-transparent dark scrim covers the entire screen
+- A transparent circle cutout (spotlight) is positioned over the currently highlighted tab icon, with a pulsing ring border around it
+- A tooltip bubble floats above the spotlight with the tab name and description
+- The main content area shows a large icon and description for the currently highlighted tab
+- A "X of 5" counter shows progress through the tour
+
+**Tab descriptions (shown in tooltip + main area):**
+  - **Home** — "Your dashboard — training status, streaks, next session"
+  - **Workout** — "Start runs, connect HR monitor, bootcamp sessions" *(spotlight ring turns gradient red-pink, tab name uses gradient text — Tier 1 treatment)*
   - **History** — "Past runs with route maps and HR charts"
-  - **Progress** — "Trends, volume, and fitness analytics over time"
-  - **Account** — "Settings, audio preferences, theme, and profile"
+  - **Progress** — "Trends, volume, and fitness analytics"
+  - **Account** — "Settings, audio, theme, and profile"
 
-**Actions:** None. Visual tour only.
+**Behavior:**
+- Auto-advances to the next tab every ~2.5 seconds
+- User can tap a tab icon to jump to it directly
+- User can tap "Next" to advance manually, or swipe the pager to skip to Screen 8
+- The Workout tab gets special treatment: spotlight ring turns red-pink gradient (instead of cyan), tooltip name renders in `CardeaGradient`, and the tab lingers slightly longer (~3.5s)
 
-**Design note:** The Workout tab row gets gradient text treatment and a subtle accent border to visually call it out as the primary action center. All other rows use standard white text on glass.
+**Implementation:**
+- Spotlight scrim: `Box` with `Modifier.drawWithContent` using `drawRect` with full-screen dark color, then `drawCircle` with `BlendMode.Clear` at the target tab's coordinates
+- Pulsing ring: `Canvas` drawing an animated circle with `CardeaGradient` stroke at the same coordinates, scale-pulsing via `infiniteTransition`
+- Tab coordinates: Obtained via `onGloballyPositioned` modifier on the real `NavigationBar` items, passed up via callback
+- Tooltip: `Popup` or absolutely positioned `Box` above the spotlight, with a downward-pointing triangle (rotated `Box` with matching background)
+- Auto-advance: `LaunchedEffect` with `delay(2500)` cycling through tab indices; cancelled on manual interaction
+
+**Actions:** None. Visual tour only. No permissions requested.
 
 ### Screen 8: Launch Pad
 
