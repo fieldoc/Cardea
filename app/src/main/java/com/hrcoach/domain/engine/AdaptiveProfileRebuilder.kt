@@ -46,6 +46,7 @@ class AdaptiveProfileRebuilder @Inject constructor() {
             isWorkoutRunning()
 
             var profile = AdaptiveProfile()
+            var lastProcessedStartTime: Long? = null
 
             workouts.forEachIndexed { index, workout ->
                 val points = trackPointsByWorkout[workout.id]
@@ -93,9 +94,8 @@ class AdaptiveProfileRebuilder @Inject constructor() {
                 // Apply CTL/ATL from stored TRIMP score
                 val trimp = metricsByWorkout[workout.id]?.trimpScore
                 if (trimp != null && trimp > 0f) {
-                    val prevWorkout = if (index > 0) workouts[index - 1] else null
-                    val daysSinceLast = if (prevWorkout != null) {
-                        ((workout.startTime - prevWorkout.startTime) / 86_400_000L)
+                    val daysSinceLast = if (lastProcessedStartTime != null) {
+                        ((workout.startTime - lastProcessedStartTime!!) / 86_400_000L)
                             .toInt().coerceAtLeast(1)
                     } else 1
                     val loadResult = FitnessLoadCalculator.updateLoads(
@@ -118,6 +118,8 @@ class AdaptiveProfileRebuilder @Inject constructor() {
                 } else if (currentMax > 0) {
                     profile = profile.copy(hrMax = currentMax)
                 }
+
+                lastProcessedStartTime = workout.startTime
             }
 
             return profile
