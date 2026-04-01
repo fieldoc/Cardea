@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "wmic process where \"commandline like '%KotlinLspServerKt%'\" delete 2>/dev/null; cd /c/Users/glm_6/AndroidStudioProjects/HRapp && ./gradlew.bat help --daemon --quiet 2>&1 | tail -1 || true"
+            "command": "wmic process where \"commandline like '%KotlinLspServerKt%'\" delete 2>/dev/null; cd /c/Users/glm_6/AndroidStudioProjects/HRapp && ./gradlew.bat help --daemon --quiet 2>&1 | tail -1 || true; for i in 1 2 3 4 5 6; do count=$(wmic process where \"commandline like '%KotlinLspServerKt%'\" get Handle 2>/dev/null | grep -c '[0-9]' || echo 0); if [ \"$count\" -ge 1 ]; then echo \"Serena LSP confirmed running after ${i}x5s\"; break; fi; sleep 5; done"
           }
         ]
       }
@@ -53,6 +53,15 @@
           {
             "type": "command",
             "command": "count=$(wmic process where \"commandline like '%KotlinLspServerKt%'\" get Handle 2>/dev/null | grep -c '[0-9]' || echo 0); if [ \"$count\" -gt 1 ]; then wmic process where \"commandline like '%KotlinLspServerKt%'\" delete 2>/dev/null; fi; true"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ./.claude/hooks/check-commit-checklist.sh"
           }
         ]
       }
