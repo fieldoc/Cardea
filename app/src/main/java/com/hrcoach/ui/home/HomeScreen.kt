@@ -904,13 +904,15 @@ fun HomeScreen(
                 NoBootcampCard(onSetupBootcamp = onGoToBootcamp)
             }
 
-            // CTA
-            CtaRow(
-                hasActiveBootcamp = state.hasActiveBootcamp,
-                isNextSessionToday = state.isNextSessionToday,
-                onStartSession = onGoToBootcamp,
-                onSetupBootcamp = onGoToBootcamp
-            )
+            // CTA — only when bootcamp is active (NoBootcampCard has its own button)
+            if (state.hasActiveBootcamp) {
+                CtaRow(
+                    hasActiveBootcamp = true,
+                    isNextSessionToday = state.isNextSessionToday,
+                    onStartSession = onGoToBootcamp,
+                    onSetupBootcamp = onGoToBootcamp
+                )
+            }
 
             // Bottom half fills remaining space
             BottomHalf(
