@@ -105,7 +105,7 @@ fun SplashScreen(onFinished: () -> Unit) {
         phase = 2
         delay(270L)
         phase = 3
-        delay(1800L)
+        delay(2500L)  // enough for the ECG→heart morph to complete (2800ms cycle, morph finishes at ~1.6s + hold)
         onFinished()
     }
 
@@ -137,6 +137,7 @@ fun SplashScreen(onFinished: () -> Unit) {
             CardeaLogo(
                 size = 110.dp,
                 animate = true,
+                cycleDurationMs = 2_800,
                 modifier = Modifier.graphicsLayer {
                     scaleX = logoScale
                     scaleY = logoScale
