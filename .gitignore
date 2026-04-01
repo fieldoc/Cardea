@@ -26,3 +26,9 @@ GEMINI.md
 tmp_*
 bootcamp_info_flow.md
 review/
+
+# Claude worktree checkouts (auto-generated, not source)
+.claude/worktrees/
+
+# Claude debug/probe artefacts
+.claude/kotlin-lsp-probe-*.txt

@@ -20,7 +20,7 @@ class UserProfileRepository @Inject constructor(
         private const val PREF_WEIGHT_UNIT = "weight_unit" // "lbs" or "kg"
         private const val UNSET = -1
         private const val DEFAULT_NAME = "Runner"
-        private const val DEFAULT_AVATAR = "\u2665" // ♥
+        private const val DEFAULT_EMBLEM = "pulse"
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -48,13 +48,13 @@ class UserProfileRepository @Inject constructor(
     }
 
     @Synchronized
-    fun getAvatarSymbol(): String {
-        return prefs.getString(PREF_AVATAR_SYMBOL, DEFAULT_AVATAR) ?: DEFAULT_AVATAR
+    fun getEmblemId(): String {
+        return prefs.getString(PREF_AVATAR_SYMBOL, DEFAULT_EMBLEM) ?: DEFAULT_EMBLEM
     }
 
     @Synchronized
-    fun setAvatarSymbol(symbol: String) {
-        prefs.edit().putString(PREF_AVATAR_SYMBOL, symbol).apply()
+    fun setEmblemId(id: String) {
+        prefs.edit().putString(PREF_AVATAR_SYMBOL, id).apply()
     }
 
     @Synchronized

@@ -14,11 +14,17 @@ interface WorkoutDao {
     @Update
     suspend fun update(workout: WorkoutEntity)
 
-    @Query("SELECT * FROM workouts ORDER BY startTime DESC")
+    // History and UI — excludes simulated rows
+    @Query("SELECT * FROM workouts WHERE isSimulated = 0 ORDER BY startTime DESC")
     fun getAllWorkouts(): Flow<List<WorkoutEntity>>
 
-    @Query("SELECT * FROM workouts ORDER BY startTime DESC")
+    // Used by service (CTL/ATL prev-workout lookup) and general callers — excludes simulated
+    @Query("SELECT * FROM workouts WHERE isSimulated = 0 ORDER BY startTime DESC")
     suspend fun getAllWorkoutsOnce(): List<WorkoutEntity>
+
+    // Used by AdaptiveProfileRebuilder — real runs only, ascending for replay
+    @Query("SELECT * FROM workouts WHERE isSimulated = 0 AND endTime > 0 ORDER BY startTime ASC")
+    suspend fun getAllRealWorkoutsAsc(): List<WorkoutEntity>
 
     @Query("SELECT * FROM workouts WHERE id = :id")
     suspend fun getById(id: Long): WorkoutEntity?
@@ -26,7 +32,7 @@ interface WorkoutDao {
     @Query("DELETE FROM workouts WHERE id = :id")
     suspend fun deleteById(id: Long)
 
-    @Query("SELECT COALESCE(SUM(totalDistanceMeters), 0) / 1000.0 FROM workouts")
+    @Query("SELECT COALESCE(SUM(totalDistanceMeters), 0) / 1000.0 FROM workouts WHERE isSimulated = 0")
     suspend fun sumAllDistanceKm(): Double
 
     @Query("SELECT * FROM workouts WHERE endTime = 0")

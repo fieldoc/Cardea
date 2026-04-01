@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.TextRange
@@ -62,12 +61,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.domain.model.VoiceVerbosity
+import com.hrcoach.domain.emblem.Emblem
 import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
+import com.hrcoach.ui.components.EmblemIconWithRing
+import com.hrcoach.ui.components.EmblemPicker
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import com.hrcoach.ui.theme.CardeaCtaGradient
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
@@ -89,9 +90,9 @@ fun AccountScreen(
     if (showProfileSheet) {
         ProfileEditBottomSheet(
             displayName = state.displayName,
-            avatarSymbol = state.avatarSymbol,
+            emblemId = state.emblemId,
             onNameChange = viewModel::setDisplayName,
-            onAvatarChange = viewModel::setAvatarSymbol,
+            onEmblemChange = { viewModel.setEmblemId(it) },
             onSave = {
                 viewModel.saveProfile()
                 showProfileSheet = false
@@ -130,7 +131,7 @@ fun AccountScreen(
             // ── Profile hero ─────────────────────────────────────────────────
             ProfileHeroCard(
                 displayName = state.displayName,
-                avatarSymbol = state.avatarSymbol,
+                emblemId = state.emblemId,
                 runCount = state.totalWorkouts,
                 onClick = { showProfileSheet = true }
             )
@@ -416,7 +417,7 @@ fun AccountScreen(
 @Composable
 private fun ProfileHeroCard(
     displayName: String,
-    avatarSymbol: String,
+    emblemId: String,
     runCount: Int,
     onClick: () -> Unit,
 ) {
@@ -439,28 +440,10 @@ private fun ProfileHeroCard(
             .padding(horizontal = 18.dp, vertical = 20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            // Gradient ring with unicode symbol
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(CardeaGradient),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(CardeaTheme.colors.bgPrimary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = avatarSymbol,
-                        fontSize = 24.sp,
-                        color = CardeaTheme.colors.accentPink
-                    )
-                }
-            }
+            EmblemIconWithRing(
+                emblem = Emblem.fromId(emblemId),
+                size = 56.dp
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -484,30 +467,15 @@ private fun ProfileHeroCard(
     }
 }
 
-// ── Avatar symbols ────────────────────────────────────────────────────────────
-
-private val AVATAR_SYMBOLS = listOf(
-    "\u2665", // ♥
-    "\u2605", // ★
-    "\u26A1", // ⚡
-    "\u25C6", // ◆
-    "\u25B2", // ▲
-    "\u25CF", // ●
-    "\u2726", // ✦
-    "\u2666", // ♦
-    "\u2191", // ↑
-    "\u221E", // ∞
-)
-
 // ── Profile edit bottom sheet ─────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ProfileEditBottomSheet(
     displayName: String,
-    avatarSymbol: String,
+    emblemId: String,
     onNameChange: (String) -> Unit,
-    onAvatarChange: (String) -> Unit,
+    onEmblemChange: (String) -> Unit,
     onSave: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -564,53 +532,14 @@ private fun ProfileEditBottomSheet(
             )
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Avatar picker
-            Text("Avatar", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
+            // Emblem picker
+            Text("Emblem", style = MaterialTheme.typography.labelMedium, color = CardeaTheme.colors.textSecondary)
             Spacer(modifier = Modifier.height(10.dp))
-
-            // 5x2 grid
-            for (row in AVATAR_SYMBOLS.chunked(5)) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    row.forEach { symbol ->
-                        val selected = symbol == avatarSymbol
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (selected) CardeaGradient
-                                    else Brush.linearGradient(
-                                        listOf(
-                                            CardeaTheme.colors.textTertiary.copy(alpha = 0.3f),
-                                            CardeaTheme.colors.textTertiary.copy(alpha = 0.1f)
-                                        )
-                                    )
-                                )
-                                .clickable { onAvatarChange(symbol) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(CardeaTheme.colors.bgPrimary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = symbol,
-                                    fontSize = 20.sp,
-                                    color = if (selected) CardeaTheme.colors.accentPink
-                                            else CardeaTheme.colors.textTertiary
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            EmblemPicker(
+                selected = Emblem.fromId(emblemId),
+                onSelect = { onEmblemChange(it.id) },
+                modifier = Modifier.height(200.dp)
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
             GradientSaveButton(onClick = onSave)
