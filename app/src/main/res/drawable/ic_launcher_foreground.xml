@@ -12,29 +12,29 @@
         scaled to fit adaptive icon safe zone (66dp circle within 108dp canvas).
     -->
 
-    <!-- Gradient-filled heart -->
+    <!-- Gradient-filled heart — wider, shorter proportions for icon legibility -->
     <path
         android:pathData="
-            M54,88
-            C52,85.5 49.5,82 47,78.5
-            C41,70 34.5,60 31,52
-            C28.5,46.5 27,42 27,38
-            C27,33 29,29 32.5,26.5
-            C36,24 40.5,24 44.5,26
-            C47,27 50,29.5 54,34
-            C58,29.5 61,27 63.5,26
-            C67.5,24 72,24 75.5,26.5
-            C79,29 81,33 81,38
-            C81,42 79.5,46.5 77,52
-            C73.5,60 67,70 61,78.5
-            C58.5,82 56,85.5 54,88 Z">
+            M54,83
+            C52,81 49.5,78 47,74.5
+            C41,67 34,58.5 30.5,51.5
+            C28,46.5 26.5,42.5 26.5,39
+            C26.5,34 28.5,30 32,27.5
+            C35.5,25 40,24.5 44,26.5
+            C47,28 50,30.5 54,35
+            C58,30.5 61,28 64,26.5
+            C68,24.5 72.5,25 76,27.5
+            C79.5,30 81.5,34 81.5,39
+            C81.5,42.5 80,46.5 77.5,51.5
+            C74,58.5 67,67 61,74.5
+            C58.5,78 56,81 54,83 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="27"
+                android:startX="26"
                 android:startY="24"
-                android:endX="81"
-                android:endY="88">
+                android:endX="82"
+                android:endY="83">
                 <item android:offset="0.00" android:color="#FFFF5A5F"/>
                 <item android:offset="0.35" android:color="#FFFF2DA6"/>
                 <item android:offset="0.65" android:color="#FF5B5BFF"/>
@@ -46,15 +46,15 @@
     <!-- White ECG waveform line through the heart -->
     <path
         android:pathData="
-            M33,56
-            L44,56
-            L46.5,58
-            L49,42
-            L52.5,62
-            L55,51
-            L57,56.5
-            L63,56
-            L75,56"
+            M32,54
+            L43,54
+            L45.5,56
+            L48,41
+            L51.5,60
+            L54,50
+            L56,54.5
+            L62,54
+            L76,54"
         android:fillColor="@android:color/transparent"
         android:strokeColor="#EEFFFFFF"
         android:strokeWidth="2.5"
