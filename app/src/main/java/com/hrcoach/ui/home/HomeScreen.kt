@@ -57,6 +57,8 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.domain.education.ContentDensity
+import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.util.metersToKm
 
 // ── Zone pill color mapping ─────────────────────────────────────
@@ -277,6 +279,17 @@ private fun PulseHero(
                         fontSize = 10.sp
                     ),
                     color = pillText
+                )
+            }
+            ZoneEducationProvider.forSessionType(
+                session.sessionType, ContentDensity.ONE_LINER
+            )?.let { oneLiner ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = oneLiner,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    color = CardeaTheme.colors.textTertiary,
+                    maxLines = 2
                 )
             }
         }

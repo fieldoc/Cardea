@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +60,9 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.domain.education.ContentDensity
+import com.hrcoach.domain.education.ZoneEducationProvider
+import com.hrcoach.domain.education.ZoneId
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import kotlin.math.abs
@@ -528,6 +532,41 @@ private fun ZoneDistributionCard(uiState: ProgressUiState, modifier: Modifier = 
                     .height(180.dp)
                     .fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            ZoneEducationLegend()
+        }
+    }
+}
+
+@Composable
+private fun ZoneEducationLegend() {
+    val zones = listOf(
+        ZoneId.ZONE_2 to "Z2",
+        ZoneId.ZONE_3 to "Z3",
+        ZoneId.ZONE_4_5 to "Z4-5"
+    )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((zoneId, label) in zones) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    ),
+                    color = CardeaTheme.colors.textSecondary,
+                    modifier = Modifier.width(30.dp)
+                )
+                Text(
+                    text = ZoneEducationProvider.getContent(zoneId, ContentDensity.ONE_LINER),
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = CardeaTheme.colors.textTertiary,
+                    maxLines = 2
+                )
+            }
         }
     }
 }

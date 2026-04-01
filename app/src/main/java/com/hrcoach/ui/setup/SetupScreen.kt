@@ -384,6 +384,12 @@ fun SetupScreen(
                                 color = CardeaTheme.colors.textSecondary,
                                 modifier = Modifier.padding(top = 4.dp)
                             )
+                            Text(
+                                text = "Your max HR sets your personal zone boundaries — from aerobic base building through to VO\u2082max intervals.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTheme.colors.textTertiary,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
                         }
                     },
                     confirmButton = {
