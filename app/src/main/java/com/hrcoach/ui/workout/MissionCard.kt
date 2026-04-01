@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.domain.education.ContentDensity
+import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.model.ZoneStatus
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextPrimary
@@ -119,6 +121,24 @@ fun MissionCard(
                         ),
                         color = zoneColor
                     )
+                    uiState.rawSessionType?.let { rawType ->
+                        ZoneEducationProvider.forSessionType(rawType, ContentDensity.BADGE)
+                    }?.let { badge ->
+                        Text(
+                            text = "\u00B7",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            color = zoneColor.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = badge,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Medium,
+                                letterSpacing = 0.2.sp
+                            ),
+                            color = zoneColor.copy(alpha = 0.7f)
+                        )
+                    }
                 }
             }
 

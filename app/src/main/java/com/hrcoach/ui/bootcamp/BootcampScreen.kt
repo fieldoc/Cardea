@@ -77,6 +77,8 @@ import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.SessionType
+import com.hrcoach.domain.education.ContentDensity
+import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.WorkoutConfig
@@ -1633,6 +1635,19 @@ private fun SessionDetailSheet(
                         style = MaterialTheme.typography.bodyMedium,
                         color = CardeaTheme.colors.textSecondary
                     )
+                    ZoneEducationProvider.forSessionType(
+                        session.rawTypeName, ContentDensity.BADGE
+                    )?.let { badge ->
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = badge,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.5.sp
+                            ),
+                            color = CardeaTheme.colors.textTertiary
+                        )
+                    }
                 }
                 when {
                     session.isCompleted -> {
@@ -1682,7 +1697,7 @@ private fun SessionDetailSheet(
 
             GlassCard {
                 Text(
-                    text = SessionDescription.forType(session.rawTypeName, session.presetId),
+                    text = SessionDescription.forType(session.rawTypeName, session.presetId, maxHr),
                     style = MaterialTheme.typography.bodyMedium,
                     color = CardeaTheme.colors.textPrimary,
                     lineHeight = 22.sp
@@ -1776,18 +1791,15 @@ private fun SessionDetailSheet(
 }
 
 private object SessionDescription {
-    fun forType(rawType: String, presetId: String?): String {
+    fun forType(rawType: String, presetId: String?, maxHr: Int? = null): String {
+        val educationFull = ZoneEducationProvider.forSessionType(
+            rawType, ContentDensity.FULL, maxHr
+        )
+        if (educationFull != null) return educationFull
+
         val type = runCatching { SessionType.valueOf(rawType) }.getOrNull()
-        
         return when (type) {
-            SessionType.EASY -> "A conversational, low-intensity run. These miles build your aerobic base and strengthen your heart without stressing your recovery."
-            SessionType.LONG -> "The cornerstone of endurance training. Long runs teach your body to burn fat efficiently and build the mental stamina needed for your goal distance."
-            SessionType.TEMPO -> "A 'comfortably hard' effort at Zone 3. This improves your lactate threshold, allowing you to run faster for longer periods."
-            SessionType.INTERVAL -> "High-intensity bursts at Zone 5 followed by recovery. These sessions increase your VO2 max and top-end speed."
-            SessionType.STRIDES -> "Short, fast accelerations to improve your running form and efficiency without building up significant fatigue."
-            SessionType.RACE_SIM -> "A dress rehearsal for your goal. Practice your target pace and fueling strategy to build confidence for race day."
-            SessionType.DISCOVERY -> "A test run to calibrate your zones. We'll use the data from this session to personalize your entire program."
-            SessionType.CHECK_IN -> "A brief assessment of your current fitness. This helps the engine decide if you're ready to move up a tier."
+            SessionType.STRIDES -> "Short, fast accelerations to improve your running form and neuromuscular coordination without accumulating significant fatigue."
             else -> "A specialized training session tailored to your current phase and fitness level."
         }
     }
@@ -2001,11 +2013,21 @@ private fun TodayHeroSection(
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             MetaChip("${today.session.minutes} min")
-                            val desc = SessionDescription.forType(
-                                today.session.type.name,
-                                today.session.presetId
+                            val badge = ZoneEducationProvider.forSessionType(
+                                today.session.type.name, ContentDensity.BADGE
                             )
-                            if (desc.isNotBlank()) MetaChip(desc.take(24))
+                            if (badge != null) MetaChip(badge)
+                        }
+                        ZoneEducationProvider.forSessionType(
+                            today.session.type.name, ContentDensity.ONE_LINER
+                        )?.let { oneLiner ->
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = oneLiner,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                color = CardeaTheme.colors.textTertiary,
+                                maxLines = 2
+                            )
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         androidx.compose.material3.Button(
