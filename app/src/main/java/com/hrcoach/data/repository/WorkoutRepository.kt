@@ -15,6 +15,7 @@ class WorkoutRepository @Inject constructor(
 ) {
     fun getAllWorkouts(): Flow<List<WorkoutEntity>> = workoutDao.getAllWorkouts()
     suspend fun getAllWorkoutsOnce(): List<WorkoutEntity> = workoutDao.getAllWorkoutsOnce()
+    suspend fun getAllRealWorkoutsAsc(): List<WorkoutEntity> = workoutDao.getAllRealWorkoutsAsc()
 
     suspend fun getWorkoutById(id: Long): WorkoutEntity? = workoutDao.getById(id)
 
