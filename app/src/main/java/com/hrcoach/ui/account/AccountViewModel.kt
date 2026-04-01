@@ -24,7 +24,7 @@ import javax.inject.Inject
 
 data class AccountUiState(
     val displayName: String = "Runner",
-    val avatarSymbol: String = "\u2665", // ♥
+    val emblemId: String = "pulse",
     val totalWorkouts: Int = 0,
     val mapsApiKey: String = "",
     val mapsApiKeySaved: Boolean = false,
@@ -72,7 +72,7 @@ class AccountViewModel @Inject constructor(
     private val _autoPauseEnabled = MutableStateFlow(true)
 
     private val _displayName = MutableStateFlow("Runner")
-    private val _avatarSymbol = MutableStateFlow("\u2665")
+    private val _emblemId = MutableStateFlow("pulse")
 
     init {
         viewModelScope.launch {
@@ -87,7 +87,7 @@ class AccountViewModel @Inject constructor(
             _inZoneConfirm.value = settings.enableInZoneConfirm != false
             _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
             _displayName.value = userProfileRepo.getDisplayName()
-            _avatarSymbol.value = userProfileRepo.getAvatarSymbol()
+            _emblemId.value = userProfileRepo.getEmblemId()
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
@@ -134,9 +134,9 @@ class AccountViewModel @Inject constructor(
     }.combine(_autoPauseEnabled) { base, autoPause ->
         base.copy(autoPauseEnabled = autoPause)
     }.combine(
-        combine(_displayName, _avatarSymbol) { name, avatar -> name to avatar }
-    ) { base, (name, avatar) ->
-        base.copy(displayName = name, avatarSymbol = avatar)
+        combine(_displayName, _emblemId) { name, emblemId -> name to emblemId }
+    ) { base, (name, emblemId) ->
+        base.copy(displayName = name, emblemId = emblemId)
     }.combine(achievementDao.getAllAchievements()) { base, achievements ->
         base.copy(achievements = achievements)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
@@ -191,13 +191,13 @@ class AccountViewModel @Inject constructor(
         _displayName.value = name.take(20)
     }
 
-    fun setAvatarSymbol(symbol: String) {
-        _avatarSymbol.value = symbol
+    fun setEmblemId(id: String) {
+        _emblemId.value = id
     }
 
     fun saveProfile() {
         userProfileRepo.setDisplayName(_displayName.value)
-        userProfileRepo.setAvatarSymbol(_avatarSymbol.value)
+        userProfileRepo.setEmblemId(_emblemId.value)
     }
 
     fun saveMaxHr() {
