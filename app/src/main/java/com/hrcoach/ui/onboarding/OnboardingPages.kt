@@ -1,5 +1,13 @@
 package com.hrcoach.ui.onboarding
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,16 +28,31 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.CardeaTextSecondary
@@ -51,6 +75,7 @@ import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.util.PermissionGate
 
 private val ZoneOrange = Color(0xFFFF8C00)
 
@@ -427,21 +452,497 @@ fun ZonesPage(effectiveHrMax: Int?) {
     }
 }
 
-// ── Screens 4-8: Stubs (replaced in Tasks 7-9) ─────────────────────
+// ── Screen 4: BLE ───────────────────────────────────────────────────
 
 @Composable
 fun BlePage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
-    Box(Modifier.fillMaxSize(), Alignment.Center) { Text("BLE") }
+    val context = LocalContext.current
+    val blePerms = remember { PermissionGate.blePermissions() }
+    val alreadyGranted = remember(permissionGranted) {
+        blePerms.isEmpty() || PermissionGate.hasPermissions(context, blePerms)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        onPermissionResult(results.values.all { it })
+    }
+
+    LaunchedEffect(Unit) {
+        if (alreadyGranted) onPermissionResult(true)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Your HR Monitor",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = CardeaTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Cardea connects to Bluetooth heart rate monitors for real-time coaching",
+            fontSize = 14.sp,
+            color = CardeaTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Animated BLE waves
+        val infiniteTransition = rememberInfiniteTransition(label = "ble")
+        val waveScale by infiniteTransition.animateFloat(
+            initialValue = 0.8f,
+            targetValue = 1.2f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "bleWave",
+        )
+        val waveAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.6f,
+            targetValue = 0.1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1500),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "bleAlpha",
+        )
+
+        Box(
+            modifier = Modifier.size(120.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val center = Offset(size.width / 2, size.height / 2)
+                for (i in 1..3) {
+                    drawCircle(
+                        color = GradientCyan.copy(alpha = waveAlpha / i),
+                        radius = 24.dp.toPx() * waveScale * i,
+                        center = center,
+                        style = Stroke(width = 1.5f.dp.toPx()),
+                    )
+                }
+            }
+            Icon(
+                imageVector = Icons.Filled.Bluetooth,
+                contentDescription = "Bluetooth",
+                tint = GradientCyan,
+                modifier = Modifier.size(36.dp),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Compatibility cards
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = null,
+                    tint = ZoneGreen,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "Works with Bluetooth (BLE)",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CardeaTextPrimary,
+                    )
+                    Text(
+                        text = "Coospo, Polar, Garmin, Wahoo and most chest straps",
+                        fontSize = 12.sp,
+                        color = CardeaTextSecondary,
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = null,
+                    tint = ZoneRed,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "ANT+ only \u2014 not supported",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = CardeaTextPrimary,
+                    )
+                    Text(
+                        text = "Some older devices use ANT+ exclusively. Check your device specs.",
+                        fontSize = 12.sp,
+                        color = CardeaTextSecondary,
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "You'll connect your monitor in the Workout tab when you're ready to run",
+            fontSize = 12.sp,
+            color = CardeaTextTertiary,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = 260.dp),
+        )
+
+        // Permission request button (only if needed)
+        if (blePerms.isNotEmpty() && !alreadyGranted && !permissionGranted) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GlassHighlight)
+                    .clickable { launcher.launch(blePerms.toTypedArray()) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Allow Bluetooth Access",
+                    fontSize = 14.sp,
+                    color = CardeaTextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+        if (permissionGranted || alreadyGranted) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Check, null, tint = ZoneGreen, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Bluetooth ready", fontSize = 12.sp, color = ZoneGreen)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
 }
+
+// ── Screen 5: GPS ───────────────────────────────────────────────────
 
 @Composable
 fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
-    Box(Modifier.fillMaxSize(), Alignment.Center) { Text("GPS") }
+    val context = LocalContext.current
+    val gpsPerms = remember { PermissionGate.locationPermissions() }
+    val alreadyGranted = remember(permissionGranted) {
+        PermissionGate.hasPermissions(context, gpsPerms)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        onPermissionResult(results.values.all { it })
+    }
+
+    LaunchedEffect(Unit) {
+        if (alreadyGranted) onPermissionResult(true)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Track Your Runs",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = CardeaTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "GPS maps your route and measures distance and pace in real time",
+            fontSize = 14.sp,
+            color = CardeaTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Route illustration
+        val infiniteTransition = rememberInfiniteTransition(label = "gps")
+        val pulseAlpha by infiniteTransition.animateFloat(
+            initialValue = 0.4f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "gpsPulse",
+        )
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+        ) {
+            val w = size.width
+            val h = size.height
+            val routePath = Path().apply {
+                moveTo(w * 0.1f, h * 0.8f)
+                cubicTo(w * 0.25f, h * 0.2f, w * 0.4f, h * 0.6f, w * 0.55f, h * 0.3f)
+                cubicTo(w * 0.7f, h * 0.1f, w * 0.8f, h * 0.5f, w * 0.9f, h * 0.4f)
+            }
+            drawPath(
+                path = routePath,
+                brush = Brush.linearGradient(
+                    colors = listOf(GradientRed, GradientCyan),
+                    start = Offset(w * 0.1f, 0f),
+                    end = Offset(w * 0.9f, 0f),
+                ),
+                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+            )
+            // Pulsing end marker
+            drawCircle(
+                color = GradientCyan.copy(alpha = pulseAlpha),
+                radius = 6.dp.toPx(),
+                center = Offset(w * 0.9f, h * 0.4f),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Metric strip
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            MetricItem("5.2", "km")
+            MetricItem("5:42", "/km")
+            MetricItem("29:38", "time")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Permission request
+        if (!alreadyGranted && !permissionGranted) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GlassHighlight)
+                    .clickable { launcher.launch(gpsPerms.toTypedArray()) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Allow Location Access",
+                    fontSize = 14.sp,
+                    color = CardeaTextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+        if (permissionGranted || alreadyGranted) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Check, null, tint = ZoneGreen, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Location ready", fontSize = 12.sp, color = ZoneGreen)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
 }
 
 @Composable
+private fun MetricItem(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = value,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = CardeaTextPrimary,
+            fontFamily = FontFamily.Monospace,
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = CardeaTextTertiary,
+        )
+    }
+}
+
+// ── Screen 6: Alerts ────────────────────────────────────────────────
+
+@Composable
 fun AlertsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
-    Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Alerts") }
+    val context = LocalContext.current
+    val notifPerms = remember { PermissionGate.notificationPermissions() }
+    val alreadyGranted = remember(permissionGranted) {
+        notifPerms.isEmpty() || PermissionGate.hasPermissions(context, notifPerms)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        onPermissionResult(results.values.all { it })
+    }
+
+    LaunchedEffect(Unit) {
+        if (alreadyGranted) onPermissionResult(true)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Stay in the Zone",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = CardeaTextPrimary,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "Audio tones guide you without looking at your phone",
+            fontSize = 14.sp,
+            color = CardeaTextSecondary,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Alert cards
+        AlertInfoCard(
+            title = "In Zone",
+            description = "A quick confirmation tone when you're right where you should be",
+            tintColor = ZoneGreen,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        AlertInfoCard(
+            title = "Ease Up",
+            description = "A descending tone when your heart rate is climbing too high",
+            tintColor = ZoneAmber,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        AlertInfoCard(
+            title = "Pick It Up",
+            description = "An ascending tone when you need to push a little harder",
+            tintColor = ZoneRed,
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Music callout
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.widthIn(max = 260.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MusicNote,
+                contentDescription = null,
+                tint = CardeaTextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Alerts layer over your music without pausing it",
+                fontSize = 12.sp,
+                color = CardeaTextTertiary,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Permission request
+        if (notifPerms.isNotEmpty() && !alreadyGranted && !permissionGranted) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(GlassHighlight)
+                    .clickable { launcher.launch(notifPerms.toTypedArray()) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Allow Notifications",
+                    fontSize = 14.sp,
+                    color = CardeaTextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+
+        if (permissionGranted || alreadyGranted) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Check, null, tint = ZoneGreen, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Notifications ready", fontSize = 12.sp, color = ZoneGreen)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun AlertInfoCard(title: String, description: String, tintColor: Color) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(tintColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = tintColor,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = tintColor,
+                )
+                Text(
+                    text = description,
+                    fontSize = 12.sp,
+                    color = CardeaTextSecondary,
+                    lineHeight = 16.sp,
+                )
+            }
+        }
+    }
 }
 
 @Composable
