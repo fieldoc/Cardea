@@ -37,4 +37,7 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE endTime = 0")
     suspend fun getOrphanedWorkouts(): List<WorkoutEntity>
+
+    @Query("SELECT COUNT(*) FROM workouts")
+    suspend fun getWorkoutCount(): Int
 }

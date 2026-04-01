@@ -15,6 +15,9 @@ class UserProfileRepository @Inject constructor(
         private const val PREF_DISPLAY_NAME = "display_name"
         private const val PREF_AVATAR_SYMBOL = "avatar_symbol"
         private const val PREF_USER_ID = "user_id"
+        private const val PREF_AGE = "age"
+        private const val PREF_WEIGHT = "weight"
+        private const val PREF_WEIGHT_UNIT = "weight_unit" // "lbs" or "kg"
         private const val UNSET = -1
         private const val DEFAULT_NAME = "Runner"
         private const val DEFAULT_EMBLEM = "pulse"
@@ -61,6 +64,41 @@ class UserProfileRepository @Inject constructor(
         val newId = java.util.UUID.randomUUID().toString()
         prefs.edit().putString(PREF_USER_ID, newId).apply()
         return newId
+    }
+
+    @Synchronized
+    fun getAge(): Int? {
+        val stored = prefs.getInt(PREF_AGE, UNSET)
+        return if (stored == UNSET) null else stored
+    }
+
+    @Synchronized
+    fun setAge(age: Int) {
+        require(age in 13..99) { "age must be in 13..99" }
+        prefs.edit().putInt(PREF_AGE, age).apply()
+    }
+
+    @Synchronized
+    fun getWeight(): Int? {
+        val stored = prefs.getInt(PREF_WEIGHT, UNSET)
+        return if (stored == UNSET) null else stored
+    }
+
+    @Synchronized
+    fun setWeight(weight: Int) {
+        require(weight in 27..400) { "weight must be in 27..400" }
+        prefs.edit().putInt(PREF_WEIGHT, weight).apply()
+    }
+
+    @Synchronized
+    fun getWeightUnit(): String {
+        return prefs.getString(PREF_WEIGHT_UNIT, "lbs") ?: "lbs"
+    }
+
+    @Synchronized
+    fun setWeightUnit(unit: String) {
+        require(unit == "lbs" || unit == "kg") { "unit must be 'lbs' or 'kg'" }
+        prefs.edit().putString(PREF_WEIGHT_UNIT, unit).apply()
     }
 }
 
