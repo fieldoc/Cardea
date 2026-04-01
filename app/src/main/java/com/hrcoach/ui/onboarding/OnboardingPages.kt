@@ -1085,7 +1085,115 @@ private data class TabInfo(
     val isHighlighted: Boolean,
 )
 
+// ── Screen 8: Launch Pad ────────────────────────────────────────────
+
 @Composable
 fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
-    Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Launch Pad") }
+    val infiniteTransition = rememberInfiniteTransition(label = "launchpad")
+    val ringScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "checkRing",
+    )
+    val ringAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "checkRingAlpha",
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        // Gradient checkmark circle with pulsing ring
+        Box(
+            modifier = Modifier.size(100.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val center = Offset(size.width / 2, size.height / 2)
+                drawCircle(
+                    color = GradientCyan.copy(alpha = ringAlpha),
+                    radius = 36.dp.toPx() * ringScale,
+                    center = center,
+                    style = Stroke(width = 2.dp.toPx()),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(CardeaCtaGradient),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Check,
+                    contentDescription = "Complete",
+                    tint = Color.White,
+                    modifier = Modifier.size(36.dp),
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "You're All Set!",
+            fontSize = 26.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = CardeaTextPrimary,
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Cardea's 8-week Bootcamp builds your aerobic base with progressive HR zone training. Most runners see measurable improvement by week 3.",
+            fontSize = 14.sp,
+            color = CardeaTextSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 20.sp,
+            modifier = Modifier.widthIn(max = 280.dp),
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Primary CTA: Start Bootcamp
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(CardeaCtaGradient)
+                .clickable { onStartBootcamp() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "Start Bootcamp Setup",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = CardeaTextPrimary,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Secondary: Explore first
+        Text(
+            text = "Explore the app first",
+            fontSize = 14.sp,
+            color = CardeaTextTertiary,
+            modifier = Modifier.clickable { onExploreFirst() },
+        )
+    }
 }
