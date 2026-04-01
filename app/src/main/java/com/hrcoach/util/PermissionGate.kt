@@ -56,6 +56,34 @@ object PermissionGate {
         }
     }
 
+    /** Bluetooth permissions — only needed on Android 12+ (API 31). */
+    fun blePermissions(): List<String> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return emptyList()
+        return listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT
+        )
+    }
+
+    /** Location permissions for GPS tracking. */
+    fun locationPermissions(): List<String> = listOf(
+        Manifest.permission.ACCESS_FINE_LOCATION,
+        Manifest.permission.ACCESS_COARSE_LOCATION
+    )
+
+    /** Notification permission — only needed on Android 13+ (API 33). */
+    fun notificationPermissions(): List<String> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return emptyList()
+        return listOf(Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    /** Check if a specific permission group is fully granted. */
+    fun hasPermissions(context: Context, permissions: List<String>): Boolean {
+        return permissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
     /** Human-readable description for a denied permission. */
     fun describePermission(permission: String): String = when (permission) {
         Manifest.permission.ACCESS_FINE_LOCATION,

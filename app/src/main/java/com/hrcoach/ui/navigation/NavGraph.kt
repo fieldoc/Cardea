@@ -73,7 +73,11 @@ import com.hrcoach.ui.postrun.PostRunSummaryScreen
 import com.hrcoach.ui.postrun.PostRunSummaryViewModel
 import com.hrcoach.ui.progress.ProgressScreen
 import com.hrcoach.ui.setup.SetupScreen
+import com.hrcoach.ui.onboarding.OnboardingSplashViewModel
+import com.hrcoach.ui.onboarding.OnboardingScreen
 import com.hrcoach.ui.splash.SplashScreen
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.ui.theme.CardeaNavGradient
 import com.hrcoach.ui.theme.CardeaTheme
@@ -97,6 +101,7 @@ object Routes {
     const val ACCOUNT          = "account"
     const val BOOTCAMP         = "bootcamp"
     const val SIMULATION        = "simulation"
+    const val ONBOARDING        = "onboarding"
     const val BOOTCAMP_SETTINGS = "bootcamp_settings"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
@@ -157,7 +162,7 @@ fun HrCoachNavGraph(
 
     // Activity tab covers both History and Progress routes
     val tabRoutes = setOf(Routes.HOME, Routes.SETUP, Routes.BOOTCAMP, Routes.PROGRESS, Routes.HISTORY, Routes.ACCOUNT)
-    val showBottomBar = !isWorkoutRunning && currentRoute in tabRoutes
+    val showBottomBar = !isWorkoutRunning && currentRoute in tabRoutes && currentRoute != Routes.ONBOARDING
 
     Scaffold(
         containerColor = CardeaTheme.colors.bgPrimary,
@@ -257,13 +262,43 @@ fun HrCoachNavGraph(
                         fadeOut(animationSpec = tween(NavDurationMs))
                 }
             ) {
+                val splashVm: OnboardingSplashViewModel = hiltViewModel()
+                var destination by remember { mutableStateOf<String?>(null) }
+
+                LaunchedEffect(Unit) {
+                    val completed = splashVm.onboardingRepository.autoCompleteForExistingUser()
+                    destination = if (completed) Routes.HOME else Routes.ONBOARDING
+                }
+
                 SplashScreen(
                     onFinished = {
-                        navController.navigate(Routes.HOME) {
+                        val dest = destination ?: Routes.ONBOARDING
+                        navController.navigate(dest) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
+                )
+            }
+
+            composable(
+                route = Routes.ONBOARDING,
+                enterTransition = { fadeIn(animationSpec = tween(NavDurationMs)) },
+                exitTransition = { fadeOut(animationSpec = tween(NavDurationMs)) },
+            ) {
+                OnboardingScreen(
+                    onNavigateToHome = {
+                        navController.navigate(Routes.HOME) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToBootcamp = {
+                        navController.navigate(Routes.BOOTCAMP) {
+                            popUpTo(Routes.ONBOARDING) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    },
                 )
             }
 
