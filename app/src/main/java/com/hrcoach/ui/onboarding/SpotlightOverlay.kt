@@ -34,9 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientCyan
 
 private val EaseInOutCubic = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)
@@ -118,7 +116,7 @@ fun SpotlightOverlay(
                         )
                     }
                     .width(200.dp)
-                    .background(CardeaBgSecondary, RoundedCornerShape(12.dp))
+                    .background(CardeaTheme.colors.bgSecondary, RoundedCornerShape(12.dp))
                     .padding(12.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -127,13 +125,13 @@ fun SpotlightOverlay(
                         text = tooltipName,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (useGradientName) ringColor else CardeaTextPrimary,
+                        color = if (useGradientName) ringColor else CardeaTheme.colors.textPrimary,
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = tooltipDescription,
                         fontSize = 11.sp,
-                        color = CardeaTextSecondary,
+                        color = CardeaTheme.colors.textSecondary,
                         lineHeight = 15.sp,
                     )
                 }

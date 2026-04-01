@@ -72,14 +72,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.components.CardeaLogo
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.CardeaBgSecondary
-import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
-import com.hrcoach.ui.theme.CardeaTextPrimary
-import com.hrcoach.ui.theme.CardeaTextSecondary
-import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneAmber
@@ -125,7 +119,7 @@ fun WelcomePage() {
             text = "Meet Cardea",
             fontSize = 28.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -133,7 +127,7 @@ fun WelcomePage() {
         Text(
             text = "Your AI running coach that listens to your heart. Real-time zone coaching, adaptive training plans, and audio alerts that keep you in the zone.",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp,
             modifier = Modifier.widthIn(max = 280.dp),
@@ -145,7 +139,7 @@ fun WelcomePage() {
             text = "TRAIN SMARTER. RUN STRONGER.",
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            color = CardeaTextTertiary,
+            color = CardeaTheme.colors.textTertiary,
             letterSpacing = 2.sp,
         )
     }
@@ -175,13 +169,13 @@ fun ProfilePage(
             text = "Tell Us About You",
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "We'll use this to personalize your training zones",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
         )
 
@@ -196,12 +190,12 @@ fun ProfilePage(
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = GradientCyan,
-                unfocusedBorderColor = GlassBorder,
+                unfocusedBorderColor = CardeaTheme.colors.glassBorder,
                 focusedLabelColor = GradientCyan,
-                unfocusedLabelColor = CardeaTextTertiary,
+                unfocusedLabelColor = CardeaTheme.colors.textTertiary,
                 cursorColor = GradientCyan,
-                focusedTextColor = CardeaTextPrimary,
-                unfocusedTextColor = CardeaTextPrimary,
+                focusedTextColor = CardeaTheme.colors.textPrimary,
+                unfocusedTextColor = CardeaTheme.colors.textPrimary,
             ),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -221,12 +215,12 @@ fun ProfilePage(
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GradientCyan,
-                    unfocusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = CardeaTheme.colors.glassBorder,
                     focusedLabelColor = GradientCyan,
-                    unfocusedLabelColor = CardeaTextTertiary,
+                    unfocusedLabelColor = CardeaTheme.colors.textTertiary,
                     cursorColor = GradientCyan,
-                    focusedTextColor = CardeaTextPrimary,
-                    unfocusedTextColor = CardeaTextPrimary,
+                    focusedTextColor = CardeaTheme.colors.textPrimary,
+                    unfocusedTextColor = CardeaTheme.colors.textPrimary,
                 ),
                 modifier = Modifier.weight(1f),
             )
@@ -234,13 +228,13 @@ fun ProfilePage(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(GlassHighlight)
+                    .background(CardeaTheme.colors.glassHighlight)
                     .clickable { onToggleWeightUnit() }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 Text(
                     text = if (uiState.weightUnit == WeightUnit.LBS) "lbs" else "kg",
-                    color = CardeaTextPrimary,
+                    color = CardeaTheme.colors.textPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -265,7 +259,7 @@ fun ProfilePage(
             Text(
                 text = "Estimated Max Heart Rate",
                 fontSize = 12.sp,
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.sp,
             )
@@ -280,7 +274,7 @@ fun ProfilePage(
                 style = TextStyle(
                     brush = if (uiState.estimatedHrMax != null) CardeaGradient else null,
                 ),
-                color = if (uiState.estimatedHrMax == null) CardeaTextTertiary else Color.Unspecified,
+                color = if (uiState.estimatedHrMax == null) CardeaTheme.colors.textTertiary else Color.Unspecified,
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -288,7 +282,7 @@ fun ProfilePage(
             Text(
                 text = "Calculated as 220 \u2212 your age",
                 fontSize = 12.sp,
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -296,7 +290,7 @@ fun ProfilePage(
             Text(
                 text = "I know my actual HRmax",
                 fontSize = 13.sp,
-                color = CardeaTextSecondary,
+                color = CardeaTheme.colors.textSecondary,
                 modifier = Modifier.clickable { onToggleHrMaxOverride() },
             )
 
@@ -310,12 +304,12 @@ fun ProfilePage(
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GradientRed,
-                        unfocusedBorderColor = GlassBorder,
+                        unfocusedBorderColor = CardeaTheme.colors.glassBorder,
                         focusedLabelColor = GradientRed,
-                        unfocusedLabelColor = CardeaTextTertiary,
+                        unfocusedLabelColor = CardeaTheme.colors.textTertiary,
                         cursorColor = GradientRed,
-                        focusedTextColor = CardeaTextPrimary,
-                        unfocusedTextColor = CardeaTextPrimary,
+                        focusedTextColor = CardeaTheme.colors.textPrimary,
+                        unfocusedTextColor = CardeaTheme.colors.textPrimary,
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -360,13 +354,13 @@ fun ZonesPage(effectiveHrMax: Int?) {
             text = "Heart Rate Zones",
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Cardea coaches you in real-time to stay in the right zone",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
         )
 
@@ -422,12 +416,12 @@ fun ZonesPage(effectiveHrMax: Int?) {
                         text = zone.name,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = CardeaTextPrimary,
+                        color = CardeaTheme.colors.textPrimary,
                     )
                     Text(
                         text = "${(zone.lowPct * 100).toInt()}-${(zone.highPct * 100).toInt()}%",
                         fontSize = 12.sp,
-                        color = CardeaTextTertiary,
+                        color = CardeaTheme.colors.textTertiary,
                     )
                 }
 
@@ -444,7 +438,7 @@ fun ZonesPage(effectiveHrMax: Int?) {
                     Text(
                         text = " bpm",
                         fontSize = 11.sp,
-                        color = CardeaTextTertiary,
+                        color = CardeaTheme.colors.textTertiary,
                     )
                 }
             }
@@ -456,7 +450,7 @@ fun ZonesPage(effectiveHrMax: Int?) {
             Text(
                 text = "BPM ranges based on your max of $effectiveHrMax bpm",
                 fontSize = 11.sp,
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 textAlign = TextAlign.Center,
             )
         }
@@ -496,13 +490,13 @@ fun BlePage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
             text = "Your HR Monitor",
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Cardea connects to Bluetooth heart rate monitors for real-time coaching",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
         )
 
@@ -569,12 +563,12 @@ fun BlePage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
                         text = "Works with Bluetooth (BLE)",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = CardeaTextPrimary,
+                        color = CardeaTheme.colors.textPrimary,
                     )
                     Text(
                         text = "Coospo, Polar, Garmin, Wahoo and most chest straps",
                         fontSize = 12.sp,
-                        color = CardeaTextSecondary,
+                        color = CardeaTheme.colors.textSecondary,
                     )
                 }
             }
@@ -596,12 +590,12 @@ fun BlePage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
                         text = "ANT+ only \u2014 not supported",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = CardeaTextPrimary,
+                        color = CardeaTheme.colors.textPrimary,
                     )
                     Text(
                         text = "Some older devices use ANT+ exclusively. Check your device specs.",
                         fontSize = 12.sp,
-                        color = CardeaTextSecondary,
+                        color = CardeaTheme.colors.textSecondary,
                     )
                 }
             }
@@ -612,7 +606,7 @@ fun BlePage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
         Text(
             text = "You'll connect your monitor in the Workout tab when you're ready to run",
             fontSize = 12.sp,
-            color = CardeaTextTertiary,
+            color = CardeaTheme.colors.textTertiary,
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(max = 260.dp),
         )
@@ -625,14 +619,14 @@ fun BlePage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
                     .fillMaxWidth()
                     .height(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GlassHighlight)
+                    .background(CardeaTheme.colors.glassHighlight)
                     .clickable { launcher.launch(blePerms.toTypedArray()) },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Allow Bluetooth Access",
                     fontSize = 14.sp,
-                    color = CardeaTextPrimary,
+                    color = CardeaTheme.colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -683,13 +677,13 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
             text = "Track Your Runs",
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "GPS maps your route and measures distance and pace in real time",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
         )
 
@@ -757,14 +751,14 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
                     .fillMaxWidth()
                     .height(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GlassHighlight)
+                    .background(CardeaTheme.colors.glassHighlight)
                     .clickable { launcher.launch(gpsPerms.toTypedArray()) },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Allow Location Access",
                     fontSize = 14.sp,
-                    color = CardeaTextPrimary,
+                    color = CardeaTheme.colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -789,13 +783,13 @@ private fun MetricItem(value: String, label: String) {
             text = value,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
             fontFamily = FontFamily.Monospace,
         )
         Text(
             text = label,
             fontSize = 11.sp,
-            color = CardeaTextTertiary,
+            color = CardeaTheme.colors.textTertiary,
         )
     }
 }
@@ -833,13 +827,13 @@ fun AlertsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit
             text = "Stay in the Zone",
             fontSize = 24.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Audio tones guide you without looking at your phone",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
         )
 
@@ -874,14 +868,14 @@ fun AlertsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit
             Icon(
                 imageVector = Icons.Filled.MusicNote,
                 contentDescription = null,
-                tint = CardeaTextTertiary,
+                tint = CardeaTheme.colors.textTertiary,
                 modifier = Modifier.size(16.dp),
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Alerts layer over your music without pausing it",
                 fontSize = 12.sp,
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
             )
         }
 
@@ -894,14 +888,14 @@ fun AlertsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit
                     .fillMaxWidth()
                     .height(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GlassHighlight)
+                    .background(CardeaTheme.colors.glassHighlight)
                     .clickable { launcher.launch(notifPerms.toTypedArray()) },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "Allow Notifications",
                     fontSize = 14.sp,
-                    color = CardeaTextPrimary,
+                    color = CardeaTheme.colors.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
@@ -948,7 +942,7 @@ private fun AlertInfoCard(title: String, description: String, tintColor: Color) 
                 Text(
                     text = description,
                     fontSize = 12.sp,
-                    color = CardeaTextSecondary,
+                    color = CardeaTheme.colors.textSecondary,
                     lineHeight = 16.sp,
                 )
             }
@@ -988,7 +982,7 @@ fun TabTourPage() {
         ) {
             Text(
                 text = "${currentTabIndex + 1} of ${tabs.size}",
-                color = CardeaTextTertiary,
+                color = CardeaTheme.colors.textTertiary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 2.sp,
@@ -1000,7 +994,7 @@ fun TabTourPage() {
             Icon(
                 imageVector = currentTab.icon,
                 contentDescription = currentTab.name,
-                tint = if (currentTab.isHighlighted) GradientRed else CardeaTextPrimary,
+                tint = if (currentTab.isHighlighted) GradientRed else CardeaTheme.colors.textPrimary,
                 modifier = Modifier.size(48.dp),
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -1009,14 +1003,14 @@ fun TabTourPage() {
                 text = currentTab.name,
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (currentTab.isHighlighted) GradientRed else CardeaTextPrimary,
+                color = if (currentTab.isHighlighted) GradientRed else CardeaTheme.colors.textPrimary,
             )
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = currentTab.description,
                 fontSize = 14.sp,
-                color = CardeaTextSecondary,
+                color = CardeaTheme.colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.widthIn(max = 260.dp),
                 lineHeight = 20.sp,
@@ -1029,7 +1023,7 @@ fun TabTourPage() {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(CardeaBgSecondary),
+                    .background(CardeaTheme.colors.bgSecondary),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -1051,13 +1045,13 @@ fun TabTourPage() {
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = tab.name,
-                            tint = if (index == currentTabIndex) CardeaTextPrimary else CardeaTextTertiary,
+                            tint = if (index == currentTabIndex) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary,
                             modifier = Modifier.size(20.dp),
                         )
                         Text(
                             text = tab.name,
                             fontSize = 10.sp,
-                            color = if (index == currentTabIndex) CardeaTextPrimary else CardeaTextTertiary,
+                            color = if (index == currentTabIndex) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary,
                         )
                     }
                 }
@@ -1134,7 +1128,7 @@ fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
                 modifier = Modifier
                     .size(72.dp)
                     .clip(CircleShape)
-                    .background(CardeaCtaGradient),
+                    .background(CardeaTheme.colors.ctaGradient),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -1152,7 +1146,7 @@ fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
             text = "You're All Set!",
             fontSize = 26.sp,
             fontWeight = FontWeight.ExtraBold,
-            color = CardeaTextPrimary,
+            color = CardeaTheme.colors.textPrimary,
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1160,7 +1154,7 @@ fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
         Text(
             text = "Cardea's 8-week Bootcamp builds your aerobic base with progressive HR zone training. Most runners see measurable improvement by week 3.",
             fontSize = 14.sp,
-            color = CardeaTextSecondary,
+            color = CardeaTheme.colors.textSecondary,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp,
             modifier = Modifier.widthIn(max = 280.dp),
@@ -1174,7 +1168,7 @@ fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
                 .fillMaxWidth()
                 .height(52.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(CardeaCtaGradient)
+                .background(CardeaTheme.colors.ctaGradient)
                 .clickable { onStartBootcamp() },
             contentAlignment = Alignment.Center,
         ) {
@@ -1182,7 +1176,7 @@ fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
                 text = "Start Bootcamp Setup",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = CardeaTextPrimary,
+                color = CardeaTheme.colors.textPrimary,
             )
         }
 
@@ -1192,7 +1186,7 @@ fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
         Text(
             text = "Explore the app first",
             fontSize = 14.sp,
-            color = CardeaTextTertiary,
+            color = CardeaTheme.colors.textTertiary,
             modifier = Modifier.clickable { onExploreFirst() },
         )
     }

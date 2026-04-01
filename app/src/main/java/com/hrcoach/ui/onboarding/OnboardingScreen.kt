@@ -49,7 +49,7 @@ fun OnboardingScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(CardeaBgPrimary)
+            .background(CardeaTheme.colors.bgPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Skip button (hidden on last page)
@@ -62,7 +62,7 @@ fun OnboardingScreen(
                 ) {
                     Text(
                         text = "Skip",
-                        color = CardeaTextSecondary,
+                        color = CardeaTheme.colors.textSecondary,
                         fontSize = 14.sp,
                         modifier = Modifier
                             .clickable { skip() }
@@ -150,8 +150,8 @@ fun OnboardingScreen(
                             .height(52.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(
-                                if (enabled) CardeaCtaGradient
-                                else Brush.linearGradient(listOf(CardeaTextTertiary, CardeaTextTertiary))
+                                if (enabled) CardeaTheme.colors.ctaGradient
+                                else Brush.linearGradient(listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary))
                             )
                             .then(
                                 if (enabled) Modifier.clickable {
@@ -163,7 +163,7 @@ fun OnboardingScreen(
                     ) {
                         Text(
                             text = buttonText,
-                            color = if (enabled) CardeaTextPrimary else CardeaTextSecondary,
+                            color = if (enabled) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary,
                             fontSize = 15.sp,
                             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                         )
@@ -190,9 +190,9 @@ fun OnboardingScreen(
                                 .width(width)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isActive) CardeaCtaGradient
+                                    if (isActive) CardeaTheme.colors.ctaGradient
                                     else Brush.linearGradient(
-                                        listOf(CardeaTextTertiary, CardeaTextTertiary)
+                                        listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary)
                                     )
                                 )
                         )
