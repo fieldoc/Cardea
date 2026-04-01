@@ -165,7 +165,8 @@ private fun buildECGLine(cx: Float, cy: Float, scale: Float, n: Int): List<Offse
 fun CardeaLogo(
     modifier: Modifier = Modifier,
     size: Dp = 64.dp,
-    animate: Boolean = true
+    animate: Boolean = true,
+    cycleDurationMs: Int = 10_000
 ) {
     val density = LocalDensity.current
     val sizePx = with(density) { size.toPx() }
@@ -188,7 +189,7 @@ fun CardeaLogo(
             initialValue = 0f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
-                animation = tween(10_000, easing = LinearEasing),
+                animation = tween(cycleDurationMs, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             ),
             label = "cycle"
