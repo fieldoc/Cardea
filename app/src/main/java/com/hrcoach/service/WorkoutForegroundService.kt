@@ -735,7 +735,10 @@ class WorkoutForegroundService : LifecycleService() {
                         }
                 }
 
-                WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
+                // Sim runs: no post-run navigation — workout was deleted
+                if (!SimulationController.isActive) {
+                    WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
+                }
             }
 
             cleanupManagers()

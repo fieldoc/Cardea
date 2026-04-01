@@ -119,6 +119,16 @@ class AdaptiveProfileRebuilder @Inject constructor() {
                     profile = profile.copy(hrMax = currentMax)
                 }
 
+                // hrRest: derive from track points using the same lower-wins proxy as the service
+                val restProxy = MetricsCalculator.computeRestingHrProxy(points.sortedBy { it.timestamp })
+                if (restProxy != null) {
+                    val updatedRest = HrCalibrator.updateHrRest(
+                        currentHrRest = profile.hrRest ?: restProxy,
+                        candidate = restProxy
+                    )
+                    profile = profile.copy(hrRest = updatedRest)
+                }
+
                 lastProcessedStartTime = workout.startTime
             }
 
