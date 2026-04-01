@@ -33,16 +33,24 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +60,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -76,6 +86,7 @@ import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.PermissionGate
+import kotlinx.coroutines.delay
 
 private val ZoneOrange = Color(0xFFFF8C00)
 
@@ -945,10 +956,134 @@ private fun AlertInfoCard(title: String, description: String, tintColor: Color) 
     }
 }
 
+// ── Screen 7: Tab Tour ──────────────────────────────────────────────
+
 @Composable
 fun TabTourPage() {
-    Box(Modifier.fillMaxSize(), Alignment.Center) { Text("Tab Tour") }
+    val tabs = remember {
+        listOf(
+            TabInfo("Home", "Your dashboard \u2014 training status, streaks, next session", Icons.Filled.Home, false),
+            TabInfo("Workout", "Start runs, connect HR monitor, bootcamp sessions", Icons.Filled.FavoriteBorder, true),
+            TabInfo("History", "Past runs with route maps and HR charts", Icons.AutoMirrored.Filled.List, false),
+            TabInfo("Progress", "Trends, volume, and fitness analytics", Icons.AutoMirrored.Filled.ShowChart, false),
+            TabInfo("Account", "Settings, audio, theme, and profile", Icons.Filled.Person, false),
+        )
+    }
+
+    var currentTabIndex by remember { mutableIntStateOf(0) }
+    val tabPositions = remember { mutableStateMapOf<Int, Offset>() }
+
+    LaunchedEffect(currentTabIndex) {
+        val delayMs = if (tabs[currentTabIndex].isHighlighted) 3500L else 2500L
+        delay(delayMs)
+        currentTabIndex = (currentTabIndex + 1) % tabs.size
+    }
+
+    val currentTab = tabs[currentTabIndex]
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "${currentTabIndex + 1} of ${tabs.size}",
+                color = CardeaTextTertiary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Icon(
+                imageVector = currentTab.icon,
+                contentDescription = currentTab.name,
+                tint = if (currentTab.isHighlighted) GradientRed else CardeaTextPrimary,
+                modifier = Modifier.size(48.dp),
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = currentTab.name,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (currentTab.isHighlighted) GradientRed else CardeaTextPrimary,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = currentTab.description,
+                fontSize = 14.sp,
+                color = CardeaTextSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = 260.dp),
+                lineHeight = 20.sp,
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Mock bottom nav bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(CardeaBgSecondary),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { currentTabIndex = index }
+                            .onGloballyPositioned { coords ->
+                                val pos = coords.localToRoot(Offset.Zero)
+                                val center = Offset(
+                                    pos.x + coords.size.width / 2f,
+                                    pos.y + coords.size.height / 2f,
+                                )
+                                tabPositions[index] = center
+                            }
+                            .padding(vertical = 4.dp, horizontal = 8.dp),
+                    ) {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.name,
+                            tint = if (index == currentTabIndex) CardeaTextPrimary else CardeaTextTertiary,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = tab.name,
+                            fontSize = 10.sp,
+                            color = if (index == currentTabIndex) CardeaTextPrimary else CardeaTextTertiary,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Spotlight overlay
+        val targetOffset = tabPositions[currentTabIndex] ?: Offset.Zero
+        if (targetOffset != Offset.Zero) {
+            SpotlightOverlay(
+                targetOffset = targetOffset,
+                ringColor = if (currentTab.isHighlighted) GradientRed else GradientCyan,
+                tooltipName = currentTab.name,
+                tooltipDescription = currentTab.description,
+                useGradientName = currentTab.isHighlighted,
+            )
+        }
+    }
 }
+
+private data class TabInfo(
+    val name: String,
+    val description: String,
+    val icon: ImageVector,
+    val isHighlighted: Boolean,
+)
 
 @Composable
 fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {
