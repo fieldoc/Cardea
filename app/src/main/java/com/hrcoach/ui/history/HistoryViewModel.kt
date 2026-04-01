@@ -30,8 +30,7 @@ class HistoryViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val workoutMetricsRepository: WorkoutMetricsRepository,
     private val mapsSettingsRepository: MapsSettingsRepository,
-    private val adaptiveProfileRepository: AdaptiveProfileRepository,
-    private val rebuilder: AdaptiveProfileRebuilder
+    private val adaptiveProfileRepository: AdaptiveProfileRepository
 ) : ViewModel() {
 
     val workouts: StateFlow<List<WorkoutEntity>> = repository.getAllWorkouts()
