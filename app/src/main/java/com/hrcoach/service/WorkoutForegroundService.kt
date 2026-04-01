@@ -272,7 +272,8 @@ class WorkoutForegroundService : LifecycleService() {
                     WorkoutEntity(
                         startTime = clock.now(),
                         mode = workoutConfig.mode.name,
-                        targetConfig = gson.toJson(workoutConfig)
+                        targetConfig = gson.toJson(workoutConfig),
+                        isSimulated = SimulationController.isActive
                     )
                 )
                 workoutStartMs = clock.now()
@@ -615,7 +616,9 @@ class WorkoutForegroundService : LifecycleService() {
                     )
                     if (newHrMax != null) {
                         currentProfile = currentProfile.copy(hrMax = newHrMax, hrMaxIsCalibrated = true)
-                        userProfileRepository.setMaxHr(newHrMax)
+                        if (!SimulationController.isActive) {
+                            userProfileRepository.setMaxHr(newHrMax)
+                        }
                     }
 
                     // Load track points once — shared by metrics calculation and hrRest calibration
@@ -631,7 +634,9 @@ class WorkoutForegroundService : LifecycleService() {
                         currentProfile = currentProfile.copy(hrRest = updatedRest)
                     }
 
-                    adaptiveProfileRepository.saveProfile(currentProfile)
+                    if (!SimulationController.isActive) {
+                        adaptiveProfileRepository.saveProfile(currentProfile)
+                    }
                     // --------------------------------
 
                     val canonicalMetrics = MetricsCalculator.deriveFullMetrics(
@@ -715,9 +720,19 @@ class WorkoutForegroundService : LifecycleService() {
                     val updatedRecentMetrics = workoutMetricsRepository.getRecentMetrics(42)
                     val fitnessEval = FitnessSignalEvaluator.evaluate(currentProfile, updatedRecentMetrics)
                     currentProfile = currentProfile.copy(lastTuningDirection = fitnessEval.tuningDirection)
-                    adaptiveProfileRepository.saveProfile(currentProfile)
+                    if (!SimulationController.isActive) {
+                        adaptiveProfileRepository.saveProfile(currentProfile)
+                    }
                 }.onFailure { e ->
                     Log.e("WorkoutService", "Metrics derivation failed for workout $workoutId", e)
+                }
+
+                // Sim runs: metrics pipeline ran for bug-catching; now clean up the DB row
+                if (SimulationController.isActive && workoutId > 0L) {
+                    runCatching { repository.deleteWorkout(workoutId) }
+                        .onFailure { e ->
+                            Log.w("WorkoutService", "Sim workout auto-delete failed (isSimulated flag prevents history pollution)", e)
+                        }
                 }
 
                 WorkoutState.update { it.copy(completedWorkoutId = workoutId) }
