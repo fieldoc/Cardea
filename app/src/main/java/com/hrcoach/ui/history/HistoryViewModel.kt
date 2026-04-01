@@ -5,14 +5,18 @@ import androidx.lifecycle.viewModelScope
 import com.hrcoach.BuildConfig
 import com.hrcoach.data.db.TrackPointEntity
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
+import com.hrcoach.domain.engine.AdaptiveProfileRebuilder
 import com.hrcoach.domain.engine.MetricsCalculator
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
+import com.hrcoach.service.WorkoutState
 import com.hrcoach.util.recordedAtMs
 import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +29,8 @@ import javax.inject.Inject
 class HistoryViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val workoutMetricsRepository: WorkoutMetricsRepository,
-    private val mapsSettingsRepository: MapsSettingsRepository
+    private val mapsSettingsRepository: MapsSettingsRepository,
+    private val adaptiveProfileRepository: AdaptiveProfileRepository
 ) : ViewModel() {
 
     val workouts: StateFlow<List<WorkoutEntity>> = repository.getAllWorkouts()
@@ -89,6 +94,31 @@ class HistoryViewModel @Inject constructor(
                 _selectedWorkout.value = null
                 _trackPoints.value = emptyList()
                 _selectedMetrics.value = null
+                // Rebuild adaptive profile from remaining runs — background, non-blocking
+                launch(Dispatchers.IO) {
+                    runCatching {
+                        val workouts = repository.getAllRealWorkoutsAsc()
+                        val trackPointsByWorkout = repository.getTrackPointsForWorkouts(
+                            workouts.map { it.id }
+                        )
+                        val metricsByWorkout = workoutMetricsRepository.getWorkoutMetrics(
+                            workouts.map { it.id }
+                        )
+                        val newProfile = AdaptiveProfileRebuilder.rebuild(
+                            workouts = workouts,
+                            trackPointsByWorkout = trackPointsByWorkout,
+                            metricsByWorkout = metricsByWorkout,
+                            isWorkoutRunning = { WorkoutState.snapshot.value.isRunning }
+                        )
+                        if (!WorkoutState.snapshot.value.isRunning) {
+                            adaptiveProfileRepository.saveProfile(newProfile)
+                        } else {
+                            Log.w("HistoryVM", "Skipped profile save — workout in progress")
+                        }
+                    }.onFailure { e ->
+                        Log.e("HistoryVM", "Profile rebuild failed after delete", e)
+                    }
+                }
             }.onFailure { e ->
                 Log.e("HistoryVM", "Failed to delete workout", e)
                 _detailError.value = e.message ?: "Unable to delete workout."
