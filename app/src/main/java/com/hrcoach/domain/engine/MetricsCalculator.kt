@@ -204,7 +204,7 @@ object MetricsCalculator {
         val maxHr = hrValues.maxOrNull()!!
         val firstHr = hrValues.first()
         if (maxHr - minHr > 15f || firstHr > 100f) return null
-        return (minHr - 10f).coerceAtLeast(30f)
+        return (minHr - 5f).coerceAtLeast(40f)
     }
 
     private fun calculateHeartbeatsPerKm(avgHr: Float, avgPaceMinPerKm: Float): Float =
