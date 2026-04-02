@@ -10,7 +10,7 @@ data class WorkoutPreset(
     val category: PresetCategory,
     val durationLabel: String,
     val intensityLabel: String,
-    val buildConfig: (maxHr: Int) -> WorkoutConfig
+    val buildConfig: (maxHr: Int, restHr: Int) -> WorkoutConfig
 )
 
 enum class PresetCategory {
