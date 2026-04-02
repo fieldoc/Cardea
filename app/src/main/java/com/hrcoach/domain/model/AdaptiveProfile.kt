@@ -1,6 +1,7 @@
 package com.hrcoach.domain.model
 
 import com.hrcoach.domain.engine.TuningDirection
+import kotlin.math.roundToInt
 
 data class PaceHrBucket(
     val avgHr: Float = 0f,
@@ -19,4 +20,11 @@ data class AdaptiveProfile(
     val hrRest: Float? = null,
     val lastTuningDirection: TuningDirection? = null,
 )
+
+/**
+ * Age-based resting HR default when no measurement exists yet.
+ * Conservative population estimate; errs slightly high (-> higher Karvonen targets).
+ */
+fun defaultRestHr(age: Int?): Int =
+    if (age != null) (72 - 0.2 * age).roundToInt().coerceIn(55, 75) else 65
 

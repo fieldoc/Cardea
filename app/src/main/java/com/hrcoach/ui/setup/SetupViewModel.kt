@@ -13,6 +13,7 @@ import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.HrSegment
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
+import com.hrcoach.domain.model.defaultRestHr
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.service.BleConnectionCoordinator
@@ -426,7 +427,9 @@ class SetupViewModel @Inject constructor(
         val maxHr = state.maxHr
         if (presetId != null && presetId != "custom" && maxHr != null) {
             val preset = PresetLibrary.ALL.firstOrNull { it.id == presetId } ?: return null
-            return preset.buildConfig(maxHr).copy(
+            val restHr = adaptiveProfileRepository.getProfile().hrRest?.toInt()
+                ?: defaultRestHr(userProfileRepository.getAge())
+            return preset.buildConfig(maxHr, restHr).copy(
                 bufferBpm = buffer,
                 alertDelaySec = delay,
                 alertCooldownSec = cooldown
