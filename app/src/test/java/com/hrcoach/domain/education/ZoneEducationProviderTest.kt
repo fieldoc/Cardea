@@ -109,12 +109,24 @@ class ZoneEducationProviderTest {
     // ── BPM range calculation ────────────────────────────────────────────
 
     @Test
-    fun `BPM range uses buffer correctly`() {
-        // Zone 2: 60-70% of HRmax=200 = 120-140, with buffer 5 = 115-145
+    fun `BPM range uses buffer correctly with no restHr`() {
+        // Zone 2: 60-70% of HRmax=200 (restHr=null -> 0) = 120-140, with buffer 5 = 115-145
         val text = ZoneEducationProvider.getContent(
             ZoneId.ZONE_2, ContentDensity.ONE_LINER, maxHr = 200, bufferBpm = 5
         )
         assertTrue("Should contain computed range", text.contains("115"))
         assertTrue("Should contain computed range", text.contains("145"))
+    }
+
+    @Test
+    fun `BPM range uses Karvonen formula when restHr is provided`() {
+        // Zone 2: 60-70% of reserve. maxHr=191, restHr=60, reserve=131
+        // low: 60 + 131*0.60 = 139, high: 60 + 131*0.70 = 152
+        // with buffer 5: "134-157 BPM"
+        val text = ZoneEducationProvider.getContent(
+            ZoneId.ZONE_2, ContentDensity.ONE_LINER, maxHr = 191, restHr = 60, bufferBpm = 5
+        )
+        assertTrue("Expected Karvonen range with 134, got: $text", text.contains("134"))
+        assertTrue("Expected Karvonen range with 157, got: $text", text.contains("157"))
     }
 }
