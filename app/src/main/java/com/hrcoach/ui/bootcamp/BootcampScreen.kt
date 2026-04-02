@@ -107,6 +107,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.graphicsLayer
@@ -604,16 +605,16 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
             }
         }
 
-        // Today's pill gets a gentle breathing pulse
+        // Today's pill gets an organic breathing pulse
         val isToday = day.isToday
         val isCompleted = session?.isCompleted == true
         val todayPulse = if (isToday && !isCompleted) {
             val pulseTransition = rememberInfiniteTransition(label = "todayPulse")
             val pulseScale by pulseTransition.animateFloat(
                 initialValue = 1f,
-                targetValue = 1.06f,
+                targetValue = 1.09f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(1800, easing = LinearEasing),
+                    animation = tween(2000, easing = FastOutSlowInEasing),
                     repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
                 ),
                 label = "todayScale"
@@ -622,15 +623,15 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
         } else 1f
 
         Box(contentAlignment = Alignment.Center) {
-            // Glow halo behind completed pills
+            // Tight glow halo behind completed pills
             if (isCompleted) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(33.dp)
                         .background(
                             Brush.radialGradient(
                                 colors = listOf(
-                                    ZoneGreen.copy(alpha = 0.18f),
+                                    ZoneGreen.copy(alpha = 0.16f),
                                     Color.Transparent
                                 )
                             )
@@ -2001,27 +2002,27 @@ private fun TodayHeroSection(
             if (uiState.totalWeeks > 0) {
                 val progress = uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
                 val barGradient = Brush.linearGradient(
-                    colors = listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
+                    colors = listOf(GradientPink, GradientBlue)
                 )
                 val trackColor = CardeaTheme.colors.glassBorder
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
                         .clickable(onClick = onProgressClick)
                 ) {
                     // Track background
                     drawRoundRect(
                         color = trackColor,
                         size = size,
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
                     )
-                    // Filled progress with Cardea gradient
+                    // Filled progress
                     drawRoundRect(
                         brush = barGradient,
                         size = size.copy(width = size.width * progress),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
                     )
                 }
             }
@@ -2100,15 +2101,16 @@ private fun TodayHeroSection(
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        // Breathing shimmer CTA
-                        val shimmerTransition = rememberInfiniteTransition(label = "ctaShimmer")
-                        val shimmerX by shimmerTransition.animateFloat(
-                            initialValue = -0.3f,
-                            targetValue = 1.3f,
+                        // Breathing scale CTA — subtle "ready to tap" pulse
+                        val ctaBreathe = rememberInfiniteTransition(label = "ctaBreathe")
+                        val ctaScale by ctaBreathe.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.015f,
                             animationSpec = infiniteRepeatable(
-                                animation = tween(2400, easing = LinearEasing)
+                                animation = tween(3000, easing = FastOutSlowInEasing),
+                                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
                             ),
-                            label = "shimmerX"
+                            label = "ctaScale"
                         )
                         androidx.compose.material3.Button(
                             onClick = {
@@ -2116,7 +2118,8 @@ private fun TodayHeroSection(
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp),
+                                .height(48.dp)
+                                .scale(ctaScale),
                             shape = RoundedCornerShape(12.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent
@@ -2130,22 +2133,6 @@ private fun TodayHeroSection(
                                     .background(CardeaCtaGradient),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // Shimmer sweep overlay
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.linearGradient(
-                                                colors = listOf(
-                                                    Color.Transparent,
-                                                    Color.White.copy(alpha = 0.15f),
-                                                    Color.Transparent
-                                                ),
-                                                start = Offset(shimmerX * 1000f - 150f, 0f),
-                                                end = Offset(shimmerX * 1000f + 150f, 0f)
-                                            )
-                                        )
-                                )
                                 Text(
                                     text = "Start run",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
@@ -2180,7 +2167,7 @@ private fun TodayHeroSection(
                                 Text(
                                     text = "Rest today",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CardeaTheme.colors.textTertiary
+                                    color = CardeaTheme.colors.textSecondary
                                 )
                             }
                         }
