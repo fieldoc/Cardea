@@ -8,6 +8,8 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.firebase.FirebasePartnerRepository
+import com.hrcoach.data.repository.BootcampRepository
+import com.hrcoach.domain.achievement.StreakCalculator
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
@@ -93,6 +95,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var partnerRepository: FirebasePartnerRepository
+
+    @Inject
+    lateinit var bootcampRepository: BootcampRepository
 
     @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
@@ -745,8 +750,15 @@ class WorkoutForegroundService : LifecycleService() {
                         val phase = WorkoutState.snapshot.value.pendingBootcampSessionId?.let {
                             "Bootcamp"
                         } ?: "Free run"
+                        val streak = try {
+                            val enrollment = bootcampRepository.getActiveEnrollmentOnce()
+                            if (enrollment != null) {
+                                val sessions = bootcampRepository.getSessionsForEnrollmentOnce(enrollment.id)
+                                StreakCalculator.computeSessionStreak(sessions, enrollment.startDate)
+                            } else 0
+                        } catch (_: Exception) { 0 }
                         partnerRepository.syncWorkoutActivity(
-                            currentStreak = 0,
+                            currentStreak = streak,
                             weeklyRunCount = weeklyCount,
                             lastRunDurationMin = durationMin,
                             lastRunPhase = phase,
