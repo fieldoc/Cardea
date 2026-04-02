@@ -75,6 +75,7 @@ import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.BuildConfig
 import com.hrcoach.ui.theme.ZoneRed
+import androidx.compose.material.icons.filled.Group
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,6 +144,29 @@ fun AccountScreen(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+
+            // ── Partners ──────────────────────────────────────────────────────
+            PartnerSection(
+                partners = state.partners,
+                partnerCount = state.partnerCount,
+                onCreateInviteCode = { viewModel.createInviteCode() },
+                onRedeemCode = { code -> viewModel.redeemInviteCode(code) },
+                onRemovePartner = viewModel::removePartner,
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                SettingToggleRow(
+                    icon = Icons.Default.Group,
+                    title = "Partner nudges",
+                    subtitle = "Notify you when a partner completes a run",
+                    checked = state.partnerNudgesEnabled,
+                    onCheckedChange = viewModel::setPartnerNudgesEnabled
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             // ── Appearance ────────────────────────────────────────────────────
             SectionLabel("Appearance")
