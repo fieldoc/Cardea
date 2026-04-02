@@ -62,7 +62,8 @@ object SessionSelector {
         tierIndex: Int
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
-        val includeStrides = phase == TrainingPhase.BUILD && tierIndex >= 2 && runsPerWeek >= 4
+        val includeStrides = (phase == TrainingPhase.BUILD && tierIndex >= 2 && runsPerWeek >= 4) ||
+            (phase == TrainingPhase.BASE && tierIndex >= 1 && goal != BootcampGoal.CARDIO_HEALTH)
 
         val qualitySessions = when (phase) {
             TrainingPhase.BASE -> 0
@@ -87,7 +88,17 @@ object SessionSelector {
 
         // Quality sessions based on phase
         when (phase) {
-            TrainingPhase.BASE -> {} // No quality sessions
+            TrainingPhase.BASE -> {
+                if (includeStrides) {
+                    sessions.add(
+                        PlannedSession(
+                            type = SessionType.STRIDES,
+                            minutes = durations.easyMinutes,
+                            presetId = "zone2_with_strides"
+                        )
+                    )
+                }
+            }
             TrainingPhase.BUILD -> {
                 sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
                 if (includeStrides) {

@@ -208,4 +208,45 @@ class SessionSelectorTest {
         val types = sessions.map { it.type }.toSet()
         assertTrue("Marathon T2 PEAK should have TEMPO", SessionType.TEMPO in types)
     }
+
+    // ── BASE phase strides (Karvonen update) ─────────────
+
+    @Test
+    fun `BASE phase tier 1 assigns one strides session per week`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BASE,
+            goal = BootcampGoal.RACE_10K,
+            runsPerWeek = 3,
+            targetMinutes = 45,
+            tierIndex = 1
+        )
+        val stridesSessions = sessions.filter { it.presetId == "zone2_with_strides" }
+        assertEquals("Expected exactly 1 strides session in BASE tier 1", 1, stridesSessions.size)
+    }
+
+    @Test
+    fun `BASE phase tier 0 has no strides sessions`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BASE,
+            goal = BootcampGoal.RACE_10K,
+            runsPerWeek = 3,
+            targetMinutes = 45,
+            tierIndex = 0
+        )
+        val stridesSessions = sessions.filter { it.presetId == "zone2_with_strides" }
+        assertEquals("Tier 0 should have no strides in BASE", 0, stridesSessions.size)
+    }
+
+    @Test
+    fun `BASE phase cardio health has no strides even at tier 1`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BASE,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 30,
+            tierIndex = 1
+        )
+        val stridesSessions = sessions.filter { it.presetId == "zone2_with_strides" }
+        assertEquals("CARDIO_HEALTH should have no strides", 0, stridesSessions.size)
+    }
 }
