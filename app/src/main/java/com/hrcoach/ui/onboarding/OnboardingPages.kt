@@ -48,7 +48,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,7 +60,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -80,7 +78,6 @@ import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.PermissionGate
-import kotlinx.coroutines.delay
 
 private val ZoneOrange = Color(0xFFFF8C00)
 
@@ -345,7 +342,8 @@ fun ZonesPage(effectiveHrMax: Int?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -383,14 +381,14 @@ fun ZonesPage(effectiveHrMax: Int?) {
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Zone rows
         zones.forEach { zone ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 6.dp),
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
@@ -444,7 +442,7 @@ fun ZonesPage(effectiveHrMax: Int?) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         if (effectiveHrMax != null) {
             Text(
@@ -454,6 +452,65 @@ fun ZonesPage(effectiveHrMax: Int?) {
                 textAlign = TextAlign.Center,
             )
         }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // How coaching works section
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "HOW ZONE COACHING WORKS",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = CardeaTheme.colors.textTertiary,
+                letterSpacing = 1.5.sp,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            ZoneCoachingStep(
+                number = "1",
+                text = "Set a target zone for your run",
+                color = GradientCyan,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            ZoneCoachingStep(
+                number = "2",
+                text = "Cardea monitors your HR in real time",
+                color = GradientCyan,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            ZoneCoachingStep(
+                number = "3",
+                text = "Audio alerts tell you to speed up or ease off",
+                color = GradientCyan,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun ZoneCoachingStep(number: String, text: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = number,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = color,
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            color = CardeaTheme.colors.textSecondary,
+        )
     }
 }
 
@@ -668,7 +725,8 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 24.dp),
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(24.dp))
@@ -687,7 +745,7 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
             textAlign = TextAlign.Center,
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Route illustration
         val infiniteTransition = rememberInfiniteTransition(label = "gps")
@@ -704,7 +762,7 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp)
+                .height(120.dp)
         ) {
             val w = size.width
             val h = size.height
@@ -722,7 +780,6 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
                 ),
                 style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
             )
-            // Pulsing end marker
             drawCircle(
                 color = GradientCyan.copy(alpha = pulseAlpha),
                 radius = 6.dp.toPx(),
@@ -730,7 +787,7 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // Metric strip
         Row(
@@ -742,7 +799,7 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
             MetricItem("29:38", "time")
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Permission request
         if (!alreadyGranted && !permissionGranted) {
@@ -772,6 +829,34 @@ fun GpsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit) {
             }
         }
 
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Feature highlights
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "AFTER YOUR RUN",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = CardeaTheme.colors.textTertiary,
+                letterSpacing = 1.5.sp,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            GpsFeatureRow(
+                icon = Icons.Filled.MyLocation,
+                text = "Route map with HR-zone color heatmap",
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GpsFeatureRow(
+                icon = Icons.AutoMirrored.Filled.ShowChart,
+                text = "Pace, distance, and split analysis",
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GpsFeatureRow(
+                icon = Icons.AutoMirrored.Filled.List,
+                text = "Full run history with searchable log",
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
@@ -790,6 +875,24 @@ private fun MetricItem(value: String, label: String) {
             text = label,
             fontSize = 11.sp,
             color = CardeaTheme.colors.textTertiary,
+        )
+    }
+}
+
+@Composable
+private fun GpsFeatureRow(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = GradientCyan,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            color = CardeaTheme.colors.textSecondary,
         )
     }
 }
@@ -879,7 +982,7 @@ fun AlertsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         // Permission request
         if (notifPerms.isNotEmpty() && !alreadyGranted && !permissionGranted) {
@@ -907,6 +1010,43 @@ fun AlertsPage(permissionGranted: Boolean, onPermissionResult: (Boolean) -> Unit
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("Notifications ready", fontSize = 12.sp, color = ZoneGreen)
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Example scenario
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "EXAMPLE DURING A RUN",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = CardeaTheme.colors.textTertiary,
+                letterSpacing = 1.5.sp,
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            AlertTimelineItem(
+                time = "0:00",
+                event = "Run starts \u2014 target Z2",
+                color = ZoneGreen,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            AlertTimelineItem(
+                time = "4:12",
+                event = "HR drifts to Z3 \u2014 ease up tone",
+                color = ZoneAmber,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            AlertTimelineItem(
+                time = "5:30",
+                event = "Back in Z2 \u2014 confirmation tone",
+                color = ZoneGreen,
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            AlertTimelineItem(
+                time = "8:45",
+                event = "HR drops to Z1 \u2014 pick it up tone",
+                color = ZoneRed,
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -950,6 +1090,32 @@ private fun AlertInfoCard(title: String, description: String, tintColor: Color) 
     }
 }
 
+@Composable
+private fun AlertTimelineItem(time: String, event: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = time,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = CardeaTheme.colors.textTertiary,
+            fontFamily = FontFamily.Monospace,
+            modifier = Modifier.width(36.dp),
+        )
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = event,
+            fontSize = 12.sp,
+            color = CardeaTheme.colors.textSecondary,
+        )
+    }
+}
+
 // ── Screen 7: Tab Tour ──────────────────────────────────────────────
 
 @Composable
@@ -965,109 +1131,106 @@ fun TabTourPage() {
     }
 
     var currentTabIndex by remember { mutableIntStateOf(0) }
-    val tabPositions = remember { mutableStateMapOf<Int, Offset>() }
-
-    LaunchedEffect(currentTabIndex) {
-        val delayMs = if (tabs[currentTabIndex].isHighlighted) 3500L else 2500L
-        delay(delayMs)
-        currentTabIndex = (currentTabIndex + 1) % tabs.size
-    }
 
     val currentTab = tabs[currentTabIndex]
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        // Header
+        Text(
+            text = "Your App",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = CardeaTheme.colors.textPrimary,
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .align(Alignment.CenterHorizontally),
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Tap each tab to explore",
+            fontSize = 14.sp,
+            color = CardeaTheme.colors.textSecondary,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Mock app screen area
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(CardeaTheme.colors.bgSecondary),
         ) {
-            Text(
-                text = "${currentTabIndex + 1} of ${tabs.size}",
-                color = CardeaTheme.colors.textTertiary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp,
-                modifier = Modifier.padding(top = 24.dp),
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Icon(
-                imageVector = currentTab.icon,
-                contentDescription = currentTab.name,
-                tint = if (currentTab.isHighlighted) GradientRed else CardeaTheme.colors.textPrimary,
-                modifier = Modifier.size(48.dp),
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = currentTab.name,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (currentTab.isHighlighted) GradientRed else CardeaTheme.colors.textPrimary,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = currentTab.description,
-                fontSize = 14.sp,
-                color = CardeaTheme.colors.textSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.widthIn(max = 260.dp),
-                lineHeight = 20.sp,
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Mock bottom nav bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(CardeaTheme.colors.bgSecondary),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                tabs.forEachIndexed { index, tab ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clickable { currentTabIndex = index }
-                            .onGloballyPositioned { coords ->
-                                val pos = coords.localToRoot(Offset.Zero)
-                                val center = Offset(
-                                    pos.x + coords.size.width / 2f,
-                                    pos.y + coords.size.height / 2f,
-                                )
-                                tabPositions[index] = center
-                            }
-                            .padding(vertical = 4.dp, horizontal = 8.dp),
-                    ) {
-                        Icon(
-                            imageVector = tab.icon,
-                            contentDescription = tab.name,
-                            tint = if (index == currentTabIndex) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                        Text(
-                            text = tab.name,
-                            fontSize = 10.sp,
-                            color = if (index == currentTabIndex) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary,
-                        )
-                    }
-                }
+            when (currentTabIndex) {
+                0 -> MockHomeScreen()
+                1 -> MockWorkoutScreen()
+                2 -> MockHistoryScreen()
+                3 -> MockProgressScreen()
+                4 -> MockAccountScreen()
             }
         }
 
-        // Spotlight overlay
-        val targetOffset = tabPositions[currentTabIndex] ?: Offset.Zero
-        if (targetOffset != Offset.Zero) {
-            SpotlightOverlay(
-                targetOffset = targetOffset,
-                ringColor = if (currentTab.isHighlighted) GradientRed else GradientCyan,
-                tooltipName = currentTab.name,
-                tooltipDescription = currentTab.description,
-                useGradientName = currentTab.isHighlighted,
-            )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Tab description
+        Text(
+            text = currentTab.description,
+            fontSize = 13.sp,
+            color = CardeaTheme.colors.textSecondary,
+            textAlign = TextAlign.Center,
+            lineHeight = 18.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp),
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Bottom nav bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(CardeaTheme.colors.bgSecondary),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEachIndexed { index, tab ->
+                val isSelected = index == currentTabIndex
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .clickable { currentTabIndex = index }
+                        .padding(vertical = 4.dp, horizontal = 8.dp),
+                ) {
+                    Icon(
+                        imageVector = tab.icon,
+                        contentDescription = tab.name,
+                        tint = when {
+                            isSelected && tab.isHighlighted -> GradientRed
+                            isSelected -> GradientCyan
+                            else -> CardeaTheme.colors.textTertiary
+                        },
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = tab.name,
+                        fontSize = 10.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = when {
+                            isSelected && tab.isHighlighted -> GradientRed
+                            isSelected -> GradientCyan
+                            else -> CardeaTheme.colors.textTertiary
+                        },
+                    )
+                }
+            }
         }
     }
 }
