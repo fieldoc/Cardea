@@ -36,7 +36,7 @@ cat <<EOF
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "permissionDecision": "deny",
-    "permissionDecisionReason": "Code files are staged for this commit:\n$(echo "$CODE_FILES" | sed 's/^/  - /')\n\nThe pre-commit checklist (CLAUDE.md) must be run before committing code changes. Please run the checklist now, then commit once all checks pass."
+    "permissionDecisionReason": "Code files are staged for this commit:\n$(echo "$CODE_FILES" | sed 's/^/  - /')\n\nRun the 9-point pre-commit checklist before committing. You MUST actually execute the verification commands (build, test, grep) — not just self-assess. Report results as a table and get user confirmation."
   }
 }
 EOF
