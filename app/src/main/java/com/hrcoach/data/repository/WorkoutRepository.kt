@@ -35,6 +35,18 @@ class WorkoutRepository @Inject constructor(
 
     suspend fun sumAllDistanceKm(): Double = workoutDao.sumAllDistanceKm()
 
+    suspend fun getWorkoutsCompletedThisWeek(): Int {
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.DAY_OF_WEEK, firstDayOfWeek)
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val weekStartMs = cal.timeInMillis
+        return workoutDao.getAllWorkoutsOnce().count { it.startTime >= weekStartMs && it.endTime > 0 }
+    }
+
     suspend fun cleanupOrphanedWorkouts() {
         val orphans = workoutDao.getOrphanedWorkouts()
         for (orphan in orphans) {

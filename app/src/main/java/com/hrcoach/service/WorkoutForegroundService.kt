@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
@@ -89,6 +90,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var userProfileRepository: UserProfileRepository
+
+    @Inject
+    lateinit var partnerRepository: FirebasePartnerRepository
 
     @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
@@ -731,6 +735,25 @@ class WorkoutForegroundService : LifecycleService() {
                     }
                 }.onFailure { e ->
                     Log.e("WorkoutService", "Metrics derivation failed for workout $workoutId", e)
+                }
+
+                // Sync activity to Firebase for accountability partners (real runs only)
+                if (!SimulationController.isActive) {
+                    try {
+                        val weeklyCount = repository.getWorkoutsCompletedThisWeek()
+                        val durationMin = ((now - workoutStartMs) / 60_000L).toInt()
+                        val phase = WorkoutState.snapshot.value.pendingBootcampSessionId?.let {
+                            "Bootcamp"
+                        } ?: "Free run"
+                        partnerRepository.syncWorkoutActivity(
+                            currentStreak = 0,
+                            weeklyRunCount = weeklyCount,
+                            lastRunDurationMin = durationMin,
+                            lastRunPhase = phase,
+                        )
+                    } catch (e: Exception) {
+                        Log.w("WorkoutService", "Failed to sync partner activity", e)
+                    }
                 }
 
                 // Sim runs: metrics pipeline ran for bug-catching; now clean up the DB row
