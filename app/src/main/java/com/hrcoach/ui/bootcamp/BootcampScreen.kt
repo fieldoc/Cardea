@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -452,26 +453,19 @@ private fun WeekStripCard(
     dateRange: String,
     onSessionClick: (SessionUiItem) -> Unit = {}
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        // Header: "This Week" + date range
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "This Week",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTheme.colors.textPrimary
-            )
-            Text(
-                text = dateRange,
-                style = MaterialTheme.typography.labelSmall,
-                color = CardeaTheme.colors.textTertiary
-            )
-        }
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        // Date range label only (no title — day letters make context obvious)
+        Text(
+            text = dateRange,
+            style = MaterialTheme.typography.labelSmall,
+            color = CardeaTheme.colors.textTertiary,
+            modifier = Modifier.align(Alignment.End)
+        )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // 7-day pill row
         Row(
@@ -484,56 +478,6 @@ private fun WeekStripCard(
                     onClick = day.session?.let { session -> { onSessionClick(session) } }
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Tick + glow timeline indicator
-        val todayIndex = days.indexOfFirst { it.isToday }.takeIf { it >= 0 } ?: 0
-        val trackColor = CardeaTheme.colors.glassBorder
-        val glowColor = CardeaTheme.colors.glassSurface
-        val tickColor = CardeaTheme.colors.textSecondary
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-        ) {
-            val pillHalfWidth = 15.dp.toPx()
-            val trackStart = pillHalfWidth
-            val trackEnd = size.width - pillHalfWidth
-            val trackY = size.height / 2f
-            val tickX = trackStart + (trackEnd - trackStart) * todayIndex / 6f
-
-            // Dim track
-            drawLine(
-                color = trackColor,
-                start = Offset(trackStart, trackY),
-                end = Offset(trackEnd, trackY),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            // Radial glow bloom at today
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        glowColor,
-                        Color.Transparent
-                    ),
-                    center = Offset(tickX, trackY),
-                    radius = 9.dp.toPx()
-                ),
-                radius = 9.dp.toPx(),
-                center = Offset(tickX, trackY)
-            )
-
-            // Tick line
-            drawLine(
-                color = tickColor,
-                start = Offset(tickX, trackY - 4.5.dp.toPx()),
-                end = Offset(tickX, trackY + 4.5.dp.toPx()),
-                strokeWidth = 1.5.dp.toPx(),
-                cap = StrokeCap.Round
-            )
         }
     }
 }
@@ -1321,8 +1265,8 @@ private fun ActiveBootcampDashboard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(top = 16.dp, bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(top = 10.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             WeekStripCard(
                 days = uiState.currentWeekDays,
@@ -1516,40 +1460,61 @@ private fun PreferredDaysStrip(
 
 @Composable
 private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Coming Up",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTheme.colors.textPrimary
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        weeks.forEachIndexed { weekIndex, week ->
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        // Show only the first upcoming week for density; rest accessible via progress view
+        val displayWeeks = weeks.take(2)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Coming Up",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            if (weeks.size > 2) {
+                Text(
+                    text = "${weeks.size} weeks ahead",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textTertiary
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        displayWeeks.forEachIndexed { weekIndex, week ->
             if (weekIndex > 0) {
-                HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 6.dp))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "Week ${week.weekNumber}",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = CardeaTheme.colors.textPrimary
                     )
                     Text(
-                        text = if (week.isRecoveryWeek) "Recovery week" else "Build week",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = if (week.isRecoveryWeek) "Recovery" else "Build",
+                        style = MaterialTheme.typography.labelSmall,
                         color = if (week.isRecoveryWeek) ZoneGreen else CardeaTheme.colors.textSecondary
                     )
                 }
-                
+
                 val types = week.sessions
                     .map { it.typeName.split(" ")[0] }
                     .distinct()
                     .joinToString(", ")
-                
+
                 Text(
                     text = types,
                     style = MaterialTheme.typography.bodySmall,
@@ -1835,24 +1800,43 @@ private fun TodayHeroSection(
                 )
             )
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
 
-            // ── Top row: "Training" title + ⋮ menu ─────────────────────────
+            // ── Compact header: title + goal + progress + menu ──────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Training",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = CardeaTheme.colors.textPrimary
-                )
+                // Left: "Training" + goal name inline
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Training",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.3).sp
+                        ),
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    val goal = uiState.goal
+                    if (goal != null) {
+                        Text(
+                            text = goalDisplayName(goal),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = GradientPink,
+                            modifier = Modifier.clickable(onClick = onGoalClick)
+                        )
+                    }
+                }
                 Box {
-                    IconButton(onClick = { menuExpanded = true }) {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Program options",
@@ -1894,37 +1878,24 @@ private fun TodayHeroSection(
                 }
             }
 
-            // ── Goal name (gradient, clickable) ────────────────────────────
-            val goal = uiState.goal
-            if (goal != null) {
-                Text(
-                    text = goalDisplayName(goal),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = GradientPink,
-                    modifier = Modifier
-                        .clickable(onClick = onGoalClick)
-                        .padding(top = 2.dp)
-                )
-            }
-
-            // ── Progress pill: week X of Y · phase ─────────────────────────
+            // ── Progress pills: week · phase · recovery · fitness ──────────
             Row(
                 modifier = Modifier
-                    .padding(top = 6.dp)
+                    .padding(top = 4.dp)
                     .clickable(onClick = onProgressClick),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val phaseText = if (uiState.currentPhase != null)
-                    "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks} · ${uiState.currentPhase.displayName}"
+                    "Wk ${uiState.absoluteWeek}/${uiState.totalWeeks} · ${uiState.currentPhase.displayName}"
                 else
-                    "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks}"
+                    "Wk ${uiState.absoluteWeek}/${uiState.totalWeeks}"
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(CardeaTheme.colors.glassHighlight)
                         .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = phaseText,
@@ -1938,7 +1909,7 @@ private fun TodayHeroSection(
                             .clip(RoundedCornerShape(20.dp))
                             .background(ZoneGreen.copy(alpha = 0.12f))
                             .border(1.dp, ZoneGreen.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "Recovery",
@@ -1953,7 +1924,7 @@ private fun TodayHeroSection(
                             .clip(RoundedCornerShape(20.dp))
                             .background(CardeaTheme.colors.glassHighlight)
                             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = uiState.fitnessLevel.name.lowercase()
@@ -1965,7 +1936,7 @@ private fun TodayHeroSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // ── State-dependent hero content ───────────────────────────────
             when {
@@ -1988,55 +1959,62 @@ private fun TodayHeroSection(
 
                 else -> when (val today = uiState.todayState) {
                     is TodayState.RunUpcoming -> {
-                        Text(
-                            text = "TODAY",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.2.sp,
-                                fontSize = 10.sp
-                            ),
-                            color = CardeaTheme.colors.textTertiary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
                         val sessionLabel = SessionType.displayLabelForPreset(today.session.presetId)
                             ?: today.session.type.name
                                 .lowercase()
                                 .replaceFirstChar { it.uppercase() }
-                        Text(
-                            text = sessionLabel,
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-0.5).sp
-                            ),
-                            color = CardeaTheme.colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            MetaChip("${today.session.minutes} min")
+                        // Session name + duration on one row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = sessionLabel,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = (-0.5).sp
+                                ),
+                                color = CardeaTheme.colors.textPrimary
+                            )
+                            Text(
+                                text = "${today.session.minutes} min",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                color = CardeaTheme.colors.textSecondary,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                        // Zone badge + one-liner description inline
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             val badge = ZoneEducationProvider.forSessionType(
                                 today.session.type.name, ContentDensity.BADGE
                             )
                             if (badge != null) MetaChip(badge)
+                            ZoneEducationProvider.forSessionType(
+                                today.session.type.name, ContentDensity.ONE_LINER
+                            )?.let { oneLiner ->
+                                Text(
+                                    text = oneLiner,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = CardeaTheme.colors.textTertiary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
-                        ZoneEducationProvider.forSessionType(
-                            today.session.type.name, ContentDensity.ONE_LINER
-                        )?.let { oneLiner ->
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = oneLiner,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                                color = CardeaTheme.colors.textTertiary,
-                                maxLines = 2
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         androidx.compose.material3.Button(
                             onClick = {
                                 onRequestSession(today.session)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp),
+                                .height(48.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent
@@ -2058,15 +2036,14 @@ private fun TodayHeroSection(
                             }
                         }
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 2.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             if (onReschedule != null) {
                                 TextButton(
                                     onClick = onReschedule,
-                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(32.dp)
                                 ) {
                                     Text(
                                         text = "Reschedule",
@@ -2079,7 +2056,8 @@ private fun TodayHeroSection(
                             }
                             TextButton(
                                 onClick = onSwapTodayForRest,
-                                contentPadding = PaddingValues(horizontal = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                modifier = Modifier.height(32.dp)
                             ) {
                                 Text(
                                     text = "Rest today",
