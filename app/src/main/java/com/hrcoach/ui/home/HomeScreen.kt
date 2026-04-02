@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -220,10 +221,9 @@ private fun PulseHero(
 
     val heroAlpha = if (isToday) 1f else 0.5f
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(195.dp)
             .background(
                 Brush.linearGradient(
                     colorStops = arrayOf(
@@ -235,7 +235,7 @@ private fun PulseHero(
             )
     ) {
         Column(
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp)
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp)
         ) {
             Text(
                 text = headerText,
@@ -247,14 +247,21 @@ private fun PulseHero(
                 color = CardeaTheme.colors.textTertiary
             )
             Spacer(Modifier.height(8.dp))
+            val heroGradient = CardeaTheme.colors.gradient
             Text(
                 text = sessionLabel,
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 30.sp,
-                    letterSpacing = (-0.3).sp
+                    fontSize = 34.sp,
+                    letterSpacing = (-0.5).sp
                 ),
-                color = if (isToday) Color.White else CardeaTheme.colors.textSecondary
+                color = CardeaTheme.colors.textPrimary,
+                modifier = Modifier
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
+                    }
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -284,41 +291,63 @@ private fun PulseHero(
             ZoneEducationProvider.forSessionType(
                 session.sessionType, ContentDensity.ONE_LINER
             )?.let { oneLiner ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = oneLiner,
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = CardeaTheme.colors.textTertiary,
-                    maxLines = 2
-                )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(top = 2.dp)
+                            .width(2.dp)
+                            .height(30.dp)
+                            .background(
+                                Color.White.copy(alpha = 0.18f),
+                                RoundedCornerShape(1.dp)
+                            )
+                    )
+                    Text(
+                        text = oneLiner,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
+                        ),
+                        color = CardeaTheme.colors.textTertiary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 
-        // ECG glow
+        // ECG glow + line sit below the text content
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(y = (-15).dp)
-                .size(width = 180.dp, height = 60.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            GradientPink.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
-                    ),
-                    shape = CircleShape
-                )
-        )
-
-        // ECG line
-        EcgLine(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .height(85.dp),
-            alpha = 0.45f
-        )
+                .height(85.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = (-15).dp)
+                    .size(width = 180.dp, height = 60.dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                GradientPink.copy(alpha = 0.15f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+            EcgLine(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(85.dp),
+                alpha = 0.45f
+            )
+        }
     }
 }
 
@@ -446,7 +475,6 @@ private fun PrimaryRow(state: HomeUiState, modifier: Modifier = Modifier) {
 
 @Composable
 private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
-    val gradient = CardeaTheme.colors.gradient
     val remaining = (target - current).coerceAtLeast(0)
     val subText = when {
         remaining == 0 -> "goal hit!"
@@ -458,21 +486,8 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
         modifier = modifier
             .fillMaxHeight()
             .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.linearGradient(
-                    colorStops = arrayOf(
-                        0f to GradientRed.copy(alpha = 0.06f),
-                        1f to GradientBlue.copy(alpha = 0.03f)
-                    ),
-                    start = Offset.Zero,
-                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                )
-            )
-            .border(
-                1.dp,
-                GradientPink.copy(alpha = 0.12f),
-                RoundedCornerShape(18.dp)
-            )
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(18.dp))
             .padding(18.dp),
         verticalArrangement = Arrangement.Center
     ) {
@@ -490,16 +505,10 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
             text = "$current/$target",
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 40.sp,
-                lineHeight = 40.sp
+                fontSize = 30.sp,
+                lineHeight = 30.sp
             ),
-            color = Color.White,
-            modifier = Modifier
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(brush = gradient, blendMode = BlendMode.SrcIn)
-                }
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(Modifier.height(6.dp))
         Text(
@@ -537,8 +546,8 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
             text = streak.toString(),
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 40.sp,
-                lineHeight = 40.sp
+                fontSize = 28.sp,
+                lineHeight = 28.sp
             ),
             color = CardeaTheme.colors.textPrimary
         )
@@ -737,7 +746,15 @@ private fun VolumeRow(label: String, value: String, progress: Float) {
                     .fillMaxWidth(progress.coerceAtLeast(0.01f))
                     .height(4.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.20f))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                GradientRed.copy(alpha = 0.55f),
+                                GradientPink.copy(alpha = 0.55f),
+                                GradientBlue.copy(alpha = 0.55f)
+                            )
+                        )
+                    )
             )
         }
         Text(

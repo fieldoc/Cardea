@@ -71,15 +71,15 @@ object ZoneEducationProvider {
         val bpmSuffix = bpmRange(zoneId, maxHr, bufferBpm)?.let { " ($it)" } ?: ""
         return when (zoneId) {
             ZoneId.ZONE_2 ->
-                "Increases your heart\u2019s stroke volume and builds capillary networks around muscle fibers, so the same pace costs less cardiac effort$bpmSuffix"
+                "Builds stroke volume and capillary density \u2014 same pace, less effort over time$bpmSuffix"
             ZoneId.ZONE_3 ->
-                "Trains at the intensity where lactate production outpaces your muscles\u2019 ability to use it as fuel \u2014 pushing that ceiling higher lets you hold faster paces$bpmSuffix"
+                "Pushes your lactate threshold so you can hold faster paces longer$bpmSuffix"
             ZoneId.ZONE_4_5 ->
-                "Works your heart at near-peak cardiac output to raise your VO\u2082max ceiling, while recruiting fast-twitch fibers that stay dormant at easier paces$bpmSuffix"
+                "Raises your VO\u2082max ceiling and recruits fast-twitch fibers$bpmSuffix"
             ZoneId.RECOVERY ->
-                "Low-effort data collection that maps how your heart rate responds to pace \u2014 used to calibrate your personal zones"
+                "Easy effort that maps your HR-to-pace response for zone calibration"
             ZoneId.RACE_PACE ->
-                "Rehearses the exact neuromuscular patterns and energy pacing you\u2019ll need on race day$bpmSuffix"
+                "Rehearses the neuromuscular patterns and pacing you\u2019ll need on race day$bpmSuffix"
         }
     }
 
