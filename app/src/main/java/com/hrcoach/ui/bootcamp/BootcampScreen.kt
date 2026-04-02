@@ -2961,26 +2961,6 @@ private fun MaxHrGateSheet(
     }
 }
 
-private fun buildConfigJson(session: PlannedSession, maxHr: Int?, restHr: Int): String {
-    val presetId = session.presetId
-    if (presetId != null && maxHr != null) {
-        val preset = com.hrcoach.domain.preset.PresetLibrary.ALL.firstOrNull { it.id == presetId }
-        if (preset != null) {
-            val config = preset.buildConfig(maxHr, restHr)
-            return com.hrcoach.util.JsonCodec.gson.toJson(config)
-        }
-    }
-    // Fallback: free run with bootcamp session metadata for display
-    val label = session.type.name.lowercase().replaceFirstChar { it.uppercase() } + " Run"
-    return com.hrcoach.util.JsonCodec.gson.toJson(
-        WorkoutConfig(
-            mode = WorkoutMode.FREE_RUN,
-            plannedDurationMinutes = session.minutes,
-            sessionLabel = label
-        )
-    )
-}
-
 // ─── HR Monitor Connection Sheet ────────────────────────────────────────────
 
 @SuppressLint("MissingPermission")
