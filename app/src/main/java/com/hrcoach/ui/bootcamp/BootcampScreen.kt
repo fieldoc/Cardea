@@ -2086,13 +2086,16 @@ private fun TodayHeroSection(
                             ZoneEducationProvider.forSessionType(
                                 today.session.type.name, ContentDensity.ONE_LINER
                             )?.let { oneLiner ->
+                                var expanded by remember { mutableStateOf(false) }
                                 Text(
                                     text = oneLiner,
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                     color = CardeaTheme.colors.textTertiary,
-                                    maxLines = 1,
+                                    maxLines = if (expanded) Int.MAX_VALUE else 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { expanded = !expanded }
                                 )
                             }
                         }
