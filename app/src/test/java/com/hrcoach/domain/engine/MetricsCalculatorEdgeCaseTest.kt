@@ -35,7 +35,8 @@ class MetricsCalculatorEdgeCaseTest {
     }
 
     @Test
-    fun `restingHrProxy returns valid proxy for stable low HR`() {
+    fun `restingHrProxy uses minus-5 offset`() {
+        // min HR = 65 in first 60s -> (65 - 5) = 60
         val points = listOf(
             point(timestamp = 0L, hr = 65),
             point(timestamp = 10_000L, hr = 66),
@@ -45,18 +46,18 @@ class MetricsCalculatorEdgeCaseTest {
             point(timestamp = 50_000L, hr = 67)
         )
         val proxy = MetricsCalculator.computeRestingHrProxy(points)
-        assertEquals(55f, proxy!!, 0.01f)
+        assertEquals(60f, proxy!!, 0.01f)
     }
 
     @Test
-    fun `restingHrProxy clamps to 30 minimum`() {
+    fun `restingHrProxy clamps to 40 minimum`() {
         val points = listOf(
-            point(timestamp = 0L, hr = 35),
-            point(timestamp = 10_000L, hr = 35),
-            point(timestamp = 20_000L, hr = 35)
+            point(timestamp = 0L, hr = 42),
+            point(timestamp = 10_000L, hr = 43),
+            point(timestamp = 20_000L, hr = 44)
         )
         val proxy = MetricsCalculator.computeRestingHrProxy(points)
-        assertEquals(30f, proxy!!, 0.01f)
+        assertEquals(40f, proxy!!, 0.01f)  // (42 - 5) = 37, clamped to 40
     }
 
     @Test

@@ -1066,7 +1066,7 @@ private fun PresetCard(
 
 @Composable
 private fun SegmentTimelineStrip(preset: WorkoutPreset) {
-    val config = remember(preset.id) { preset.buildConfig(180) }
+    val config = remember(preset.id) { preset.buildConfig(180, 60) }
     val segmentColors = remember(preset.id) { buildSegmentColors(config) }
     val totalDuration = remember(preset.id) {
         when {

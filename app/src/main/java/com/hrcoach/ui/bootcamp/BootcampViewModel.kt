@@ -1162,11 +1162,13 @@ class BootcampViewModel @Inject constructor(
     }
 
     private fun buildWorkoutConfig(session: PlannedSession, maxHr: Int): String {
+        val restHr = adaptiveProfileRepository.getProfile().hrRest?.toInt()
+            ?: com.hrcoach.domain.model.defaultRestHr(userProfileRepository.getAge())
         val presetId = session.presetId
         if (presetId != null) {
             val preset = com.hrcoach.domain.preset.PresetLibrary.ALL.firstOrNull { it.id == presetId }
             if (preset != null) {
-                val config = preset.buildConfig(maxHr)
+                val config = preset.buildConfig(maxHr, restHr)
                 // Carry session metadata so the active workout screen can show goal info
                 val enriched = config.copy(
                     plannedDurationMinutes = config.plannedDurationMinutes ?: session.minutes,

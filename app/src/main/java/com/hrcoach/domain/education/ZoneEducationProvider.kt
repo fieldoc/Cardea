@@ -23,11 +23,12 @@ object ZoneEducationProvider {
         zoneId: ZoneId,
         density: ContentDensity,
         maxHr: Int? = null,
+        restHr: Int? = null,
         bufferBpm: Int = 5
     ): String = when (density) {
         ContentDensity.BADGE -> badge(zoneId)
-        ContentDensity.ONE_LINER -> oneLiner(zoneId, maxHr, bufferBpm)
-        ContentDensity.FULL -> full(zoneId, maxHr, bufferBpm)
+        ContentDensity.ONE_LINER -> oneLiner(zoneId, maxHr, restHr, bufferBpm)
+        ContentDensity.FULL -> full(zoneId, maxHr, restHr, bufferBpm)
     }
 
     /**
@@ -48,11 +49,12 @@ object ZoneEducationProvider {
         rawSessionType: String,
         density: ContentDensity,
         maxHr: Int? = null,
+        restHr: Int? = null,
         bufferBpm: Int = 5
     ): String? {
         val type = runCatching { SessionType.valueOf(rawSessionType) }.getOrNull()
             ?: return null
-        return getContent(zoneForSessionType(type), density, maxHr, bufferBpm)
+        return getContent(zoneForSessionType(type), density, maxHr, restHr, bufferBpm)
     }
 
     // ── Badge (1-2 words) ────────────────────────────────────────────────
@@ -67,8 +69,8 @@ object ZoneEducationProvider {
 
     // ── One-liner (1 sentence) ───────────────────────────────────────────
 
-    private fun oneLiner(zoneId: ZoneId, maxHr: Int?, bufferBpm: Int): String {
-        val bpmSuffix = bpmRange(zoneId, maxHr, bufferBpm)?.let { " ($it)" } ?: ""
+    private fun oneLiner(zoneId: ZoneId, maxHr: Int?, restHr: Int?, bufferBpm: Int): String {
+        val bpmSuffix = bpmRange(zoneId, maxHr, restHr, bufferBpm)?.let { " ($it)" } ?: ""
         return when (zoneId) {
             ZoneId.ZONE_2 ->
                 "Builds stroke volume and capillary density \u2014 same pace, less effort over time$bpmSuffix"
@@ -85,8 +87,8 @@ object ZoneEducationProvider {
 
     // ── Full (2-4 sentences) ─────────────────────────────────────────────
 
-    private fun full(zoneId: ZoneId, maxHr: Int?, bufferBpm: Int): String {
-        val bpmLine = bpmRange(zoneId, maxHr, bufferBpm)
+    private fun full(zoneId: ZoneId, maxHr: Int?, restHr: Int?, bufferBpm: Int): String {
+        val bpmLine = bpmRange(zoneId, maxHr, restHr, bufferBpm)
             ?.let { "\n\nYour range: $it" }
             ?: "\n\nRun a Discovery session to see your personal ranges."
         return when (zoneId) {
@@ -132,11 +134,12 @@ object ZoneEducationProvider {
 
     // ── BPM range helper ─────────────────────────────────────────────────
 
-    private fun bpmRange(zoneId: ZoneId, maxHr: Int?, bufferBpm: Int): String? {
+    private fun bpmRange(zoneId: ZoneId, maxHr: Int?, restHr: Int?, bufferBpm: Int): String? {
         if (maxHr == null) return null
         val (lowPct, highPct) = zonePercentages(zoneId)
-        val targetLow = (maxHr * lowPct).roundToInt()
-        val targetHigh = (maxHr * highPct).roundToInt()
+        val rest = restHr ?: 0
+        val targetLow = (rest + (maxHr - rest) * lowPct).roundToInt()
+        val targetHigh = (rest + (maxHr - rest) * highPct).roundToInt()
         return "${targetLow - bufferBpm}\u2013${targetHigh + bufferBpm} BPM"
     }
 

@@ -425,6 +425,12 @@ class WorkoutForegroundService : LifecycleService() {
         val guidance = when {
             isAutoPaused -> "STOPPED \u2022 ALERTS PAUSED"
             adaptiveResult?.guidance != null -> adaptiveResult.guidance
+            // Strides guidance after 20 minutes
+            workoutConfig.guidanceTag == "strides" && elapsedSeconds >= 1200 && zoneStatus == ZoneStatus.IN_ZONE ->
+                "Time for strides! 4\u20136 \u00d7 20s fast & smooth, jog easy 60\u201390s between"
+            // Zone 2 conversational pace nudge
+            zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides") ->
+                "Easy pace builds your aerobic engine. Hold a conversation."
             else -> when (zoneStatus) {
                 ZoneStatus.ABOVE_ZONE -> "SLOW DOWN NOW"
                 ZoneStatus.BELOW_ZONE -> "SPEED UP NOW"

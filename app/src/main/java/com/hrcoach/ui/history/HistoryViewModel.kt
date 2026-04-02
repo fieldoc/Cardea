@@ -7,6 +7,7 @@ import com.hrcoach.data.db.TrackPointEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.MapsSettingsRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.engine.AdaptiveProfileRebuilder
@@ -30,7 +31,8 @@ class HistoryViewModel @Inject constructor(
     private val repository: WorkoutRepository,
     private val workoutMetricsRepository: WorkoutMetricsRepository,
     private val mapsSettingsRepository: MapsSettingsRepository,
-    private val adaptiveProfileRepository: AdaptiveProfileRepository
+    private val adaptiveProfileRepository: AdaptiveProfileRepository,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
     val workouts: StateFlow<List<WorkoutEntity>> = repository.getAllWorkouts()
@@ -108,7 +110,8 @@ class HistoryViewModel @Inject constructor(
                             workouts = workouts,
                             trackPointsByWorkout = trackPointsByWorkout,
                             metricsByWorkout = metricsByWorkout,
-                            isWorkoutRunning = { WorkoutState.snapshot.value.isRunning }
+                            isWorkoutRunning = { WorkoutState.snapshot.value.isRunning },
+                            age = userProfileRepository.getAge()
                         )
                         if (!WorkoutState.snapshot.value.isRunning) {
                             adaptiveProfileRepository.saveProfile(newProfile)

@@ -40,7 +40,8 @@ class AdaptiveProfileRebuilder @Inject constructor() {
             workouts: List<WorkoutEntity>,
             trackPointsByWorkout: Map<Long, List<TrackPointEntity>>,
             metricsByWorkout: Map<Long, WorkoutAdaptiveMetrics>,
-            isWorkoutRunning: () -> Boolean
+            isWorkoutRunning: () -> Boolean,
+            age: Int? = null
         ): AdaptiveProfile {
             // Consulted so the lambda fires during this call (callers check return value separately)
             isWorkoutRunning()
@@ -117,6 +118,23 @@ class AdaptiveProfileRebuilder @Inject constructor() {
                     profile = profile.copy(hrMax = sessionMax, hrMaxIsCalibrated = false)
                 } else if (currentMax > 0) {
                     profile = profile.copy(hrMax = currentMax)
+                }
+
+                // Submaximal HRmax inference (first 3 qualifying workouts)
+                if (age != null && profile.totalSessions <= 3 && !profile.hrMaxIsCalibrated) {
+                    val hrSamples = points.sortedBy { it.timestamp }.map {
+                        HrSample(it.timestamp, it.heartRate)
+                    }
+                    val currentMax = profile.hrMax ?: (220 - age)
+                    val subMaxEstimate = SubMaxHrEstimator.estimate(
+                        samples = hrSamples,
+                        currentHrMax = currentMax,
+                        age = age,
+                        isCalibrated = profile.hrMaxIsCalibrated
+                    )
+                    if (subMaxEstimate != null) {
+                        profile = profile.copy(hrMax = subMaxEstimate)
+                    }
                 }
 
                 // hrRest: derive from track points using the same lower-wins proxy as the service
