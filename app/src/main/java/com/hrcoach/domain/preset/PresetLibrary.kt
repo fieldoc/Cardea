@@ -12,7 +12,7 @@ internal fun karvonen(maxHr: Int, restHr: Int, pct: Float): Int =
 object PresetLibrary {
 
     val ALL: List<WorkoutPreset> = listOf(
-        zone2Base(), aeroTempo(), lactateThreshold(),
+        zone2Base(), zone2WithStrides(), aeroTempo(), lactateThreshold(),
         norwegian4x4(), hiit3030(), hillRepeats(),
         halfMarathonPrep(), marathonPrep()
     )
@@ -31,6 +31,26 @@ object PresetLibrary {
                 steadyStateTargetHr = karvonen(maxHr, restHr, 0.68f),
                 bufferBpm = 5,
                 presetId = "zone2_base"
+            )
+        }
+    )
+
+    private fun zone2WithStrides() = WorkoutPreset(
+        id = "zone2_with_strides",
+        name = "Easy + Strides",
+        subtitle = "Aerobic base with pickups",
+        description = "45\u201375 min easy run with 4\u20136 \u00d7 20-sec strides after 20 minutes.",
+        category = PresetCategory.BASE_AEROBIC,
+        durationLabel = "45\u201375 min",
+        intensityLabel = "Easy",
+        buildConfig = { maxHr, restHr ->
+            WorkoutConfig(
+                mode = WorkoutMode.STEADY_STATE,
+                steadyStateTargetHr = karvonen(maxHr, restHr, 0.68f),
+                bufferBpm = 5,
+                presetId = "zone2_with_strides",
+                sessionLabel = "Easy + Strides",
+                guidanceTag = "strides"
             )
         }
     )

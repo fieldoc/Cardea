@@ -13,7 +13,9 @@ data class WorkoutConfig(
     /** Human-readable session label — for display only (e.g. "Easy Run"). */
     val sessionLabel: String? = null,
     /** Bootcamp week number — for display only on the active workout screen. */
-    val bootcampWeekNumber: Int? = null
+    val bootcampWeekNumber: Int? = null,
+    /** Tag for special guidance during workout (e.g. "strides" triggers stride protocol text). */
+    val guidanceTag: String? = null
 ) {
     /**
      * Returns true when every segment is time-based (has [HrSegment.durationSeconds] set and

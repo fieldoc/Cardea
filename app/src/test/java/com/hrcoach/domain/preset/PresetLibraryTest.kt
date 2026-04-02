@@ -62,6 +62,15 @@ class PresetLibraryTest {
     }
 
     @Test
+    fun `zone2 with strides has strides guidance tag`() {
+        val config = PresetLibrary.ALL.first { it.id == "zone2_with_strides" }.buildConfig(180, 60)
+        assertEquals("strides", config.guidanceTag)
+        assertEquals("Easy + Strides", config.sessionLabel)
+        // Same Karvonen target as zone2_base
+        assertEquals(142, config.steadyStateTargetHr)
+    }
+
+    @Test
     fun `preset IDs are unique`() {
         val ids = PresetLibrary.ALL.map { it.id }
         assertEquals(ids.distinct().size, ids.size)
