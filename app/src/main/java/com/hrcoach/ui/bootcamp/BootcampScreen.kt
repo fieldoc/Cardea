@@ -94,6 +94,7 @@ import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.ZoneGreen
 
 import androidx.compose.material.icons.outlined.Info
@@ -103,7 +104,12 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.offset
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
@@ -598,15 +604,50 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(RoundedCornerShape(7.dp))
-                .background(dotBackground)
-                .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(7.dp)) else Modifier),
-            contentAlignment = Alignment.Center
-        ) {
-            dotContent()
+        // Today's pill gets a gentle breathing pulse
+        val isToday = day.isToday
+        val isCompleted = session?.isCompleted == true
+        val todayPulse = if (isToday && !isCompleted) {
+            val pulseTransition = rememberInfiniteTransition(label = "todayPulse")
+            val pulseScale by pulseTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.06f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1800, easing = LinearEasing),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "todayScale"
+            )
+            pulseScale
+        } else 1f
+
+        Box(contentAlignment = Alignment.Center) {
+            // Glow halo behind completed pills
+            if (isCompleted) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    ZoneGreen.copy(alpha = 0.18f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .scale(todayPulse)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(dotBackground)
+                    .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(7.dp)) else Modifier),
+                contentAlignment = Alignment.Center
+            ) {
+                dotContent()
+            }
         }
     }
 }
@@ -1770,6 +1811,22 @@ private object SessionDescription {
     }
 }
 
+// ─── Session-type ambient color mapping ─────────────────────────────────────
+
+/** Returns ambient tint color for the hero background based on today's session type. */
+private fun sessionAmbientColor(todayState: TodayState): Color = when (todayState) {
+    is TodayState.RunUpcoming -> when (todayState.session.type) {
+        SessionType.EASY, SessionType.STRIDES -> Color(0xFF0EA5E9) // Cool sky-teal
+        SessionType.LONG -> Color(0xFF6366F1)                     // Deep indigo
+        SessionType.TEMPO -> ZoneAmber                             // Warm amber
+        SessionType.INTERVAL -> GradientPink                       // Hot pink
+        SessionType.RACE_SIM -> GradientRed                        // Aggressive red
+        SessionType.DISCOVERY, SessionType.CHECK_IN -> GradientBlue
+    }
+    is TodayState.RunDone -> ZoneGreen                             // Accomplished green
+    is TodayState.RestDay -> Color.Transparent                     // No tint
+}
+
 // ─── Today Hero Section (replaces PhaseHeader + TodayContextCard) ───────────
 
 @Composable
@@ -1790,12 +1847,15 @@ private fun TodayHeroSection(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
+    // Ambient color based on today's session type
+    val ambientColor = sessionAmbientColor(uiState.todayState)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(GradientRed.copy(alpha = 0.10f), Color.Transparent),
+                    colors = listOf(ambientColor.copy(alpha = 0.12f), Color.Transparent),
                     endY = 600f
                 )
             )
@@ -1936,7 +1996,36 @@ private fun TodayHeroSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // ── Program progress bar ────────────────────────────────────────
+            Spacer(modifier = Modifier.height(10.dp))
+            if (uiState.totalWeeks > 0) {
+                val progress = uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
+                val barGradient = Brush.linearGradient(
+                    colors = listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
+                )
+                val trackColor = CardeaTheme.colors.glassBorder
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .clickable(onClick = onProgressClick)
+                ) {
+                    // Track background
+                    drawRoundRect(
+                        color = trackColor,
+                        size = size,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                    )
+                    // Filled progress with Cardea gradient
+                    drawRoundRect(
+                        brush = barGradient,
+                        size = size.copy(width = size.width * progress),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx())
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
 
             // ── State-dependent hero content ───────────────────────────────
             when {
@@ -2008,6 +2097,16 @@ private fun TodayHeroSection(
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
+                        // Breathing shimmer CTA
+                        val shimmerTransition = rememberInfiniteTransition(label = "ctaShimmer")
+                        val shimmerX by shimmerTransition.animateFloat(
+                            initialValue = -0.3f,
+                            targetValue = 1.3f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(2400, easing = LinearEasing)
+                            ),
+                            label = "shimmerX"
+                        )
                         androidx.compose.material3.Button(
                             onClick = {
                                 onRequestSession(today.session)
@@ -2028,6 +2127,22 @@ private fun TodayHeroSection(
                                     .background(CardeaCtaGradient),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Shimmer sweep overlay
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.linearGradient(
+                                                colors = listOf(
+                                                    Color.Transparent,
+                                                    Color.White.copy(alpha = 0.15f),
+                                                    Color.Transparent
+                                                ),
+                                                start = Offset(shimmerX * 1000f - 150f, 0f),
+                                                end = Offset(shimmerX * 1000f + 150f, 0f)
+                                            )
+                                        )
+                                )
                                 Text(
                                     text = "Start run",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
