@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -93,6 +94,7 @@ import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.ZoneGreen
 
 import androidx.compose.material.icons.outlined.Info
@@ -102,7 +104,13 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.offset
 import android.annotation.SuppressLint
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Star
@@ -452,26 +460,19 @@ private fun WeekStripCard(
     dateRange: String,
     onSessionClick: (SessionUiItem) -> Unit = {}
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        // Header: "This Week" + date range
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "This Week",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTheme.colors.textPrimary
-            )
-            Text(
-                text = dateRange,
-                style = MaterialTheme.typography.labelSmall,
-                color = CardeaTheme.colors.textTertiary
-            )
-        }
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        // Date range label only (no title — day letters make context obvious)
+        Text(
+            text = dateRange,
+            style = MaterialTheme.typography.labelSmall,
+            color = CardeaTheme.colors.textTertiary,
+            modifier = Modifier.align(Alignment.End)
+        )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // 7-day pill row
         Row(
@@ -484,56 +485,6 @@ private fun WeekStripCard(
                     onClick = day.session?.let { session -> { onSessionClick(session) } }
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Tick + glow timeline indicator
-        val todayIndex = days.indexOfFirst { it.isToday }.takeIf { it >= 0 } ?: 0
-        val trackColor = CardeaTheme.colors.glassBorder
-        val glowColor = CardeaTheme.colors.glassSurface
-        val tickColor = CardeaTheme.colors.textSecondary
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-        ) {
-            val pillHalfWidth = 15.dp.toPx()
-            val trackStart = pillHalfWidth
-            val trackEnd = size.width - pillHalfWidth
-            val trackY = size.height / 2f
-            val tickX = trackStart + (trackEnd - trackStart) * todayIndex / 6f
-
-            // Dim track
-            drawLine(
-                color = trackColor,
-                start = Offset(trackStart, trackY),
-                end = Offset(trackEnd, trackY),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            // Radial glow bloom at today
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        glowColor,
-                        Color.Transparent
-                    ),
-                    center = Offset(tickX, trackY),
-                    radius = 9.dp.toPx()
-                ),
-                radius = 9.dp.toPx(),
-                center = Offset(tickX, trackY)
-            )
-
-            // Tick line
-            drawLine(
-                color = tickColor,
-                start = Offset(tickX, trackY - 4.5.dp.toPx()),
-                end = Offset(tickX, trackY + 4.5.dp.toPx()),
-                strokeWidth = 1.5.dp.toPx(),
-                cap = StrokeCap.Round
-            )
         }
     }
 }
@@ -654,15 +605,50 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .clip(RoundedCornerShape(7.dp))
-                .background(dotBackground)
-                .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(7.dp)) else Modifier),
-            contentAlignment = Alignment.Center
-        ) {
-            dotContent()
+        // Today's pill gets an organic breathing pulse
+        val isToday = day.isToday
+        val isCompleted = session?.isCompleted == true
+        val todayPulse = if (isToday && !isCompleted) {
+            val pulseTransition = rememberInfiniteTransition(label = "todayPulse")
+            val pulseScale by pulseTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.09f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2000, easing = FastOutSlowInEasing),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                ),
+                label = "todayScale"
+            )
+            pulseScale
+        } else 1f
+
+        Box(contentAlignment = Alignment.Center) {
+            // Tight glow halo behind completed pills
+            if (isCompleted) {
+                Box(
+                    modifier = Modifier
+                        .size(33.dp)
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    ZoneGreen.copy(alpha = 0.16f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .scale(todayPulse)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(dotBackground)
+                    .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(7.dp)) else Modifier),
+                contentAlignment = Alignment.Center
+            ) {
+                dotContent()
+            }
         }
     }
 }
@@ -1321,8 +1307,8 @@ private fun ActiveBootcampDashboard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(top = 16.dp, bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(top = 10.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             WeekStripCard(
                 days = uiState.currentWeekDays,
@@ -1516,40 +1502,61 @@ private fun PreferredDaysStrip(
 
 @Composable
 private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = "Coming Up",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTheme.colors.textPrimary
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        weeks.forEachIndexed { weekIndex, week ->
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        // Show only the first upcoming week for density; rest accessible via progress view
+        val displayWeeks = weeks.take(2)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Coming Up",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            if (weeks.size > 2) {
+                Text(
+                    text = "${weeks.size} weeks ahead",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textTertiary
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        displayWeeks.forEachIndexed { weekIndex, week ->
             if (weekIndex > 0) {
-                HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = CardeaTheme.colors.glassBorder, modifier = Modifier.padding(vertical = 6.dp))
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "Week ${week.weekNumber}",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = CardeaTheme.colors.textPrimary
                     )
                     Text(
-                        text = if (week.isRecoveryWeek) "Recovery week" else "Build week",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = if (week.isRecoveryWeek) "Recovery" else "Build",
+                        style = MaterialTheme.typography.labelSmall,
                         color = if (week.isRecoveryWeek) ZoneGreen else CardeaTheme.colors.textSecondary
                     )
                 }
-                
+
                 val types = week.sessions
                     .map { it.typeName.split(" ")[0] }
                     .distinct()
                     .joinToString(", ")
-                
+
                 Text(
                     text = types,
                     style = MaterialTheme.typography.bodySmall,
@@ -1805,6 +1812,22 @@ private object SessionDescription {
     }
 }
 
+// ─── Session-type ambient color mapping ─────────────────────────────────────
+
+/** Returns ambient tint color for the hero background based on today's session type. */
+private fun sessionAmbientColor(todayState: TodayState): Color = when (todayState) {
+    is TodayState.RunUpcoming -> when (todayState.session.type) {
+        SessionType.EASY, SessionType.STRIDES -> Color(0xFF0EA5E9) // Cool sky-teal
+        SessionType.LONG -> Color(0xFF6366F1)                     // Deep indigo
+        SessionType.TEMPO -> ZoneAmber                             // Warm amber
+        SessionType.INTERVAL -> GradientPink                       // Hot pink
+        SessionType.RACE_SIM -> GradientRed                        // Aggressive red
+        SessionType.DISCOVERY, SessionType.CHECK_IN -> GradientBlue
+    }
+    is TodayState.RunDone -> ZoneGreen                             // Accomplished green
+    is TodayState.RestDay -> Color.Transparent                     // No tint
+}
+
 // ─── Today Hero Section (replaces PhaseHeader + TodayContextCard) ───────────
 
 @Composable
@@ -1825,34 +1848,56 @@ private fun TodayHeroSection(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
+    // Ambient color based on today's session type
+    val ambientColor = sessionAmbientColor(uiState.todayState)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(GradientRed.copy(alpha = 0.10f), Color.Transparent),
+                    colors = listOf(ambientColor.copy(alpha = 0.12f), Color.Transparent),
                     endY = 600f
                 )
             )
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
 
-            // ── Top row: "Training" title + ⋮ menu ─────────────────────────
+            // ── Compact header: title + goal + progress + menu ──────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Training",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = (-0.5).sp
-                    ),
-                    color = CardeaTheme.colors.textPrimary
-                )
+                // Left: "Training" + goal name inline
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "Training",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = (-0.3).sp
+                        ),
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    val goal = uiState.goal
+                    if (goal != null) {
+                        Text(
+                            text = goalDisplayName(goal),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                            color = GradientPink,
+                            modifier = Modifier.clickable(onClick = onGoalClick)
+                        )
+                    }
+                }
                 Box {
-                    IconButton(onClick = { menuExpanded = true }) {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Program options",
@@ -1894,37 +1939,24 @@ private fun TodayHeroSection(
                 }
             }
 
-            // ── Goal name (gradient, clickable) ────────────────────────────
-            val goal = uiState.goal
-            if (goal != null) {
-                Text(
-                    text = goalDisplayName(goal),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = GradientPink,
-                    modifier = Modifier
-                        .clickable(onClick = onGoalClick)
-                        .padding(top = 2.dp)
-                )
-            }
-
-            // ── Progress pill: week X of Y · phase ─────────────────────────
+            // ── Progress pills: week · phase · recovery · fitness ──────────
             Row(
                 modifier = Modifier
-                    .padding(top = 6.dp)
+                    .padding(top = 4.dp)
                     .clickable(onClick = onProgressClick),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val phaseText = if (uiState.currentPhase != null)
-                    "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks} · ${uiState.currentPhase.displayName}"
+                    "Wk ${uiState.absoluteWeek}/${uiState.totalWeeks} · ${uiState.currentPhase.displayName}"
                 else
-                    "Week ${uiState.absoluteWeek} of ${uiState.totalWeeks}"
+                    "Wk ${uiState.absoluteWeek}/${uiState.totalWeeks}"
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(CardeaTheme.colors.glassHighlight)
                         .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = phaseText,
@@ -1938,7 +1970,7 @@ private fun TodayHeroSection(
                             .clip(RoundedCornerShape(20.dp))
                             .background(ZoneGreen.copy(alpha = 0.12f))
                             .border(1.dp, ZoneGreen.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "Recovery",
@@ -1953,7 +1985,7 @@ private fun TodayHeroSection(
                             .clip(RoundedCornerShape(20.dp))
                             .background(CardeaTheme.colors.glassHighlight)
                             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = uiState.fitnessLevel.name.lowercase()
@@ -1965,7 +1997,36 @@ private fun TodayHeroSection(
                 }
             }
 
-            Spacer(modifier = Modifier.height(22.dp))
+            // ── Program progress bar ────────────────────────────────────────
+            Spacer(modifier = Modifier.height(10.dp))
+            if (uiState.totalWeeks > 0) {
+                val progress = uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
+                val barGradient = Brush.linearGradient(
+                    colors = listOf(GradientPink, GradientBlue)
+                )
+                val trackColor = CardeaTheme.colors.glassBorder
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .clickable(onClick = onProgressClick)
+                ) {
+                    // Track background
+                    drawRoundRect(
+                        color = trackColor,
+                        size = size,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+                    )
+                    // Filled progress
+                    drawRoundRect(
+                        brush = barGradient,
+                        size = size.copy(width = size.width * progress),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
 
             // ── State-dependent hero content ───────────────────────────────
             when {
@@ -1988,55 +2049,77 @@ private fun TodayHeroSection(
 
                 else -> when (val today = uiState.todayState) {
                     is TodayState.RunUpcoming -> {
-                        Text(
-                            text = "TODAY",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.2.sp,
-                                fontSize = 10.sp
-                            ),
-                            color = CardeaTheme.colors.textTertiary
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
                         val sessionLabel = SessionType.displayLabelForPreset(today.session.presetId)
                             ?: today.session.type.name
                                 .lowercase()
                                 .replaceFirstChar { it.uppercase() }
-                        Text(
-                            text = sessionLabel,
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = (-0.5).sp
-                            ),
-                            color = CardeaTheme.colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            MetaChip("${today.session.minutes} min")
+                        // Session name + duration on one row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            Text(
+                                text = sessionLabel,
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = (-0.5).sp
+                                ),
+                                color = CardeaTheme.colors.textPrimary
+                            )
+                            Text(
+                                text = "${today.session.minutes} min",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                                color = CardeaTheme.colors.textSecondary,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                        // Zone badge + one-liner description inline
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
                             val badge = ZoneEducationProvider.forSessionType(
                                 today.session.type.name, ContentDensity.BADGE
                             )
                             if (badge != null) MetaChip(badge)
+                            ZoneEducationProvider.forSessionType(
+                                today.session.type.name, ContentDensity.ONE_LINER
+                            )?.let { oneLiner ->
+                                var expanded by remember { mutableStateOf(false) }
+                                Text(
+                                    text = oneLiner,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    color = CardeaTheme.colors.textTertiary,
+                                    maxLines = if (expanded) Int.MAX_VALUE else 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { expanded = !expanded }
+                                )
+                            }
                         }
-                        ZoneEducationProvider.forSessionType(
-                            today.session.type.name, ContentDensity.ONE_LINER
-                        )?.let { oneLiner ->
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = oneLiner,
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                                color = CardeaTheme.colors.textTertiary,
-                                maxLines = 2
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
+                        // Breathing scale CTA — subtle "ready to tap" pulse
+                        val ctaBreathe = rememberInfiniteTransition(label = "ctaBreathe")
+                        val ctaScale by ctaBreathe.animateFloat(
+                            initialValue = 1f,
+                            targetValue = 1.015f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(3000, easing = FastOutSlowInEasing),
+                                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+                            ),
+                            label = "ctaScale"
+                        )
                         androidx.compose.material3.Button(
                             onClick = {
                                 onRequestSession(today.session)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp),
+                                .height(48.dp)
+                                .scale(ctaScale),
                             shape = RoundedCornerShape(12.dp),
                             colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent
@@ -2058,15 +2141,14 @@ private fun TodayHeroSection(
                             }
                         }
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 2.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             if (onReschedule != null) {
                                 TextButton(
                                     onClick = onReschedule,
-                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(32.dp)
                                 ) {
                                     Text(
                                         text = "Reschedule",
@@ -2079,12 +2161,13 @@ private fun TodayHeroSection(
                             }
                             TextButton(
                                 onClick = onSwapTodayForRest,
-                                contentPadding = PaddingValues(horizontal = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                modifier = Modifier.height(32.dp)
                             ) {
                                 Text(
                                     text = "Rest today",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = CardeaTheme.colors.textTertiary
+                                    color = CardeaTheme.colors.textSecondary
                                 )
                             }
                         }
