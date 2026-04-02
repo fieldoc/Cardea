@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.achievement.StreakCalculator
@@ -53,6 +54,7 @@ data class HomeUiState(
     val bootcampTotalWeeks: Int = 12,
     val bootcampPercentComplete: Float = 0f,
     val coachingInsight: CoachingInsight? = null,
+    val nudgeBanner: NudgeBannerState? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -60,17 +62,20 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val bootcampRepository: BootcampRepository,
+    private val partnerRepository: FirebasePartnerRepository,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
-        workoutRepository.getAllWorkouts(),
-        bootcampRepository.getActiveEnrollment(),
-        WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged()
-    ) { workouts, enrollment, isRunning ->
-        Triple(workouts, enrollment, isRunning)
-    }
-    .flatMapLatest { (workouts, enrollment, isRunning) ->
+        combine(
+            workoutRepository.getAllWorkouts(),
+            bootcampRepository.getActiveEnrollment(),
+            WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged(),
+        ) { workouts, enrollment, isRunning -> Triple(workouts, enrollment, isRunning) },
+        partnerRepository.observePartners(),
+    ) { triple, partners -> triple to partners }
+    .flatMapLatest { (triple, partners) ->
+        val (workouts, enrollment, isRunning) = triple
         flow {
             val zone = ZoneId.systemDefault()
             val now = Instant.now().atZone(zone)
@@ -154,6 +159,15 @@ class HomeViewModel @Inject constructor(
             val sensorName = blePrefs.getString("last_device_name", null)
             val sensorLastSeen = blePrefs.getLong("last_connected_ms", 0L).takeIf { it > 0L }
 
+            val userRanToday = workouts.any { workout ->
+                val workoutDate = Instant.ofEpochMilli(workout.startTime).atZone(zone).toLocalDate()
+                workoutDate == today
+            }
+            val nudgeBanner = computeNudgeBanner(
+                partners = partners,
+                userRanToday = userRanToday,
+            )
+
             emit(HomeUiState(
                 greeting = greeting,
                 lastWorkout = workouts.firstOrNull(),
@@ -175,6 +189,7 @@ class HomeViewModel @Inject constructor(
                 bootcampTotalWeeks = bootcampTotalWeeks,
                 bootcampPercentComplete = bootcampPercentComplete,
                 coachingInsight = coachingInsight,
+                nudgeBanner = nudgeBanner,
             ))
         }
     }

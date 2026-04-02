@@ -15,6 +15,7 @@ class UserProfileRepository @Inject constructor(
         private const val PREF_DISPLAY_NAME = "display_name"
         private const val PREF_AVATAR_SYMBOL = "avatar_symbol"
         private const val PREF_USER_ID = "user_id"
+        private const val PREF_PARTNER_NUDGES_ENABLED = "partner_nudges_enabled"
         private const val PREF_AGE = "age"
         private const val PREF_WEIGHT = "weight"
         private const val PREF_WEIGHT_UNIT = "weight_unit" // "lbs" or "kg"
@@ -64,6 +65,21 @@ class UserProfileRepository @Inject constructor(
         val newId = java.util.UUID.randomUUID().toString()
         prefs.edit().putString(PREF_USER_ID, newId).apply()
         return newId
+    }
+
+    @Synchronized
+    fun setUserId(id: String) {
+        prefs.edit().putString(PREF_USER_ID, id).apply()
+    }
+
+    @Synchronized
+    fun isPartnerNudgesEnabled(): Boolean {
+        return prefs.getBoolean(PREF_PARTNER_NUDGES_ENABLED, true)
+    }
+
+    @Synchronized
+    fun setPartnerNudgesEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(PREF_PARTNER_NUDGES_ENABLED, enabled).apply()
     }
 
     @Synchronized

@@ -934,6 +934,16 @@ fun HomeScreen(
                 NoBootcampCard(onSetupBootcamp = onGoToBootcamp)
             }
 
+            // Partner nudge banner — visible when a partner ran today and user hasn't
+            if (state.nudgeBanner != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                PartnerNudgeBanner(
+                    state = state.nudgeBanner!!,
+                    onTap = onGoToBootcamp,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            }
+
             // CTA — only when bootcamp is active (NoBootcampCard has its own button)
             if (state.hasActiveBootcamp) {
                 CtaRow(
