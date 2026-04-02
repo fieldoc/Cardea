@@ -277,7 +277,7 @@ fun ProfilePage(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Calculated as 220 \u2212 your age",
+                text = "Estimated \u2014 improves after your first run",
                 fontSize = 12.sp,
                 color = CardeaTheme.colors.textTertiary,
             )
