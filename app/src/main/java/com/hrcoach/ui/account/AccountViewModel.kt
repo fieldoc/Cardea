@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.firebase.FirebaseAuthManager
+import com.hrcoach.data.firebase.FirebasePartnerRepository
+import com.hrcoach.data.firebase.FcmTokenManager
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.AutoPauseSettingsRepository
@@ -11,6 +14,7 @@ import com.hrcoach.data.repository.MapsSettingsRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.model.AudioSettings
+import com.hrcoach.domain.model.PartnerActivity
 import com.hrcoach.domain.model.VoiceVerbosity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +45,9 @@ data class AccountUiState(
     val maxHrError: String? = null,
     val autoPauseEnabled: Boolean = true,
     val achievements: List<AchievementEntity> = emptyList(),
+    val partners: List<PartnerActivity> = emptyList(),
+    val partnerCount: Int = 0,
+    val partnerNudgesEnabled: Boolean = true,
 )
 
 @HiltViewModel
@@ -52,6 +59,9 @@ class AccountViewModel @Inject constructor(
     private val autoPauseRepo: AutoPauseSettingsRepository,
     private val achievementDao: AchievementDao,
     private val adaptiveProfileRepo: AdaptiveProfileRepository,
+    private val partnerRepository: FirebasePartnerRepository,
+    private val firebaseAuthManager: FirebaseAuthManager,
+    private val fcmTokenManager: FcmTokenManager,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -74,6 +84,10 @@ class AccountViewModel @Inject constructor(
     private val _displayName = MutableStateFlow("Runner")
     private val _emblemId = MutableStateFlow("pulse")
 
+    private val _partners = partnerRepository.observePartners()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val _partnerNudgesEnabled = MutableStateFlow(true)
+
     init {
         viewModelScope.launch {
             _mapsKey.value = mapsRepo.getMapsApiKey()
@@ -91,6 +105,8 @@ class AccountViewModel @Inject constructor(
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
+        _partnerNudgesEnabled.value = userProfileRepo.isPartnerNudgesEnabled()
+        initFirebase()
     }
 
     val uiState: StateFlow<AccountUiState> = combine(
@@ -139,6 +155,14 @@ class AccountViewModel @Inject constructor(
         base.copy(displayName = name, emblemId = emblemId)
     }.combine(achievementDao.getAllAchievements()) { base, achievements ->
         base.copy(achievements = achievements)
+    }.combine(
+        combine(_partners, _partnerNudgesEnabled) { partners, nudgesEnabled -> partners to nudgesEnabled }
+    ) { base, (partners, nudgesEnabled) ->
+        base.copy(
+            partners = partners,
+            partnerCount = partners.size,
+            partnerNudgesEnabled = nudgesEnabled,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
     fun setMapsApiKey(key: String) {
@@ -216,5 +240,30 @@ class AccountViewModel @Inject constructor(
         adaptiveProfileRepo.saveProfile(profile.copy(hrMax = value))
         _maxHr.value = value
         _maxHrSaved.value = true
+    }
+
+    fun initFirebase() {
+        viewModelScope.launch {
+            firebaseAuthManager.ensureSignedIn()
+            fcmTokenManager.refreshToken()
+            partnerRepository.syncProfile()
+        }
+    }
+
+    suspend fun createInviteCode(): String {
+        return partnerRepository.createInviteCode()
+    }
+
+    suspend fun redeemInviteCode(code: String): PartnerActivity? {
+        return partnerRepository.redeemInviteCode(code)
+    }
+
+    fun removePartner(partnerId: String) {
+        viewModelScope.launch { partnerRepository.removePartner(partnerId) }
+    }
+
+    fun setPartnerNudgesEnabled(enabled: Boolean) {
+        _partnerNudgesEnabled.value = enabled
+        userProfileRepo.setPartnerNudgesEnabled(enabled)
     }
 }
