@@ -109,6 +109,10 @@ class FirebasePartnerRepository @Inject constructor(
         }
         val partnersRef = usersRef.child(uid).child("partners")
 
+        // Emit empty list immediately so combine() doesn't stall
+        // while waiting for the first Firebase callback
+        trySend(emptyList())
+
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val partnerIds = snapshot.children.mapNotNull { it.key }
@@ -151,6 +155,11 @@ class FirebasePartnerRepository @Inject constructor(
             return@callbackFlow
         }
         val partnersRef = usersRef.child(uid).child("partners")
+
+        // Emit initial value so combine() doesn't stall
+        // while waiting for the first Firebase callback
+        trySend(0)
+
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 trySend(snapshot.childrenCount.toInt())
