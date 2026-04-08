@@ -107,12 +107,52 @@ Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, *
 - **Not suitable for:** UX design decisions, brainstorming, tasks requiring human judgment. Use `superpowers:brainstorming` for those first.
 - **Good for:** Well-defined TDD implementation tasks where the plan already specifies exact file changes and test commands.
 
-## Serena (semantic code search)
+## MCP Servers
 
-Serena is registered via `.mcp.json` (manual, not plugin) with `--context claude-code` and explicit `--project` path. See `.claude/rules/serena.md` for when to use Serena vs Grep.
+Three MCP servers are registered in `.mcp.json`. All are manual (not plugin-managed).
+
+### Serena (semantic Kotlin/LSP code search)
+
+Serena is registered via `.mcp.json` with `--context claude-code` and explicit `--project` path. See `.claude/rules/serena.md` for when to use Serena vs Grep.
 
 **If the LSP fails** ("language server manager is not initialized"):
 1. Call `restart_language_server`, then verify with a real symbol operation
 2. If still broken, fall back to Grep/Glob — don't spin on a broken LSP
 3. `activate_project` can return false success — always verify after calling it
 4. Never silently switch to Grep — note that Serena was unavailable
+
+### mobile-mcp (Android device / emulator automation)
+
+`mobile-mcp` (`@mobilenext/mobile-mcp`) replaces the old `android-debug-bridge-mcp`. It provides:
+- **Screenshots** of the running app on device or emulator
+- **Tap / swipe / type** interactions with UI elements
+- **Accessibility tree snapshots** — structured view of what's on screen
+- **App launch / install / clear** operations
+- **ADB logcat** access
+
+**When to use:** Any time a feature or UI change needs visual verification on device — take a screenshot after building and installing to confirm the composable renders correctly. See `.claude/rules/mobile-mcp.md` for playbook.
+
+**Prerequisite:** An emulator must be running or a physical device connected via USB with developer mode enabled. Verify with `adb devices` before invoking mobile-mcp tools.
+
+### GitHub MCP (repository & PR management)
+
+Registered in `.mcp.json`. **Requires a GitHub Personal Access Token (PAT)** — replace the `REPLACE_WITH_YOUR_GITHUB_PAT` placeholder in `.mcp.json` before the server will connect.
+
+**How to create a PAT:** GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic). Scopes needed: `repo`, `read:org`, `workflow`.
+
+**When to use:**
+- Creating PRs with proper descriptions after implementing a feature
+- Checking GitHub Actions CI status after a push
+- Searching issues/PRs for prior decisions or related work
+- Creating issues from discovered bugs
+
+See `.claude/rules/github-mcp.md` for tool reference.
+
+### Figma MCP (design → code, code → design)
+
+Connect via the Cowork registry (OAuth, no API key needed). Once connected, it enables:
+- Pulling a Figma frame directly into Compose code generation
+- Reading exact design tokens, component specs, and Auto Layout constraints
+- Supercharges the `design` plugin's handoff and critique skills
+
+**Not yet connected** — use the Connect button in Cowork's connector panel to authenticate.

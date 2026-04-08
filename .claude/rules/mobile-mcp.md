@@ -43,7 +43,7 @@ After implementing a UI feature and building:
 - **Debug APK path:** `app/build/outputs/apk/debug/app-debug.apk`
 - **Active workout screen** hides the bottom nav bar — don't expect it to be visible during a workout
 - **BLE and GPS** are not available in emulators — test HR zone logic with unit tests; use mobile-mcp only for UI shape verification
-- **Theme mode** — Cardea supports System/Light/Dark via the in-app Theme selector on AccountScreen. Light mode is a valid user preference; the device's system theme also applies when set to "System". Do not flag the user's chosen theme as a bug.
+- **Dark theme only** — Cardea enforces its own palette, so system light/dark mode doesn't apply
 
 ## Troubleshooting
 
