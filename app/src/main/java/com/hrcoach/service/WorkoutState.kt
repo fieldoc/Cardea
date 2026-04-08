@@ -25,6 +25,7 @@ data class WorkoutSnapshot(
     val isAutoPaused: Boolean = false,
     val autoPauseEnabled: Boolean = true,
     val countdownSecondsRemaining: Int? = null,
+    val elapsedSeconds: Long = 0L,         // service-computed, sim-clock-aware
 )
 
 object WorkoutState {

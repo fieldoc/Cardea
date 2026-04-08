@@ -471,7 +471,8 @@ class WorkoutForegroundService : LifecycleService() {
                 guidanceText = guidance,
                 projectionReady = adaptiveResult?.hasProjectionConfidence ?: false,
                 isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN,
-                avgHr = sessionAvgHr
+                avgHr = sessionAvgHr,
+                elapsedSeconds = elapsedSeconds,
             )
         }
 

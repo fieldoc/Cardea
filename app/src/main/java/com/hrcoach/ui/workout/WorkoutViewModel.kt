@@ -82,7 +82,9 @@ class WorkoutViewModel @Inject constructor(
                 val snapshot = _uiState.value.snapshot
                 if (!snapshot.isRunning) continue
                 _uiState.update { current ->
-                    val newElapsed = computeElapsedSeconds(System.currentTimeMillis())
+                    val snap = current.snapshot
+                    val newElapsed = if (snap.elapsedSeconds > 0L) snap.elapsedSeconds
+                                     else computeElapsedSeconds(System.currentTimeMillis())
                     val seg = deriveSegmentInfo(current.workoutConfig, newElapsed)
                     val prog = deriveProgressInfo(current.workoutConfig)
                     current.copy(
@@ -141,7 +143,11 @@ class WorkoutViewModel @Inject constructor(
         }
 
         _uiState.update { current ->
-            val newElapsed = if (snapshot.isRunning) computeElapsedSeconds(nowMs) else 0L
+            val newElapsed = when {
+                !snapshot.isRunning -> 0L
+                snapshot.elapsedSeconds > 0L -> snapshot.elapsedSeconds
+                else -> computeElapsedSeconds(nowMs)
+            }
             val config = if (snapshot.isRunning) current.workoutConfig else null
             val seg = deriveSegmentInfo(config, newElapsed)
             val prog = deriveProgressInfo(config)
