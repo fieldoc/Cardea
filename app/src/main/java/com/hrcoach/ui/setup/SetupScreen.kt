@@ -83,6 +83,7 @@ import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
+import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
@@ -499,7 +500,7 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
                     .fillMaxWidth()
                     .height(42.dp)
                     .clip(RoundedCornerShape(11.dp))
-                    .background(CardeaGradient)
+                    .background(CardeaCtaGradient)
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
             ) {
