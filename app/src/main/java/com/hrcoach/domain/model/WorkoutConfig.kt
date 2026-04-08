@@ -67,4 +67,30 @@ data class WorkoutConfig(
         val total = segments.mapNotNull { it.durationSeconds?.toLong() }.sum()
         return total.takeIf { it > 0 }
     }
+
+    /**
+     * Returns true when segments include both time-based (durationSeconds only) and
+     * distance-based (distanceMeters only) entries. The bug fix for mixed configs routes
+     * time-based segments by elapsed time, then hands off to distance routing.
+     */
+    fun hasMixedSegments(): Boolean =
+        segments.any { it.durationSeconds != null && it.distanceMeters == null } &&
+        segments.any { it.distanceMeters != null }
+
+    /**
+     * HR target for configs with a mix of time-based and distance-based segments.
+     * Time-based segments (those with durationSeconds but no distanceMeters) act as a
+     * preamble: they are matched by elapsed time. Once elapsed time exceeds all
+     * time-based segments, distance routing takes over.
+     */
+    fun targetHrForMixed(elapsedSeconds: Long, distanceMeters: Float): Int? {
+        var cumulativeTime = 0L
+        for (seg in segments) {
+            if (seg.durationSeconds != null && seg.distanceMeters == null) {
+                cumulativeTime += seg.durationSeconds
+                if (elapsedSeconds < cumulativeTime) return seg.targetHr
+            }
+        }
+        return targetHrAtDistance(distanceMeters)
+    }
 }

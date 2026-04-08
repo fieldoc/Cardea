@@ -380,10 +380,10 @@ class WorkoutForegroundService : LifecycleService() {
         } else {
             0L
         }
-        val target = if (workoutConfig.isTimeBased()) {
-            workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
-        } else {
-            workoutConfig.targetHrAtDistance(tick.distanceMeters)
+        val target = when {
+            workoutConfig.isTimeBased() -> workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
+            workoutConfig.hasMixedSegments() -> workoutConfig.targetHrForMixed(elapsedSeconds, tick.distanceMeters)
+            else -> workoutConfig.targetHrAtDistance(tick.distanceMeters)
         }
         val isPaused = WorkoutState.snapshot.value.isPaused
 
