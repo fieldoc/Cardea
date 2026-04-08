@@ -263,7 +263,7 @@ fun AddPartnerBottomSheet(
         Column(
             modifier = Modifier
                 .navigationBarsPadding()
-                .padding(bottom = 24.dp)
+                .padding(top = 8.dp, bottom = 24.dp)
         ) {
             Text(
                 text = "Add a Partner",
