@@ -139,6 +139,7 @@ class WorkoutForegroundService : LifecycleService() {
 
     private var hrSampleSum: Long = 0L
     private var hrSampleCount: Int = 0
+    private var lastNotificationText: String = ""
 
     private val hrSampleBuffer = ArrayDeque<Int>()      // rolling 120-sample window for artifact detection
     private val hrSessionSamples = mutableListOf<Int>() // full session for hrMax detection
@@ -232,6 +233,7 @@ class WorkoutForegroundService : LifecycleService() {
         hrSampleBuffer.clear()
         hrSessionSamples.clear()
         cadenceLockSuspected = false
+        lastNotificationText = ""
 
         notificationHelper.startForeground(this, "Starting workout...")
 
@@ -519,7 +521,10 @@ class WorkoutForegroundService : LifecycleService() {
             target != null && target > 0 -> "$guidance - HR ${tick.hr} / $target"
             else -> "HR ${tick.hr} bpm"
         }
-        notificationHelper.update(notificationText)
+        if (notificationText != lastNotificationText) {
+            lastNotificationText = notificationText
+            notificationHelper.update(notificationText)
+        }
     }
 
     private fun pauseWorkout() {
