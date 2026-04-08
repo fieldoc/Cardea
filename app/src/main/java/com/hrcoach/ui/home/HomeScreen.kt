@@ -302,7 +302,7 @@ private fun PulseHero(
                             .width(2.dp)
                             .height(30.dp)
                             .background(
-                                Color.White.copy(alpha = 0.18f),
+                                CardeaTheme.colors.glassBorder,
                                 RoundedCornerShape(1.dp)
                             )
                     )
@@ -429,16 +429,18 @@ private fun CtaRow(
 
 @Composable
 private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
+    val hasLowerContent = state.hasActiveBootcamp || state.coachingInsight != null
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Tier 1: Goal + Streak tiles — fill available space
+        // Tier 1: Goal + Streak tiles — fill available space when peers exist, fixed otherwise
         PrimaryRow(
             state = state,
-            modifier = Modifier.weight(1f)
+            modifier = if (hasLowerContent) Modifier.weight(1f)
+                       else Modifier.fillMaxWidth().height(160.dp)
         )
 
         // Tier 2: Bootcamp + Volume — fixed height
@@ -484,7 +486,7 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier
-            .fillMaxHeight()
+            .fillMaxSize()
             .clip(RoundedCornerShape(18.dp))
             .background(CardeaTheme.colors.glassHighlight)
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(18.dp))
@@ -525,7 +527,7 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier
-            .fillMaxHeight()
+            .fillMaxSize()
             .clip(RoundedCornerShape(18.dp))
             .background(CardeaTheme.colors.glassHighlight)
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(18.dp))
@@ -609,6 +611,7 @@ private fun BootcampTile(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Compact 44dp progress ring
+        val ringTrackColor = CardeaTheme.colors.glassBorder
         Box(
             modifier = Modifier.size(44.dp),
             contentAlignment = Alignment.Center
@@ -617,7 +620,7 @@ private fun BootcampTile(
                 val strokeW = 4.dp.toPx()
                 val radius = (size.minDimension - strokeW) / 2f
                 drawCircle(
-                    color = Color.White.copy(alpha = 0.05f),
+                    color = ringTrackColor,
                     radius = radius,
                     style = Stroke(width = strokeW)
                 )
@@ -664,7 +667,7 @@ private fun BootcampTile(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     ),
-                    color = Color.White
+                    color = CardeaTheme.colors.textPrimary
                 )
             }
             Spacer(Modifier.height(6.dp))
@@ -673,7 +676,7 @@ private fun BootcampTile(
                     .fillMaxWidth()
                     .height(5.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.06f))
+                    .background(CardeaTheme.colors.glassBorder)
             ) {
                 Box(
                     modifier = Modifier
@@ -739,7 +742,7 @@ private fun VolumeRow(label: String, value: String, progress: Float) {
                 .weight(1f)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.06f))
+                .background(CardeaTheme.colors.glassBorder)
         ) {
             Box(
                 modifier = Modifier
@@ -825,6 +828,55 @@ private fun CoachingEcgIcon(modifier: Modifier = Modifier) {
                 cap = StrokeCap.Round,
                 join = StrokeJoin.Round
             )
+        )
+    }
+}
+
+// ── All Caught Up Card ──────────────────────────────────────────
+
+@Composable
+private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = CardeaTheme.colors.glassBorder,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .background(
+                color = CardeaTheme.colors.glassHighlight,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .padding(20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "THIS WEEK\u2019S SESSIONS",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            ),
+            color = CardeaTheme.colors.textSecondary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "All done for now",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+            color = CardeaTheme.colors.textPrimary
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "Next week\u2019s plan is on the way. Rest well.",
+            style = MaterialTheme.typography.bodySmall,
+            color = CardeaTheme.colors.textSecondary,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(16.dp))
+        CardeaButton(
+            text = "View Training",
+            onClick = onGoToTraining,
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
@@ -923,15 +975,21 @@ fun HomeScreen(
 
             // Hero section
             val nextSession = state.nextSession
-            if (state.hasActiveBootcamp && nextSession != null) {
-                PulseHero(
-                    session = nextSession,
-                    weekNumber = state.currentWeekNumber,
-                    isToday = state.isNextSessionToday,
-                    dayLabel = state.nextSessionDayLabel
-                )
-            } else {
-                NoBootcampCard(onSetupBootcamp = onGoToBootcamp)
+            when {
+                state.hasActiveBootcamp && nextSession != null -> {
+                    PulseHero(
+                        session = nextSession,
+                        weekNumber = state.currentWeekNumber,
+                        isToday = state.isNextSessionToday,
+                        dayLabel = state.nextSessionDayLabel
+                    )
+                }
+                state.hasActiveBootcamp -> {
+                    AllCaughtUpCard(onGoToTraining = onGoToBootcamp)
+                }
+                else -> {
+                    NoBootcampCard(onSetupBootcamp = onGoToBootcamp)
+                }
             }
 
             // Partner nudge banner — visible when a partner ran today and user hasn't

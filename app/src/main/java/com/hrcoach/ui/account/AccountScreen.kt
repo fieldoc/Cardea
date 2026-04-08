@@ -225,6 +225,15 @@ fun AccountScreen(
                         onValueChange = viewModel::setMapsApiKey,
                         singleLine = true,
                         label = { Text("Google Maps API key") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CardeaTheme.colors.accentPink,
+                            unfocusedBorderColor = CardeaTheme.colors.glassBorder,
+                            cursorColor = CardeaTheme.colors.accentPink,
+                            focusedTextColor = CardeaTheme.colors.textPrimary,
+                            unfocusedTextColor = CardeaTheme.colors.textPrimary,
+                            focusedLabelColor = CardeaTheme.colors.accentPink,
+                            unfocusedLabelColor = CardeaTheme.colors.textTertiary,
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -260,6 +269,17 @@ fun AccountScreen(
                         placeholder = { Text("e.g. 185") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         isError = state.maxHrError != null,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CardeaTheme.colors.accentPink,
+                            unfocusedBorderColor = CardeaTheme.colors.glassBorder,
+                            cursorColor = CardeaTheme.colors.accentPink,
+                            focusedTextColor = CardeaTheme.colors.textPrimary,
+                            unfocusedTextColor = CardeaTheme.colors.textPrimary,
+                            focusedLabelColor = CardeaTheme.colors.accentPink,
+                            unfocusedLabelColor = CardeaTheme.colors.textTertiary,
+                            errorBorderColor = ZoneRed,
+                            errorLabelColor = ZoneRed,
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(6.dp))
