@@ -314,12 +314,21 @@ class WorkoutForegroundService : LifecycleService() {
 
         // Drive simulated sources if in sim mode
         if (hr is SimulatedHrSource && loc is SimulatedLocationSource) {
+            val scenarioDurationSec: Float = SimulationController.state.value.scenario
+                ?.durationSeconds?.toFloat() ?: Float.MAX_VALUE
             simTickJob?.cancel()
             simTickJob = lifecycleScope.launch(Dispatchers.IO) {
                 while (true) {
-                    val elapsedSec = (clock.now() - workoutStartMs) / 1000f
-                    hr.updateForTime(elapsedSec)
-                    loc.updateForTime(elapsedSec)
+                    val snap = WorkoutState.snapshot.value
+                    if (!snap.isPaused && !snap.isAutoPaused) {
+                        val elapsedSec = (clock.now() - workoutStartMs) / 1000f
+                        hr.updateForTime(elapsedSec)
+                        loc.updateForTime(elapsedSec)
+                        if (elapsedSec >= scenarioDurationSec) {
+                            stopWorkout()
+                            break
+                        }
+                    }
                     delay(100) // 100ms real time between ticks
                 }
             }
