@@ -10,6 +10,7 @@ import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.domain.achievement.StreakCalculator
+import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
@@ -100,6 +101,9 @@ class WorkoutForegroundService : LifecycleService() {
     lateinit var bootcampRepository: BootcampRepository
 
     @Inject
+    lateinit var bootcampSessionCompleter: BootcampSessionCompleter
+
+    @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
 
     @Inject
@@ -139,6 +143,7 @@ class WorkoutForegroundService : LifecycleService() {
 
     private var hrSampleSum: Long = 0L
     private var hrSampleCount: Int = 0
+    private var lastNotificationText: String = ""
 
     private val hrSampleBuffer = ArrayDeque<Int>()      // rolling 120-sample window for artifact detection
     private val hrSessionSamples = mutableListOf<Int>() // full session for hrMax detection
@@ -232,6 +237,7 @@ class WorkoutForegroundService : LifecycleService() {
         hrSampleBuffer.clear()
         hrSessionSamples.clear()
         cadenceLockSuspected = false
+        lastNotificationText = ""
 
         notificationHelper.startForeground(this, "Starting workout...")
 
@@ -314,12 +320,21 @@ class WorkoutForegroundService : LifecycleService() {
 
         // Drive simulated sources if in sim mode
         if (hr is SimulatedHrSource && loc is SimulatedLocationSource) {
+            val scenarioDurationSec: Float = SimulationController.state.value.scenario
+                ?.durationSeconds?.toFloat() ?: Float.MAX_VALUE
             simTickJob?.cancel()
             simTickJob = lifecycleScope.launch(Dispatchers.IO) {
                 while (true) {
-                    val elapsedSec = (clock.now() - workoutStartMs) / 1000f
-                    hr.updateForTime(elapsedSec)
-                    loc.updateForTime(elapsedSec)
+                    val snap = WorkoutState.snapshot.value
+                    if (!snap.isPaused && !snap.isAutoPaused) {
+                        val elapsedSec = (clock.now() - workoutStartMs) / 1000f
+                        hr.updateForTime(elapsedSec)
+                        loc.updateForTime(elapsedSec)
+                        if (elapsedSec >= scenarioDurationSec) {
+                            stopWorkout()
+                            break
+                        }
+                    }
                     delay(100) // 100ms real time between ticks
                 }
             }
@@ -380,10 +395,10 @@ class WorkoutForegroundService : LifecycleService() {
         } else {
             0L
         }
-        val target = if (workoutConfig.isTimeBased()) {
-            workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
-        } else {
-            workoutConfig.targetHrAtDistance(tick.distanceMeters)
+        val target = when {
+            workoutConfig.isTimeBased() -> workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
+            workoutConfig.hasMixedSegments() -> workoutConfig.targetHrForMixed(elapsedSeconds, tick.distanceMeters)
+            else -> workoutConfig.targetHrAtDistance(tick.distanceMeters)
         }
         val isPaused = WorkoutState.snapshot.value.isPaused
 
@@ -460,7 +475,8 @@ class WorkoutForegroundService : LifecycleService() {
                 guidanceText = guidance,
                 projectionReady = adaptiveResult?.hasProjectionConfidence ?: false,
                 isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN,
-                avgHr = sessionAvgHr
+                avgHr = sessionAvgHr,
+                elapsedSeconds = elapsedSeconds,
             )
         }
 
@@ -510,7 +526,10 @@ class WorkoutForegroundService : LifecycleService() {
             target != null && target > 0 -> "$guidance - HR ${tick.hr} / $target"
             else -> "HR ${tick.hr} bpm"
         }
-        notificationHelper.update(notificationText)
+        if (notificationText != lastNotificationText) {
+            lastNotificationText = notificationText
+            notificationHelper.update(notificationText)
+        }
     }
 
     private fun pauseWorkout() {
@@ -768,8 +787,20 @@ class WorkoutForegroundService : LifecycleService() {
                     }
                 }
 
-                // Sim runs: metrics pipeline ran for bug-catching; now clean up the DB row
+                // Sim runs: complete bootcamp session (if any) before deleting the workout row.
+                // The session will reference a deleted workoutId — acceptable for sim testing.
                 if (SimulationController.isActive && workoutId > 0L) {
+                    val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
+                    if (pendingId != null) {
+                        runCatching {
+                            bootcampSessionCompleter.complete(
+                                workoutId = workoutId,
+                                pendingSessionId = pendingId
+                            )
+                        }.onFailure { e ->
+                            Log.w("WorkoutService", "Sim bootcamp session completion failed", e)
+                        }
+                    }
                     runCatching { repository.deleteWorkout(workoutId) }
                         .onFailure { e ->
                             Log.w("WorkoutService", "Sim workout auto-delete failed (isSimulated flag prevents history pollution)", e)
