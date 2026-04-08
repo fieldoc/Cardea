@@ -10,6 +10,7 @@ import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.domain.achievement.StreakCalculator
+import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
@@ -98,6 +99,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var bootcampRepository: BootcampRepository
+
+    @Inject
+    lateinit var bootcampSessionCompleter: BootcampSessionCompleter
 
     @Inject
     lateinit var bleCoordinator: BleConnectionCoordinator
@@ -783,8 +787,20 @@ class WorkoutForegroundService : LifecycleService() {
                     }
                 }
 
-                // Sim runs: metrics pipeline ran for bug-catching; now clean up the DB row
+                // Sim runs: complete bootcamp session (if any) before deleting the workout row.
+                // The session will reference a deleted workoutId — acceptable for sim testing.
                 if (SimulationController.isActive && workoutId > 0L) {
+                    val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
+                    if (pendingId != null) {
+                        runCatching {
+                            bootcampSessionCompleter.complete(
+                                workoutId = workoutId,
+                                pendingSessionId = pendingId
+                            )
+                        }.onFailure { e ->
+                            Log.w("WorkoutService", "Sim bootcamp session completion failed", e)
+                        }
+                    }
                     runCatching { repository.deleteWorkout(workoutId) }
                         .onFailure { e ->
                             Log.w("WorkoutService", "Sim workout auto-delete failed (isSimulated flag prevents history pollution)", e)
