@@ -30,6 +30,12 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            firebaseAppDistribution {
+                testers = "graham.l.metcalfe@gmail.com, schellmh@gmail.com"
+                releaseNotes = "Invite dialog fix: dialog now shows immediately with a loading state while the invite code generates in the background, plus accountability partner pipeline bug fixes."
+            }
+        }
     }
 
     compileOptions {
