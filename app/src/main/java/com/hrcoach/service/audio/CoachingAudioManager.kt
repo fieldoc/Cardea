@@ -3,6 +3,7 @@ package com.hrcoach.service.audio
 import android.content.Context
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,7 +63,7 @@ class CoachingAudioManager(
             CoachingEvent.SPEED_UP,
             CoachingEvent.SLOW_DOWN -> {
                 val escalationLevel = escalationTracker.onZoneAlert()
-                earconPlayer.play(event)
+                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
                 if (
                     escalationLevel == EscalationLevel.EARCON_VOICE ||
                     escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION
@@ -79,12 +80,12 @@ class CoachingAudioManager(
 
             CoachingEvent.RETURN_TO_ZONE -> {
                 escalationTracker.reset()
-                earconPlayer.play(event)
+                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
                 voiceCoach.speak(event, guidanceText)
             }
 
             else -> {
-                earconPlayer.play(event)
+                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
                 voiceCoach.speak(event, guidanceText)
             }
         }
@@ -100,5 +101,11 @@ class CoachingAudioManager(
         voiceCoach.destroy()
         ttsBriefingPlayer.destroy()
         vibrationManager.destroy()
+    }
+
+    companion object {
+        /** Returns true when earcons should fire. OFF suppresses earcons; other levels allow them. */
+        fun shouldPlayEarcon(verbosity: VoiceVerbosity): Boolean =
+            verbosity != VoiceVerbosity.OFF
     }
 }
