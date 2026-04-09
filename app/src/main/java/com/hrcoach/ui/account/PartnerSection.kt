@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.data.firebase.PartnerLimitException
 import com.hrcoach.domain.emblem.Emblem
 import com.hrcoach.domain.model.PartnerActivity
 import com.hrcoach.ui.components.EmblemIconWithRing
@@ -121,7 +122,8 @@ fun PartnerSection(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = { if (!isFull) showAddSheet = true }
+                    enabled = !isFull,
+                    onClick = { showAddSheet = true }
                 )
                 .padding(horizontal = 10.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
@@ -572,6 +574,8 @@ private fun EnterCodeTab(
                                         } else {
                                             errorMessage = "Code not found or already used."
                                         }
+                                    } catch (ex: PartnerLimitException) {
+                                        errorMessage = ex.message
                                     } catch (ex: Exception) {
                                         errorMessage = if (ex is IllegalStateException || ex.message.isNullOrBlank())
                                             "Something went wrong. Please try again."

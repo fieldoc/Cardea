@@ -16,6 +16,10 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
+class PartnerLimitException(message: String) : Exception(message)
+
+private const val MAX_PARTNERS = 3
+
 @Singleton
 class FirebasePartnerRepository @Inject constructor(
     private val database: FirebaseDatabase,
@@ -79,12 +83,13 @@ class FirebasePartnerRepository @Inject constructor(
         val myUid = authManager.ensureSignedIn()
         if (partnerId == myUid) return null
 
-        // Enforce 3-partner cap before writing
+        // Note: client-side cap check. A concurrent redemption can bypass this before the write
+        // lands — true enforcement requires Firebase Security Rules or a Cloud Function.
         val currentCount = usersRef.child(myUid).child("partners").get().await().childrenCount
-        if (currentCount >= 3) throw Exception("You already have 3 partners. Remove one to add more.")
+        if (currentCount >= MAX_PARTNERS) throw PartnerLimitException("You already have $MAX_PARTNERS partners. Remove one to add more.")
 
         val partnerCount = usersRef.child(partnerId).child("partners").get().await().childrenCount
-        if (partnerCount >= 3) throw Exception("Your partner has reached their 3-partner limit.")
+        if (partnerCount >= MAX_PARTNERS) throw PartnerLimitException("Your partner has reached their $MAX_PARTNERS-partner limit.")
 
         // Bidirectional partner link
         usersRef.child(myUid).child("partners").child(partnerId).setValue(true).await()
