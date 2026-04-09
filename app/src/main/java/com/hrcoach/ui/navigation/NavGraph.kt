@@ -83,6 +83,7 @@ import com.hrcoach.ui.theme.CardeaNavGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.DarkCardeaColors
 import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.LocalCardeaColors
 import androidx.compose.runtime.CompositionLocalProvider
 import com.hrcoach.ui.debug.DebugSimulationScreen
@@ -239,7 +240,7 @@ fun HrCoachNavGraph(
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor   = Color.Unspecified,
                                 unselectedIconColor = CardeaTheme.colors.textSecondary,
-                                selectedTextColor   = GradientBlue,
+                                selectedTextColor   = GradientPink,
                                 unselectedTextColor = CardeaTheme.colors.textSecondary,
                                 indicatorColor      = Color.Transparent
                             )

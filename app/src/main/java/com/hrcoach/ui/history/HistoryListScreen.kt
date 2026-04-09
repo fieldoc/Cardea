@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,8 +47,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +68,7 @@ import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
@@ -471,6 +478,51 @@ private fun WeekWorkoutCard(
 // ── Empty state ──────────────────────────────────────────────────────────────
 
 @Composable
+private fun EcgWaveIllustration(modifier: Modifier = Modifier) {
+    val gradientColors = listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val midY = h / 2f
+
+        val path = Path().apply {
+            moveTo(0f, midY)
+            lineTo(w * 0.22f, midY)
+            // P wave — small smooth bump
+            cubicTo(w * 0.25f, midY - h * 0.10f, w * 0.30f, midY - h * 0.10f, w * 0.33f, midY)
+            // PR segment
+            lineTo(w * 0.38f, midY)
+            // Q dip
+            lineTo(w * 0.41f, midY + h * 0.14f)
+            // R peak — tall spike, the heartbeat
+            lineTo(w * 0.45f, midY - h * 0.80f)
+            // S dip
+            lineTo(w * 0.49f, midY + h * 0.18f)
+            // ST segment
+            lineTo(w * 0.54f, midY)
+            // T wave — smooth dome
+            cubicTo(w * 0.58f, midY - h * 0.18f, w * 0.65f, midY - h * 0.18f, w * 0.70f, midY)
+            // Flat outro
+            lineTo(w, midY)
+        }
+
+        drawPath(
+            path = path,
+            brush = Brush.linearGradient(
+                colors = gradientColors,
+                start = Offset(w * 0.22f, midY),
+                end = Offset(w * 0.70f, midY)
+            ),
+            style = Stroke(
+                width = 2.5.dp.toPx(),
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+    }
+}
+
+@Composable
 private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
     GlassCard(
         modifier = Modifier
@@ -478,6 +530,12 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
             .padding(top = 24.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 28.dp)
     ) {
+        EcgWaveIllustration(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
             text = "Your run archive is still empty",
             style = MaterialTheme.typography.headlineSmall,
@@ -490,7 +548,7 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             color = CardeaTheme.colors.textSecondary
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         CardeaButton(
             text = "Start a Run",
             onClick = onStartWorkout,
