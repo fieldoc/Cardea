@@ -14,7 +14,7 @@ class EarconPlayer(context: Context) {
 
     init {
         val attrs = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+            .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
         soundPool = SoundPool.Builder()
