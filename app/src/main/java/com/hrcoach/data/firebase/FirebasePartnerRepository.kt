@@ -6,6 +6,9 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.domain.model.PartnerActivity
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -83,7 +86,8 @@ class FirebasePartnerRepository @Inject constructor(
         // Delete consumed invite
         invitesRef.child(code).removeValue().await()
 
-        return PartnerActivity(
+        val partnerSnap = usersRef.child(partnerId).get().await()
+        return partnerSnap.toPartnerActivity(partnerId) ?: PartnerActivity(
             userId = partnerId,
             displayName = partnerName,
             emblemId = partnerEmblem,
@@ -97,8 +101,11 @@ class FirebasePartnerRepository @Inject constructor(
 
     suspend fun removePartner(partnerId: String) {
         val myUid = authManager.ensureSignedIn()
-        usersRef.child(myUid).child("partners").child(partnerId).removeValue().await()
-        usersRef.child(partnerId).child("partners").child(myUid).removeValue().await()
+        val updates = mapOf(
+            "users/$myUid/partners/$partnerId" to null,
+            "users/$partnerId/partners/$myUid" to null,
+        )
+        database.reference.updateChildren(updates).await()
     }
 
     fun observePartners(): Flow<List<PartnerActivity>> = callbackFlow {
@@ -108,6 +115,7 @@ class FirebasePartnerRepository @Inject constructor(
             return@callbackFlow
         }
         val partnersRef = usersRef.child(uid).child("partners")
+        val flowScope = this
 
         // Emit empty list immediately so combine() doesn't stall
         // while waiting for the first Firebase callback
@@ -120,22 +128,13 @@ class FirebasePartnerRepository @Inject constructor(
                     trySend(emptyList())
                     return
                 }
-                val partners = mutableListOf<PartnerActivity>()
-                var loaded = 0
-                for (pid in partnerIds) {
-                    usersRef.child(pid).get().addOnSuccessListener { partnerSnap ->
-                        val activity = partnerSnap.toPartnerActivity(pid)
-                        if (activity != null) partners.add(activity)
-                        loaded++
-                        if (loaded == partnerIds.size) {
-                            trySend(partners.sortedByDescending { it.lastRunDate })
-                        }
-                    }.addOnFailureListener {
-                        loaded++
-                        if (loaded == partnerIds.size) {
-                            trySend(partners.sortedByDescending { it.lastRunDate })
-                        }
-                    }
+                flowScope.launch {
+                    val partners = partnerIds
+                        .map { pid -> async { usersRef.child(pid).get().await().toPartnerActivity(pid) } }
+                        .awaitAll()
+                        .filterNotNull()
+                        .sortedByDescending { it.lastRunDate }
+                    trySend(partners)
                 }
             }
 
