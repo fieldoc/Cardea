@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -114,12 +116,13 @@ fun PartnerNudgeBanner(
             text = "Go \u2192",
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-            }.drawBehind {
-                drawRect(brush = GoGradient, size = this.size)
-            },
-            color = Color.Transparent,
+            modifier = Modifier
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(brush = GoGradient, blendMode = BlendMode.SrcIn)
+                },
+            color = Color.White,
         )
     }
 }

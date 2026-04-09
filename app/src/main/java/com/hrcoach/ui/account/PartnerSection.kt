@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,12 +35,14 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +91,15 @@ fun PartnerSection(
     onRemovePartner: (String) -> Unit,
 ) {
     var showAddSheet by remember { mutableStateOf(false) }
+    var showEmpty by remember { mutableStateOf(false) }
+    LaunchedEffect(partners) {
+        if (partners.isEmpty()) {
+            delay(500)
+            showEmpty = true
+        } else {
+            showEmpty = false
+        }
+    }
 
     if (showAddSheet) {
         AddPartnerBottomSheet(
@@ -146,7 +158,7 @@ fun PartnerSection(
     Spacer(modifier = Modifier.height(6.dp))
 
     GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-        if (partners.isEmpty()) {
+        if (partners.isEmpty() && showEmpty) {
             // Empty state
             Column(
                 modifier = Modifier
@@ -242,7 +254,8 @@ fun PartnerRow(
                 fontWeight = FontWeight.Medium,
                 fontSize = 11.sp
             ),
-            color = statusColor
+            color = statusColor,
+            modifier = Modifier.widthIn(max = 80.dp)
         )
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -436,28 +449,6 @@ private fun ShareCodeTab(
                     .padding(horizontal = 32.dp, vertical = 16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // Gradient text for invite code
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier.size(
-                        width = (inviteCode.length * 22).dp,
-                        height = 36.dp
-                    )
-                ) {}
-                Text(
-                    text = inviteCode,
-                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 6.sp
-                    ),
-                    color = Color.Transparent,
-                    modifier = Modifier
-                        .background(
-                            brush = PartnerGradient,
-                            shape = RoundedCornerShape(4.dp)
-                        )
-                )
-                // Visible gradient text overlay
                 Text(
                     text = inviteCode,
                     style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
