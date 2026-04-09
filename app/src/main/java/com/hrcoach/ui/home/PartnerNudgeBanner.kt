@@ -19,8 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -110,16 +112,23 @@ fun PartnerNudgeBanner(
         Spacer(modifier = Modifier.width(12.dp))
 
         // "Go →" gradient CTA
+        // Gradient text technique: draw the text in white onto an offscreen layer,
+        // then paint the gradient over the whole layer using SrcIn blend mode.
+        // SrcIn keeps only the pixels where the destination (text) is opaque,
+        // so the gradient is masked to the text shape. CompositingStrategy.Offscreen
+        // is required so the layer is composited before blending — without it,
+        // BlendMode.SrcIn blends against the entire screen instead of just this Text.
         Text(
             text = "Go \u2192",
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.graphicsLayer {
-                compositingStrategy = CompositingStrategy.Offscreen
-            }.drawBehind {
-                drawRect(brush = GoGradient, size = this.size)
-            },
-            color = Color.Transparent,
+            modifier = Modifier
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(brush = GoGradient, blendMode = BlendMode.SrcIn)
+                },
+            color = Color.White,
         )
     }
 }
