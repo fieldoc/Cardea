@@ -2092,7 +2092,7 @@ private fun TodayHeroSection(
                                     text = oneLiner,
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                     color = CardeaTheme.colors.textTertiary,
-                                    maxLines = if (expanded) Int.MAX_VALUE else 1,
+                                    maxLines = if (expanded) Int.MAX_VALUE else 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
                                         .weight(1f)
