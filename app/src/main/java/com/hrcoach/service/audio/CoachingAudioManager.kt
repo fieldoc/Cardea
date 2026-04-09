@@ -1,6 +1,8 @@
 package com.hrcoach.service.audio
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.ToneGenerator
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.WorkoutConfig
@@ -92,6 +94,40 @@ class CoachingAudioManager(
 
     fun resetEscalation() {
         escalationTracker.reset()
+    }
+
+    /**
+     * Plays a short transition tone to confirm pause/resume to the runner.
+     * Pause = two descending tones; Resume = two ascending tones.
+     * Skipped if verbosity is OFF.
+     */
+    fun playPauseFeedback(paused: Boolean) {
+        if (currentSettings.voiceVerbosity == VoiceVerbosity.OFF) return
+        val volume = currentSettings.earconVolume.coerceIn(0, 100)
+        scope.launch {
+            val toneGenerator = try {
+                ToneGenerator(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE, volume)
+            } catch (_: RuntimeException) {
+                return@launch
+            }
+            try {
+                if (paused) {
+                    // Descending: high-pitch then low-pitch
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 150)
+                    delay(250L)
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+                    delay(200L)
+                } else {
+                    // Ascending: low-pitch then high-pitch
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
+                    delay(250L)
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 150)
+                    delay(200L)
+                }
+            } finally {
+                toneGenerator.release()
+            }
+        }
     }
 
     fun destroy() {
