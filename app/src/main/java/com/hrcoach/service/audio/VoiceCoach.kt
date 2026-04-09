@@ -60,15 +60,7 @@ class VoiceCoach(private val context: Context) {
         }
     }
 
-    private fun minimalResFor(event: CoachingEvent): Int? {
-        return when (event) {
-            CoachingEvent.SPEED_UP -> R.raw.voice_speed_up
-            CoachingEvent.SLOW_DOWN -> R.raw.voice_slow_down
-            CoachingEvent.SEGMENT_CHANGE -> R.raw.voice_segment_change
-            CoachingEvent.SIGNAL_LOST -> R.raw.voice_signal_lost
-            else -> null
-        }
-    }
+    private fun minimalResFor(event: CoachingEvent): Int? = minimalResForEvent(event)
 
     private fun fullResFor(event: CoachingEvent, guidanceText: String?): Int? {
         return when (event) {
@@ -92,6 +84,17 @@ class VoiceCoach(private val context: Context) {
     }
 
     companion object {
+        /** Exposed for unit tests — returns the R.raw resource ID for MINIMAL verbosity, or null. */
+        fun minimalResForEvent(event: CoachingEvent): Int? = when (event) {
+            CoachingEvent.SPEED_UP           -> R.raw.voice_speed_up
+            CoachingEvent.SLOW_DOWN          -> R.raw.voice_slow_down
+            CoachingEvent.RETURN_TO_ZONE     -> R.raw.voice_return_to_zone
+            CoachingEvent.PREDICTIVE_WARNING -> R.raw.voice_predictive_warning
+            CoachingEvent.SEGMENT_CHANGE     -> R.raw.voice_segment_change
+            CoachingEvent.SIGNAL_LOST        -> R.raw.voice_signal_lost
+            else                             -> null
+        }
+
         val KM_RESOURCES: Map<Int, Int> = mapOf(
             1 to R.raw.voice_km_1, 2 to R.raw.voice_km_2, 3 to R.raw.voice_km_3,
             4 to R.raw.voice_km_4, 5 to R.raw.voice_km_5, 6 to R.raw.voice_km_6,
