@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
@@ -30,6 +31,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -330,11 +332,26 @@ fun AddPartnerBottomSheet(
 private fun ShareCodeTab(
     onCreateInviteCode: suspend () -> String,
 ) {
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var inviteCode by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var inviteCode by remember { mutableStateOf<String?>(null) }
+    var isGeneratingCode by remember { mutableStateOf(false) }
+    var pairError by remember { mutableStateOf<String?>(null) }
+
+    // Auto-generate invite code when tab is first shown
+    LaunchedEffect(Unit) {
+        isGeneratingCode = true
+        pairError = null
+        try {
+            inviteCode = onCreateInviteCode()
+        } catch (ex: Exception) {
+            pairError = if (ex is IllegalStateException || ex.message.isNullOrBlank())
+                "Something went wrong. Please try again."
+            else
+                ex.message
+        } finally {
+            isGeneratingCode = false
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -351,136 +368,106 @@ private fun ShareCodeTab(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (inviteCode.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.linearGradient(listOf(GradientRed, GradientPink))
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            if (!isLoading) {
-                                isLoading = true
-                                errorMessage = null
-                                scope.launch {
-                                    try {
-                                        inviteCode = onCreateInviteCode()
-                                    } catch (ex: Exception) {
-                                        errorMessage = if (ex is IllegalStateException || ex.message.isNullOrBlank())
-                                            "Something went wrong. Please try again."
-                                        else
-                                            ex.message
-                                    } finally {
-                                        isLoading = false
-                                    }
-                                }
-                            }
-                        }
-                    )
-                    .padding(horizontal = 32.dp, vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = if (isLoading) "Generating..." else "Generate my code",
-                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = Color.White
+        when {
+            isGeneratingCode || inviteCode == null && pairError == null -> {
+                // Loading state while async code generates
+                CircularProgressIndicator(
+                    modifier = Modifier.size(40.dp),
+                    color = GradientPink,
+                    strokeWidth = 3.dp
                 )
             }
-
-            errorMessage?.let { msg ->
-                Spacer(modifier = Modifier.height(8.dp))
+            pairError != null -> {
+                // Error state — surface inside the dialog
                 Text(
-                    text = msg,
+                    text = pairError!!,
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     color = PartnerErrorRed,
                     textAlign = TextAlign.Center
                 )
             }
-        } else {
-            // Code display with gradient text effect
-            Text(
-                text = "Your invite code",
-                style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
-                color = CardeaTheme.colors.textTertiary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CardeaTheme.colors.glassHighlight)
-                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 32.dp, vertical = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Gradient text for invite code
-                androidx.compose.foundation.Canvas(
-                    modifier = Modifier.size(
-                        width = (inviteCode.length * 22).dp,
-                        height = 36.dp
-                    )
-                ) {}
+            else -> {
+                // Code display with gradient text effect
                 Text(
-                    text = inviteCode,
-                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 6.sp
-                    ),
-                    color = Color.Transparent,
+                    text = "Your invite code",
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textTertiary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(
                     modifier = Modifier
-                        .background(
-                            brush = PartnerGradient,
-                            shape = RoundedCornerShape(4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CardeaTheme.colors.glassHighlight)
+                        .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 32.dp, vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Gradient text for invite code
+                    androidx.compose.foundation.Canvas(
+                        modifier = Modifier.size(
+                            width = (inviteCode!!.length * 22).dp,
+                            height = 36.dp
                         )
-                )
-                // Visible gradient text overlay
-                Text(
-                    text = inviteCode,
-                    style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 6.sp,
-                        brush = PartnerGradient
-                    ),
-                    color = Color.Unspecified
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        Brush.linearGradient(listOf(GradientRed, GradientPink))
+                    ) {}
+                    Text(
+                        text = inviteCode!!,
+                        style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 6.sp
+                        ),
+                        color = Color.Transparent,
+                        modifier = Modifier
+                            .background(
+                                brush = PartnerGradient,
+                                shape = RoundedCornerShape(4.dp)
+                            )
                     )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = {
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, "Join me on Cardea! My invite code is: $inviteCode")
+                    // Visible gradient text overlay
+                    Text(
+                        text = inviteCode!!,
+                        style = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 6.sp,
+                            brush = PartnerGradient
+                        ),
+                        color = Color.Unspecified
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Share button — only shown once inviteCode != null
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            Brush.linearGradient(listOf(GradientRed, GradientPink))
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, "Join me on Cardea! My invite code is: ${inviteCode!!}")
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Share invite code"))
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share invite code"))
-                        }
+                        )
+                        .padding(horizontal = 32.dp, vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Share invite code",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                        color = Color.White
                     )
-                    .padding(horizontal = 32.dp, vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Share invite code",
-                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = Color.White
-                )
+                }
             }
         }
     }
