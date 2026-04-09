@@ -108,25 +108,30 @@ fun PartnerSection(
             ),
             color = CardeaTheme.colors.textTertiary
         )
-        // Gradient "+ Add" button
+        // Gradient "+ Add" button — disabled at 3/3
+        val isFull = partnerCount >= 3
+        val addButtonGradient = if (isFull)
+            Brush.linearGradient(listOf(Color(0xFF4B5563), Color(0xFF374151)))
+        else
+            PartnerCtaGradient
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(6.dp))
-                .background(PartnerCtaGradient)
+                .background(addButtonGradient)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = { showAddSheet = true }
+                    onClick = { if (!isFull) showAddSheet = true }
                 )
                 .padding(horizontal = 10.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "+ Add",
+                text = if (isFull) "Full (3/3)" else "+ Add",
                 style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold
                 ),
-                color = Color.White
+                color = if (isFull) CardeaTheme.colors.textTertiary else Color.White
             )
         }
     }

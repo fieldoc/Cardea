@@ -79,6 +79,13 @@ class FirebasePartnerRepository @Inject constructor(
         val myUid = authManager.ensureSignedIn()
         if (partnerId == myUid) return null
 
+        // Enforce 3-partner cap before writing
+        val currentCount = usersRef.child(myUid).child("partners").get().await().childrenCount
+        if (currentCount >= 3) throw Exception("You already have 3 partners. Remove one to add more.")
+
+        val partnerCount = usersRef.child(partnerId).child("partners").get().await().childrenCount
+        if (partnerCount >= 3) throw Exception("Your partner has reached their 3-partner limit.")
+
         // Bidirectional partner link
         usersRef.child(myUid).child("partners").child(partnerId).setValue(true).await()
         usersRef.child(partnerId).child("partners").child(myUid).setValue(true).await()
