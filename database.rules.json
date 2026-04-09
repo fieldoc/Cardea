@@ -5,7 +5,6 @@
         ".read": "auth.uid === $uid || root.child('users').child(auth.uid).child('partners').child($uid).exists()",
         ".write": "auth.uid === $uid",
         "partners": {
-          ".validate": "newData.numChildren() <= 3",
           "$partnerId": {
             ".write": "auth.uid === $uid || auth.uid === $partnerId",
             ".validate": "$partnerId !== auth.uid"
