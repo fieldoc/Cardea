@@ -323,6 +323,7 @@ private fun ShareCodeTab(
     val context = LocalContext.current
     var inviteCode by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -352,9 +353,16 @@ private fun ShareCodeTab(
                         onClick = {
                             if (!isLoading) {
                                 isLoading = true
+                                errorMessage = null
                                 scope.launch {
-                                    inviteCode = onCreateInviteCode()
-                                    isLoading = false
+                                    try {
+                                        inviteCode = onCreateInviteCode()
+                                        errorMessage = null
+                                    } catch (ex: Exception) {
+                                        errorMessage = ex.message ?: "Failed to generate code. Try again."
+                                    } finally {
+                                        isLoading = false
+                                    }
                                 }
                             }
                         }
@@ -368,6 +376,16 @@ private fun ShareCodeTab(
                         fontWeight = FontWeight.Bold
                     ),
                     color = Color.White
+                )
+            }
+
+            errorMessage?.let { msg ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = msg,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFEF4444),
+                    textAlign = TextAlign.Center
                 )
             }
         } else {
@@ -536,13 +554,19 @@ private fun EnterCodeTab(
                         onClick = {
                             if (canConnect) {
                                 isConnecting = true
+                                errorMessage = null
                                 scope.launch {
-                                    val partner = onRedeemCode(code)
-                                    isConnecting = false
-                                    if (partner != null) {
-                                        connectedPartner = partner
-                                    } else {
-                                        errorMessage = "Code not found or already used."
+                                    try {
+                                        val partner = onRedeemCode(code)
+                                        if (partner != null) {
+                                            connectedPartner = partner
+                                        } else {
+                                            errorMessage = "Code not found or already used."
+                                        }
+                                    } catch (ex: Exception) {
+                                        errorMessage = ex.message ?: "Connection failed. Try again."
+                                    } finally {
+                                        isConnecting = false
                                     }
                                 }
                             }
