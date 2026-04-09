@@ -4,6 +4,7 @@ import android.util.Log
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,8 +16,10 @@ class FcmTokenManager @Inject constructor(
 ) {
     suspend fun refreshToken() {
         val uid = authManager.ensureSignedIn()
-        val token = messaging.token.await()
-        database.reference.child("users").child(uid).child("fcmToken").setValue(token).await()
+        withTimeout(10_000) {
+            val token = messaging.token.await()
+            database.reference.child("users").child(uid).child("fcmToken").setValue(token).await()
+        }
         Log.d("FcmTokenManager", "Token synced for $uid")
     }
 }

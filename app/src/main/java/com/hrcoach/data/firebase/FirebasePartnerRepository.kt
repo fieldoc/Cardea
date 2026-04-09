@@ -35,8 +35,10 @@ class FirebasePartnerRepository @Inject constructor(
     suspend fun syncProfile() {
         val uid = authManager.ensureSignedIn()
         val userRef = usersRef.child(uid)
-        userRef.child("displayName").setValue(userProfileRepository.getDisplayName()).await()
-        userRef.child("emblemId").setValue(userProfileRepository.getEmblemId()).await()
+        withTimeout(10_000) {
+            userRef.child("displayName").setValue(userProfileRepository.getDisplayName()).await()
+            userRef.child("emblemId").setValue(userProfileRepository.getEmblemId()).await()
+        }
     }
 
     suspend fun syncWorkoutActivity(
@@ -54,7 +56,7 @@ class FirebasePartnerRepository @Inject constructor(
             "lastRunDurationMin" to lastRunDurationMin,
             "lastRunPhase" to lastRunPhase,
         )
-        activityRef.updateChildren(updates).await()
+        withTimeout(10_000) { activityRef.updateChildren(updates).await() }
     }
 
     suspend fun createInviteCode(): String {
@@ -77,19 +79,19 @@ class FirebasePartnerRepository @Inject constructor(
         return code
     }
 
-    suspend fun redeemInviteCode(code: String): PartnerActivity? {
+    suspend fun redeemInviteCode(code: String): PartnerActivity? = withTimeout(15_000) {
         val snapshot = invitesRef.child(code).get().await()
-        if (!snapshot.exists()) return null
+        if (!snapshot.exists()) return@withTimeout null
 
-        val expiresAt = snapshot.child("expiresAt").getValue(Long::class.java) ?: return null
-        if (System.currentTimeMillis() > expiresAt) return null
+        val expiresAt = snapshot.child("expiresAt").getValue(Long::class.java) ?: return@withTimeout null
+        if (System.currentTimeMillis() > expiresAt) return@withTimeout null
 
-        val partnerId = snapshot.child("userId").getValue(String::class.java) ?: return null
+        val partnerId = snapshot.child("userId").getValue(String::class.java) ?: return@withTimeout null
         val partnerName = snapshot.child("displayName").getValue(String::class.java) ?: "Runner"
         val partnerEmblem = snapshot.child("emblemId").getValue(String::class.java) ?: "pulse"
 
         val myUid = authManager.ensureSignedIn()
-        if (partnerId == myUid) return null
+        if (partnerId == myUid) return@withTimeout null
 
         // Note: client-side cap check. A concurrent redemption can bypass this before the write
         // lands — true enforcement requires Firebase Security Rules or a Cloud Function.
@@ -106,11 +108,11 @@ class FirebasePartnerRepository @Inject constructor(
         )
         database.reference.updateChildren(linkUpdates).await()
 
-        // Delete consumed invite
-        invitesRef.child(code).removeValue().await()
+        // Delete consumed invite (best-effort — rule allows delete by confirmed partners)
+        runCatching { invitesRef.child(code).removeValue().await() }
 
         val partnerSnap = usersRef.child(partnerId).get().await()
-        return partnerSnap.toPartnerActivity(partnerId) ?: PartnerActivity(
+        partnerSnap.toPartnerActivity(partnerId) ?: PartnerActivity(
             userId = partnerId,
             displayName = partnerName,
             emblemId = partnerEmblem,
@@ -128,7 +130,7 @@ class FirebasePartnerRepository @Inject constructor(
             "users/$myUid/partners/$partnerId" to null,
             "users/$partnerId/partners/$myUid" to null,
         )
-        database.reference.updateChildren(updates).await()
+        withTimeout(10_000) { database.reference.updateChildren(updates).await() }
     }
 
     fun observePartners(): Flow<List<PartnerActivity>> = callbackFlow {
@@ -155,8 +157,8 @@ class FirebasePartnerRepository @Inject constructor(
                     val partners = partnerIds
                         .map { pid ->
                             async {
-                                runCatching { usersRef.child(pid).get().await().toPartnerActivity(pid) }
-                                    .onFailure { e -> if (e is CancellationException) throw e }
+                                runCatching { withTimeout(10_000) { usersRef.child(pid).get().await().toPartnerActivity(pid) } }
+                                    .onFailure { e -> if (e is CancellationException && e !is TimeoutCancellationException) throw e }
                                     .getOrNull()
                             }
                         }
