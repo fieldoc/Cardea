@@ -68,6 +68,8 @@ private val PartnerCtaGradient = Brush.linearGradient(
     listOf(GradientRed, GradientPink)
 )
 
+private val PartnerErrorRed = Color(0xFFEF4444)
+
 // ── Partner Section ────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -357,9 +359,11 @@ private fun ShareCodeTab(
                                 scope.launch {
                                     try {
                                         inviteCode = onCreateInviteCode()
-                                        errorMessage = null
                                     } catch (ex: Exception) {
-                                        errorMessage = ex.message ?: "Failed to generate code. Try again."
+                                        errorMessage = if (ex is IllegalStateException || ex.message.isNullOrBlank())
+                                            "Something went wrong. Please try again."
+                                        else
+                                            ex.message
                                     } finally {
                                         isLoading = false
                                     }
@@ -384,7 +388,7 @@ private fun ShareCodeTab(
                 Text(
                     text = msg,
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = Color(0xFFEF4444),
+                    color = PartnerErrorRed,
                     textAlign = TextAlign.Center
                 )
             }
@@ -525,7 +529,7 @@ private fun EnterCodeTab(
                     cursorColor = GradientPink,
                     focusedTextColor = CardeaTheme.colors.textPrimary,
                     unfocusedTextColor = CardeaTheme.colors.textPrimary,
-                    errorBorderColor = Color(0xFFEF4444),
+                    errorBorderColor = PartnerErrorRed,
                 ),
                 textStyle = androidx.compose.material3.MaterialTheme.typography.headlineSmall.copy(
                     fontFamily = FontFamily.Monospace,
@@ -564,7 +568,10 @@ private fun EnterCodeTab(
                                             errorMessage = "Code not found or already used."
                                         }
                                     } catch (ex: Exception) {
-                                        errorMessage = ex.message ?: "Connection failed. Try again."
+                                        errorMessage = if (ex is IllegalStateException || ex.message.isNullOrBlank())
+                                            "Something went wrong. Please try again."
+                                        else
+                                            ex.message
                                     } finally {
                                         isConnecting = false
                                     }

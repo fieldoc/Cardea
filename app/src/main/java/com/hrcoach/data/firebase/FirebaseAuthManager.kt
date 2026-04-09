@@ -2,6 +2,7 @@ package com.hrcoach.data.firebase
 
 import com.google.firebase.auth.FirebaseAuth
 import com.hrcoach.data.repository.UserProfileRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
@@ -17,16 +18,16 @@ class FirebaseAuthManager @Inject constructor(
         val currentUser = auth.currentUser
         if (currentUser != null) return currentUser.uid
 
-        try {
-            val result = withTimeout(10_000) {
-                auth.signInAnonymously().await()
-            }
-            val uid = result.user?.uid ?: throw IllegalStateException("Anonymous auth returned null UID")
-            userProfileRepository.setUserId(uid)
-            return uid
-        } catch (e: TimeoutCancellationException) {
+        val authResult = runCatching {
+            withTimeout(10_000) { auth.signInAnonymously().await() }
+        }.getOrElse { e ->
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
             throw Exception("Authentication timed out. Please check your connection.")
         }
+
+        val uid = authResult.user?.uid ?: throw IllegalStateException("Anonymous auth returned null UID")
+        userProfileRepository.setUserId(uid)
+        return uid
     }
 
     fun getCurrentUid(): String? = auth.currentUser?.uid
