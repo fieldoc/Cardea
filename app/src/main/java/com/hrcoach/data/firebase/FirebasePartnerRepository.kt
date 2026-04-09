@@ -130,7 +130,11 @@ class FirebasePartnerRepository @Inject constructor(
                 }
                 flowScope.launch {
                     val partners = partnerIds
-                        .map { pid -> async { usersRef.child(pid).get().await().toPartnerActivity(pid) } }
+                        .map { pid ->
+                            async {
+                                runCatching { usersRef.child(pid).get().await().toPartnerActivity(pid) }.getOrNull()
+                            }
+                        }
                         .awaitAll()
                         .filterNotNull()
                         .sortedByDescending { it.lastRunDate }
