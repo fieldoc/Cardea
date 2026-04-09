@@ -377,12 +377,14 @@ class WorkoutForegroundService : LifecycleService() {
                     autoPauseStartMs = nowMs
                     locationSource?.setMoving(false)
                     WorkoutState.update { it.copy(isAutoPaused = true) }
+                    coachingAudioManager?.playPauseFeedback(paused = true)
                 }
                 AutoPauseEvent.RESUMED -> {
                     totalAutoPausedMs += nowMs - autoPauseStartMs
                     autoPauseStartMs = 0L
                     locationSource?.setMoving(true)
                     WorkoutState.update { it.copy(isAutoPaused = false) }
+                    coachingAudioManager?.playPauseFeedback(paused = false)
                 }
                 else -> Unit
             }
@@ -542,6 +544,7 @@ class WorkoutForegroundService : LifecycleService() {
         }
         if (didPause) {
             pauseStartMs = clock.now()
+            coachingAudioManager?.playPauseFeedback(paused = true)
         }
         notificationHelper.update("Workout paused")
     }
@@ -559,6 +562,7 @@ class WorkoutForegroundService : LifecycleService() {
             totalPausedMs += nowMs - pauseStartMs
             pauseStartMs = 0L
         }
+        if (didResume) coachingAudioManager?.playPauseFeedback(paused = false)
         notificationHelper.update("Workout resumed")
     }
 
