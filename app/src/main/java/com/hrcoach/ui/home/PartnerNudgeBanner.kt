@@ -112,6 +112,12 @@ fun PartnerNudgeBanner(
         Spacer(modifier = Modifier.width(12.dp))
 
         // "Go →" gradient CTA
+        // Gradient text technique: draw the text in white onto an offscreen layer,
+        // then paint the gradient over the whole layer using SrcIn blend mode.
+        // SrcIn keeps only the pixels where the destination (text) is opaque,
+        // so the gradient is masked to the text shape. CompositingStrategy.Offscreen
+        // is required so the layer is composited before blending — without it,
+        // BlendMode.SrcIn blends against the entire screen instead of just this Text.
         Text(
             text = "Go \u2192",
             fontSize = 13.sp,
