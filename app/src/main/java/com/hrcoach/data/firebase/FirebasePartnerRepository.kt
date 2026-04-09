@@ -7,6 +7,7 @@ import com.google.firebase.database.ValueEventListener
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.domain.model.PartnerActivity
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
@@ -14,6 +15,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -66,7 +68,12 @@ class FirebasePartnerRepository @Inject constructor(
             "createdAt" to now,
             "expiresAt" to now + 24 * 60 * 60 * 1000,
         )
-        invitesRef.child(code).setValue(data).await()
+        runCatching {
+            withTimeout(10_000) { invitesRef.child(code).setValue(data).await() }
+        }.getOrElse { e ->
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            throw Exception("Could not save invite code. Check your connection and try again.")
+        }
         return code
     }
 
