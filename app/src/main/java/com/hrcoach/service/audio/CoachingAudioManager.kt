@@ -34,6 +34,7 @@ class CoachingAudioManager(
     fun applySettings(settings: AudioSettings) {
         currentSettings = settings
         earconPlayer.setVolume(settings.earconVolume)
+        voiceCoach.setVolume(settings.voiceVolume)
         voiceCoach.verbosity = settings.voiceVerbosity
         ttsBriefingPlayer.verbosity = settings.voiceVerbosity
         vibrationManager.enabled = settings.enableVibration

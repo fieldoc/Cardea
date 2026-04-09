@@ -33,6 +33,7 @@ data class AccountUiState(
     val mapsApiKey: String = "",
     val mapsApiKeySaved: Boolean = false,
     val earconVolume: Int = 80,
+    val voiceVolume: Int = 80,
     val voiceVerbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL,
     val enableVibration: Boolean = true,
     val enableHalfwayReminder: Boolean = true,
@@ -67,6 +68,7 @@ class AccountViewModel @Inject constructor(
     private val _mapsKey      = MutableStateFlow("")
     private val _mapsKeySaved = MutableStateFlow(false)
     private val _volume       = MutableStateFlow(80)
+    private val _voiceVolume  = MutableStateFlow(80)
     private val _verbosity    = MutableStateFlow(VoiceVerbosity.MINIMAL)
     private val _vibration    = MutableStateFlow(true)
     private val _halfwayReminder   = MutableStateFlow(true)
@@ -92,8 +94,9 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             _mapsKey.value = mapsRepo.getMapsApiKey()
             val settings = audioRepo.getAudioSettings()
-            _volume.value    = settings.earconVolume
-            _verbosity.value = settings.voiceVerbosity
+            _volume.value      = settings.earconVolume
+            _voiceVolume.value = settings.voiceVolume
+            _verbosity.value   = settings.voiceVerbosity
             _vibration.value = settings.enableVibration
             _halfwayReminder.value = settings.enableHalfwayReminder != false
             _kmSplits.value = settings.enableKmSplits != false
@@ -123,6 +126,8 @@ class AccountViewModel @Inject constructor(
             earconVolume    = vol,
             voiceVerbosity  = verb,
         )
+    }.combine(_voiceVolume) { base, voiceVol ->
+        base.copy(voiceVolume = voiceVol)
     }.combine(_vibration) { base, vib ->
         base.copy(enableVibration = vib)
     }.combine(
@@ -177,6 +182,7 @@ class AccountViewModel @Inject constructor(
     }
 
     fun setVolume(v: Float) { _volume.value = ((v / 5f).toInt() * 5).coerceIn(0, 100) }
+    fun setVoiceVolume(v: Float) { _voiceVolume.value = ((v / 5f).toInt() * 5).coerceIn(0, 100) }
     fun setVerbosity(v: VoiceVerbosity) { _verbosity.value = v }
     fun setVibration(v: Boolean) { _vibration.value = v }
     fun setEnableHalfwayReminder(v: Boolean) { _halfwayReminder.value = v; saveAudioSettings() }
@@ -194,6 +200,7 @@ class AccountViewModel @Inject constructor(
             audioRepo.saveAudioSettings(
                 AudioSettings(
                     earconVolume    = _volume.value,
+                    voiceVolume     = _voiceVolume.value,
                     voiceVerbosity  = _verbosity.value,
                     enableVibration = _vibration.value,
                     enableHalfwayReminder = _halfwayReminder.value,

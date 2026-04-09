@@ -10,6 +10,7 @@ import com.hrcoach.domain.model.VoiceVerbosity
 class VoiceCoach(private val context: Context) {
 
     var verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL
+    private var volumeScalar: Float = 0.8f
 
     private var mediaPlayer: MediaPlayer? = null
 
@@ -17,6 +18,10 @@ class VoiceCoach(private val context: Context) {
         .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
         .build()
+
+    fun setVolume(percent: Int) {
+        volumeScalar = volumeScalarFor(percent)
+    }
 
     fun speak(event: CoachingEvent, guidanceText: String?) {
         if (verbosity == VoiceVerbosity.OFF) return
@@ -27,10 +32,10 @@ class VoiceCoach(private val context: Context) {
             VoiceVerbosity.FULL -> fullResFor(event, guidanceText)
         } ?: return
 
-        // Stop any in-progress playback (QUEUE_FLUSH equivalent)
         releasePlayer()
 
         mediaPlayer = MediaPlayer.create(context, resId, audioAttributes, 0)?.also { mp ->
+            mp.setVolume(volumeScalar, volumeScalar)
             mp.setOnCompletionListener {
                 it.release()
                 mediaPlayer = null
@@ -38,6 +43,9 @@ class VoiceCoach(private val context: Context) {
             mp.start()
         }
     }
+
+    /** Returns true if a voice clip is currently playing. */
+    fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
 
     fun destroy() {
         releasePlayer()
@@ -47,16 +55,8 @@ class VoiceCoach(private val context: Context) {
         val mp = mediaPlayer
         mediaPlayer = null
         if (mp != null) {
-            try {
-                if (mp.isPlaying) mp.stop()
-            } catch (_: IllegalStateException) {
-                // MediaPlayer already released or in error state
-            }
-            try {
-                mp.release()
-            } catch (_: IllegalStateException) {
-                // Already released
-            }
+            try { if (mp.isPlaying) mp.stop() } catch (_: IllegalStateException) {}
+            try { mp.release() } catch (_: IllegalStateException) {}
         }
     }
 
@@ -64,29 +64,31 @@ class VoiceCoach(private val context: Context) {
 
     private fun fullResFor(event: CoachingEvent, guidanceText: String?): Int? {
         return when (event) {
-            CoachingEvent.SPEED_UP -> R.raw.voice_speed_up
-            CoachingEvent.SLOW_DOWN -> R.raw.voice_slow_down
-            CoachingEvent.RETURN_TO_ZONE -> R.raw.voice_return_to_zone
-            CoachingEvent.PREDICTIVE_WARNING -> R.raw.voice_predictive_warning
-            CoachingEvent.SEGMENT_CHANGE -> R.raw.voice_segment_change
-            CoachingEvent.SIGNAL_LOST -> R.raw.voice_signal_lost
-            CoachingEvent.SIGNAL_REGAINED -> R.raw.voice_signal_regained
-            CoachingEvent.HALFWAY -> R.raw.voice_halfway
-            CoachingEvent.WORKOUT_COMPLETE -> R.raw.voice_workout_complete
-            CoachingEvent.IN_ZONE_CONFIRM -> R.raw.voice_in_zone_confirm
-            CoachingEvent.KM_SPLIT -> kmSplitRes(guidanceText)
+            CoachingEvent.SPEED_UP            -> R.raw.voice_speed_up
+            CoachingEvent.SLOW_DOWN           -> R.raw.voice_slow_down
+            CoachingEvent.RETURN_TO_ZONE      -> R.raw.voice_return_to_zone
+            CoachingEvent.PREDICTIVE_WARNING  -> R.raw.voice_predictive_warning
+            CoachingEvent.SEGMENT_CHANGE      -> R.raw.voice_segment_change
+            CoachingEvent.SIGNAL_LOST         -> R.raw.voice_signal_lost
+            CoachingEvent.SIGNAL_REGAINED     -> R.raw.voice_signal_regained
+            CoachingEvent.HALFWAY             -> R.raw.voice_halfway
+            CoachingEvent.WORKOUT_COMPLETE    -> R.raw.voice_workout_complete
+            CoachingEvent.IN_ZONE_CONFIRM     -> R.raw.voice_in_zone_confirm
+            CoachingEvent.KM_SPLIT            -> kmSplitRes(guidanceText)
         }
     }
 
     private fun kmSplitRes(guidanceText: String?): Int? {
         val km = guidanceText?.toIntOrNull() ?: return null
-        return KM_RESOURCES[km]
+        return KM_RESOURCES[km]  // returns null for km > 50; TTS fallback handled in CoachingAudioManager
     }
 
     companion object {
+        fun volumeScalarFor(percent: Int): Float = (percent.coerceIn(0, 100) / 100f)
+
         /** Exposed for unit tests — returns the R.raw resource ID for MINIMAL verbosity, or null. */
         fun minimalResForEvent(event: CoachingEvent): Int? = when (event) {
-            CoachingEvent.SPEED_UP           -> R.raw.voice_speed_up
+            CoachingEvent.SPEED_UP            -> R.raw.voice_speed_up
             CoachingEvent.SLOW_DOWN          -> R.raw.voice_slow_down
             CoachingEvent.RETURN_TO_ZONE     -> R.raw.voice_return_to_zone
             CoachingEvent.PREDICTIVE_WARNING -> R.raw.voice_predictive_warning

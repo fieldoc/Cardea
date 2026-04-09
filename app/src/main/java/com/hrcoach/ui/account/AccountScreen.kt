@@ -339,6 +339,32 @@ fun AccountScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
+                // Voice volume
+                SettingSection(icon = Icons.Default.Mic, title = "Voice Volume") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CardeaSlider(
+                            value = state.voiceVolume.toFloat(),
+                            onValueChange = viewModel::setVoiceVolume,
+                            valueRange = 0f..100f,
+                            steps = 19,
+                            onValueChangeFinished = viewModel::saveAudioSettings,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "${state.voiceVolume}%",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = CardeaTheme.colors.textSecondary
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
+
                 // Voice Coaching
                 SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching") {
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
