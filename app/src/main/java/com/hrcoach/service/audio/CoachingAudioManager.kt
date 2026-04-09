@@ -46,7 +46,7 @@ class CoachingAudioManager(
      * of the countdown (~4s); the TTS briefing plays asynchronously after.
      */
     suspend fun playStartSequence(config: WorkoutConfig) {
-        startupSequencer.playCountdown()
+        startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
         ttsBriefingPlayer.speakBriefing(config)
     }
 
