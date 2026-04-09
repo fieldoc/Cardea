@@ -540,7 +540,7 @@ private fun EnterCodeTab(
                     capitalization = KeyboardCapitalization.Characters
                 ),
                 isError = errorMessage != null,
-                supportingText = errorMessage?.let { { Text(it, color = CardeaTheme.colors.textTertiary) } },
+                supportingText = errorMessage?.let { { Text(it, color = PartnerErrorRed) } },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GradientPink,
                     unfocusedBorderColor = CardeaTheme.colors.textTertiary,

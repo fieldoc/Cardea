@@ -91,9 +91,12 @@ class FirebasePartnerRepository @Inject constructor(
         val partnerCount = usersRef.child(partnerId).child("partners").get().await().childrenCount
         if (partnerCount >= MAX_PARTNERS) throw PartnerLimitException("Your partner has reached their $MAX_PARTNERS-partner limit.")
 
-        // Bidirectional partner link
-        usersRef.child(myUid).child("partners").child(partnerId).setValue(true).await()
-        usersRef.child(partnerId).child("partners").child(myUid).setValue(true).await()
+        // Bidirectional partner link — single atomic write so both sides appear together
+        val linkUpdates = mapOf(
+            "users/$myUid/partners/$partnerId" to true,
+            "users/$partnerId/partners/$myUid" to true,
+        )
+        database.reference.updateChildren(linkUpdates).await()
 
         // Delete consumed invite
         invitesRef.child(code).removeValue().await()
@@ -144,7 +147,9 @@ class FirebasePartnerRepository @Inject constructor(
                     val partners = partnerIds
                         .map { pid ->
                             async {
-                                runCatching { usersRef.child(pid).get().await().toPartnerActivity(pid) }.getOrNull()
+                                runCatching { usersRef.child(pid).get().await().toPartnerActivity(pid) }
+                                    .onFailure { e -> if (e is CancellationException) throw e }
+                                    .getOrNull()
                             }
                         }
                         .awaitAll()
