@@ -74,6 +74,13 @@ class CoachingAudioManager(
                     scope.launch {
                         delay(300L)
                         voiceCoach.speak(event, guidanceText)
+                        // In FULL verbosity, follow the static clip with dynamic TTS guidance
+                        if (currentSettings.voiceVerbosity == VoiceVerbosity.FULL &&
+                            !guidanceText.isNullOrBlank()
+                        ) {
+                            delay(1_800L)  // Wait for the ~1.5s MP3 to finish before TTS queues
+                            ttsBriefingPlayer.speak(guidanceText)
+                        }
                     }
                 }
                 if (escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION) {
