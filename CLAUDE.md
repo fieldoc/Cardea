@@ -30,6 +30,10 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **Worktree builds:** `local.properties` is gitignored and won't exist in worktrees. Copy from the main repo: `cp ../../local.properties .` (or from project root).
 
+**Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
+
+**`git worktree remove` permission denied:** Fails if shell cwd is inside the worktree being removed. `cd` to the repo root or any outside directory first. Use `git worktree prune` to clean stale registrations (leaves directories on disk but removes git tracking).
+
 **Build requirements:** JDK 17, Android SDK with compileSdk 35. Google Maps API key goes in `local.properties` as `MAPS_API_KEY=...` (falls back to `local.defaults.properties` placeholder).
 
 ## Architecture
@@ -119,6 +123,12 @@ Four-component layered audio system in `service/audio/`:
 ## DataStore / Slider Pattern
 
 Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on every drag frame (hundreds of times). Use `onValueChangeFinished` for persistence; update in-memory `StateFlow` in `onValueChange` for smooth UI.
+
+## Recent Architectural Changes (audit 2026-04-09)
+
+- **`CoachingEventRouter.reset()`** now accepts `reset(workoutStartMs: Long = 0L)` — pass the workout clock timestamp after countdown completes so `IN_ZONE_CONFIRM` fires correctly from the start of a quiet in-zone session.
+- **`AlertPolicy`** now resets `lastAlertTime` on zone-direction flip (ABOVE→BELOW or vice versa) — cooldown no longer bleeds across directions, so overcorrection in both directions alerts promptly.
+- **`WorkoutForegroundService.handleStartFailure()`** now clears `pendingBootcampSessionId` — stale bootcamp session IDs no longer pollute the next workout attempt after a failed start.
 
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
