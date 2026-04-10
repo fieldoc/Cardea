@@ -89,7 +89,16 @@ class CoachingAudioManager(
 
             else -> {
                 if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
-                voiceCoach.speak(event, guidanceText)
+                if (event == CoachingEvent.KM_SPLIT) {
+                    val km = guidanceText?.toIntOrNull()
+                    if (km != null && km > 50) {
+                        ttsBriefingPlayer.speak(TtsBriefingPlayer.kmAnnouncementText(km))
+                    } else {
+                        voiceCoach.speak(event, guidanceText)
+                    }
+                } else {
+                    voiceCoach.speak(event, guidanceText)
+                }
             }
         }
     }
