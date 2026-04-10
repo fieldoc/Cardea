@@ -563,6 +563,7 @@ class WorkoutForegroundService : LifecycleService() {
             pauseStartMs = 0L
             coachingAudioManager?.playPauseFeedback(paused = false)
         }
+        if (didResume) coachingAudioManager?.playPauseFeedback(paused = false)
         notificationHelper.update("Workout resumed")
     }
 

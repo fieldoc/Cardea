@@ -84,7 +84,7 @@ class CoachingEventRouter {
 
         // KM_SPLIT
         val currentKm = (distanceMeters / 1000f).toInt()
-        if (currentKm > lastKmAnnounced && currentKm in 1..50) {
+        if (currentKm > lastKmAnnounced && currentKm >= 1) {
             lastKmAnnounced = currentKm
             emitEvent(CoachingEvent.KM_SPLIT, currentKm.toString())
             lastVoiceCueTimeMs = nowMs

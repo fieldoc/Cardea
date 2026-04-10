@@ -23,6 +23,8 @@ class TtsBriefingPlayer(context: Context) {
 
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var pendingAdHocText: String? = null
+    private var pendingBriefingConfig: WorkoutConfig? = null
 
     var verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL
 
@@ -37,6 +39,19 @@ class TtsBriefingPlayer(context: Context) {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 )
+                pendingAdHocText?.let { queued ->
+                    if (queued.isNotBlank() && verbosity != VoiceVerbosity.OFF) {
+                        tts?.speak(queued, TextToSpeech.QUEUE_ADD, Bundle.EMPTY, "adhoc_pending")
+                    }
+                }
+                pendingAdHocText = null
+                pendingBriefingConfig?.let { bufferedConfig ->
+                    val bufferedText = buildBriefingText(bufferedConfig)
+                    if (bufferedText.isNotBlank() && verbosity != VoiceVerbosity.OFF) {
+                        tts?.speak(bufferedText, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing_delayed")
+                    }
+                }
+                pendingBriefingConfig = null
             } else {
                 Log.w(TAG, "TTS init failed with status $status")
             }
@@ -49,15 +64,31 @@ class TtsBriefingPlayer(context: Context) {
      */
     fun speakBriefing(config: WorkoutConfig) {
         if (verbosity == VoiceVerbosity.OFF) return
-        if (!ttsReady) {
-            Log.w(TAG, "TTS not ready, skipping briefing")
-            return
-        }
-
         val text = buildBriefingText(config)
         if (text.isBlank()) return
+        if (ttsReady) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing")
+        } else {
+            Log.d(TAG, "TTS not ready, buffering briefing until init completes")
+            pendingBriefingConfig = config
+        }
+    }
 
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing")
+    /**
+     * Speaks arbitrary [text] via TTS. Used for km > 50 distance announcements.
+     * Non-blocking. Skipped if verbosity is OFF or TTS not ready (buffered for retry).
+     */
+    fun speak(text: String) {
+        if (verbosity == VoiceVerbosity.OFF) return
+        if (text.isBlank()) return
+        if (ttsReady) {
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, Bundle.EMPTY, "adhoc_${System.nanoTime()}")
+        } else {
+            if (pendingAdHocText != null) {
+                Log.w(TAG, "TTS not ready — pending ad-hoc text overwritten: '$pendingAdHocText'")
+            }
+            pendingAdHocText = text
+        }
     }
 
     fun destroy() {
@@ -65,6 +96,8 @@ class TtsBriefingPlayer(context: Context) {
         tts?.shutdown()
         tts = null
         ttsReady = false
+        pendingAdHocText = null
+        pendingBriefingConfig = null
     }
 
     internal fun buildBriefingText(config: WorkoutConfig): String {
@@ -137,5 +170,7 @@ class TtsBriefingPlayer(context: Context) {
 
     companion object {
         private const val TAG = "TtsBriefingPlayer"
+
+        fun kmAnnouncementText(km: Int): String = "Kilometer $km"
     }
 }

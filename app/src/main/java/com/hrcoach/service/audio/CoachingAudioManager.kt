@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.ToneGenerator
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +36,7 @@ class CoachingAudioManager(
     fun applySettings(settings: AudioSettings) {
         currentSettings = settings
         earconPlayer.setVolume(settings.earconVolume)
+        voiceCoach.setVolume(settings.voiceVolume)
         voiceCoach.verbosity = settings.voiceVerbosity
         ttsBriefingPlayer.verbosity = settings.voiceVerbosity
         vibrationManager.enabled = settings.enableVibration
@@ -46,7 +48,7 @@ class CoachingAudioManager(
      * of the countdown (~4s); the TTS briefing plays asynchronously after.
      */
     suspend fun playStartSequence(config: WorkoutConfig) {
-        startupSequencer.playCountdown()
+        startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
         ttsBriefingPlayer.speakBriefing(config)
     }
 
@@ -64,7 +66,7 @@ class CoachingAudioManager(
             CoachingEvent.SPEED_UP,
             CoachingEvent.SLOW_DOWN -> {
                 val escalationLevel = escalationTracker.onZoneAlert()
-                earconPlayer.play(event)
+                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
                 if (
                     escalationLevel == EscalationLevel.EARCON_VOICE ||
                     escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION
@@ -72,6 +74,13 @@ class CoachingAudioManager(
                     scope.launch {
                         delay(300L)
                         voiceCoach.speak(event, guidanceText)
+                        // In FULL verbosity, follow the static clip with dynamic TTS guidance
+                        if (currentSettings.voiceVerbosity == VoiceVerbosity.FULL &&
+                            !guidanceText.isNullOrBlank()
+                        ) {
+                            delay(1_800L)  // Wait for the ~1.5s MP3 to finish before TTS queues
+                            ttsBriefingPlayer.speak(guidanceText)
+                        }
                     }
                 }
                 if (escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION) {
@@ -81,13 +90,22 @@ class CoachingAudioManager(
 
             CoachingEvent.RETURN_TO_ZONE -> {
                 escalationTracker.reset()
-                earconPlayer.play(event)
+                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
                 voiceCoach.speak(event, guidanceText)
             }
 
             else -> {
-                earconPlayer.play(event)
-                voiceCoach.speak(event, guidanceText)
+                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
+                if (event == CoachingEvent.KM_SPLIT) {
+                    val km = guidanceText?.toIntOrNull()
+                    if (km != null && km > 50) {
+                        ttsBriefingPlayer.speak(TtsBriefingPlayer.kmAnnouncementText(km))
+                    } else {
+                        voiceCoach.speak(event, guidanceText)
+                    }
+                } else {
+                    voiceCoach.speak(event, guidanceText)
+                }
             }
         }
     }
@@ -136,5 +154,11 @@ class CoachingAudioManager(
         voiceCoach.destroy()
         ttsBriefingPlayer.destroy()
         vibrationManager.destroy()
+    }
+
+    companion object {
+        /** Returns true when earcons should fire. OFF suppresses earcons; other levels allow them. */
+        fun shouldPlayEarcon(verbosity: VoiceVerbosity): Boolean =
+            verbosity != VoiceVerbosity.OFF
     }
 }
