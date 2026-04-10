@@ -563,7 +563,6 @@ class WorkoutForegroundService : LifecycleService() {
             pauseStartMs = 0L
             coachingAudioManager?.playPauseFeedback(paused = false)
         }
-        if (didResume) coachingAudioManager?.playPauseFeedback(paused = false)
         notificationHelper.update("Workout resumed")
     }
 
@@ -843,6 +842,7 @@ class WorkoutForegroundService : LifecycleService() {
             .onFailure { Log.w("WorkoutService", "Failed to update notification", it) }
         cleanupManagers()
         WorkoutState.reset()
+        WorkoutState.setPendingBootcampSessionId(null)
         WorkoutState.clearCompletedWorkoutId()
         runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
             .onFailure { Log.w("WorkoutService", "Failed to stop foreground", it) }
