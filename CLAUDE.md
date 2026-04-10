@@ -49,7 +49,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - **WorkoutForegroundService** is the central orchestrator. It combines BLE HR and GPS flows, evaluates zones, triggers alerts, saves track points every 5s, and persists completed workouts to Room.
 - **Three workout modes:** `STEADY_STATE` (single target HR ± buffer), `DISTANCE_PROFILE` (ordered distance segments each with a target HR), and `FREE_RUN` (no target, data collection only).
 - **Adaptive learning** (`AdaptivePaceController`) tracks HR slope, pace-HR buckets, response lag, and trim offsets across sessions. Profile persists via `AdaptiveProfileRepository`.
-- **Alerts** use `ToneGenerator` on `STREAM_NOTIFICATION` to layer tones over music without requesting audio focus.
+- **Alerts** use `ToneGenerator` on `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` to layer tones over music without requesting audio focus. Do NOT change this to `NOTIFICATION_EVENT` — it would be ducked by music.
 
 ## Key Packages
 
@@ -58,6 +58,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - `domain/model/` — Domain models: `WorkoutConfig`, `WorkoutMode`, `AdaptiveProfile`, `ZoneStatus`
 - `domain/engine/` — `ZoneEngine` (static zone eval), `AdaptivePaceController` (predictive HR-pace modeling)
 - `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `AlertManager`, `WorkoutState`
+- `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoiceCoach`, `TtsBriefingPlayer`, `StartupSequencer`, `VoiceEventPriority`
 - `ui/home/` — Home dashboard screen + ViewModel (new)
 - `ui/setup/` — Workout setup screen + ViewModel (config, BLE scanning); maps to "Workout" nav tab
 - `ui/workout/` — Active workout display
@@ -99,6 +100,25 @@ Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, *
 - **Guided workouts UX design:** `docs/plans/2026-03-02-guided-workouts-ux-design.md` — Approach B: Cardea glass preset cards, segment timeline strip, HRmax onboarding, interval countdown.
 - **Guided workouts implementation plan:** `docs/plans/2026-03-01-preset-workout-profiles.md` — 12-task TDD plan; Tasks 1–2 already done in commit fd3d9d9.
 - Legacy: `docs/plans/2026-02-25-hr-coaching-app-design.md` — superseded; data model and alert behavior sections still valid, UI/UX sections replaced by the 2026-03-02 spec.
+
+## Audio Pipeline
+
+Four-component layered audio system in `service/audio/`:
+
+- **`EarconPlayer`** — SoundPool, plays short WAV clips for zone alerts. `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE`.
+- **`VoiceCoach`** — MediaPlayer, plays pre-recorded voice clips. Priority-gated via `VoiceEventPriority` (CRITICAL > NORMAL > INFORMATIONAL) — lower-priority events cannot interrupt higher-priority playback. KM_SPLIT clips exist for km 1–50 only; km >50 routes to TTS.
+- **`TtsBriefingPlayer`** — TextToSpeech for workout briefings and ad-hoc text. Buffers via `pendingAdHocText` / `pendingBriefingConfig` if TTS engine isn't ready yet.
+- **`StartupSequencer`** — ToneGenerator countdown sequence before workout starts.
+- **`CoachingAudioManager`** — Orchestrator. `VoiceVerbosity.OFF` gates ALL audio (earcons + voice + TTS). `shouldPlayEarcon(verbosity)` is the single gate for earcon playback.
+- **`AudioSettings`** — `earconVolume` and `voiceVolume` are independent (both 0–100 int percent).
+
+## DataStore / Slider Pattern
+
+Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on every drag frame (hundreds of times). Use `onValueChangeFinished` for persistence; update in-memory `StateFlow` in `onValueChange` for smooth UI.
+
+## Known Pre-existing Lint Errors (do not treat as regressions)
+
+`BleHrManager.kt` MissingPermission, `WorkoutForegroundService.kt` MissingSuperCall, `NavGraph.kt` NewApi (×2), `build.gradle.kts` WrongGradleMethod — all pre-date this codebase's Claude sessions.
 
 ## Ralph Loop (ralph-loop skill)
 
