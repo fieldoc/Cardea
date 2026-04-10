@@ -91,19 +91,27 @@ Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, *
 
 ## UI & Theme
 
-- **Cardea design system** — Dark glass-morphic theme. Background `#0B0F17` (radial gradient with `#0F1623`). Cardea gradient: `#FF5A5F→#FF2DA6→#5B5BFF→#00D1FF` at 135°. All design tokens are in `ui/theme/Color.kt` as named constants. See `docs/plans/2026-03-02-cardea-ui-ux-design.md` for the authoritative spec.
+- **Cardea design system** — Dark glass-morphic theme. Background `#050505` (radial gradient with `#0D0D0D`). All design tokens are in `ui/theme/Color.kt` as named constants. See `docs/plans/2026-03-02-cardea-ui-ux-design.md` for the authoritative spec. **Token drift rule: if the spec conflicts with `Color.kt`, the spec is wrong — fix the spec, not the code.**
 - **`CardeaTheme`** — Primary theme function. `HrCoachTheme` is a backward-compat wrapper. `HrCoachThemeTokens` is a `typealias` for `CardeaThemeTokens`. Dynamic color is `false` — Cardea palette is always enforced. The app supports System/Light/Dark modes via the in-app Theme selector (`AccountScreen`); light mode is a valid user preference — do not flag it as a bug.
-- **`CardeaGradient`** — `Brush.linearGradient` with exact 4-stop color stops (do NOT alter). Access via `HrCoachThemeTokens.gradient` in composables. **3-tier usage hierarchy:** Tier 1 = gradient text/borders for single most important metric per screen (18dp corners); Tier 2 = white on glass for supporting metrics (14dp corners); Tier 3 = secondary text on glass for ambient info (12dp corners). Gradient also used for primary CTA button and active nav icons. Do NOT apply gradient to every element — "colour pops not colour vomit".
-- **Glass surface pattern** — `GlassBorder = Color(0x0FFFFFFF)`, `GlassHighlight = Color(0x14FFFFFF)`. Use `GlassCard` composable from `ui/components/GlassCard.kt` for all card surfaces.
+- **Three gradient variants — use the right one:**
+  - `CardeaGradient` (4-stop, `#FF4D5A→#FF2DA6→#4D61FF→#00E5FF`, 135°) — ring foregrounds, gradient text, Tier 1 accent borders only. Do NOT alter the stops.
+  - `CardeaCtaGradient` (Red→Pink, 2-stop) — ALL buttons and active chips. `CardeaButton` uses this correctly. ~30 inline buttons across bootcamp/setup screens still use the full `CardeaGradient` — audit with `search_for_pattern "CardeaGradient"` before adding new ones.
+  - `CardeaNavGradient` (Blue→Cyan, 2-stop) — active nav icons only.
+- **One gradient accent per screen** — the 3-tier hierarchy means exactly one composable per screen carries the gradient (text, border, or CTA button). A ring AND a button AND a tile all lit simultaneously is wrong. BootcampTile ring is plain white (0.55α), not gradient. **3-tier:** Tier 1 = gradient, 18dp corners; Tier 2 = white on glass, 14dp corners; Tier 3 = secondary text on glass, 12dp corners.
+- **Glass surface pattern** — `GlassBorder = Color(0x1AFFFFFF)` (10% alpha), `GlassHighlight = Color(0x0AFFFFFF)`. Use `GlassCard` composable from `ui/components/GlassCard.kt` for all card surfaces.
+- **`GlassCard.containerColor`** — previously silently ignored; now wired up (2026-04-09). Pass `containerColor = SomeColor.copy(alpha = 0.06f)` for subtle tinted-fill states (e.g. selected PresetCard). Also pass `borderColor = Color.Transparent` when using an outer `Modifier.border(brush=…)` to avoid double-borders.
+- **`CardeaTextTertiary` is `#6B6B73`** — raised from `#52525B` (2026-04-09) for WCAG AA compliance on `#050505` background. Downstream aliases `DisabledGray`, `ThresholdLine` auto-update.
+- **Zone status composables** — pills, indicators showing HR zone must be **minimum 12sp** with adequate padding. Zone info is safety-critical and must be readable at a glance mid-run. Do not style as decorative micro-labels.
 - **`CardeaLogo`** — Canvas-drawn composable in `ui/components/CardeaLogo.kt`. Heart + ECG line + orbital ring with gradient fill. Two sizes: `LogoSize.LARGE` (splash, 180dp) and `LogoSize.SMALL` (nav badge, 32dp).
-- **Gradient nav icons** — Active nav icons use `CompositingStrategy.Offscreen` + `BlendMode.SrcIn` with `CardeaGradient` to produce pixel-perfect gradient fill on any `ImageVector` icon.
+- **Gradient nav icons** — Active nav icons use `CompositingStrategy.Offscreen` + `BlendMode.SrcIn` with `CardeaNavGradient` to produce pixel-perfect gradient fill on any `ImageVector` icon.
 - **Charts are custom Canvas-drawn** — `ui/charts/` (BarChart, PieChart, ScatterPlot) use `DrawScope` directly; no charting library. Styling changes require Canvas API edits.
 - **`WorkoutSnapshot` has no elapsed time** — compute elapsed seconds in the ViewModel via a ticker flow when `isRunning && !isPaused`.
 - **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
 
 ## Design Documents
 
-- **Authoritative spec:** `docs/plans/2026-03-02-cardea-ui-ux-design.md`
+- **Authoritative spec:** `docs/plans/2026-03-02-cardea-ui-ux-design.md` — unified 2026-04-09; tokens now match `Color.kt` exactly.
+- **Design review mockup:** `docs/mockups/cardea-design-review.html` — HTML phone-frame mockups of Home/Workout/Account with token reference, type scale, and inline critique. Open in browser for visual reference.
 - **Implementation plan:** `docs/plans/2026-03-02-cardea-ui-ux-plan.md`
 - **Guided workouts UX design:** `docs/plans/2026-03-02-guided-workouts-ux-design.md` — Approach B: Cardea glass preset cards, segment timeline strip, HRmax onboarding, interval countdown.
 - **Guided workouts implementation plan:** `docs/plans/2026-03-01-preset-workout-profiles.md` — 12-task TDD plan; Tasks 1–2 already done in commit fd3d9d9.
