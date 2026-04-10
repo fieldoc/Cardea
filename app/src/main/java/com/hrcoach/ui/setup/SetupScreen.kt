@@ -642,12 +642,12 @@ private fun ModeOptionsCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(
-                            if (isSelected) Color(0xFF4D9FFF).copy(alpha = 0.10f)
+                            if (isSelected) GradientRed.copy(alpha = 0.10f)
                             else CardeaTheme.colors.glassHighlight
                         )
                         .border(
                             1.dp,
-                            if (isSelected) Color(0xFF4D9FFF).copy(alpha = 0.30f)
+                            if (isSelected) GradientRed.copy(alpha = 0.35f)
                             else CardeaTheme.colors.glassBorder,
                             RoundedCornerShape(10.dp)
                         )
@@ -660,7 +660,7 @@ private fun ModeOptionsCard(
                         modifier = Modifier
                             .size(8.dp)
                             .background(
-                                if (isSelected) Color(0xFF4D9FFF)
+                                if (isSelected) GradientRed
                                 else CardeaTheme.colors.glassSurface,
                                 CircleShape
                             )

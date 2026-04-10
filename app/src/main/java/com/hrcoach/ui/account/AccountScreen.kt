@@ -494,7 +494,7 @@ private fun ProfileHeroCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
@@ -503,9 +503,9 @@ private fun ProfileHeroCard(
                         Color.Transparent
                     )
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(18.dp)
             )
-            .border(1.dp, GradientRed.copy(alpha = 0.20f), RoundedCornerShape(16.dp))
+            .border(1.5.dp, CardeaTheme.colors.gradient, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 18.dp, vertical = 20.dp)
     ) {
