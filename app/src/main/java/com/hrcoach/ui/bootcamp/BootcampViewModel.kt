@@ -485,8 +485,9 @@ class BootcampViewModel @Inject constructor(
     }
 
     fun onBootcampWorkoutStarting() {
-        // Store in WorkoutState (singleton) so the post-run NavEntry's separate
-        // BootcampViewModel instance can read it via onWorkoutCompleted().
+        // Fallback: if prepareStartWorkout didn't already set the pending ID
+        // (e.g. code path bypassing the normal flow), pick the next scheduled session.
+        if (WorkoutState.snapshot.value.pendingBootcampSessionId != null) return
         val nextScheduled = _uiState.value.currentWeekDays
             .mapNotNull { it.session }
             .firstOrNull { it.sessionId != null && !it.isCompleted }
@@ -1103,6 +1104,18 @@ class BootcampViewModel @Inject constructor(
      * If not, shows the maxHR gate sheet first.
      */
     fun prepareStartWorkout(session: PlannedSession, onConfigReady: (String) -> Unit) {
+        // Resolve the DB session ID for the session the user tapped and store it
+        // in WorkoutState now, so onBootcampWorkoutStarting() doesn't have to guess.
+        val matchedSessionId = _uiState.value.currentWeekDays
+            .mapNotNull { it.session }
+            .firstOrNull { uiItem ->
+                uiItem.sessionId != null &&
+                !uiItem.isCompleted &&
+                uiItem.presetId == session.presetId &&
+                uiItem.minutes == session.minutes
+            }?.sessionId
+        WorkoutState.setPendingBootcampSessionId(matchedSessionId)
+
         val currentMaxHr = _uiState.value.maxHr
         if (currentMaxHr != null) {
             onConfigReady(buildWorkoutConfig(session, currentMaxHr))
