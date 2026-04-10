@@ -11,6 +11,7 @@ class VoiceCoach(private val context: Context) {
 
     var verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL
     private var volumeScalar: Float = 0.8f
+    private var currentPriority: VoiceEventPriority = VoiceEventPriority.INFORMATIONAL
 
     private var mediaPlayer: MediaPlayer? = null
 
@@ -32,13 +33,23 @@ class VoiceCoach(private val context: Context) {
             VoiceVerbosity.FULL -> fullResFor(event, guidanceText)
         } ?: return
 
+        val incomingPriority = VoiceEventPriority.of(event)
+
+        // Only interrupt current playback if new event is equal or higher priority
+        if (mediaPlayer?.isPlaying == true && incomingPriority.ordinal > currentPriority.ordinal) {
+            // Current clip has higher priority — skip this lower-priority event
+            return
+        }
+
         releasePlayer()
+        currentPriority = incomingPriority
 
         mediaPlayer = MediaPlayer.create(context, resId, audioAttributes, 0)?.also { mp ->
             mp.setVolume(volumeScalar, volumeScalar)
             mp.setOnCompletionListener {
                 it.release()
                 mediaPlayer = null
+                currentPriority = VoiceEventPriority.INFORMATIONAL  // reset after clip ends
             }
             mp.start()
         }
