@@ -567,12 +567,12 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun stopWorkout() {
+        if (isStopping) return
+        isStopping = true
         val finalHrSampleSum = hrSampleSum
         val finalHrSampleCount = hrSampleCount
         hrSampleSum = 0L
         hrSampleCount = 0
-        if (isStopping) return
-        isStopping = true
 
         stopJob?.cancel()
         stopJob = lifecycleScope.launch(Dispatchers.IO) {
@@ -672,9 +672,7 @@ class WorkoutForegroundService : LifecycleService() {
                         currentProfile = currentProfile.copy(hrRest = updatedRest)
                     }
 
-                    if (!SimulationController.isActive) {
-                        adaptiveProfileRepository.saveProfile(currentProfile)
-                    }
+                    // Profile is saved once below after CTL/ATL and tuning direction are computed.
                     // --------------------------------
 
                     val canonicalMetrics = MetricsCalculator.deriveFullMetrics(

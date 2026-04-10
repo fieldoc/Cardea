@@ -78,7 +78,7 @@ Room database `hr_coach_db` with two tables: `workouts` and `track_points` (FK t
 
 ## Navigation
 
-Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, **Account**. Start destination after splash is `home`. Active workout screen hides the bottom bar. Navigation auto-transitions to workout screen when service starts; when workout ends it navigates back to `setup` (or post-run summary). `onDone` from post-run summary returns to `home`.
+Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, **Account**. Start destination after splash is `home`. Active workout screen hides the bottom bar. Navigation auto-transitions to workout screen when service starts; when workout ends it navigates to post-run summary (or back to `setup` if no completed workout ID). `onDone` from post-run summary navigates to **bootcamp dashboard** (bootcamp runs) or **history detail** (freestyle runs).
 
 ## UI & Theme
 
