@@ -231,6 +231,7 @@ class WorkoutForegroundService : LifecycleService() {
         autoPauseStartMs = 0L
         totalAutoPausedMs = 0L
         autoPauseGraceUntilMs = 0L
+        workoutStartMs = 0L
         alertPolicy.reset()
         coachingEventRouter.reset()
         trackPointRecorder.reset()
