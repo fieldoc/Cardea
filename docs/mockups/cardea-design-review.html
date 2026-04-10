@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardea — Design Review 2026-04-09</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Oxanium:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ──────────────────────────────────────────────────────
+       Design tokens — mirroring Color.kt exactly
+       ────────────────────────────────────────────────────── */
+    :root {
+      --bg:          #050505;
+      --bg2:         #0D0D0D;
+
+      --glass-fill:  rgba(255,255,255,0.08);
+      --glass-fill2: rgba(255,255,255,0.13);
+      --glass-bdr:   rgba(255,255,255,0.10);
+      --glass-hi:    rgba(255,255,255,0.04);
+
+      --grad-full:   linear-gradient(135deg,#FF4D5A 0%,#FF2DA6 35%,#4D61FF 65%,#00E5FF 100%);
+      --grad-cta:    linear-gradient(135deg,#FF4D5A,#FF2DA6);
+      --grad-nav:    linear-gradient(135deg,#4D61FF,#00E5FF);
+
+      --t1: #FFFFFF;
+      --t2: #A1A1AA;
+      --t3: #52525B;
+
+      --zone-g: #22C55E;
+      --zone-a: #FACC15;
+      --zone-r: #EF4444;
+
+      --r1: 18px;
+      --r2: 14px;
+      --r3: 12px;
+
+      --f-ui:     'DM Sans', system-ui, sans-serif;
+      --f-metric: 'Oxanium', monospace;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+      background: radial-gradient(ellipse at 12% 8%, #111 0%, #050505 55%);
+      color: var(--t1);
+      font-family: var(--f-ui);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Layout
+       ────────────────────────────────────────────────────── */
+    .page { max-width: 1160px; margin: 0 auto; padding: 64px 40px 100px; }
+
+    .section { margin-bottom: 80px; }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--t3);
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 36px;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Page header
+       ────────────────────────────────────────────────────── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 80px;
+      animation: rise 0.55s ease-out both;
+    }
+
+    .brand {
+      font-size: 52px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      background: var(--grad-full);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-sub {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--t3);
+      margin-top: 10px;
+    }
+
+    .header-tagline {
+      font-size: 13px;
+      color: var(--t2);
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Phone frames
+       ────────────────────────────────────────────────────── */
+    .phones {
+      display: flex;
+      gap: 40px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .phone-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      animation: rise .6s ease-out both;
+    }
+    .phone-wrap:nth-child(1) { animation-delay: .05s; }
+    .phone-wrap:nth-child(2) { animation-delay: .15s; }
+    .phone-wrap:nth-child(3) { animation-delay: .25s; }
+
+    .phone-caption {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--t3);
+    }
+
+    .frame {
+      width: 320px;
+      height: 680px;
+      background: #080808;
+      border-radius: 46px;
+      border: 1.5px solid rgba(255,255,255,0.13);
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        0 0 0 6px rgba(255,255,255,0.025),
+        0 48px 96px rgba(0,0,0,.85),
+        inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+
+    .screen {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at 25% 6%, #111 0%, #050505 68%);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* status bar */
+    .sbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 22px 0;
+      flex-shrink: 0;
+    }
+    .sbar-time { font-size: 12px; font-weight: 600; }
+    .sbar-icons { display: flex; align-items: center; gap: 5px; }
+
+    /* ──────────────────────────────────────────────────────
+       Glass card tiers
+       ────────────────────────────────────────────────────── */
+    .g2 {
+      background: var(--glass-fill);
+      border: 1px solid var(--glass-bdr);
+      border-radius: var(--r2);
+    }
+
+    .g3 {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--r3);
+    }
+
+    /* gradient border trick for tier-1 */
+    .g1 {
+      border-radius: var(--r1);
+      background:
+        linear-gradient(var(--bg2), var(--bg2)) padding-box,
+        var(--grad-full) border-box;
+      border: 1.5px solid transparent;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Gradient helpers
+       ────────────────────────────────────────────────────── */
+    .gtext {
+      background: var(--grad-full);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       HOME SCREEN
+       ────────────────────────────────────────────────────── */
+    .home-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 6px 0 0;
+    }
+
+    /* Greeting row */
+    .greeting {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 14px 6px;
+      flex-shrink: 0;
+    }
+    .greeting-txt { font-size: 12px; color: var(--t2); }
+    .greeting-btns { display: flex; gap: 7px; }
+    .icon-btn {
+      width: 29px; height: 29px;
+      border-radius: 50%;
+      background: var(--glass-fill);
+      border: 1px solid var(--glass-bdr);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* PULSE hero */
+    .pulse-hero {
+      margin: 0 12px;
+      height: 168px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      position: relative;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .pulse-bg {
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,77,90,.09) 0%, rgba(77,97,255,.06) 100%);
+    }
+    .pulse-orb {
+      position: absolute; top: -30px; right: -30px;
+      width: 140px; height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,77,90,.18) 0%, transparent 70%);
+      animation: breathe 2.8s ease-in-out infinite;
+    }
+    .pulse-content {
+      position: relative; z-index: 2;
+      padding: 12px 14px 0;
+    }
+    .pulse-tag {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--t3);
+    }
+    .pulse-name {
+      font-size: 22px; font-weight: 600;
+      color: var(--t1); line-height: 1.1;
+      margin: 2px 0 3px;
+    }
+    .pulse-detail { font-size: 10px; color: var(--t2); }
+    .zone-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 100px;
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      margin-top: 5px;
+    }
+    .zone-pill.green {
+      background: rgba(34,197,94,.14);
+      border: 1px solid rgba(34,197,94,.28);
+      color: var(--zone-g);
+    }
+    .zone-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--zone-g);
+      animation: blink 1.4s ease-in-out infinite;
+    }
+
+    /* CTA */
+    .cta-row { padding: 8px 12px; flex-shrink: 0; }
+    .btn-cta {
+      width: 100%; height: 48px;
+      border-radius: 16px;
+      background: var(--grad-cta);
+      border: none; cursor: pointer;
+      color: #fff; font-family: var(--f-ui);
+      font-size: 13px; font-weight: 600;
+      letter-spacing: .03em;
+      box-shadow: 0 6px 24px rgba(255,77,90,.28);
+    }
+
+    /* Bottom tiles */
+    .bottom { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 0 12px 6px; min-height: 0; }
+
+    .row-primary { display: flex; gap: 6px; flex: 1.2; min-height: 0; }
+
+    .goal-tile { flex: 1.2; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+    .streak-tile { flex: .8; padding: 10px 12px; display: flex; flex-direction: column; justify-content: space-between; }
+
+    .tile-lbl { font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+    .tile-num { font-family: var(--f-metric); font-size: 32px; font-weight: 700; line-height: 1; }
+    .tile-sub { font-size: 9px; color: var(--t2); margin-top: 2px; }
+
+    .pbar-wrap { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-top: 5px; }
+    .pbar { height: 100%; background: var(--grad-cta); border-radius: 2px; }
+
+    .row-mid { display: flex; gap: 6px; flex: .9; min-height: 0; }
+
+    .bootcamp-tile { flex: 1; padding: 9px 11px; display: flex; flex-direction: column; gap: 5px; }
+    .volume-tile   { flex: 1; padding: 9px 11px; display: flex; flex-direction: column; gap: 3px; }
+
+    .ring-row { display: flex; align-items: center; gap: 7px; }
+
+    .minibars { display: flex; gap: 3px; align-items: flex-end; height: 22px; margin-top: 3px; }
+    .minibar { flex: 1; border-radius: 2px; background: rgba(255,255,255,0.18); }
+
+    .coaching-strip {
+      flex: 0 0 auto;
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 11px;
+    }
+    .coaching-txt { font-size: 9px; color: var(--t2); line-height: 1.4; }
+
+    /* ──────────────────────────────────────────────────────
+       NAV BAR
+       ────────────────────────────────────────────────────── */
+    .nav {
+      height: 62px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: space-around;
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .nav-lbl { font-size: 9px; font-weight: 500; }
+    .nav-item.active .nav-lbl {
+      background: var(--grad-nav);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-item.inactive .nav-lbl { color: var(--t3); }
+    .nav-item.inactive svg { opacity: 0.38; }
+
+    /* ──────────────────────────────────────────────────────
+       SETUP SCREEN
+       ────────────────────────────────────────────────────── */
+    .screen-header { padding: 8px 16px 10px; flex-shrink: 0; }
+    .screen-title { font-size: 19px; font-weight: 600; }
+    .screen-sub { font-size: 11px; color: var(--t2); margin-top: 2px; }
+
+    .chips { display: flex; gap: 5px; padding: 0 12px; flex-shrink: 0; margin-bottom: 9px; }
+    .chip {
+      flex: 1; height: 32px; border-radius: 10px;
+      border: 1px solid var(--glass-bdr);
+      background: var(--glass-fill);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 500; color: var(--t2);
+    }
+    .chip.on {
+      background: linear-gradient(var(--bg2), var(--bg2)) padding-box,
+                  var(--grad-full) border-box;
+      border: 1.5px solid transparent;
+      color: var(--t1);
+    }
+
+    .scroller { flex: 1; overflow-y: auto; padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px; }
+    .scroller::-webkit-scrollbar { display: none; }
+
+    .preset-section-hdr {
+      font-size: 8px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+      padding: 6px 0 3px;
+    }
+
+    .preset-card { padding: 9px 11px; cursor: pointer; margin-bottom: 4px; }
+    .preset-card.on {
+      background: linear-gradient(var(--bg2), var(--bg2)) padding-box,
+                  var(--grad-full) border-box !important;
+      border: 1.5px solid transparent !important;
+    }
+    .preset-row { display: flex; justify-content: space-between; align-items: flex-start; }
+    .preset-name { font-size: 11px; font-weight: 600; color: var(--t1); }
+    .preset-desc { font-size: 9px; color: var(--t2); margin-top: 1px; }
+    .preset-dur  { font-size: 10px; color: var(--t2); text-align: right; }
+    .preset-int  { font-size: 8px; color: var(--t3); margin-top: 1px; }
+
+    .seg-strip { height: 4px; border-radius: 3px; margin-top: 7px; overflow: hidden; display: flex; gap: 2px; }
+    .seg { height: 100%; border-radius: 2px; }
+
+    .setup-cta { padding: 6px 12px 10px; flex-shrink: 0; }
+
+    /* ──────────────────────────────────────────────────────
+       ACCOUNT SCREEN
+       ────────────────────────────────────────────────────── */
+    .acc-scroll { flex: 1; overflow-y: auto; padding: 6px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .acc-scroll::-webkit-scrollbar { display: none; }
+
+    .profile-card { padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+
+    .avatar {
+      width: 50px; height: 50px; border-radius: 50%; flex-shrink: 0;
+      background: var(--grad-full) padding-box;
+      padding: 2px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-inner {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: #1a1a1a;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700;
+    }
+
+    .settings-card { padding: 2px 0; }
+    .settings-hdr {
+      font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); padding: 8px 14px 3px;
+    }
+    .s-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 11px;
+    }
+    .s-row:last-child { border-bottom: none; }
+    .s-lbl { color: var(--t1); }
+    .s-val { color: var(--t2); font-size: 10px; }
+
+    .toggle {
+      width: 34px; height: 19px; border-radius: 100px; position: relative;
+    }
+    .toggle.on { background: var(--grad-cta); }
+    .toggle.off { background: rgba(255,255,255,.12); }
+    .thumb {
+      width: 15px; height: 15px; border-radius: 50%; background: #fff;
+      position: absolute; top: 2px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    }
+    .toggle.on .thumb { right: 2px; }
+    .toggle.off .thumb { left: 2px; }
+
+    .seg-ctrl { display: flex; border-radius: 7px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); }
+    .seg-opt { flex: 1; padding: 3px 7px; font-size: 8px; font-weight: 600; text-align: center; color: var(--t3); }
+    .seg-opt.on { background: var(--grad-cta); color: #fff; }
+
+    .maxhr-val {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 13px; font-weight: 700;
+      font-family: var(--f-metric);
+    }
+
+    /* ──────────────────────────────────────────────────────
+       DESIGN TOKENS SECTION
+       ────────────────────────────────────────────────────── */
+    .tokens-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 32px; }
+
+    .tg-title {
+      font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 12px;
+    }
+
+    .swatch-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+    .swatch { width: 30px; height: 18px; border-radius: 5px; flex-shrink: 0; }
+    .swatch-name { font-size: 10px; color: var(--t2); font-family: monospace; }
+    .swatch-val  { font-size: 9px; color: var(--t3); margin-left: auto; font-family: monospace; }
+
+    .grad-swatch { height: 22px; border-radius: 7px; margin-bottom: 6px; }
+    .grad-stops { display: flex; justify-content: space-between; margin-bottom: 14px; }
+    .grad-stop { font-size: 8px; color: var(--t3); font-family: monospace; }
+
+    .tier-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .tier-badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 100px;
+      font-size: 8px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    }
+    .tb1 { background: var(--grad-full); color: #fff; }
+    .tb2 { background: rgba(255,255,255,.10); color: var(--t2); }
+    .tb3 { background: rgba(255,255,255,.05); color: var(--t3); }
+    .tier-desc { font-size: 10px; color: var(--t2); }
+
+    /* ──────────────────────────────────────────────────────
+       TYPE SCALE
+       ────────────────────────────────────────────────────── */
+    .type-row {
+      display: flex; align-items: baseline; gap: 24px;
+      padding-bottom: 18px; margin-bottom: 18px;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .type-row:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+    .type-meta { width: 130px; flex-shrink: 0; }
+    .type-role { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--t3); }
+    .type-spec { font-size: 9px; color: var(--t3); margin-top: 3px; font-family: monospace; }
+    .type-sample { flex: 1; }
+
+    /* ──────────────────────────────────────────────────────
+       CRITIQUE
+       ────────────────────────────────────────────────────── */
+    .crit-panel {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 22px;
+      padding: 44px;
+    }
+
+    .crit-title { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+    .crit-summary {
+      font-size: 13px; color: var(--t2); line-height: 1.7;
+      max-width: 640px; margin-bottom: 36px;
+    }
+
+    .crit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; margin-bottom: 36px; }
+
+    .crit-section-lbl {
+      font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--t3); padding-bottom: 10px; margin-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+
+    .finding { display: flex; gap: 10px; margin-bottom: 13px; }
+    .fd { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+    .fd.r { background: var(--zone-r); }
+    .fd.a { background: var(--zone-a); }
+    .fd.g { background: var(--zone-g); }
+    .f-title { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+    .f-desc  { font-size: 10px; color: var(--t2); line-height: 1.55; }
+
+    .works-item { display: flex; gap: 10px; margin-bottom: 10px; font-size: 11px; }
+    .check { color: var(--zone-g); flex-shrink: 0; margin-top: 1px; }
+    .works-txt { color: var(--t2); line-height: 1.55; }
+    .works-txt strong { color: var(--t1); }
+
+    .hr-thin { height: 1px; background: rgba(255,255,255,.05); margin: 28px 0 24px; }
+
+    .priority-item { display: flex; gap: 14px; margin-bottom: 18px; align-items: flex-start; }
+    .pri-num {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; color: var(--t2);
+    }
+    .pri-title { font-size: 11px; font-weight: 600; margin-bottom: 3px; }
+    .pri-desc  { font-size: 10px; color: var(--t2); line-height: 1.55; }
+    .pri-desc em { color: var(--t3); }
+
+    /* ──────────────────────────────────────────────────────
+       Animations
+       ────────────────────────────────────────────────────── */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes breathe {
+      0%,100% { transform: scale(1); opacity: .18; }
+      50%      { transform: scale(1.15); opacity: .28; }
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: .4; }
+    }
+
+    @keyframes ecg-run {
+      from { stroke-dashoffset: 600; }
+      to   { stroke-dashoffset: 0; }
+    }
+
+    .ecg-path {
+      stroke-dasharray: 600;
+      animation: ecg-run 3.2s linear infinite;
+    }
+
+    .section { animation: rise .55s ease-out both; }
+    .section:nth-child(2) { animation-delay: .1s; }
+    .section:nth-child(3) { animation-delay: .18s; }
+    .section:nth-child(4) { animation-delay: .26s; }
+    .section:nth-child(5) { animation-delay: .34s; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Page Header ─────────────────────────────────── -->
+  <div class="page-header">
+    <div class="brand">Cardea</div>
+    <div class="header-sub">Design Review &nbsp;·&nbsp; 2026-04-09</div>
+    <div class="header-tagline">Listen to your body.</div>
+  </div>
+
+  <!-- ──────────────────────────────────────────────────
+       PHONE MOCKUPS
+       ────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-label">Screen Mockups — Home · Workout · Account</div>
+    <div class="phones">
+
+      <!-- ── PHONE 1: Home PULSE ─── -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+
+            <!-- status bar -->
+            <div class="sbar">
+              <span class="sbar-time">9:41</span>
+              <div class="sbar-icons">
+                <svg width="15" height="10" viewBox="0 0 15 10" fill="none">
+                  <rect x="0"  y="5" width="2.2" height="5" rx="1" fill="white" opacity=".4"/>
+                  <rect x="3.2" y="3.3" width="2.2" height="6.7" rx="1" fill="white" opacity=".6"/>
+                  <rect x="6.4" y="1.7" width="2.2" height="8.3" rx="1" fill="white" opacity=".8"/>
+                  <rect x="9.6" y="0"   width="2.2" height="10"  rx="1" fill="white"/>
+                  <rect x="12.8" y="1" width="2.2" height="3.5" rx=".6" fill="none" stroke="white" stroke-width="1" opacity=".8"/>
+                  <rect x="13.3" y="1.5" width="1.2" height="2.5" rx=".4" fill="white" opacity=".8"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- screen body -->
+            <div class="home-wrap">
+
+              <!-- Greeting -->
+              <div class="greeting">
+                <span class="greeting-txt">Good evening</span>
+                <div class="greeting-btns">
+                  <div class="icon-btn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.8" stroke-linecap="round">
+                      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                    </svg>
+                  </div>
+                  <div class="icon-btn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.8" stroke-linecap="round">
+                      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PULSE Hero -->
+              <div class="pulse-hero">
+                <div class="pulse-bg"></div>
+                <div class="pulse-orb"></div>
+
+                <div class="pulse-content">
+                  <div class="pulse-tag">Base Aerobic</div>
+                  <div class="pulse-name">Easy Run</div>
+                  <div class="pulse-detail">5.0 km &nbsp;·&nbsp; 30 min &nbsp;·&nbsp; Week 4</div>
+                  <div class="zone-pill green">
+                    <div class="zone-dot"></div>
+                    In Zone
+                  </div>
+                </div>
+
+                <!-- ECG gradient trace -->
+                <svg style="position:absolute;bottom:0;left:0;right:0;height:52px;opacity:.45;"
+                     viewBox="0 0 320 52" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="eg" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%"   stop-color="#FF4D5A"/>
+                      <stop offset="35%"  stop-color="#FF2DA6"/>
+                      <stop offset="65%"  stop-color="#4D61FF"/>
+                      <stop offset="100%" stop-color="#00E5FF"/>
+                    </linearGradient>
+                  </defs>
+                  <path class="ecg-path"
+                    d="M0,34 L18,34 C22,28 24,28 27,34 L34,34 L36,37 L40,6 L44,46 L48,34 L56,34 C60,26 63,26 67,34
+                       L85,34 C89,28 91,28 94,34 L101,34 L103,37 L107,6 L111,46 L115,34 L123,34 C127,26 130,26 134,34
+                       L152,34 C156,28 158,28 161,34 L168,34 L170,37 L174,6 L178,46 L182,34 L190,34 C194,26 197,26 201,34
+                       L219,34 C223,28 225,28 228,34 L235,34 L237,37 L241,6 L245,46 L249,34 L257,34 C261,26 264,26 268,34
+                       L286,34 C290,28 292,28 295,34 L302,34 L304,37 L308,6 L312,46 L316,34 L320,34"
+                    fill="none" stroke="url(#eg)" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <!-- ECG glow layer -->
+                <svg style="position:absolute;bottom:0;left:0;right:0;height:52px;opacity:.14;filter:blur(3px);"
+                     viewBox="0 0 320 52" preserveAspectRatio="none">
+                  <path
+                    d="M0,34 L18,34 C22,28 24,28 27,34 L34,34 L36,37 L40,6 L44,46 L48,34 L56,34 C60,26 63,26 67,34
+                       L85,34 C89,28 91,28 94,34 L101,34 L103,37 L107,6 L111,46 L115,34 L123,34 C127,26 130,26 134,34
+                       L152,34 C156,28 158,28 161,34 L168,34 L170,37 L174,6 L178,46 L182,34 L190,34 C194,26 197,26 201,34
+                       L219,34 C223,28 225,28 228,34 L235,34 L237,37 L241,6 L245,46 L249,34 L257,34 C261,26 264,26 268,34
+                       L286,34 C290,28 292,28 295,34 L302,34 L304,37 L308,6 L312,46 L316,34 L320,34"
+                    fill="none" stroke="url(#eg)" stroke-width="5" stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <!-- CTA -->
+              <div class="cta-row">
+                <button class="btn-cta">Start Session</button>
+              </div>
+
+              <!-- Bottom tiles -->
+              <div class="bottom">
+
+                <!-- Primary row -->
+                <div class="row-primary">
+                  <!-- Goal tile — Tier 1: gradient border, gradient number -->
+                  <div class="g1 goal-tile">
+                    <div>
+                      <div class="tile-lbl">Today's Goal</div>
+                    </div>
+                    <div>
+                      <div class="tile-num gtext">8.2</div>
+                      <div class="tile-sub">km remaining</div>
+                      <div class="pbar-wrap"><div class="pbar" style="width:55%;"></div></div>
+                    </div>
+                  </div>
+                  <!-- Streak tile — Tier 2: plain glass, white number -->
+                  <div class="g2 streak-tile">
+                    <div class="tile-lbl">Streak</div>
+                    <div>
+                      <div class="tile-num" style="color:#fff;">7</div>
+                      <div class="tile-sub">day streak</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Mid row -->
+                <div class="row-mid">
+                  <!-- Bootcamp tile — Tier 2 -->
+                  <div class="g2 bootcamp-tile">
+                    <div class="tile-lbl">Bootcamp</div>
+                    <div class="ring-row">
+                      <svg width="34" height="34" viewBox="0 0 34 34">
+                        <defs>
+                          <linearGradient id="ring-nav" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#4D61FF"/>
+                            <stop offset="100%" stop-color="#00E5FF"/>
+                          </linearGradient>
+                        </defs>
+                        <!-- Background ring — plain white, not gradient -->
+                        <circle cx="17" cy="17" r="13" fill="none"
+                          stroke="rgba(255,255,255,0.12)" stroke-width="3"/>
+                        <!-- Progress arc — white (Tier 2 — NOT gradient per critique finding) -->
+                        <circle cx="17" cy="17" r="13" fill="none"
+                          stroke="rgba(255,255,255,0.55)" stroke-width="3"
+                          stroke-linecap="round"
+                          stroke-dasharray="57" stroke-dashoffset="18"
+                          transform="rotate(-90 17 17)"/>
+                      </svg>
+                      <div>
+                        <div style="font-size:13px;font-weight:700;color:#fff;font-family:'Oxanium',monospace;">68%</div>
+                        <div style="font-size:8px;color:#A1A1AA;">wk 4 of 8</div>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Volume tile — Tier 2 -->
+                  <div class="g2 volume-tile">
+                    <div class="tile-lbl">Volume</div>
+                    <div style="display:flex;gap:8px;font-size:8px;color:#52525B;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">
+                      <span>DST</span><span>MIN</span>
+                    </div>
+                    <div class="minibars">
+                      <div class="minibar" style="height:55%;"></div>
+                      <div class="minibar" style="height:38%;"></div>
+                      <div class="minibar" style="height:78%;"></div>
+                      <div class="minibar" style="height:48%;"></div>
+                      <div class="minibar" style="height:65%;"></div>
+                      <div class="minibar" style="height:28%;"></div>
+                      <div class="minibar" style="height:50%;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Coaching strip — Tier 3 -->
+                <div class="g3 coaching-strip">
+                  <svg style="opacity:.6;flex-shrink:0;" width="16" height="11" viewBox="0 0 32 16" fill="none">
+                    <path d="M0,8 L6,8 L8,4 L10,12 L12,2 L14,14 L16,8 L20,8 C23,5 25,5 28,8 L32,8"
+                      stroke="#A1A1AA" stroke-width="1.5" stroke-linecap="round"/>
+                  </svg>
+                  <div class="coaching-txt">Your aerobic base is building steadily. Maintain easy effort.</div>
+                </div>
+
+              </div><!-- /bottom -->
+            </div><!-- /home-wrap -->
+
+            <!-- Nav bar -->
+            <div class="nav">
+              <div class="nav-item active">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <defs>
+                    <linearGradient id="nh" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="url(#nh)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                  <polyline points="9,22 9,12 15,12 15,22" stroke="url(#nh)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                </svg>
+                <span class="nav-lbl">Home</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <span class="nav-lbl">Workout</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span class="nav-lbl">History</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span class="nav-lbl">Progress</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                <span class="nav-lbl">Account</span>
+              </div>
+            </div>
+
+          </div><!-- /screen -->
+        </div><!-- /frame -->
+        <div class="phone-caption">Home — PULSE</div>
+      </div><!-- /phone-wrap -->
+
+
+      <!-- ── PHONE 2: Workout Setup ─── -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar">
+              <span class="sbar-time">9:41</span>
+              <svg width="14" height="10" viewBox="0 0 15 10" fill="none" opacity=".5">
+                <rect x="0" y="5" width="2.2" height="5" rx="1" fill="white"/>
+                <rect x="3.2" y="3.3" width="2.2" height="6.7" rx="1" fill="white"/>
+                <rect x="6.4" y="1.7" width="2.2" height="8.3" rx="1" fill="white"/>
+                <rect x="9.6" y="0" width="2.2" height="10" rx="1" fill="white"/>
+              </svg>
+            </div>
+
+            <div class="screen-header">
+              <div class="screen-title">Workout</div>
+              <div class="screen-sub">Choose a session type</div>
+            </div>
+
+            <!-- Mode chips -->
+            <div class="chips">
+              <div class="chip">Steady</div>
+              <div class="chip on">Guided</div>
+              <div class="chip">Free Run</div>
+            </div>
+
+            <div class="scroller">
+              <div class="g2" style="padding:12px 12px 6px;">
+                <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#A1A1AA;margin-bottom:8px;">Select Preset</div>
+
+                <div class="preset-section-hdr gtext">Base Aerobic</div>
+
+                <div class="g2 preset-card on" style="margin-bottom:5px;">
+                  <div class="preset-row">
+                    <div>
+                      <div class="preset-name">Easy Run</div>
+                      <div class="preset-desc">Comfortable conversational pace</div>
+                    </div>
+                    <div><div class="preset-dur">30 min</div><div class="preset-int">Easy</div></div>
+                  </div>
+                  <div class="seg-strip">
+                    <div class="seg" style="flex:1;background:#2B8C6E;"></div>
+                  </div>
+                </div>
+
+                <div class="g2 preset-card" style="margin-bottom:5px;">
+                  <div class="preset-row">
+                    <div>
+                      <div class="preset-name">Long Slow Distance</div>
+                      <div class="preset-desc">Build aerobic endurance</div>
+                    </div>
+                    <div><div class="preset-dur">60 min</div><div class="preset-int">Easy</div></div>
+                  </div>
+                  <div class="seg-strip">
+                    <div class="seg" style="flex:1;background:#2B8C6E;"></div>
+                  </div>
+                </div>
+
+                <div class="preset-section-hdr gtext">Threshold</div>
+
+                <div class="g2 preset-card" style="margin-bottom:5px;">
+                  <div class="preset-row">
+                    <div>
+                      <div class="preset-name">Tempo Run</div>
+                      <div class="preset-desc">Comfortably hard effort</div>
+                    </div>
+                    <div><div class="preset-dur">35 min</div><div class="preset-int">Moderate</div></div>
+                  </div>
+                  <div class="seg-strip">
+                    <div class="seg" style="flex:2;background:#2B8C6E;"></div>
+                    <div class="seg" style="flex:4;background:#E8A838;"></div>
+                    <div class="seg" style="flex:2;background:#2B8C6E;"></div>
+                  </div>
+                </div>
+
+                <div class="preset-section-hdr gtext">Intervals</div>
+
+                <div class="g2 preset-card" style="margin-bottom:5px;">
+                  <div class="preset-row">
+                    <div>
+                      <div class="preset-name">VO₂max Intervals</div>
+                      <div class="preset-desc">4 × 4 min hard / 3 min easy</div>
+                    </div>
+                    <div><div class="preset-dur">40 min</div><div class="preset-int">Very High</div></div>
+                  </div>
+                  <div class="seg-strip">
+                    <div class="seg" style="flex:2;background:#2B8C6E;"></div>
+                    <div class="seg" style="flex:3;background:#FF4D5A;"></div>
+                    <div class="seg" style="flex:2.5;background:#2B8C6E;"></div>
+                    <div class="seg" style="flex:3;background:#FF4D5A;"></div>
+                    <div class="seg" style="flex:2.5;background:#2B8C6E;"></div>
+                    <div class="seg" style="flex:3;background:#FF4D5A;"></div>
+                    <div class="seg" style="flex:2.5;background:#2B8C6E;"></div>
+                    <div class="seg" style="flex:3;background:#FF4D5A;"></div>
+                    <div class="seg" style="flex:2;background:#2B8C6E;"></div>
+                  </div>
+                </div>
+
+                <div class="preset-section-hdr gtext">Race Prep</div>
+
+                <div class="g2 preset-card">
+                  <div class="preset-row">
+                    <div>
+                      <div class="preset-name">Race Pace</div>
+                      <div class="preset-desc">Simulate goal race effort</div>
+                    </div>
+                    <div><div class="preset-dur">50 min</div><div class="preset-int">High</div></div>
+                  </div>
+                  <div class="seg-strip">
+                    <div class="seg" style="flex:2;background:#2B8C6E;"></div>
+                    <div class="seg" style="flex:7;background:#FF4D5A;"></div>
+                    <div class="seg" style="flex:2;background:#2B8C6E;"></div>
+                  </div>
+                </div>
+
+              </div><!-- /card -->
+            </div><!-- /scroller -->
+
+            <div class="setup-cta">
+              <button class="btn-cta">Start Workout</button>
+            </div>
+
+            <!-- Nav bar — Workout active -->
+            <div class="nav">
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+                <span class="nav-lbl">Home</span>
+              </div>
+              <div class="nav-item active">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <defs>
+                    <linearGradient id="nw" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="url(#nw)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                </svg>
+                <span class="nav-lbl">Workout</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span class="nav-lbl">History</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span class="nav-lbl">Progress</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                <span class="nav-lbl">Account</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="phone-caption">Workout — Guided Preset</div>
+      </div>
+
+
+      <!-- ── PHONE 3: Account ─── -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar">
+              <span class="sbar-time">9:41</span>
+              <svg width="14" height="10" viewBox="0 0 15 10" fill="none" opacity=".5">
+                <rect x="0" y="5" width="2.2" height="5" rx="1" fill="white"/>
+                <rect x="3.2" y="3.3" width="2.2" height="6.7" rx="1" fill="white"/>
+                <rect x="6.4" y="1.7" width="2.2" height="8.3" rx="1" fill="white"/>
+                <rect x="9.6" y="0" width="2.2" height="10" rx="1" fill="white"/>
+              </svg>
+            </div>
+
+            <div class="screen-header">
+              <div class="screen-title">Account</div>
+            </div>
+
+            <div class="acc-scroll">
+
+              <!-- Profile card — Tier 1: gradient border -->
+              <div class="g1 profile-card">
+                <div class="avatar">
+                  <div class="avatar-inner">R</div>
+                </div>
+                <div>
+                  <div style="font-size:15px;font-weight:600;">Runner</div>
+                  <div style="font-size:10px;color:#A1A1AA;margin-top:2px;">47 workouts &nbsp;·&nbsp; 312 km</div>
+                </div>
+              </div>
+
+              <!-- Profile / MaxHR -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Profile</div>
+                <div class="s-row">
+                  <div>
+                    <div class="s-lbl">Max Heart Rate</div>
+                    <div style="font-size:8px;color:#52525B;margin-top:2px;">Personalises all preset HR targets</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:5px;">
+                    <div class="maxhr-val">185</div>
+                    <div style="font-size:9px;color:#52525B;">bpm</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Audio -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Audio & Alerts</div>
+                <div class="s-row">
+                  <div class="s-lbl">Voice Coaching</div>
+                  <div class="seg-ctrl">
+                    <div class="seg-opt">Off</div>
+                    <div class="seg-opt on">Min</div>
+                    <div class="seg-opt">Full</div>
+                  </div>
+                </div>
+                <div class="s-row">
+                  <div>
+                    <div class="s-lbl">Alert Volume</div>
+                    <div style="height:3px;background:rgba(255,255,255,.08);border-radius:2px;width:70px;margin-top:5px;overflow:hidden;">
+                      <div style="width:72%;height:100%;background:linear-gradient(90deg,#FF4D5A,#FF2DA6);border-radius:2px;"></div>
+                    </div>
+                  </div>
+                  <div class="s-val">72%</div>
+                </div>
+                <div class="s-row">
+                  <div class="s-lbl">Vibration</div>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+              </div>
+
+              <!-- Device -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Device</div>
+                <div class="s-row">
+                  <div class="s-lbl">HR Monitor</div>
+                  <div class="s-val">Coospo H808S</div>
+                </div>
+              </div>
+
+              <!-- Maps -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Maps</div>
+                <div class="s-row">
+                  <div>
+                    <div class="s-lbl">Google Maps API Key</div>
+                    <div style="font-size:8px;color:#52525B;font-family:monospace;margin-top:2px;">AIza••••••••••</div>
+                  </div>
+                  <div style="font-size:10px;color:#22C55E;">✓</div>
+                </div>
+              </div>
+
+              <!-- About — Tier 3 -->
+              <div class="g3 settings-card">
+                <div class="settings-hdr">About</div>
+                <div class="s-row">
+                  <div class="s-lbl" style="color:#A1A1AA;">Cardea</div>
+                  <div class="s-val">v1.4.2</div>
+                </div>
+              </div>
+
+            </div><!-- /acc-scroll -->
+
+            <!-- Nav bar — Account active -->
+            <div class="nav">
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+                <span class="nav-lbl">Home</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <span class="nav-lbl">Workout</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span class="nav-lbl">History</span>
+              </div>
+              <div class="nav-item inactive">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span class="nav-lbl">Progress</span>
+              </div>
+              <div class="nav-item active">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <defs>
+                    <linearGradient id="na" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/>
+                    </linearGradient>
+                  </defs>
+                  <circle cx="12" cy="8" r="4" stroke="url(#na)" stroke-width="1.8" fill="none"/>
+                  <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="url(#na)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+                </svg>
+                <span class="nav-lbl">Account</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="phone-caption">Account — Settings</div>
+      </div>
+
+    </div><!-- /phones -->
+  </div><!-- /section -->
+
+
+  <!-- ──────────────────────────────────────────────────
+       DESIGN TOKENS
+       ────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-label">Design Tokens — Color.kt reference</div>
+    <div class="tokens-grid">
+
+      <!-- Gradients -->
+      <div>
+        <div class="tg-title">Gradient Variants</div>
+
+        <div style="margin-bottom:4px;font-size:8px;color:var(--t3);font-family:monospace;">CardeaGradient · 4-stop · 135°</div>
+        <div class="grad-swatch" style="background:linear-gradient(135deg,#FF4D5A 0%,#FF2DA6 35%,#4D61FF 65%,#00E5FF 100%);"></div>
+        <div class="grad-stops" style="margin-bottom:16px;">
+          <span class="grad-stop">#FF4D5A</span>
+          <span class="grad-stop">#FF2DA6</span>
+          <span class="grad-stop">#4D61FF</span>
+          <span class="grad-stop">#00E5FF</span>
+        </div>
+
+        <div style="margin-bottom:4px;font-size:8px;color:var(--t3);font-family:monospace;">CardeaCtaGradient · buttons & borders</div>
+        <div class="grad-swatch" style="background:linear-gradient(135deg,#FF4D5A,#FF2DA6);height:16px;margin-bottom:16px;"></div>
+
+        <div style="margin-bottom:4px;font-size:8px;color:var(--t3);font-family:monospace;">CardeaNavGradient · active nav icons</div>
+        <div class="grad-swatch" style="background:linear-gradient(135deg,#4D61FF,#00E5FF);height:16px;margin-bottom:20px;"></div>
+
+        <div class="tg-title" style="margin-top:4px;">Tier System</div>
+        <div class="tier-row">
+          <span class="tier-badge tb1">Tier 1</span>
+          <span class="tier-desc">Gradient border/text · 18dp · 1 per screen</span>
+        </div>
+        <div class="tier-row">
+          <span class="tier-badge tb2">Tier 2</span>
+          <span class="tier-desc">White on glass · 14dp · supporting metrics</span>
+        </div>
+        <div class="tier-row">
+          <span class="tier-badge tb3">Tier 3</span>
+          <span class="tier-desc">Secondary text · 12dp · ambient info</span>
+        </div>
+      </div>
+
+      <!-- Neutrals & Glass -->
+      <div>
+        <div class="tg-title">Backgrounds</div>
+        <div class="swatch-row"><div class="swatch" style="background:#050505;border:1px solid rgba(255,255,255,.1);"></div><span class="swatch-name">CardeaBgPrimary</span><span class="swatch-val">#050505</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:#0D0D0D;border:1px solid rgba(255,255,255,.1);"></div><span class="swatch-name">CardeaBgSecondary</span><span class="swatch-val">#0D0D0D</span></div>
+        <div style="margin:14px 0 10px;"><div class="tg-title">Glass Surface</div></div>
+        <div class="swatch-row"><div class="swatch" style="background:rgba(255,255,255,.08);"></div><span class="swatch-name">GlassFill</span><span class="swatch-val">0x14FFFFFF</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.3);"></div><span class="swatch-name">GlassBorder</span><span class="swatch-val">0x1AFFFFFF</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:rgba(255,255,255,.04);"></div><span class="swatch-name">GlassHighlight</span><span class="swatch-val">0x0AFFFFFF</span></div>
+        <div style="margin:14px 0 10px;"><div class="tg-title">Text</div></div>
+        <div class="swatch-row"><div class="swatch" style="background:#FFFFFF;"></div><span class="swatch-name">TextPrimary</span><span class="swatch-val">#FFFFFF</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:#A1A1AA;"></div><span class="swatch-name">TextSecondary</span><span class="swatch-val">#A1A1AA</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:#52525B;border:1px solid rgba(255,255,255,.06);"></div><span class="swatch-name">TextTertiary</span><span class="swatch-val">#52525B</span></div>
+      </div>
+
+      <!-- Zone & Semantic -->
+      <div>
+        <div class="tg-title">Zone Colors — semantic only</div>
+        <div class="swatch-row"><div class="swatch" style="background:#22C55E;"></div><span class="swatch-name">ZoneGreen</span><span class="swatch-val">#22C55E</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:#FACC15;"></div><span class="swatch-name">ZoneAmber</span><span class="swatch-val">#FACC15</span></div>
+        <div class="swatch-row"><div class="swatch" style="background:#EF4444;"></div><span class="swatch-name">ZoneRed</span><span class="swatch-val">#EF4444</span></div>
+
+        <div style="margin:14px 0 10px;"><div class="tg-title">Corner Radii</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:40px;height:22px;border-radius:18px;border:1px solid rgba(255,255,255,.2);"></div>
+            <div><div style="font-size:10px;color:#fff;">18dp</div><div style="font-size:9px;color:#52525B;">Tier 1 cards</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:40px;height:22px;border-radius:14px;border:1px solid rgba(255,255,255,.2);"></div>
+            <div><div style="font-size:10px;color:#fff;">14dp</div><div style="font-size:9px;color:#52525B;">Tier 2 cards</div></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:40px;height:22px;border-radius:12px;border:1px solid rgba(255,255,255,.2);"></div>
+            <div><div style="font-size:10px;color:#fff;">12dp</div><div style="font-size:9px;color:#52525B;">Tier 3 cards</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ──────────────────────────────────────────────────
+       TYPE SCALE
+       ────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-label">Type Scale</div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-role">Hero Metric</div><div class="type-spec">40sp · 700 · Oxanium</div></div>
+      <div class="type-sample" style="font-family:'Oxanium',monospace;font-size:40px;font-weight:700;line-height:1;" class="gtext">8.2</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-role">Section Headline</div><div class="type-spec">30sp · 600 · DM Sans</div></div>
+      <div class="type-sample" style="font-size:30px;font-weight:600;line-height:1.1;">Easy Run</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-role">Card Title</div><div class="type-spec">20sp · 600 · DM Sans</div></div>
+      <div class="type-sample" style="font-size:20px;font-weight:600;">Workout Setup</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-role">Body / Greeting</div><div class="type-spec">15sp · 400 · DM Sans</div></div>
+      <div class="type-sample" style="font-size:15px;color:#A1A1AA;">Good evening — your next session is ready.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-role">Label / Chip</div><div class="type-spec">13sp · 500 · DM Sans</div></div>
+      <div class="type-sample" style="font-size:13px;font-weight:500;color:#A1A1AA;letter-spacing:.04em;">BASE AEROBIC · 30 min · Easy</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta"><div class="type-role">Caption / Nav</div><div class="type-spec">11sp · 400 · DM Sans</div></div>
+      <div class="type-sample" style="font-size:11px;color:#52525B;">47 workouts · 312 km logged</div>
+    </div>
+  </div>
+
+
+  <!-- ──────────────────────────────────────────────────
+       DESIGN CRITIQUE
+       ────────────────────────────────────────────────── -->
+  <div class="section">
+    <div class="section-label">Design Critique — applied against updated spec</div>
+    <div class="crit-panel">
+
+      <div class="crit-title">Cardea Design Review</div>
+      <div class="crit-summary">
+        The 3-tier gradient hierarchy is the system's strongest architectural idea — when followed correctly the gradient fires exactly once per screen, creating a clear focal point without visual noise. The animated ECG hero card is the single most memorable element and directly reinforces the app's coaching purpose. Key opportunities: enforce the tier rule more rigorously in the ring system, lift the zone-status pill to readable size, and fix two stale token values that leaked through the spec/code drift.
+      </div>
+
+      <div class="crit-grid">
+
+        <div>
+          <div class="crit-section-lbl">Usability</div>
+          <div class="finding">
+            <div class="fd r"></div>
+            <div>
+              <div class="f-title">Zone pill is too small for in-motion reading</div>
+              <div class="f-desc">At 9–10sp the zone status pill is illegible with sweaty hands or a brief glance. This is the most safety-critical display element — zone changes require a prompt audio + visual response. Minimum 12sp, 40dp height touch target.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">Selected preset card reads too subtly at distance</div>
+              <div class="f-desc">The gradient border on the selected PresetCard is hard to distinguish from the default glass border on a dim phone screen outdoors. Add a very subtle gradient-tinted background fill (GradientRed at ~6% alpha) to the selected state.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">MaxHR field has no range validation signal</div>
+              <div class="f-desc">The AccountScreen MaxHR field accepts any integer. Values outside 100–220 will produce nonsensical preset targets silently. At minimum show a caption: "Typical range: 150–210 bpm."</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">Inactive nav label contrast fails WCAG AA</div>
+              <div class="f-desc">TextTertiary #52525B on background #050505 is ≈2.8:1 — below the 3.0:1 minimum for UI labels. Raise to #6B6B73 (≈3.5:1). One token change, global fix.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="crit-section-lbl">Visual Hierarchy</div>
+          <div class="finding">
+            <div class="fd r"></div>
+            <div>
+              <div class="f-title">BootcampTile ring must not use CardeaNavGradient</div>
+              <div class="f-desc">If the ring progress arc uses the Blue→Cyan gradient, the Home screen has two gradient accent points (GoalTile + BootcampTile ring). This breaks the "one gradient per screen" rule. Use plain white arc at 0.55 opacity — it reads clearly and the ring shape does the work. See mockup above for correct rendering.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">Coaching strip ECG icon too faint</div>
+              <div class="f-desc">0.5 opacity on a Tier 3 surface (which is itself 4% alpha on the dark bg) renders the icon nearly invisible. Lower practical limit is ~0.65 opacity.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">Account screen Profile card gradient border is subtle</div>
+              <div class="f-desc">A 1.5dp gradient border on a 52px wide avatar card is the only Tier 1 signal on the Account screen. Consider pairing it with a very faint gradient wash inside the card (gradient at 4% alpha) to make the Tier 1 designation perceptible.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="crit-section-lbl">Consistency</div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">Stale token: 0x0FFFFFFF in screen files</div>
+              <div class="f-desc">Old GlassBorder value (6% alpha). Canonical is 0x1AFFFFFF (10%). Search all .kt files for the old value and replace with the GlassBorder token.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd a"></div>
+            <div>
+              <div class="f-title">Stale token: 0xFF9AA4B2 in screen files</div>
+              <div class="f-desc">Old CardeaTextSecondary (blue-tinted #9AA4B2). Canonical is #A1A1AA (neutral). Search for 0xFF9AA4B2 and replace with CardeaTextSecondary token.</div>
+            </div>
+          </div>
+          <div class="finding">
+            <div class="fd r"></div>
+            <div>
+              <div class="f-title">All CTAs must use CardeaCtaGradient, not CardeaGradient</div>
+              <div class="f-desc">The full 4-stop gradient on a button reads as a rainbow. The CTA variant (Red→Pink) is warmer, more energetic, and specifically designed for call-to-action surfaces. Check all Button composables.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="crit-section-lbl">What Works Well</div>
+          <div class="works-item">
+            <div class="check">✓</div>
+            <div class="works-txt"><strong>3-tier hierarchy is the right architectural decision.</strong> A constraint that produces clarity rather than limiting creativity — the gradient fires as a highlight, not wallpaper.</div>
+          </div>
+          <div class="works-item">
+            <div class="check">✓</div>
+            <div class="works-txt"><strong>ECG hero card is the app's signature moment.</strong> The gradient trace directly maps to the product's purpose. Animated and layered with a glow — immediately distinctive.</div>
+          </div>
+          <div class="works-item">
+            <div class="check">✓</div>
+            <div class="works-txt"><strong>SegmentTimelineStrip is information-dense and elegant.</strong> 4dp of colored bar communicates the entire workout structure at a glance. The intensity color coding is intuitive.</div>
+          </div>
+          <div class="works-item">
+            <div class="check">✓</div>
+            <div class="works-txt"><strong>Three gradient variants prevent ambiguity.</strong> Full, CTA, Nav — each has a clear role. No designer needs to guess which gradient goes on which surface.</div>
+          </div>
+          <div class="works-item">
+            <div class="check">✓</div>
+            <div class="works-txt"><strong>Glass surface system is disciplined.</strong> Three properties (fill, border, highlight) create a consistent material at every elevation. No surface reinvents the language.</div>
+          </div>
+          <div class="works-item">
+            <div class="check">✓</div>
+            <div class="works-txt"><strong>Zone colors are semantically pure.</strong> Green/amber/red used only for zone status — never decoratively. Users learn the color language fast.</div>
+          </div>
+        </div>
+
+      </div><!-- /crit-grid -->
+
+      <div class="hr-thin"></div>
+
+      <div class="crit-section-lbl">Priority Fix List — Ranked by Visual Impact</div>
+
+      <div class="priority-item">
+        <div class="pri-num">1</div>
+        <div>
+          <div class="pri-title">Remove gradient from BootcampTile ring — use white arc at 0.55 opacity</div>
+          <div class="pri-desc">Violates one-gradient-per-screen. Instant fix, high impact on hierarchy clarity. <em>ui/home/HomeScreen.kt · BootcampTile.</em></div>
+        </div>
+      </div>
+
+      <div class="priority-item">
+        <div class="pri-num">2</div>
+        <div>
+          <div class="pri-title">Switch all CTA buttons from CardeaGradient to CardeaCtaGradient</div>
+          <div class="pri-desc">The full 4-stop gradient reads as a novelty on buttons. CardeaCtaGradient (Red→Pink) is energetic and purpose-built. <em>All Button composables.</em></div>
+        </div>
+      </div>
+
+      <div class="priority-item">
+        <div class="pri-num">3</div>
+        <div>
+          <div class="pri-title">Audit and replace stale token literals 0x0FFFFFFF and 0xFF9AA4B2</div>
+          <div class="pri-desc">Two stale values produce visually different glass and text colors from the spec. Serena <code>search_for_pattern</code> on both, replace with named tokens.</div>
+        </div>
+      </div>
+
+      <div class="priority-item">
+        <div class="pri-num">4</div>
+        <div>
+          <div class="pri-title">Increase zone pill to minimum 12sp with 40dp touch height</div>
+          <div class="pri-desc">Zone status is safety-critical. Must be immediately legible at a glance during a run. <em>ui/home/HomeScreen.kt · PulseHeroCard · ZonePill composable.</em></div>
+        </div>
+      </div>
+
+      <div class="priority-item">
+        <div class="pri-num">5</div>
+        <div>
+          <div class="pri-title">Raise TextTertiary to #6B6B73 for WCAG AA compliance on inactive nav labels</div>
+          <div class="pri-desc">One token change in Color.kt fixes all nav labels and tertiary text globally. No screen-level changes needed.</div>
+        </div>
+      </div>
+
+      <div class="priority-item">
+        <div class="pri-num">6</div>
+        <div>
+          <div class="pri-title">Add gradient-tinted fill to selected PresetCard (GradientRed at 6% alpha)</div>
+          <div class="pri-desc">Makes selected state clearly distinguishable from unselected at distance and in bright daylight. <em>ui/setup/SetupScreen.kt · PresetCard.</em></div>
+        </div>
+      </div>
+
+    </div><!-- /crit-panel -->
+  </div><!-- /section -->
+
+</div><!-- /page -->
+</body>
+</html>

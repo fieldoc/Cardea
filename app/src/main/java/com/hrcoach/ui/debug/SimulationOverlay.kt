@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.service.simulation.SimulationController
+import com.hrcoach.ui.theme.CardeaTheme
 
 internal val SPEED_OPTIONS = listOf(1f, 5f, 10f, 50f)
 
@@ -41,7 +42,7 @@ fun SimulationOverlay(modifier: Modifier = Modifier) {
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0x14FFFFFF))
-            .border(1.dp, Color(0x0FFFFFFF), RoundedCornerShape(12.dp))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween

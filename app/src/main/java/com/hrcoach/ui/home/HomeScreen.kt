@@ -276,14 +276,14 @@ private fun PulseHero(
                         color = pillBg,
                         shape = RoundedCornerShape(100.dp)
                     )
-                    .padding(horizontal = 14.dp, vertical = 5.dp)
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
             ) {
                 Text(
                     text = session.sessionType.replace("_", " "),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 0.5.sp,
-                        fontSize = 10.sp
+                        fontSize = 12.sp
                     ),
                     color = pillText
                 )
@@ -625,14 +625,11 @@ private fun BootcampTile(
                     style = Stroke(width = strokeW)
                 )
                 drawArc(
-                    brush = Brush.sweepGradient(
-                        colors = listOf(GradientRed, GradientPink, GradientBlue)
-                    ),
+                    color = Color.White.copy(alpha = 0.55f),
                     startAngle = -90f,
                     sweepAngle = 360f * animatedPercent.coerceIn(0f, 1f),
                     useCenter = false,
-                    style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                    alpha = 0.75f
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
                 )
             }
             Text(

@@ -38,7 +38,8 @@ fun GlassCard(
         shape = GlassShape,
         border = BorderStroke(1.dp, borderColor),
         colors = CardDefaults.cardColors(
-            containerColor = if (colors.isDark) Color.Transparent else colors.bgSecondary
+            containerColor = if (containerColor != Color.Transparent) containerColor
+                             else if (colors.isDark) Color.Transparent else colors.bgSecondary
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = colors.glassElevation)
     ) {

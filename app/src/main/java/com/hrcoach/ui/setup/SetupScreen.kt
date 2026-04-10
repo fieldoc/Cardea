@@ -87,6 +87,7 @@ import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneRed
@@ -397,7 +398,7 @@ fun SetupScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(CardeaGradient)
+                                .background(CardeaCtaGradient)
                                 .clickable { viewModel.confirmMaxHr() }
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) { Text("Confirm", color = CardeaTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold) }
@@ -554,7 +555,7 @@ private fun QuickLaunchCard(
                 .height(50.dp)
                 .clip(RoundedCornerShape(13.dp))
                 .background(
-                    if (canStart) CardeaGradient
+                    if (canStart) CardeaCtaGradient
                     else Brush.linearGradient(listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary))
                 )
                 .clickable(enabled = canStart, onClick = onStart),
@@ -1035,14 +1036,16 @@ private fun PresetCard(
     onClick: () -> Unit
 ) {
     val borderModifier = if (isSelected) {
-        Modifier.border(width = 2.dp, brush = CardeaGradient, shape = RoundedCornerShape(18.dp))
+        Modifier.border(width = 2.dp, brush = CardeaCtaGradient, shape = RoundedCornerShape(18.dp))
     } else Modifier
 
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .then(borderModifier)
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
+        borderColor = if (isSelected) Color.Transparent else CardeaTheme.colors.glassBorder,
+        containerColor = if (isSelected) GradientRed.copy(alpha = 0.06f) else Color.Transparent
     ) {
         Column {
             Row(
@@ -1187,7 +1190,7 @@ private fun HrMonitorCard(
                     .height(52.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .then(
-                        if (!state.isScanning) Modifier.background(CardeaGradient)
+                        if (!state.isScanning) Modifier.background(CardeaCtaGradient)
                         else Modifier.background(CardeaTheme.colors.textTertiary)
                     )
                     .clickable(enabled = !state.isScanning, onClick = onStartScan),

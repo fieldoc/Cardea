@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hrcoach.ui.theme.CardeaTheme
 
 @Composable
 fun DebugSimulationScreen(
@@ -86,7 +87,7 @@ fun DebugSimulationScreen(
                     .background(if (isSelected) Color(0x33FF5A5F) else Color(0x14FFFFFF))
                     .border(
                         1.dp,
-                        if (isSelected) Color(0xFFFF5A5F) else Color(0x0FFFFFFF),
+                        if (isSelected) Color(0xFFFF5A5F) else CardeaTheme.colors.glassBorder,
                         RoundedCornerShape(10.dp)
                     )
                     .clickable { viewModel.selectScenario(index) }
