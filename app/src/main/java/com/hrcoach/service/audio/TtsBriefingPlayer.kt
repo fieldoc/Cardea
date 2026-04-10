@@ -24,6 +24,7 @@ class TtsBriefingPlayer(context: Context) {
     private var tts: TextToSpeech? = null
     private var ttsReady = false
     private var pendingAdHocText: String? = null
+    private var pendingBriefingConfig: WorkoutConfig? = null
 
     var verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL
 
@@ -44,6 +45,13 @@ class TtsBriefingPlayer(context: Context) {
                     }
                 }
                 pendingAdHocText = null
+                pendingBriefingConfig?.let { bufferedConfig ->
+                    val bufferedText = buildBriefingText(bufferedConfig)
+                    if (bufferedText.isNotBlank() && verbosity != VoiceVerbosity.OFF) {
+                        tts?.speak(bufferedText, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing_delayed")
+                    }
+                }
+                pendingBriefingConfig = null
             } else {
                 Log.w(TAG, "TTS init failed with status $status")
             }
@@ -56,15 +64,14 @@ class TtsBriefingPlayer(context: Context) {
      */
     fun speakBriefing(config: WorkoutConfig) {
         if (verbosity == VoiceVerbosity.OFF) return
-        if (!ttsReady) {
-            Log.w(TAG, "TTS not ready, skipping briefing")
-            return
-        }
-
         val text = buildBriefingText(config)
         if (text.isBlank()) return
-
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing")
+        if (ttsReady) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing")
+        } else {
+            Log.d(TAG, "TTS not ready, buffering briefing until init completes")
+            pendingBriefingConfig = config
+        }
     }
 
     /**
@@ -90,6 +97,7 @@ class TtsBriefingPlayer(context: Context) {
         tts = null
         ttsReady = false
         pendingAdHocText = null
+        pendingBriefingConfig = null
     }
 
     internal fun buildBriefingText(config: WorkoutConfig): String {
