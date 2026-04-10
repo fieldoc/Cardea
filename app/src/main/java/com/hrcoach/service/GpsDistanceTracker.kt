@@ -57,6 +57,9 @@ class GpsDistanceTracker(context: Context) : LocationDataSource {
             val previous = lastLocation
             // Always update lastLocation so there is no distance spike on auto-pause resume.
             lastLocation = location
+            // @Volatile gives visibility but not atomicity across the setMoving()/read boundary.
+            // Worst-case: one extra GPS update interval (~2 m) is accumulated after auto-pause begins.
+            // Accepted: bounded and infrequent; a mutex here would add overhead on every location fix.
             if (isMoving && previous != null) {
                 _distanceMeters.value += previous.distanceTo(location)
             }
