@@ -292,6 +292,7 @@ class WorkoutForegroundService : LifecycleService() {
                     )
                 )
                 workoutStartMs = clock.now()
+                coachingEventRouter.reset(workoutStartMs)  // stamp the start time for IN_ZONE_CONFIRM baseline
 
                 // Suppress auto-pause for 15 seconds so the runner can pocket
                 // their phone and start moving without seeing "Auto-Paused"

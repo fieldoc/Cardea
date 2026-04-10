@@ -17,8 +17,10 @@ class CoachingEventRouter {
     private var completeFired: Boolean = false
     private var lastKmAnnounced: Int = 0
     private var lastVoiceCueTimeMs: Long = 0L
+    private var workoutStartMs: Long = 0L
 
-    fun reset() {
+    fun reset(workoutStartMs: Long = 0L) {
+        this.workoutStartMs = workoutStartMs
         wasHrConnected = false
         previousZoneStatus = ZoneStatus.NO_DATA
         lastSegmentIndex = -1
@@ -121,9 +123,11 @@ class CoachingEventRouter {
         }
 
         // IN_ZONE_CONFIRM (every 3+ minutes of voice silence while in zone)
-        // Use nowMs as initial baseline so the first confirm can fire 3 min into the workout
+        // Use workoutStartMs as initial baseline so the first confirm fires ~3 min into the workout.
         if (zoneStatus == ZoneStatus.IN_ZONE) {
-            val baseline = if (lastVoiceCueTimeMs > 0L) lastVoiceCueTimeMs else nowMs - 1
+            val baseline = if (lastVoiceCueTimeMs > 0L) lastVoiceCueTimeMs
+                           else if (workoutStartMs > 0L) workoutStartMs
+                           else nowMs
             if (nowMs - baseline >= 180_000L) {
                 emitEvent(CoachingEvent.IN_ZONE_CONFIRM, null)
                 lastVoiceCueTimeMs = nowMs
