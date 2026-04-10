@@ -182,6 +182,68 @@ class AdaptivePaceControllerTest {
         assertTrue((sessionResult.metrics.aerobicDecoupling ?: 0f) > 0f)
     }
 
+    // ── BUG 1: hrSlopeBpmPerMin not clamped ──────────────────────────────────
+    @Test
+    fun `BLE spike does not produce wildly inflated projected HR`() {
+        val controller = AdaptivePaceController(
+            config = steadyConfig(target = 145, buffer = 5),
+            initialProfile = AdaptiveProfile(totalSessions = 5, responseLagSec = 25f)
+        )
+        val t0 = 1_000_000L
+        // Baseline tick — initialises slope tracker
+        controller.evaluateTick(
+            nowMs = t0, hr = 145, connected = true, targetHr = 145,
+            distanceMeters = 0f, actualZone = ZoneStatus.IN_ZONE
+        )
+        // BLE artifact: HR jumps 40 BPM in 3 seconds (deltaMin = 0.05)
+        // Unclamped: instSlope = 40/0.05 = 800 BPM/min → hrSlopeBpmPerMin ≈ 200
+        // Projection contribution at 15 s horizon: 200 * (15/60) = 50 BPM → predictedHr ≈ 237
+        val result = controller.evaluateTick(
+            nowMs = t0 + 3_000L, hr = 185, connected = true, targetHr = 145,
+            distanceMeters = 15f, actualZone = ZoneStatus.ABOVE_ZONE
+        )
+        // With fix (instSlope clamped to ±30 BPM/min): hrSlopeBpmPerMin ≈ 7.5
+        // Projection: 185 + 7.5*(15/60) ≈ 187 → predictedHr ≤ 195
+        assertTrue(
+            "BLE spike produced predictedHr=${result.predictedHr}, expected ≤ 195",
+            result.predictedHr <= 195
+        )
+    }
+
+    // ── BUG 3: settle-lag averaging ignores sample counts ─────────────────────
+    @Test
+    fun `finishSession weights settle samples by count not by direction`() {
+        val controller = AdaptivePaceController(
+            config = steadyConfig(target = 145, buffer = 5),
+            initialProfile = AdaptiveProfile(responseLagSec = 25f)
+        )
+        var t = 1_000_000L
+        fun tick(zone: ZoneStatus) = controller.evaluateTick(
+            nowMs = t,
+            hr = when (zone) { ZoneStatus.ABOVE_ZONE -> 155; ZoneStatus.BELOW_ZONE -> 135; else -> 145 },
+            connected = true, targetHr = 145, distanceMeters = 0f, actualZone = zone
+        )
+        // 3 settle-down events of 10 s each (ABOVE → IN_ZONE)
+        repeat(3) {
+            tick(ZoneStatus.ABOVE_ZONE); t += 10_000L
+            tick(ZoneStatus.IN_ZONE);   t += 30_000L
+        }
+        // 1 settle-up event of 90 s (BELOW → IN_ZONE)
+        tick(ZoneStatus.BELOW_ZONE); t += 90_000L
+        tick(ZoneStatus.IN_ZONE)
+
+        val result = controller.finishSession(workoutId = 1L, endedAtMs = t)
+
+        // Sample-weighted average: (3×10 + 1×90) / 4 = 30 s
+        // → blended: 25×0.85 + 30×0.15 = 25.75
+        // Direction-averaged (bug): (10 + 90) / 2 = 50 s
+        // → blended: 25×0.85 + 50×0.15 = 28.75
+        assertTrue(
+            "responseLagSec should be ≈25.75 (sample-weighted), got ${result.updatedProfile.responseLagSec}",
+            result.updatedProfile.responseLagSec < 27f
+        )
+    }
+
     private fun steadyConfig(target: Int, buffer: Int): WorkoutConfig {
         return WorkoutConfig(
             mode = WorkoutMode.STEADY_STATE,

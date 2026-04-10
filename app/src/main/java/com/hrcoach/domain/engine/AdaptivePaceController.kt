@@ -179,12 +179,9 @@ class AdaptivePaceController(
                 ).coerceIn(-20f, 20f)
         }
 
-        val settleCombinedSec = buildList {
-            settleDownSamplesMs.takeIf { it.isNotEmpty() }?.let { add(it.average().toFloat() / 1000f) }
-            settleUpSamplesMs.takeIf { it.isNotEmpty() }?.let { add(it.average().toFloat() / 1000f) }
-        }
-        if (settleCombinedSec.isNotEmpty()) {
-            val observedLagSec = settleCombinedSec.average().toFloat()
+        val allSettleSamplesMs = settleDownSamplesMs + settleUpSamplesMs
+        if (allSettleSamplesMs.isNotEmpty()) {
+            val observedLagSec = allSettleSamplesMs.average().toFloat() / 1000f
             responseLagSec = (
                 (responseLagSec * tuning.lagBlendCurrentWeight) +
                     (observedLagSec * tuning.lagBlendObservedWeight)
@@ -280,7 +277,7 @@ class AdaptivePaceController(
 
         val deltaMin = (nowMs - lastHrTimeMs) / 60_000f
         if (deltaMin in 0.05f..1.5f) {
-            val instSlope = (hr - lastHr) / deltaMin
+            val instSlope = ((hr - lastHr) / deltaMin).coerceIn(-30f, 30f)
             hrSlopeBpmPerMin = (hrSlopeBpmPerMin * tuning.slopeSmoothingPreviousWeight) +
                 (instSlope * tuning.slopeSmoothingInstantWeight)
         }

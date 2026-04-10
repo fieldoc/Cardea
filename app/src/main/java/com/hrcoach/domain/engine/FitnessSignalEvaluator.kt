@@ -61,7 +61,6 @@ object FitnessSignalEvaluator {
         // is implemented.
 
         val tuningDirection = when {
-            tsb < TSB_EASE_THRESHOLD -> TuningDirection.EASE_BACK
             tsb > TSB_PUSH_THRESHOLD &&
                 efTrend != null &&
                 efTrend > EF_RISE_THRESHOLD -> TuningDirection.PUSH_HARDER

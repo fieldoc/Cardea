@@ -131,6 +131,42 @@ class AdaptiveProfileRebuilderTest {
         assertEquals(0, result.totalSessions)
     }
 
+    // ── BUG 2: CTL/ATL not decayed across TRIMP-less workouts ────────────────
+    @Test
+    fun `CTL decays correctly during gap covered only by TRIMP-less workout`() {
+        val dayMs = 86_400_000L
+        // 5 daily workouts with TRIMP=80, then 21-day gap with a TRIMP-less workout,
+        // then TRIMP=80 workout 21 days later.
+        val workouts = (1..5).map { i ->
+            workout(id = i.toLong(), startTime = i * dayMs)
+        } + listOf(
+            workout(id = 6L, startTime = 26 * dayMs),  // no TRIMP — 21 days after w5
+            workout(id = 7L, startTime = 47 * dayMs)   // TRIMP=80 — 21 days after w6
+        )
+        val metricsMap = listOf(1L, 2L, 3L, 4L, 5L, 7L).associateWith { id ->
+            WorkoutAdaptiveMetrics(
+                workoutId = id,
+                recordedAtMs = id * dayMs + 1_800_000L,
+                trimpScore = 80f
+            )
+        }
+        val trackMap = workouts.associate { w -> w.id to trackPoints(w.id, w.startTime) }
+
+        val result = AdaptiveProfileRebuilder.rebuild(
+            workouts = workouts,
+            trackPointsByWorkout = trackMap,
+            metricsByWorkout = metricsMap,
+            isWorkoutRunning = { false }
+        )
+
+        // Bug: CTL stays at ~9.04 through the TRIMP-less gap → CTL after w7 ≈ 36.96
+        // Fix: zero-load decay applied for the 21-day gap → CTL after w7 ≈ 34.81
+        assertTrue(
+            "CTL should reflect decay during TRIMP-less gap (≈34.81), got ${result.ctl}",
+            result.ctl < 36f
+        )
+    }
+
     @Test
     fun `hrMax set to highest observed HR across track points`() {
         val w = workout(id = 1)

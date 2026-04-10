@@ -93,23 +93,18 @@ class AdaptiveProfileRebuilder @Inject constructor() {
                 profile = session.updatedProfile
 
                 // Apply CTL/ATL from stored TRIMP score
+                val daysSinceLast = if (lastProcessedStartTime != null) {
+                    ((workout.startTime - lastProcessedStartTime!!) / 86_400_000L)
+                        .toInt().coerceAtLeast(1)
+                } else 1
                 val trimp = metricsByWorkout[workout.id]?.trimpScore
-                if (trimp != null && trimp > 0f) {
-                    val daysSinceLast = if (lastProcessedStartTime != null) {
-                        ((workout.startTime - lastProcessedStartTime!!) / 86_400_000L)
-                            .toInt().coerceAtLeast(1)
-                    } else 1
-                    val loadResult = FitnessLoadCalculator.updateLoads(
-                        currentCtl = prevCtl,
-                        currentAtl = prevAtl,
-                        trimpScore = trimp,
-                        daysSinceLast = daysSinceLast
-                    )
-                    profile = profile.copy(ctl = loadResult.ctl, atl = loadResult.atl)
-                } else {
-                    // No TRIMP available — carry forward accumulated CTL/ATL unchanged
-                    profile = profile.copy(ctl = prevCtl, atl = prevAtl)
-                }
+                val loadResult = FitnessLoadCalculator.updateLoads(
+                    currentCtl = prevCtl,
+                    currentAtl = prevAtl,
+                    trimpScore = if (trimp != null && trimp > 0f) trimp else 0f,
+                    daysSinceLast = daysSinceLast
+                )
+                profile = profile.copy(ctl = loadResult.ctl, atl = loadResult.atl)
 
                 // hrMax: track highest reliably observed HR across sessions
                 val sessionMax = points.maxOfOrNull { it.heartRate } ?: 0
