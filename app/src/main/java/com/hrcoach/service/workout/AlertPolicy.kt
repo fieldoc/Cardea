@@ -33,11 +33,7 @@ class AlertPolicy {
         if (status != lastOutOfZoneStatus) {
             lastOutOfZoneStatus = status
             outOfZoneSince = nowMs
-            return
-        }
-
-        if (outOfZoneSince == 0L) {
-            outOfZoneSince = nowMs
+            lastAlertTime = 0L  // reset cooldown so direction-flip doesn't suppress next alert
             return
         }
 
