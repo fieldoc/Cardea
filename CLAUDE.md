@@ -30,6 +30,8 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **Worktree builds:** `local.properties` is gitignored and won't exist in worktrees. Copy from the main repo: `cp ../../local.properties .` (or from project root).
 
+**Worktree build path-length issue (Windows):** KSP/AAPT can fail in worktrees due to Windows path-length limits on deeply-nested build directories (`.claude/worktrees/<name>/app/build/...`). Workaround: run tests from the main repo after copying changed files, or use `subst` to shorten the path.
+
 **Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
 
 **`git worktree remove` permission denied:** Fails if shell cwd is inside the worktree being removed. `cd` to the repo root or any outside directory first. Use `git worktree prune` to clean stale registrations (leaves directories on disk but removes git tracking).
@@ -126,7 +128,13 @@ Four-component layered audio system in `service/audio/`:
 - **`TtsBriefingPlayer`** — TextToSpeech for workout briefings and ad-hoc text. Buffers via `pendingAdHocText` / `pendingBriefingConfig` if TTS engine isn't ready yet.
 - **`StartupSequencer`** — ToneGenerator countdown sequence before workout starts.
 - **`CoachingAudioManager`** — Orchestrator. `VoiceVerbosity.OFF` gates ALL audio (earcons + voice + TTS). `shouldPlayEarcon(verbosity)` is the single gate for earcon playback.
+- **Pause/resume tones are exempt from verbosity gating** — `playPauseFeedback()` always plays regardless of `VoiceVerbosity` setting. These are safety-critical (runner needs to know autopause activated/deactivated).
+- **VoiceCoach `awaitCompletion()`** — TTS must call `voiceCoach.awaitCompletion()` before speaking to prevent overlapping playback. Uses `CompletableDeferred` internally. Never use hardcoded delays.
 - **`AudioSettings`** — `earconVolume` and `voiceVolume` are independent (both 0–100 int percent).
+
+## WorkoutState / Same-Tick Race Pattern
+
+Never read `WorkoutState.snapshot.value` in the same function that called `WorkoutState.update{}` and expect the new value — `MutableStateFlow.update` may not have propagated yet. Use a local variable for same-tick decisions. Fixed in `onHrTick()` for autopause (2026-04-10).
 
 ## DataStore / Slider Pattern
 
@@ -147,6 +155,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **TRIMP formula is non-standard** — uses `duration * avgHR * (avgHR/HRmax)^2`, not Bannister's exponential. Consistent across the codebase; don't "fix" it to match literature values.
 - **`finishSession()` always increments `totalSessions`** even when no pace samples were collected (GPS failure mid-run). Known limitation, not fixed.
 - **`projectionConfidence` thresholds**: LOW < 2 effective sessions or < 80 samples; MEDIUM ≥ 2 or ≥ 80; HIGH ≥ 4 or ≥ 180. "Effective sessions" = `initialTotalSessions + 1` if current session has ≥ 20 pace samples.
+- **`WorkoutConfig.totalDurationSeconds()` and FREE_RUN** — Returns `plannedDurationMinutes * 60` for FREE_RUN mode (fixed 2026-04-10). Previously returned `null` unconditionally for FREE_RUN, breaking time-target UI, halfway prompts, and workout-complete triggers for bootcamp timed sessions.
 
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
