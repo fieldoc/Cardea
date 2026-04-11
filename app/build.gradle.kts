@@ -32,7 +32,7 @@ android {
         }
         debug {
             firebaseAppDistribution {
-                testers = "graham.l.metcalfe@gmail.com, schellmh@gmail.com"
+                groups = "testers"
                 releaseNotes = "v0.4.0: Unified TTS voice coaching (replaced 60+ MP3 clips with Android TTS). Marimba 3-2-1-GO countdown. Adaptive training: fitness-signal recovery weeks, EF regression slope, tuningDirection propagation. 10 audio bug fixes from code review."
             }
         }
