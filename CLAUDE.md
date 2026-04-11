@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -101,13 +101,15 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 
 **Bootcamp session identity contract:** When the user taps "Start Run" on a bootcamp session, `prepareStartWorkout()` resolves the DB session ID and stores it in `WorkoutState.pendingBootcampSessionId` immediately. `onBootcampWorkoutStarting()` is a fallback only. Do NOT use heuristic "first uncompleted" matching — it picks the wrong session when sessions are started out of order.
 
+**Simulation permission bypass:** NavGraph permission checks (`PermissionGate.hasAllRuntimePermissions`) are skipped when `SimulationController.isActive`. Sim workouts don't use BLE or GPS hardware. Both check sites (SetupScreen and BootcampScreen `onStartWorkout`) have this bypass.
+
 ## UI & Theme
 
 - **Cardea design system** — Dark glass-morphic theme. Background `#050505` (radial gradient with `#0D0D0D`). All design tokens are in `ui/theme/Color.kt` as named constants. See `docs/plans/2026-03-02-cardea-ui-ux-design.md` for the authoritative spec. **Token drift rule: if the spec conflicts with `Color.kt`, the spec is wrong — fix the spec, not the code.**
 - **`CardeaTheme`** — Primary theme function. `HrCoachTheme` is a backward-compat wrapper. `HrCoachThemeTokens` is a `typealias` for `CardeaThemeTokens`. Dynamic color is `false` — Cardea palette is always enforced. The app supports System/Light/Dark modes via the in-app Theme selector (`AccountScreen`); light mode is a valid user preference — do not flag it as a bug.
 - **Three gradient variants — use the right one:**
   - `CardeaGradient` (4-stop, `#FF4D5A→#FF2DA6→#4D61FF→#00E5FF`, 135°) — ring foregrounds, gradient text, Tier 1 accent borders only. Do NOT alter the stops.
-  - `CardeaCtaGradient` (Red→Pink, 2-stop) — ALL buttons and active chips. `CardeaButton` uses this correctly. ~30 inline buttons across bootcamp/setup screens still use the full `CardeaGradient` — audit with `search_for_pattern "CardeaGradient"` before adding new ones.
+  - `CardeaCtaGradient` (Red→Pink, 2-stop) — ALL buttons, active chips, selection indicators, and day-selection dots. Audited 2026-04-11: all bootcamp/setup/onboarding chips now correct. Only ~3 legitimate `CardeaGradient` uses remain (progress bars, decorative arcs). Run `search_for_pattern "CardeaGradient"` before adding new ones.
   - `CardeaNavGradient` (Blue→Cyan, 2-stop) — active nav icons only.
 - **One gradient accent per screen** — the 3-tier hierarchy means exactly one composable per screen carries the gradient (text, border, or CTA button). A ring AND a button AND a tile all lit simultaneously is wrong. BootcampTile ring is plain white (0.55α), not gradient. **3-tier:** Tier 1 = gradient, 18dp corners; Tier 2 = white on glass, 14dp corners; Tier 3 = secondary text on glass, 12dp corners.
 - **Glass surface pattern** — `GlassBorder = Color(0x1AFFFFFF)` (10% alpha), `GlassHighlight = Color(0x0AFFFFFF)`. Use `GlassCard` composable from `ui/components/GlassCard.kt` for all card surfaces.
@@ -119,6 +121,8 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **Charts are custom Canvas-drawn** — `ui/charts/` (BarChart, PieChart, ScatterPlot) use `DrawScope` directly; no charting library. Styling changes require Canvas API edits.
 - **`WorkoutSnapshot` has no elapsed time** — compute elapsed seconds in the ViewModel via a ticker flow when `isRunning && !isPaused`.
 - **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
+- **`CardeaSlider` uses `GradientPink`** — thumb and active track are pink (matching CTA accent), not blue. Changed from `GradientBlue` (2026-04-11) to distinguish from Material3 defaults. Bootcamp sliders also use `GradientPink` directly.
+- **Home screen gradient hierarchy** — `PulseHero` is the sole Tier 1 gradient element (gradient text headline). `GoalTile` is Tier 2 (glass border, white text). `BootcampTile` progress bar uses `ctaGradient`. `VolumeTile` progress bars use subtle inline gradient. Do not add gradient borders or gradient text to the stat tiles.
 
 ## Design Documents
 
@@ -128,6 +132,7 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **Guided workouts UX design:** `docs/plans/2026-03-02-guided-workouts-ux-design.md` — Approach B: Cardea glass preset cards, segment timeline strip, HRmax onboarding, interval countdown.
 - **Guided workouts implementation plan:** `docs/plans/2026-03-01-preset-workout-profiles.md` — 12-task TDD plan; Tasks 1–2 already done in commit fd3d9d9.
 - Legacy: `docs/plans/2026-02-25-hr-coaching-app-design.md` — superseded; data model and alert behavior sections still valid, UI/UX sections replaced by the 2026-03-02 spec.
+- **E2E happy path audit:** `docs/2026-04-11-e2e-happy-path-audit.md` — device-tested findings: bugs, design violations, UX observations, test coverage matrix.
 
 ## Audio Pipeline
 
@@ -141,6 +146,10 @@ Three-component layered audio system in `service/audio/`:
 - **`AudioSettings`** — `earconVolume` and `voiceVolume` are independent (both 0–100 int percent).
 - **Verbosity levels:** OFF (silent), MINIMAL (earcons + voice for critical/normal events only), FULL (earcons + voice for all events including informational).
 - **KM splits:** Simple "Kilometer N" for STEADY_STATE/DISTANCE_PROFILE. Rich "Kilometer N. Pace: X minutes Y." for FREE_RUN.
+
+## Notification Stop Gate
+
+`WorkoutNotificationHelper.stop()` must be called before every `stopForeground(STOP_FOREGROUND_REMOVE)` call. Without it, a late `processTick()` notification update races past `stopForeground()` and re-posts the notification. The `@Volatile stopped` flag short-circuits `update()`. Three call sites in `WorkoutForegroundService`: normal stop, short-run discard, and error handler.
 
 ## WorkoutState / Same-Tick Race Pattern
 
@@ -196,17 +205,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 
 ## MCP Servers
 
-Three MCP servers are registered in `.mcp.json`. All are manual (not plugin-managed).
-
-### Serena (semantic Kotlin/LSP code search)
-
-Serena is registered via `.mcp.json` with `--context claude-code` and explicit `--project` path. See `.claude/rules/serena.md` for when to use Serena vs Grep.
-
-**If the LSP fails** ("language server manager is not initialized"):
-1. Call `restart_language_server`, then verify with a real symbol operation
-2. If still broken, fall back to Grep/Glob — don't spin on a broken LSP
-3. `activate_project` can return false success — always verify after calling it
-4. Never silently switch to Grep — note that Serena was unavailable
+Two MCP servers are registered in `.mcp.json`. All are manual (not plugin-managed).
 
 ### mobile-mcp (Android device / emulator automation)
 
