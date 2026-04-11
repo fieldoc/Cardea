@@ -48,6 +48,7 @@ data class PostRunSummaryUiState(
     val bootcampWeekComplete: Boolean = false,
     val isBootcampRun: Boolean = false,
     val isHrrActive: Boolean = false,
+    val workoutEndTimeMs: Long = 0L,
     val newAchievements: List<AchievementEntity> = emptyList(),
 )
 
@@ -113,6 +114,7 @@ class PostRunSummaryViewModel @Inject constructor(
                     similarRunCount = similar.size,
                     comparisons = comparisons,
                     isHrrActive = isHrrActive,
+                    workoutEndTimeMs = workout.endTime,
                 )
             }.onFailure {
                 Log.e("PostRunSummaryVM", "Failed to load workout summary", it)
