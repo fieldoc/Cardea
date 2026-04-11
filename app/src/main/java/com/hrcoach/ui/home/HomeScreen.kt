@@ -484,13 +484,12 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
         else -> "$remaining more runs"
     }
 
-    val goalGradient = CardeaTheme.colors.gradient
     Column(
         modifier = modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(18.dp))
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.5.dp, goalGradient, RoundedCornerShape(18.dp))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(18.dp))
             .padding(18.dp),
         verticalArrangement = Arrangement.Center
     ) {
@@ -511,13 +510,7 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
                 fontSize = 30.sp,
                 lineHeight = 30.sp
             ),
-            color = CardeaTheme.colors.textPrimary,
-            modifier = Modifier
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(brush = goalGradient, blendMode = BlendMode.SrcIn)
-                }
+            color = CardeaTheme.colors.textPrimary
         )
         Spacer(Modifier.height(6.dp))
         Text(

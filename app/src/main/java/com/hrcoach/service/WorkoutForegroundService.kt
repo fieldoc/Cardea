@@ -639,6 +639,7 @@ class WorkoutForegroundService : LifecycleService() {
                     cleanupManagers()
                     WorkoutState.reset()
                     if (SimulationController.isActive) SimulationController.deactivate()
+                    notificationHelper.stop()
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                     // Keep isStopping=true — see comment at end of stopWorkout()
@@ -829,6 +830,7 @@ class WorkoutForegroundService : LifecycleService() {
             if (SimulationController.isActive) {
                 SimulationController.deactivate()
             }
+            notificationHelper.stop()
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
             // Do NOT reset isStopping here. The service is about to be destroyed,
@@ -853,6 +855,7 @@ class WorkoutForegroundService : LifecycleService() {
         WorkoutState.reset()
         WorkoutState.setPendingBootcampSessionId(null)
         WorkoutState.clearCompletedWorkoutId()
+        notificationHelper.stop()
         runCatching { stopForeground(STOP_FOREGROUND_REMOVE) }
             .onFailure { Log.w("WorkoutService", "Failed to stop foreground", it) }
         stopSelf()

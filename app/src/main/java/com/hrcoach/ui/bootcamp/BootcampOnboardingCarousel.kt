@@ -103,7 +103,7 @@ fun BootcampOnboardingCarousel(
                         .clip(CircleShape)
                         .then(
                             if (isActive) {
-                                Modifier.background(CardeaGradient, CircleShape)
+                                Modifier.background(CardeaCtaGradient, CircleShape)
                             } else {
                                 Modifier.background(
                                     CardeaTheme.colors.textTertiary.copy(alpha = 0.4f),

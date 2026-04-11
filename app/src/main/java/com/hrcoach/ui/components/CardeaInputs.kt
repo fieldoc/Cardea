@@ -31,10 +31,10 @@ fun CardeaSlider(
         steps = steps,
         onValueChangeFinished = onValueChangeFinished,
         colors = SliderDefaults.colors(
-            thumbColor = GradientBlue,
-            activeTrackColor = GradientBlue,
+            thumbColor = GradientPink,
+            activeTrackColor = GradientPink,
             inactiveTrackColor = colors.glassHighlight,
-            activeTickColor = GradientBlue,
+            activeTickColor = GradientPink,
             inactiveTickColor = colors.textTertiary
         )
     )

@@ -97,7 +97,7 @@ Room database `hr_coach_db` with tables: `workouts`, `track_points` (FK to worko
 
 ## Navigation
 
-Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, **Account**. Start destination after splash is `home`. Active workout screen hides the bottom bar. Navigation auto-transitions to workout screen when service starts; when workout ends it navigates to post-run summary (or back to `setup` if no completed workout ID). `onDone` from post-run summary navigates to **bootcamp dashboard** (bootcamp runs) or **history detail** (freestyle runs).
+Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enrollment), **History** (also covers Progress), **Account**. Start destination after splash is `home`. Active workout screen hides the bottom bar. Navigation auto-transitions to workout screen when service starts; when workout ends it navigates to post-run summary (or back to `setup` if no completed workout ID). `onDone` from post-run summary navigates to **bootcamp dashboard** (bootcamp runs) or **history detail** (freestyle runs).
 
 **Bootcamp session identity contract:** When the user taps "Start Run" on a bootcamp session, `prepareStartWorkout()` resolves the DB session ID and stores it in `WorkoutState.pendingBootcampSessionId` immediately. `onBootcampWorkoutStarting()` is a fallback only. Do NOT use heuristic "first uncompleted" matching — it picks the wrong session when sessions are started out of order.
 

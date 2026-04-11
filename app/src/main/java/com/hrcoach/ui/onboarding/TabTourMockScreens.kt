@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientCyan
@@ -105,7 +106,7 @@ internal fun MockHomeScreen() {
         ) {
             MockStatChip("3", "streak", Modifier.weight(1f))
             MockStatChip("12", "runs", Modifier.weight(1f))
-            MockStatChip("42k", "total", Modifier.weight(1f))
+            MockStatChip("42 km", "total", Modifier.weight(1f))
         }
     }
 }
@@ -196,7 +197,7 @@ internal fun MockWorkoutScreen() {
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(CardeaGradient),
+                .background(CardeaCtaGradient),
             contentAlignment = Alignment.Center,
         ) {
             Text("Start Workout", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
