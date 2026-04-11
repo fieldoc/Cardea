@@ -1,7 +1,11 @@
 package com.hrcoach.ui.onboarding
 
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.OnboardingRepository
 import com.hrcoach.data.repository.UserProfileRepository
+import com.hrcoach.domain.model.AdaptiveProfile
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -25,6 +29,7 @@ class OnboardingViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var onboardingRepo: OnboardingRepository
     private lateinit var userProfileRepo: UserProfileRepository
+    private lateinit var adaptiveProfileRepo: AdaptiveProfileRepository
     private lateinit var vm: OnboardingViewModel
 
     @Before
@@ -37,6 +42,9 @@ class OnboardingViewModelTest {
             every { getWeightUnit() } returns "lbs"
             every { getMaxHr() } returns null
         }
+        adaptiveProfileRepo = mockk(relaxed = true) {
+            coEvery { getProfile() } returns AdaptiveProfile()
+        }
     }
 
     @After
@@ -44,7 +52,7 @@ class OnboardingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createVm() = OnboardingViewModel(onboardingRepo, userProfileRepo)
+    private fun createVm() = OnboardingViewModel(onboardingRepo, userProfileRepo, adaptiveProfileRepo)
 
     @Test
     fun `initial state has empty fields and page 0`() {
@@ -131,6 +139,8 @@ class OnboardingViewModelTest {
         verify { userProfileRepo.setWeight(165) }
         verify { userProfileRepo.setMaxHr(188) }
         verify { userProfileRepo.setWeightUnit("lbs") }
+        coVerify { adaptiveProfileRepo.getProfile() }
+        coVerify { adaptiveProfileRepo.saveProfile(match { it.hrMax == 188 }) }
     }
 
     @Test

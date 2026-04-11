@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
             if (permanentlyDenied) {
                 Toast.makeText(
                     this,
-                    "Permissions required for workouts. Tap to open Settings.",
+                    "Permissions required for workouts. Opening Settings…",
                     Toast.LENGTH_LONG
                 ).show()
                 startActivity(
