@@ -127,13 +127,13 @@ class PhaseEngineTest {
     @Test
     fun `weeksUntilNextRecovery returns zero during recovery week`() {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 2)
-        assertEquals(0, engine.weeksUntilNextRecovery)
+        assertEquals(0, engine.weeksUntilNextRecovery())
     }
 
     @Test
     fun `weeksUntilNextRecovery counts down to next recovery week`() {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 0)
-        assertEquals(2, engine.weeksUntilNextRecovery)
+        assertEquals(2, engine.weeksUntilNextRecovery())
     }
 
     @Test

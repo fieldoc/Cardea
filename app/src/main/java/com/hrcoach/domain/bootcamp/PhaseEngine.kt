@@ -36,18 +36,22 @@ data class PhaseEngine(
         return (weekInPhase + 1) % cadence == 0
     }
 
-    val weeksUntilNextRecovery: Int
-        get() {
-            if (isRecoveryWeek()) return 0
-            var w = weekInPhase + 1
-            var steps = 0
-            while (steps < 10) {
-                if (w > 0 && (w + 1) % 3 == 0) return steps + 1
-                w++
-                steps++
-            }
-            return steps
+    fun weeksUntilNextRecovery(tuningDirection: TuningDirection? = null): Int {
+        if (isRecoveryWeek(tuningDirection)) return 0
+        val cadence = when (tuningDirection) {
+            TuningDirection.EASE_BACK -> 2
+            TuningDirection.PUSH_HARDER -> 4
+            TuningDirection.HOLD, null -> 3
         }
+        var w = weekInPhase + 1
+        var steps = 0
+        while (steps < 10) {
+            if (w > 0 && (w + 1) % cadence == 0) return steps + 1
+            w++
+            steps++
+        }
+        return steps
+    }
 
     fun planCurrentWeek(
         tierIndex: Int = 0,
@@ -85,7 +89,11 @@ data class PhaseEngine(
         }
     }
 
-    fun lookaheadWeeks(count: Int, tierIndex: Int = 1): List<WeekLookahead> {
+    fun lookaheadWeeks(
+        count: Int,
+        tierIndex: Int = 1,
+        tuningDirection: TuningDirection? = null
+    ): List<WeekLookahead> {
         if (count <= 0) return emptyList()
         val result = mutableListOf<WeekLookahead>()
         var cursor = this
@@ -98,8 +106,11 @@ data class PhaseEngine(
             result.add(
                 WeekLookahead(
                     weekNumber = cursor.absoluteWeek,
-                    isRecovery = cursor.isRecoveryWeek(),
-                    sessions = cursor.planCurrentWeek(tierIndex = tierIndex)
+                    isRecovery = cursor.isRecoveryWeek(tuningDirection),
+                    sessions = cursor.planCurrentWeek(
+                        tierIndex = tierIndex,
+                        tuningDirection = tuningDirection ?: TuningDirection.HOLD
+                    )
                 )
             )
         }

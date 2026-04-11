@@ -257,7 +257,11 @@ class BootcampViewModel @Inject constructor(
             )
         }
 
-        val upcomingWeeks = engine.lookaheadWeeks(2, tierIndex = enrollment.tierIndex).map { lookahead ->
+        val upcomingWeeks = engine.lookaheadWeeks(
+            count = 2,
+            tierIndex = enrollment.tierIndex,
+            tuningDirection = fitnessSignals.tuningDirection
+        ).map { lookahead ->
             UpcomingWeekItem(
                 weekNumber = lookahead.weekNumber,
                 isRecoveryWeek = lookahead.isRecovery,
@@ -290,7 +294,7 @@ class BootcampViewModel @Inject constructor(
             totalWeeks = engine.totalWeeks,
             weekInPhase = enrollment.currentWeekInPhase,
             isRecoveryWeek = engine.isRecoveryWeek(fitnessSignals.tuningDirection),
-            weeksUntilNextRecovery = engine.weeksUntilNextRecovery,
+            weeksUntilNextRecovery = engine.weeksUntilNextRecovery(fitnessSignals.tuningDirection),
             showGraduationCta = engine.absoluteWeek >= engine.totalWeeks,
             currentWeekDays = weekDays,
             currentWeekDateRange = computeWeekDateRange(weekStart),
