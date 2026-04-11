@@ -70,7 +70,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - `domain/model/` — Domain models: `WorkoutConfig`, `WorkoutMode`, `AdaptiveProfile`, `ZoneStatus`
 - `domain/engine/` — `ZoneEngine` (static zone eval), `AdaptivePaceController` (predictive HR-pace modeling)
 - `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `AlertManager`, `WorkoutState`
-- `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoicePlayer`, `StartupSequencer`, `VoiceEventPriority`
+- `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoicePlayer`, `StartupSequencer`, `VoiceEventPriority`, `VibrationManager`, `EscalationTracker`
 - `ui/account/` — Account & settings screen + ViewModel; includes Maps API key + audio settings
 - `ui/bootcamp/` — Bootcamp dashboard, setup flow, settings, day-state logic
 - `ui/components/` — Shared composables: `CardeaLogo`, `GlassCard`

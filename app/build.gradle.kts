@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 testers = "graham.l.metcalfe@gmail.com, schellmh@gmail.com"
-                releaseNotes = "Invite dialog fix: dialog now shows immediately with a loading state while the invite code generates in the background, plus accountability partner pipeline bug fixes."
+                releaseNotes = "Design refresh: live screens now match the Cardea design spec (gradient hierarchy, contrast fixes, token cleanup). Engine fixes: HR slope spike clamping, settle-sample pooling, CTL/ATL decay for missed days."
             }
         }
     }
