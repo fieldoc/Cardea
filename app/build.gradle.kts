@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 4
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 testers = "graham.l.metcalfe@gmail.com, schellmh@gmail.com"
-                releaseNotes = "Design refresh: live screens now match the Cardea design spec (gradient hierarchy, contrast fixes, token cleanup). Engine fixes: HR slope spike clamping, settle-sample pooling, CTL/ATL decay for missed days."
+                releaseNotes = "v0.4.0: Unified TTS voice coaching (replaced 60+ MP3 clips with Android TTS). Marimba 3-2-1-GO countdown. Adaptive training: fitness-signal recovery weeks, EF regression slope, tuningDirection propagation. 10 audio bug fixes from code review."
             }
         }
     }
