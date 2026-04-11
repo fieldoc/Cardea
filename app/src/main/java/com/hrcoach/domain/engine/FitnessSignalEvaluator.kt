@@ -54,7 +54,17 @@ object FitnessSignalEvaluator {
 
         val efValues = reliable.mapNotNull { it.efficiencyFactor }
 
-        val efTrend = if (efValues.size >= 2) efValues.last() - efValues.first() else null
+        val efTrend = if (efValues.size >= 2) {
+            // Least-squares regression slope scaled to total span,
+            // more robust than endpoint delta against outliers
+            val n = efValues.size
+            val sumX = n * (n - 1) / 2.0
+            val sumX2 = n * (n - 1) * (2 * n - 1) / 6.0
+            val sumY = efValues.sumOf { it.toDouble() }
+            val sumXY = efValues.withIndex().sumOf { (i, v) -> i * v.toDouble() }
+            val slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX)
+            (slope * (n - 1)).toFloat()
+        } else null
 
         // Note: illness detection (IllnessSignalTier.SOFT / FULL) previously relied on hrr1Bpm,
         // which is never computed or written. Illness tier is always NONE until HRR1 measurement
