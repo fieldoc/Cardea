@@ -63,7 +63,7 @@ class SessionReschedulerTest {
     @Test fun drops_lowest_priority_when_no_slots_available() {
         val easySession  = session(day = 1, type = "EASY",  status = "SKIPPED")
         val tempoSession = session(day = 3, type = "TEMPO")
-        val longSession  = session(day = 6, type = "LONG_RUN")
+        val longSession  = session(day = 6, type = "LONG")
         // All remaining days (5,6,7) are either occupied or blackout
         val req = RescheduleRequest(
             session = tempoSession,
@@ -178,5 +178,70 @@ class SessionReschedulerTest {
         )
         val result = SessionRescheduler.availableDays(req)
         assertFalse("BLACKOUT day 4 should NOT be offered", 4 in result)
+    }
+
+    @Test fun long_run_has_highest_drop_priority() {
+        val easySession = session(day = 1, type = "EASY", status = "SCHEDULED")
+        val tempoSession = session(day = 3, type = "TEMPO")
+        val longSession = session(day = 6, type = "LONG")
+        val req = RescheduleRequest(
+            session = tempoSession,
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,
+                5 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.AVAILABLE,
+                7 to DaySelectionLevel.BLACKOUT
+            )),
+            todayDayOfWeek = 5,
+            occupiedDaysThisWeek = setOf(1, 3, 6),
+            allSessionsThisWeek = listOf(easySession, tempoSession, longSession)
+        )
+        val result = SessionRescheduler.reschedule(req) as RescheduleResult.Dropped
+        assertEquals("Should drop EASY, not LONG", easySession.id, result.droppedSessionId)
+    }
+
+    @Test fun race_sim_has_highest_drop_priority() {
+        val easySession = session(day = 1, type = "EASY", status = "SCHEDULED")
+        val tempoSession = session(day = 3, type = "TEMPO")
+        val raceSimSession = session(day = 6, type = "RACE_SIM")
+        val req = RescheduleRequest(
+            session = tempoSession,
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,
+                5 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.AVAILABLE,
+                7 to DaySelectionLevel.BLACKOUT
+            )),
+            todayDayOfWeek = 5,
+            occupiedDaysThisWeek = setOf(1, 3, 6),
+            allSessionsThisWeek = listOf(easySession, tempoSession, raceSimSession)
+        )
+        val result = SessionRescheduler.reschedule(req) as RescheduleResult.Dropped
+        assertEquals("Should drop EASY, not RACE_SIM", easySession.id, result.droppedSessionId)
+    }
+
+    @Test fun respects_48h_recovery_gap_for_long_runs() {
+        val req = RescheduleRequest(
+            session = session(day = 1, type = "EASY"),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                2 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,
+                4 to DaySelectionLevel.BLACKOUT,
+                5 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.BLACKOUT,
+                7 to DaySelectionLevel.BLACKOUT
+            )),
+            todayDayOfWeek = 1,
+            occupiedDaysThisWeek = setOf(1, 3),
+            allSessionsThisWeek = listOf(
+                session(1, "EASY"),
+                session(3, "LONG")
+            )
+        )
+        val days = SessionRescheduler.availableDays(req)
+        assertFalse("Day 2 violates recovery gap with LONG on day 3", 2 in days)
     }
 }

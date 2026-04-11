@@ -31,12 +31,13 @@ class BootcampGoalTest {
     }
 
     @Test
-    fun `cardio health has no peak or taper phase`() {
+    fun `cardio health has BASE and EVERGREEN phases`() {
         val phases = BootcampGoal.CARDIO_HEALTH.phaseArc
         assertTrue(phases.any { it == TrainingPhase.BASE })
-        assertTrue(phases.any { it == TrainingPhase.BUILD })
+        assertTrue(phases.any { it == TrainingPhase.EVERGREEN })
         assertFalse(phases.any { it == TrainingPhase.PEAK })
         assertFalse(phases.any { it == TrainingPhase.TAPER })
+        assertFalse(phases.any { it == TrainingPhase.BUILD })
     }
 
     @Test

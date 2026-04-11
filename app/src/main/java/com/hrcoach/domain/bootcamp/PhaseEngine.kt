@@ -38,17 +38,20 @@ data class PhaseEngine(
 
     fun weeksUntilNextRecovery(tuningDirection: TuningDirection? = null): Int {
         if (isRecoveryWeek(tuningDirection)) return 0
-        val cadence = when (tuningDirection) {
-            TuningDirection.EASE_BACK -> 2
-            TuningDirection.PUSH_HARDER -> 4
-            TuningDirection.HOLD, null -> 3
+        // For EVERGREEN: recovery is always week 3 of 4-week micro-cycle
+        if (currentPhase == TrainingPhase.EVERGREEN) {
+            return (3 - (weekInPhase % 4)).let { if (it <= 0) it + 4 else it }
         }
-        var w = weekInPhase + 1
+        var cursor = this
         var steps = 0
-        while (steps < 10) {
-            if (w > 0 && (w + 1) % cadence == 0) return steps + 1
-            w++
+        while (steps < 12) {
+            cursor = if (cursor.shouldAdvancePhase()) {
+                cursor.advancePhase() ?: return steps + 1 // graduation — no more recovery
+            } else {
+                cursor.copy(weekInPhase = cursor.weekInPhase + 1)
+            }
             steps++
+            if (cursor.isRecoveryWeek(tuningDirection)) return steps
         }
         return steps
     }
@@ -69,7 +72,10 @@ data class PhaseEngine(
             runsPerWeek = runsPerWeek,
             targetMinutes = effectiveMinutes,
             tierIndex = tierIndex,
-            tuningDirection = tuningDirection
+            tuningDirection = tuningDirection,
+            weekInPhase = weekInPhase,
+            absoluteWeek = absoluteWeek,
+            isRecoveryWeek = isRecoveryWeek(tuningDirection)
         )
     }
 
@@ -79,8 +85,11 @@ data class PhaseEngine(
     fun advancePhase(): PhaseEngine? {
         val nextIndex = phaseIndex + 1
         return if (nextIndex >= goal.phaseArc.size) {
-            if (goal == BootcampGoal.CARDIO_HEALTH) {
-                copy(phaseIndex = 0, weekInPhase = 0) // Cardio Health cycles
+            if (currentPhase == TrainingPhase.EVERGREEN) {
+                // EVERGREEN wraps to itself — reset weekInPhase, stay in EVERGREEN
+                copy(weekInPhase = 0)
+            } else if (goal == BootcampGoal.CARDIO_HEALTH) {
+                copy(phaseIndex = 0, weekInPhase = 0)
             } else {
                 null // Race goals graduate
             }

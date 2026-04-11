@@ -13,7 +13,10 @@ object SessionSelector {
         runsPerWeek: Int,
         targetMinutes: Int,
         tierIndex: Int = 1,
-        tuningDirection: TuningDirection = TuningDirection.HOLD
+        tuningDirection: TuningDirection = TuningDirection.HOLD,
+        weekInPhase: Int = 0,
+        absoluteWeek: Int = 0,
+        isRecoveryWeek: Boolean = false
     ): List<PlannedSession> {
         val tuningFactor = when (tuningDirection) {
             TuningDirection.PUSH_HARDER -> 1.05f
@@ -28,8 +31,13 @@ object SessionSelector {
         val durations = DurationScaler.compute(runsPerWeek, effectiveMinutes)
 
         return when {
+            phase == TrainingPhase.EVERGREEN -> evergreenWeek(
+                goal, runsPerWeek, effectiveMinutes, durations, tierIndex, weekInPhase, absoluteWeek
+            )
+            isRecoveryWeek && tierIndex <= 1 -> baseAerobicWeek(phase, goal, runsPerWeek, effectiveMinutes, durations)
+            isRecoveryWeek && tierIndex >= 2 -> recoveryPeriodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex)
             tierIndex <= 0 -> baseAerobicWeek(phase, goal, runsPerWeek, effectiveMinutes, durations)
-            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex)
+            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex, absoluteWeek)
         }
     }
 
@@ -59,7 +67,8 @@ object SessionSelector {
         runsPerWeek: Int,
         minutes: Int,
         durations: DurationScaler.WeekDurations,
-        tierIndex: Int
+        tierIndex: Int,
+        absoluteWeek: Int = 0
     ): List<PlannedSession> {
         val sessions = mutableListOf<PlannedSession>()
         val includeStrides = (phase == TrainingPhase.BUILD && tierIndex >= 2 && runsPerWeek >= 4) ||
@@ -70,6 +79,7 @@ object SessionSelector {
             TrainingPhase.BUILD -> 1
             TrainingPhase.PEAK -> if (tierIndex >= 2) 2 else 1
             TrainingPhase.TAPER -> 1
+            TrainingPhase.EVERGREEN -> 1 // handled by evergreenWeek, but needed for exhaustiveness
         }
 
         val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.TAPER
@@ -120,9 +130,10 @@ object SessionSelector {
                 when {
                     tierIndex >= 2 -> {
                         // Goal determines primary quality type
+                        val intervalPreset = if (absoluteWeek % 2 == 0) "norwegian_4x4" else "hill_repeats"
                         when (goal) {
                             BootcampGoal.RACE_5K -> {
-                                sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
+                                sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, intervalPreset))
                                 if (qualitySessions >= 2) {
                                     sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                                 }
@@ -130,7 +141,7 @@ object SessionSelector {
                             BootcampGoal.RACE_10K -> {
                                 sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
                                 if (qualitySessions >= 2) {
-                                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, "norwegian_4x4"))
+                                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, intervalPreset))
                                 }
                             }
                             BootcampGoal.HALF_MARATHON, BootcampGoal.MARATHON -> {
@@ -151,7 +162,11 @@ object SessionSelector {
                 }
             }
             TrainingPhase.TAPER -> {
-                sessions.add(PlannedSession(SessionType.TEMPO, (durations.tempoMinutes * 0.8f).toInt(), "aerobic_tempo"))
+                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+            }
+            TrainingPhase.EVERGREEN -> {
+                // periodizedWeek is not called for EVERGREEN (handled by evergreenWeek above)
+                sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
             }
         }
 
@@ -160,10 +175,120 @@ object SessionSelector {
             val isRaceSim = phase == TrainingPhase.PEAK && tierIndex >= 2 &&
                 goal != BootcampGoal.CARDIO_HEALTH
             val longType = if (isRaceSim) SessionType.RACE_SIM else SessionType.LONG
-            val longPreset = if (isRaceSim) null else "zone2_base"
+            val longPreset = if (isRaceSim) raceSimPresetFor(goal) else "zone2_base"
             sessions.add(PlannedSession(longType, longMinutes, longPreset))
         }
 
         return sessions
+    }
+
+    private fun evergreenWeek(
+        goal: BootcampGoal,
+        runsPerWeek: Int,
+        minutes: Int,
+        durations: DurationScaler.WeekDurations,
+        tierIndex: Int,
+        weekInPhase: Int,
+        absoluteWeek: Int
+    ): List<PlannedSession> {
+        val sessions = mutableListOf<PlannedSession>()
+        val microWeek = weekInPhase % 4 // 0=Tempo, 1=Strides, 2=Interval/Tempo, 3=Recovery
+
+        // Tier 0 always gets base aerobic only
+        if (tierIndex <= 0 || microWeek == 3) {
+            // Recovery week (D) or tier 0: all easy + optional long
+            val hasLong = runsPerWeek >= 3
+            val longMinutes = durations.longMinutes.coerceAtMost(goal.maxLongRunMinutes)
+            val easyCount = if (hasLong) runsPerWeek - 1 else runsPerWeek
+            repeat(easyCount) {
+                sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
+            }
+            if (hasLong) {
+                sessions.add(PlannedSession(SessionType.LONG, longMinutes, "zone2_base"))
+            }
+            return sessions
+        }
+
+        val hasLong = runsPerWeek >= 3
+        val longMinutes = durations.longMinutes.coerceAtMost(goal.maxLongRunMinutes)
+
+        // Quality session for this micro-week
+        when (microWeek) {
+            0 -> {
+                // Week A: Tempo
+                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+            }
+            1 -> {
+                // Week B: Strides
+                sessions.add(PlannedSession(SessionType.STRIDES, durations.easyMinutes, "strides_20s"))
+            }
+            2 -> {
+                // Week C: Interval (tier 2+) or Tempo (tier 1)
+                if (tierIndex >= 2) {
+                    val intervalPreset = if (absoluteWeek % 2 == 0) "hill_repeats" else "hiit_30_30"
+                    sessions.add(PlannedSession(SessionType.INTERVAL, durations.intervalMinutes, intervalPreset))
+                } else {
+                    sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "lactate_threshold"))
+                }
+            }
+        }
+
+        // Long run
+        if (hasLong) {
+            sessions.add(PlannedSession(SessionType.LONG, longMinutes, "zone2_base"))
+        }
+
+        // Fill remaining with easy
+        val easyCount = (runsPerWeek - sessions.size).coerceAtLeast(0)
+        repeat(easyCount) {
+            sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
+        }
+
+        return sessions
+    }
+
+    private fun recoveryPeriodizedWeek(
+        phase: TrainingPhase,
+        goal: BootcampGoal,
+        runsPerWeek: Int,
+        minutes: Int,
+        durations: DurationScaler.WeekDurations,
+        tierIndex: Int
+    ): List<PlannedSession> {
+        val sessions = mutableListOf<PlannedSession>()
+        val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.TAPER
+        val longMinutes = durations.longMinutes.coerceAtMost(goal.maxLongRunMinutes)
+
+        // Downgraded quality: interval→aerobic tempo, tempo→strides
+        when (phase) {
+            TrainingPhase.BUILD, TrainingPhase.TAPER -> {
+                sessions.add(PlannedSession(SessionType.STRIDES, durations.easyMinutes, "strides_20s"))
+            }
+            TrainingPhase.PEAK -> {
+                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+            }
+            else -> { /* BASE has no quality — nothing to downgrade */ }
+        }
+
+        // Long run
+        if (hasLong) {
+            sessions.add(PlannedSession(SessionType.LONG, longMinutes, "zone2_base"))
+        }
+
+        // Fill remaining with easy
+        val easyCount = (runsPerWeek - sessions.size).coerceAtLeast(1)
+        repeat(easyCount) {
+            sessions.add(PlannedSession(SessionType.EASY, durations.easyMinutes, "zone2_base"))
+        }
+
+        return sessions
+    }
+
+    private fun raceSimPresetFor(goal: BootcampGoal): String = when (goal) {
+        BootcampGoal.RACE_5K -> "race_sim_5k"
+        BootcampGoal.RACE_10K -> "race_sim_10k"
+        BootcampGoal.HALF_MARATHON -> "half_marathon_prep"
+        BootcampGoal.MARATHON -> "marathon_prep"
+        BootcampGoal.CARDIO_HEALTH -> "zone2_base"
     }
 }

@@ -14,7 +14,8 @@ object PresetLibrary {
     val ALL: List<WorkoutPreset> = listOf(
         zone2Base(), zone2WithStrides(), aeroTempo(), lactateThreshold(),
         norwegian4x4(), hiit3030(), hillRepeats(),
-        halfMarathonPrep(), marathonPrep()
+        halfMarathonPrep(), marathonPrep(),
+        strides20s(), raceSim5k(), raceSim10k()
     )
 
     private fun zone2Base() = WorkoutPreset(
@@ -59,14 +60,21 @@ object PresetLibrary {
         id = "aerobic_tempo",
         name = "Aerobic Tempo",
         subtitle = "Comfortably hard",
-        description = "30 min at 84% HR reserve. Raises lactate threshold and improves running economy.",
+        description = "10-min warm-up \u2192 20-min tempo at 84% HR reserve \u2192 5-min cool-down.",
         category = PresetCategory.THRESHOLD,
-        durationLabel = "30 min",
+        durationLabel = "~35 min",
         intensityLabel = "Moderate",
         buildConfig = { maxHr, restHr ->
+            val tempoHr = karvonen(maxHr, restHr, 0.84f)
+            val warmupHr = karvonen(maxHr, restHr, 0.65f)
+            val cooldownHr = karvonen(maxHr, restHr, 0.60f)
             WorkoutConfig(
-                mode = WorkoutMode.STEADY_STATE,
-                steadyStateTargetHr = karvonen(maxHr, restHr, 0.84f),
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(durationSeconds = 600, targetHr = warmupHr, label = "Warm-up"),
+                    HrSegment(durationSeconds = 1200, targetHr = tempoHr, label = "Tempo"),
+                    HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
+                ),
                 bufferBpm = 4,
                 presetId = "aerobic_tempo"
             )
@@ -77,14 +85,21 @@ object PresetLibrary {
         id = "lactate_threshold",
         name = "Lactate Threshold",
         subtitle = "Threshold effort",
-        description = "25 min at 90% HR reserve. Targets the lactate threshold directly.",
+        description = "10-min warm-up \u2192 20-min at 90% HR reserve \u2192 5-min cool-down.",
         category = PresetCategory.THRESHOLD,
-        durationLabel = "25 min",
+        durationLabel = "~35 min",
         intensityLabel = "Hard",
         buildConfig = { maxHr, restHr ->
+            val thresholdHr = karvonen(maxHr, restHr, 0.90f)
+            val warmupHr = karvonen(maxHr, restHr, 0.65f)
+            val cooldownHr = karvonen(maxHr, restHr, 0.60f)
             WorkoutConfig(
-                mode = WorkoutMode.STEADY_STATE,
-                steadyStateTargetHr = karvonen(maxHr, restHr, 0.90f),
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(durationSeconds = 600, targetHr = warmupHr, label = "Warm-up"),
+                    HrSegment(durationSeconds = 1200, targetHr = thresholdHr, label = "Threshold"),
+                    HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
+                ),
                 bufferBpm = 3,
                 presetId = "lactate_threshold"
             )
@@ -205,6 +220,70 @@ object PresetLibrary {
                 ),
                 bufferBpm = 4,
                 presetId = "marathon_prep"
+            )
+        }
+    )
+
+    private fun strides20s() = WorkoutPreset(
+        id = "strides_20s",
+        name = "Easy + Strides",
+        subtitle = "Neuromuscular activation",
+        description = "Easy run with 4\u20136 \u00d7 20-sec strides. Improves running economy.",
+        category = PresetCategory.BASE_AEROBIC,
+        durationLabel = "20\u201326 min",
+        intensityLabel = "Easy + bursts",
+        buildConfig = { maxHr, restHr ->
+            WorkoutConfig(
+                mode = WorkoutMode.STEADY_STATE,
+                steadyStateTargetHr = karvonen(maxHr, restHr, 0.68f),
+                bufferBpm = 5,
+                presetId = "strides_20s",
+                sessionLabel = "Strides",
+                guidanceTag = "strides"
+            )
+        }
+    )
+
+    private fun raceSim5k() = WorkoutPreset(
+        id = "race_sim_5k",
+        name = "5K Race Simulation",
+        subtitle = "Race-day rehearsal",
+        description = "Progressive 5 km: easy start \u2192 race pace \u2192 kick.",
+        category = PresetCategory.RACE_PREP,
+        durationLabel = "5 km",
+        intensityLabel = "Moderate\u2013Hard",
+        buildConfig = { maxHr, restHr ->
+            WorkoutConfig(
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(distanceMeters = 1000f, targetHr = karvonen(maxHr, restHr, 0.75f), label = "Easy Start"),
+                    HrSegment(distanceMeters = 4000f, targetHr = karvonen(maxHr, restHr, 0.88f), label = "Race Pace"),
+                    HrSegment(distanceMeters = 5000f, targetHr = karvonen(maxHr, restHr, 0.92f), label = "Kick")
+                ),
+                bufferBpm = 4,
+                presetId = "race_sim_5k"
+            )
+        }
+    )
+
+    private fun raceSim10k() = WorkoutPreset(
+        id = "race_sim_10k",
+        name = "10K Race Simulation",
+        subtitle = "Race-day rehearsal",
+        description = "Progressive 10 km: easy start \u2192 race pace \u2192 strong finish.",
+        category = PresetCategory.RACE_PREP,
+        durationLabel = "10 km",
+        intensityLabel = "Moderate\u2013Hard",
+        buildConfig = { maxHr, restHr ->
+            WorkoutConfig(
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(distanceMeters = 2000f, targetHr = karvonen(maxHr, restHr, 0.72f), label = "Easy Start"),
+                    HrSegment(distanceMeters = 8000f, targetHr = karvonen(maxHr, restHr, 0.85f), label = "Race Pace"),
+                    HrSegment(distanceMeters = 10000f, targetHr = karvonen(maxHr, restHr, 0.90f), label = "Strong Finish")
+                ),
+                bufferBpm = 4,
+                presetId = "race_sim_10k"
             )
         }
     )

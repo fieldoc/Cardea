@@ -44,30 +44,49 @@ class SessionSelectorTest {
     }
 
     @Test
-    fun `taper phase reduces target minutes by 30 percent`() {
+    fun `taper phase reduces total volume compared to build`() {
+        val buildSessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.HALF_MARATHON,
+            runsPerWeek = 3,
+            targetMinutes = 40
+        )
+        val taperSessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.TAPER,
+            goal = BootcampGoal.HALF_MARATHON,
+            runsPerWeek = 3,
+            targetMinutes = 40
+        )
+        val buildTotal = buildSessions.sumOf { it.minutes }
+        val taperTotal = taperSessions.sumOf { it.minutes }
+        assertTrue("Taper ($taperTotal) should be less than build ($buildTotal)", taperTotal < buildTotal)
+    }
+
+    @Test
+    fun `taper tempo duration is at least 15 minutes`() {
         val sessions = SessionSelector.weekSessions(
             phase = TrainingPhase.TAPER,
             goal = BootcampGoal.HALF_MARATHON,
             runsPerWeek = 3,
             targetMinutes = 40
         )
-        assertTrue(sessions.all { it.minutes <= 28 }) // 40 * 0.7 = 28
+        val tempo = sessions.firstOrNull { it.type == SessionType.TEMPO }
+        assertNotNull("TAPER should have a tempo session", tempo)
+        assertTrue("Taper tempo should be at least 15 min, was ${tempo!!.minutes}", tempo.minutes >= 15)
     }
 
     @Test
-    fun `cardio health never gets interval sessions in any phase`() {
-        for (phase in BootcampGoal.CARDIO_HEALTH.phaseArc) {
-            val sessions = SessionSelector.weekSessions(
-                phase = phase,
-                goal = BootcampGoal.CARDIO_HEALTH,
-                runsPerWeek = 3,
-                targetMinutes = 25
-            )
-            assertFalse(
-                "Phase $phase should not have intervals for cardio health",
-                sessions.any { it.type == SessionType.INTERVAL }
-            )
-        }
+    fun `cardio health BASE phase has no interval sessions`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BASE,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 25
+        )
+        assertFalse(
+            "BASE should not have intervals for cardio health",
+            sessions.any { it.type == SessionType.INTERVAL }
+        )
     }
 
     @Test
@@ -248,5 +267,186 @@ class SessionSelectorTest {
         )
         val stridesSessions = sessions.filter { it.presetId == "zone2_with_strides" }
         assertEquals("CARDIO_HEALTH should have no strides", 0, stridesSessions.size)
+    }
+
+    // ── RACE_SIM preset resolution tests ──────────────────────────
+
+    @Test
+    fun `RACE_SIM session has goal-appropriate preset for 5K`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 35,
+            tierIndex = 2
+        )
+        val raceSim = sessions.firstOrNull { it.type == SessionType.RACE_SIM }
+        assertNotNull("5K tier 2 PEAK should have RACE_SIM", raceSim)
+        assertEquals("race_sim_5k", raceSim!!.presetId)
+    }
+
+    @Test
+    fun `RACE_SIM session has goal-appropriate preset for marathon`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK,
+            goal = BootcampGoal.MARATHON,
+            runsPerWeek = 4,
+            targetMinutes = 50,
+            tierIndex = 2
+        )
+        val raceSim = sessions.firstOrNull { it.type == SessionType.RACE_SIM }
+        assertNotNull("Marathon tier 2 PEAK should have RACE_SIM", raceSim)
+        assertEquals("marathon_prep", raceSim!!.presetId)
+    }
+
+    // ── EVERGREEN phase tests ──────────────────────────
+
+    @Test
+    fun `EVERGREEN week 0 includes tempo for tier 1`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 30,
+            tierIndex = 1,
+            weekInPhase = 0
+        )
+        assertTrue("Week A should have TEMPO", sessions.any { it.type == SessionType.TEMPO })
+    }
+
+    @Test
+    fun `EVERGREEN week 1 includes strides for tier 1`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 30,
+            tierIndex = 1,
+            weekInPhase = 1
+        )
+        assertTrue("Week B should have STRIDES", sessions.any { it.type == SessionType.STRIDES })
+    }
+
+    @Test
+    fun `EVERGREEN week 2 includes interval for tier 2`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 30,
+            tierIndex = 2,
+            weekInPhase = 2
+        )
+        assertTrue("Week C tier 2 should have INTERVAL", sessions.any { it.type == SessionType.INTERVAL })
+    }
+
+    @Test
+    fun `EVERGREEN week 2 uses tempo for tier 1 instead of interval`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 30,
+            tierIndex = 1,
+            weekInPhase = 2
+        )
+        assertFalse("Week C tier 1 should NOT have INTERVAL", sessions.any { it.type == SessionType.INTERVAL })
+        assertTrue("Week C tier 1 should have TEMPO", sessions.any { it.type == SessionType.TEMPO })
+    }
+
+    @Test
+    fun `EVERGREEN week 3 is all easy - recovery week`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3,
+            targetMinutes = 30,
+            tierIndex = 2,
+            weekInPhase = 3
+        )
+        assertTrue("Week D (recovery) should be all easy/long",
+            sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
+    }
+
+    @Test
+    fun `EVERGREEN tier 0 gets only easy and long regardless of week`() {
+        for (week in 0..3) {
+            val sessions = SessionSelector.weekSessions(
+                phase = TrainingPhase.EVERGREEN,
+                goal = BootcampGoal.CARDIO_HEALTH,
+                runsPerWeek = 3,
+                targetMinutes = 25,
+                tierIndex = 0,
+                weekInPhase = week
+            )
+            assertTrue("Tier 0 week $week should be all easy/long",
+                sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
+        }
+    }
+
+    @Test
+    fun `EVERGREEN week 2 alternates between hill repeats and HIIT for tier 2`() {
+        val hillWeek = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3, targetMinutes = 30, tierIndex = 2,
+            weekInPhase = 2, absoluteWeek = 6 // even -> hill
+        )
+        val hiitWeek = SessionSelector.weekSessions(
+            phase = TrainingPhase.EVERGREEN,
+            goal = BootcampGoal.CARDIO_HEALTH,
+            runsPerWeek = 3, targetMinutes = 30, tierIndex = 2,
+            weekInPhase = 2, absoluteWeek = 7 // odd -> hiit
+        )
+        val hillPreset = hillWeek.first { it.type == SessionType.INTERVAL }.presetId
+        val hiitPreset = hiitWeek.first { it.type == SessionType.INTERVAL }.presetId
+        assertEquals("hill_repeats", hillPreset)
+        assertEquals("hiit_30_30", hiitPreset)
+    }
+
+    // ── Recovery week composition tests ──────────────────────────
+
+    @Test
+    fun `tier 1 recovery week replaces quality with easy`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD, goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 3, targetMinutes = 19,
+            tierIndex = 1, isRecoveryWeek = true
+        )
+        assertTrue("Tier 1 recovery should be all easy/long",
+            sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
+    }
+
+    @Test
+    fun `tier 2 recovery week downgrades interval to easier quality`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK, goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4, targetMinutes = 22,
+            tierIndex = 2, isRecoveryWeek = true
+        )
+        assertFalse("Tier 2 recovery should not have INTERVAL",
+            sessions.any { it.type == SessionType.INTERVAL })
+        assertTrue("Tier 2 recovery should have downgraded quality",
+            sessions.any { it.type == SessionType.TEMPO || it.type == SessionType.STRIDES })
+    }
+
+    // ── Interval variety tests ──────────────────────────
+
+    @Test
+    fun `PEAK interval preset alternates between norwegian and hills for race goals`() {
+        val n4x4Week = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK, goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4, targetMinutes = 35, tierIndex = 2,
+            absoluteWeek = 10 // even -> norwegian_4x4
+        )
+        val hillWeek = SessionSelector.weekSessions(
+            phase = TrainingPhase.PEAK, goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4, targetMinutes = 35, tierIndex = 2,
+            absoluteWeek = 11 // odd -> hill_repeats
+        )
+        val n4x4Preset = n4x4Week.first { it.type == SessionType.INTERVAL }.presetId
+        val hillPreset = hillWeek.first { it.type == SessionType.INTERVAL }.presetId
+        assertEquals("norwegian_4x4", n4x4Preset)
+        assertEquals("hill_repeats", hillPreset)
     }
 }

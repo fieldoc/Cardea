@@ -78,12 +78,13 @@ class PhaseEngineTest {
     }
 
     @Test
-    fun `advancePhase at final phase wraps for cycling goals`() {
-        // Cardio health has 2 phases (BASE, BUILD). At index 1, it should wrap to 0.
-        val engine = PhaseEngine(goal = BootcampGoal.CARDIO_HEALTH, phaseIndex = 1, weekInPhase = 5)
+    fun `advancePhase at EVERGREEN wraps to itself`() {
+        // CARDIO_HEALTH: phaseArc = [BASE, EVERGREEN]. EVERGREEN midpoint=4. weekInPhase=4 triggers advance.
+        val engine = PhaseEngine(goal = BootcampGoal.CARDIO_HEALTH, phaseIndex = 1, weekInPhase = 4)
+        assertTrue(engine.shouldAdvancePhase())
         val next = engine.advancePhase()
-        assertNotNull("Cardio health should wrap", next)
-        assertEquals(0, next!!.phaseIndex)
+        assertNotNull("EVERGREEN should wrap", next)
+        assertEquals("Should stay at EVERGREEN phase index", 1, next!!.phaseIndex)
         assertEquals(0, next.weekInPhase)
     }
 
@@ -99,16 +100,16 @@ class PhaseEngineTest {
     }
 
     @Test
-    fun `advancePhase wraps for CARDIO_HEALTH`() {
+    fun `advancePhase wraps EVERGREEN for CARDIO_HEALTH`() {
         val engine = PhaseEngine(
             goal = BootcampGoal.CARDIO_HEALTH,
-            phaseIndex = 1, // BUILD (last phase for cardio health)
+            phaseIndex = 1, // EVERGREEN (last phase for cardio health)
             weekInPhase = 5
         )
         assertTrue(engine.shouldAdvancePhase())
         val next = engine.advancePhase()
-        assertNotNull("Cardio health should wrap", next)
-        assertEquals(0, next!!.phaseIndex)
+        assertNotNull("EVERGREEN should wrap", next)
+        assertEquals("Should stay in EVERGREEN", 1, next!!.phaseIndex)
     }
 
     @Test
@@ -222,5 +223,32 @@ class PhaseEngineTest {
         // EASE_BACK at weekInPhase=1 triggers recovery (0.65x) + tuning factor (0.90x)
         // HOLD at weekInPhase=1 is NOT recovery, just tuning factor 1.0x
         assertTrue("EASE_BACK recovery should reduce total minutes", easeTotal < holdTotal)
+    }
+
+    // --- EVERGREEN and phase boundary tests ---
+
+    @Test
+    fun `weeksUntilNextRecovery accounts for phase boundary reset`() {
+        val engine = PhaseEngine(
+            goal = BootcampGoal.RACE_5K,
+            phaseIndex = 0, // BASE
+            weekInPhase = 3 // last week before advance (midpoint=4, so shouldAdvancePhase at 4)
+        )
+        val weeks = engine.weeksUntilNextRecovery()
+        assertTrue("Should be at least 2 weeks (not 0 or 1)", weeks >= 2)
+    }
+
+    @Test
+    fun `EVERGREEN weeksUntilNextRecovery returns correct micro-cycle distance`() {
+        // EVERGREEN week 0: recovery is at week 3 → 3 weeks away
+        val engine = PhaseEngine(goal = BootcampGoal.CARDIO_HEALTH, phaseIndex = 1, weekInPhase = 0)
+        assertEquals(3, engine.weeksUntilNextRecovery())
+    }
+
+    @Test
+    fun `EVERGREEN weeksUntilNextRecovery wraps around micro-cycle`() {
+        // weekInPhase=4 → 4%4=0 → recovery at 3 → 3 weeks away
+        val engine = PhaseEngine(goal = BootcampGoal.CARDIO_HEALTH, phaseIndex = 1, weekInPhase = 4)
+        assertEquals(3, engine.weeksUntilNextRecovery())
     }
 }

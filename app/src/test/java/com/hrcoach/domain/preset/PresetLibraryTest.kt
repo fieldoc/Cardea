@@ -75,4 +75,60 @@ class PresetLibraryTest {
         val ids = PresetLibrary.ALL.map { it.id }
         assertEquals(ids.distinct().size, ids.size)
     }
+
+    @Test
+    fun `strides_20s preset exists and has strides guidance tag`() {
+        val preset = PresetLibrary.ALL.firstOrNull { it.id == "strides_20s" }
+        assertNotNull("strides_20s preset must exist", preset)
+        val config = preset!!.buildConfig(190, 60)
+        assertEquals(WorkoutMode.STEADY_STATE, config.mode)
+        assertEquals("strides", config.guidanceTag)
+        assertNotNull(config.steadyStateTargetHr)
+    }
+
+    @Test
+    fun `race_sim_5k preset exists and has distance segments`() {
+        val preset = PresetLibrary.ALL.firstOrNull { it.id == "race_sim_5k" }
+        assertNotNull("race_sim_5k preset must exist", preset)
+        val config = preset!!.buildConfig(190, 60)
+        assertEquals(WorkoutMode.DISTANCE_PROFILE, config.mode)
+        assertTrue(config.segments.isNotEmpty())
+        assertEquals(5000f, config.segments.last().distanceMeters!!, 100f)
+    }
+
+    @Test
+    fun `race_sim_10k preset exists and has distance segments`() {
+        val preset = PresetLibrary.ALL.firstOrNull { it.id == "race_sim_10k" }
+        assertNotNull("race_sim_10k preset must exist", preset)
+        val config = preset!!.buildConfig(190, 60)
+        assertEquals(WorkoutMode.DISTANCE_PROFILE, config.mode)
+        assertTrue(config.segments.isNotEmpty())
+        assertEquals(10000f, config.segments.last().distanceMeters!!, 100f)
+    }
+
+    @Test
+    fun `all preset IDs are unique`() {
+        val ids = PresetLibrary.ALL.map { it.id }
+        assertEquals("Duplicate preset IDs found", ids.size, ids.distinct().size)
+    }
+
+    @Test
+    fun `aerobic_tempo has warm-up and cool-down segments`() {
+        val preset = PresetLibrary.ALL.first { it.id == "aerobic_tempo" }
+        val config = preset.buildConfig(190, 60)
+        assertEquals(WorkoutMode.DISTANCE_PROFILE, config.mode)
+        assertTrue("Should have at least 3 segments", config.segments.size >= 3)
+        assertTrue("First segment HR should be lower (warm-up)",
+            config.segments.first().targetHr < config.segments[1].targetHr)
+        assertEquals("Warm-up", config.segments.first().label)
+    }
+
+    @Test
+    fun `lactate_threshold has warm-up and cool-down segments`() {
+        val preset = PresetLibrary.ALL.first { it.id == "lactate_threshold" }
+        val config = preset.buildConfig(190, 60)
+        assertEquals(WorkoutMode.DISTANCE_PROFILE, config.mode)
+        assertTrue(config.segments.size >= 3)
+        assertEquals("Warm-up", config.segments.first().label)
+    }
 }

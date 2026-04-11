@@ -89,7 +89,8 @@ class BootcampSessionCompleter @Inject constructor(
                 nextEngine = nextEngine,
                 preferredDays = enrollment.preferredDays,
                 tierIndex = enrollment.tierIndex,
-                tuningDirection = tuningDirection
+                tuningDirection = tuningDirection,
+                completedWeekSessions = simulatedWeek
             )
             bootcampRepository.completeSessionAndAdvanceWeek(
                 completedSession = completedSession,
@@ -118,12 +119,21 @@ class BootcampSessionCompleter @Inject constructor(
         nextEngine: PhaseEngine,
         preferredDays: List<DayPreference>,
         tierIndex: Int,
-        tuningDirection: TuningDirection
+        tuningDirection: TuningDirection,
+        completedWeekSessions: List<BootcampSessionEntity> = emptyList()
     ): List<BootcampSessionEntity> {
+        val currentPresetIndices = completedWeekSessions
+            .filter { it.presetIndex != null }
+            .mapNotNull { session ->
+                val key = sessionTypePresetKey(session.sessionType) ?: return@mapNotNull null
+                key to (session.presetIndex ?: 0)
+            }
+            .toMap()
+
         val plannedSessions = nextEngine.planCurrentWeek(
             tierIndex = tierIndex,
             tuningDirection = tuningDirection,
-            currentPresetIndices = emptyMap()
+            currentPresetIndices = currentPresetIndices
         )
         if (plannedSessions.isEmpty()) return emptyList()
 
@@ -146,5 +156,14 @@ class BootcampSessionCompleter @Inject constructor(
                 presetId = session.presetId
             )
         }
+    }
+
+    private fun sessionTypePresetKey(rawType: String): String? = when (rawType) {
+        "EASY" -> "easy"
+        "TEMPO" -> "tempo"
+        "INTERVAL" -> "interval"
+        "STRIDES" -> "strides"
+        "LONG" -> "long"
+        else -> null
     }
 }
