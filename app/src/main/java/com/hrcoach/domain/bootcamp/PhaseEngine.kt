@@ -1,5 +1,6 @@
 package com.hrcoach.domain.bootcamp
 
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 
@@ -25,12 +26,19 @@ data class PhaseEngine(
             return sum + weekInPhase + 1
         }
 
-    val isRecoveryWeek: Boolean
-        get() = weekInPhase > 0 && (weekInPhase + 1) % 3 == 0
+    fun isRecoveryWeek(tuningDirection: TuningDirection? = null): Boolean {
+        if (weekInPhase == 0) return false
+        val cadence = when (tuningDirection) {
+            TuningDirection.EASE_BACK -> 2
+            TuningDirection.PUSH_HARDER -> 4
+            TuningDirection.HOLD, null -> 3
+        }
+        return (weekInPhase + 1) % cadence == 0
+    }
 
     val weeksUntilNextRecovery: Int
         get() {
-            if (isRecoveryWeek) return 0
+            if (isRecoveryWeek()) return 0
             var w = weekInPhase + 1
             var steps = 0
             while (steps < 10) {
@@ -46,7 +54,7 @@ data class PhaseEngine(
         tuningDirection: com.hrcoach.domain.engine.TuningDirection = com.hrcoach.domain.engine.TuningDirection.HOLD,
         currentPresetIndices: Map<String, Int> = emptyMap()
     ): List<PlannedSession> {
-        val effectiveMinutes = if (isRecoveryWeek) {
+        val effectiveMinutes = if (isRecoveryWeek(tuningDirection)) {
             (targetMinutes * 0.65f).toInt()
         } else {
             targetMinutes
@@ -90,7 +98,7 @@ data class PhaseEngine(
             result.add(
                 WeekLookahead(
                     weekNumber = cursor.absoluteWeek,
-                    isRecovery = cursor.isRecoveryWeek,
+                    isRecovery = cursor.isRecoveryWeek(),
                     sessions = cursor.planCurrentWeek(tierIndex = tierIndex)
                 )
             )

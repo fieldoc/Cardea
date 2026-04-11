@@ -289,7 +289,7 @@ class BootcampViewModel @Inject constructor(
             absoluteWeek = engine.absoluteWeek,
             totalWeeks = engine.totalWeeks,
             weekInPhase = enrollment.currentWeekInPhase,
-            isRecoveryWeek = engine.isRecoveryWeek,
+            isRecoveryWeek = engine.isRecoveryWeek(fitnessSignals.tuningDirection),
             weeksUntilNextRecovery = engine.weeksUntilNextRecovery,
             showGraduationCta = engine.absoluteWeek >= engine.totalWeeks,
             currentWeekDays = weekDays,
