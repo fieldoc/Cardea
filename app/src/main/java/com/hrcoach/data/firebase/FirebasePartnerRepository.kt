@@ -98,9 +98,6 @@ class FirebasePartnerRepository @Inject constructor(
         val currentCount = usersRef.child(myUid).child("partners").get().await().childrenCount
         if (currentCount >= MAX_PARTNERS) throw PartnerLimitException("You already have $MAX_PARTNERS partners. Remove one to add more.")
 
-        val partnerCount = usersRef.child(partnerId).child("partners").get().await().childrenCount
-        if (partnerCount >= MAX_PARTNERS) throw PartnerLimitException("Your partner has reached their $MAX_PARTNERS-partner limit.")
-
         // Bidirectional partner link — single atomic write so both sides appear together
         val linkUpdates = mapOf(
             "users/$myUid/partners/$partnerId" to true,
