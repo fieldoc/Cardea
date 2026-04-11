@@ -7,7 +7,7 @@
         "partners": {
           "$partnerId": {
             ".write": "auth.uid === $uid || auth.uid === $partnerId",
-            ".validate": "$partnerId !== auth.uid"
+            ".validate": "$partnerId !== $uid"
           }
         }
       }
