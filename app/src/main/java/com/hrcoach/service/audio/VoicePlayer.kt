@@ -53,19 +53,43 @@ class VoicePlayer(context: Context) {
                     override fun onStart(utteranceId: String?) {}
                     override fun onDone(utteranceId: String?) {
                         currentPriority = null
-                        utteranceDeferred?.complete(Unit)
-                        utteranceDeferred = null
-                        pendingBriefingDeferred?.complete(Unit)
-                        pendingBriefingDeferred = null
+                        when {
+                            utteranceId?.startsWith("briefing") == true -> {
+                                pendingBriefingDeferred?.complete(Unit)
+                                pendingBriefingDeferred = null
+                            }
+                            utteranceId?.startsWith("event_") == true -> {
+                                utteranceDeferred?.complete(Unit)
+                                utteranceDeferred = null
+                            }
+                            else -> {
+                                utteranceDeferred?.complete(Unit)
+                                utteranceDeferred = null
+                                pendingBriefingDeferred?.complete(Unit)
+                                pendingBriefingDeferred = null
+                            }
+                        }
                     }
 
                     @Deprecated("Deprecated in API")
                     override fun onError(utteranceId: String?) {
                         currentPriority = null
-                        utteranceDeferred?.complete(Unit)
-                        utteranceDeferred = null
-                        pendingBriefingDeferred?.complete(Unit)
-                        pendingBriefingDeferred = null
+                        when {
+                            utteranceId?.startsWith("briefing") == true -> {
+                                pendingBriefingDeferred?.complete(Unit)
+                                pendingBriefingDeferred = null
+                            }
+                            utteranceId?.startsWith("event_") == true -> {
+                                utteranceDeferred?.complete(Unit)
+                                utteranceDeferred = null
+                            }
+                            else -> {
+                                utteranceDeferred?.complete(Unit)
+                                utteranceDeferred = null
+                                pendingBriefingDeferred?.complete(Unit)
+                                pendingBriefingDeferred = null
+                            }
+                        }
                     }
                 })
 
@@ -311,9 +335,9 @@ class VoicePlayer(context: Context) {
         private fun formatDuration(seconds: Long): String {
             val minutes = seconds / 60
             return when {
-                minutes < 1 -> "$seconds second"
+                minutes < 1 -> if (seconds == 1L) "1 second" else "$seconds seconds"
                 minutes == 1L -> "1 minute"
-                else -> "$minutes minute"
+                else -> "$minutes minutes"
             }
         }
 
