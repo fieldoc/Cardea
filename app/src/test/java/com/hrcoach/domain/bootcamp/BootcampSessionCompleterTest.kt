@@ -139,6 +139,26 @@ class BootcampSessionCompleterTest {
         assertFalse("Skipped session should not be completable", result.completed)
     }
 
+    @Test
+    fun nextWeekSessionsReceivePresetIndices() = runTest {
+        val sessionWithPreset = makeSession(id = 10L, dayOfWeek = 2).copy(
+            sessionType = "TEMPO",
+            presetId = "aerobic_tempo",
+            presetIndex = 1
+        )
+        val dao = FakeBootcampDao(
+            activeEnrollment = makeEnrollment(runsPerWeek = 1),
+            sessionsByWeek = mutableMapOf(
+                1 to mutableListOf(sessionWithPreset)
+            )
+        )
+        val completer = makeCompleter(dao)
+        val result = completer.complete(workoutId = 100L, pendingSessionId = 10L)
+        assertTrue(result.weekComplete)
+        val nextWeekSessions = dao.getSessionsForWeek(1L, 2)
+        assertTrue("Next week sessions should be created", nextWeekSessions.isNotEmpty())
+    }
+
     private fun makeEnrollment(
         id: Long = 1L,
         runsPerWeek: Int = 2,
