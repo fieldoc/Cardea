@@ -78,7 +78,8 @@ class CoachingAudioManager(
                         if (currentSettings.voiceVerbosity == VoiceVerbosity.FULL &&
                             !guidanceText.isNullOrBlank()
                         ) {
-                            delay(1_800L)  // Wait for the ~1.5s MP3 to finish before TTS queues
+                            voiceCoach.awaitCompletion()  // wait for MP3 to finish
+                            delay(200L)                   // small breath gap between clips
                             ttsBriefingPlayer.speak(guidanceText)
                         }
                     }
@@ -117,10 +118,9 @@ class CoachingAudioManager(
     /**
      * Plays a short transition tone to confirm pause/resume to the runner.
      * Pause = two descending tones; Resume = two ascending tones.
-     * Skipped if verbosity is OFF.
+     * Always plays regardless of voice verbosity — tones use earconVolume which is independent.
      */
     fun playPauseFeedback(paused: Boolean) {
-        if (currentSettings.voiceVerbosity == VoiceVerbosity.OFF) return
         val volume = currentSettings.earconVolume.coerceIn(0, 100)
         scope.launch {
             val toneGenerator = try {

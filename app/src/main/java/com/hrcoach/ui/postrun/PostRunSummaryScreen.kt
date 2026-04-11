@@ -42,9 +42,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -59,6 +63,7 @@ import com.hrcoach.R
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.theme.HrCoachThemeTokens
 import kotlinx.coroutines.delay
@@ -183,7 +188,7 @@ fun PostRunSummaryScreen(
                         }
 
                         if (uiState.isHrrActive) {
-                            HrrCooldownCard()
+                            HrrCooldownCard(endTimeMs = uiState.workoutEndTimeMs)
                         }
 
                         uiState.bootcampProgressLabel
@@ -357,7 +362,20 @@ private fun SummaryStatCard(
 }
 
 @Composable
-private fun HrrCooldownCard() {
+private fun HrrCooldownCard(endTimeMs: Long) {
+    val totalCooldownSec = 120
+    var remainingSeconds by remember { mutableIntStateOf(totalCooldownSec) }
+
+    LaunchedEffect(endTimeMs) {
+        while (remainingSeconds > 0) {
+            val elapsed = ((System.currentTimeMillis() - endTimeMs) / 1000).toInt()
+            remainingSeconds = (totalCooldownSec - elapsed).coerceAtLeast(0)
+            delay(1_000L)
+        }
+    }
+
+    val isComplete = remainingSeconds <= 0
+
     GlassCard {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -370,18 +388,37 @@ private fun HrrCooldownCard() {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Calculating your 30-day recovery index\u2026",
+                    text = if (isComplete) "Recovery measurement complete"
+                           else "Calculating your 30-day recovery index\u2026",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Walk slowly for 120 seconds. This single measurement tells us more about your adaptation than any individual workout.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = HrCoachThemeTokens.subtleText
-                )
+                if (isComplete) {
+                    Text(
+                        text = "You can stop walking now.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HrCoachThemeTokens.subtleText
+                    )
+                } else {
+                    Text(
+                        text = "Walk slowly \u2014 ${remainingSeconds}s remaining",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HrCoachThemeTokens.subtleText
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { 1f - (remainingSeconds.toFloat() / totalCooldownSec) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = GlassBorder
+                    )
+                }
             }
         }
     }

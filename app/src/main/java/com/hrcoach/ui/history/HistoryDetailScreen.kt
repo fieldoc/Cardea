@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -44,13 +45,17 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapType
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
@@ -331,48 +336,37 @@ private fun EmptyMapState(
 private fun BoxScope.MapHeaderOverlay(hasWorkoutTarget: Boolean) {
     Box(
         modifier = Modifier
-            .padding(12.dp)
+            .padding(8.dp)
             .align(Alignment.TopStart)
-            .background(Color(0x99000000), RoundedCornerShape(10.dp))
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .background(Color(0xCC121212), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text = if (hasWorkoutTarget) "Target heatmap" else "Heart-rate route",
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTheme.colors.textPrimary
-            )
-            Text(
-                text = if (hasWorkoutTarget) "Green = on target. Warm colors = drift above plan."
-                       else "Colors shift from lower effort to higher across the route.",
-                style = MaterialTheme.typography.labelSmall,
-                color = CardeaTheme.colors.textSecondary
-            )
-        }
+        Text(
+            text = if (hasWorkoutTarget) "Target heatmap" else "Heart-rate route",
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = CardeaTheme.colors.textPrimary
+        )
     }
 }
 
 @Composable
 private fun BoxScope.MapLegendOverlay(hasWorkoutTarget: Boolean) {
-    Box(
+    Row(
         modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(12.dp)
-            .background(Color(0x99000000), RoundedCornerShape(10.dp))
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .align(Alignment.BottomEnd)
+            .padding(8.dp)
+            .background(Color(0xCC121212), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (hasWorkoutTarget) {
-                LegendChip("On target", ZoneGreen)
-                LegendChip("Caution", ZoneAmber)
-                LegendChip("Redline", ZoneRed)
-            } else {
-                LegendChip("Easy", ZoneGreen)
-                LegendChip("Moderate", ZoneAmber)
-                LegendChip("High", ZoneRed)
-            }
+        if (hasWorkoutTarget) {
+            LegendChip("On target", ZoneGreen)
+            LegendChip("Caution", ZoneAmber)
+            LegendChip("Redline", ZoneRed)
+        } else {
+            LegendChip("Easy", ZoneGreen)
+            LegendChip("Moderate", ZoneAmber)
+            LegendChip("High", ZoneRed)
         }
     }
 }
@@ -403,6 +397,12 @@ private fun HrHeatmapRouteMap(
     trackPoints: List<TrackPointEntity>,
     workoutConfig: WorkoutConfig?
 ) {
+    val context = LocalContext.current
+    val mapStyle = remember {
+        runCatching {
+            MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+        }.getOrNull()
+    }
     val cameraPositionState = rememberCameraPositionState()
     var isMapLoaded by remember { mutableStateOf(false) }
 
@@ -424,7 +424,11 @@ private fun HrHeatmapRouteMap(
         modifier = Modifier.fillMaxSize(),
         cameraPositionState = cameraPositionState,
         onMapLoaded = { isMapLoaded = true },
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false)
+        uiSettings = MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false),
+        properties = MapProperties(
+            mapStyleOptions = mapStyle,
+            mapType = MapType.NORMAL
+        )
     ) {
         for (i in 0 until trackPoints.lastIndex) {
             val p1 = trackPoints[i]
@@ -569,7 +573,9 @@ private fun MoreActionsCard(
             ) {
                 Text(
                     text = stringResource(R.string.button_view_progress),
-                    style = MaterialTheme.typography.labelLarge
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             TextButton(

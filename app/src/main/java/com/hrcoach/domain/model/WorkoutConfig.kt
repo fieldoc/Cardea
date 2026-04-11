@@ -63,7 +63,10 @@ data class WorkoutConfig(
 
     /** Total target duration in seconds, or null if not time-based. */
     fun totalDurationSeconds(): Long? {
-        if (mode == WorkoutMode.FREE_RUN) return null
+        // FREE_RUN bootcamp sessions carry plannedDurationMinutes as the time target
+        if (mode == WorkoutMode.FREE_RUN) {
+            return plannedDurationMinutes?.let { it.toLong() * 60 }
+        }
         val total = segments.mapNotNull { it.durationSeconds?.toLong() }.sum()
         return total.takeIf { it > 0 }
     }
