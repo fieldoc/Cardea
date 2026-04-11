@@ -111,4 +111,24 @@ class PresetLibraryTest {
         val ids = PresetLibrary.ALL.map { it.id }
         assertEquals("Duplicate preset IDs found", ids.size, ids.distinct().size)
     }
+
+    @Test
+    fun `aerobic_tempo has warm-up and cool-down segments`() {
+        val preset = PresetLibrary.ALL.first { it.id == "aerobic_tempo" }
+        val config = preset.buildConfig(190, 60)
+        assertEquals(WorkoutMode.DISTANCE_PROFILE, config.mode)
+        assertTrue("Should have at least 3 segments", config.segments.size >= 3)
+        assertTrue("First segment HR should be lower (warm-up)",
+            config.segments.first().targetHr < config.segments[1].targetHr)
+        assertEquals("Warm-up", config.segments.first().label)
+    }
+
+    @Test
+    fun `lactate_threshold has warm-up and cool-down segments`() {
+        val preset = PresetLibrary.ALL.first { it.id == "lactate_threshold" }
+        val config = preset.buildConfig(190, 60)
+        assertEquals(WorkoutMode.DISTANCE_PROFILE, config.mode)
+        assertTrue(config.segments.size >= 3)
+        assertEquals("Warm-up", config.segments.first().label)
+    }
 }

@@ -4,7 +4,8 @@ enum class TrainingPhase(val weeksRange: IntRange) {
     BASE(3..6),
     BUILD(4..6),
     PEAK(2..3),
-    TAPER(1..2);
+    TAPER(1..2),
+    EVERGREEN(4..4);
 
     val displayName: String get() = name.lowercase().replaceFirstChar { it.uppercase() }
 }
@@ -23,7 +24,7 @@ enum class BootcampGoal(
         neverPrescribeBelowMinutes = 10,
         minLongRunMinutes = 20,
         maxLongRunMinutes = 60,
-        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD)
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.EVERGREEN)
     ),
     RACE_5K(
         suggestedMinMinutes = 25,

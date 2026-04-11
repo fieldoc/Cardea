@@ -60,14 +60,21 @@ object PresetLibrary {
         id = "aerobic_tempo",
         name = "Aerobic Tempo",
         subtitle = "Comfortably hard",
-        description = "30 min at 84% HR reserve. Raises lactate threshold and improves running economy.",
+        description = "10-min warm-up \u2192 20-min tempo at 84% HR reserve \u2192 5-min cool-down.",
         category = PresetCategory.THRESHOLD,
-        durationLabel = "30 min",
+        durationLabel = "~35 min",
         intensityLabel = "Moderate",
         buildConfig = { maxHr, restHr ->
+            val tempoHr = karvonen(maxHr, restHr, 0.84f)
+            val warmupHr = karvonen(maxHr, restHr, 0.65f)
+            val cooldownHr = karvonen(maxHr, restHr, 0.60f)
             WorkoutConfig(
-                mode = WorkoutMode.STEADY_STATE,
-                steadyStateTargetHr = karvonen(maxHr, restHr, 0.84f),
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(durationSeconds = 600, targetHr = warmupHr, label = "Warm-up"),
+                    HrSegment(durationSeconds = 1200, targetHr = tempoHr, label = "Tempo"),
+                    HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
+                ),
                 bufferBpm = 4,
                 presetId = "aerobic_tempo"
             )
@@ -78,14 +85,21 @@ object PresetLibrary {
         id = "lactate_threshold",
         name = "Lactate Threshold",
         subtitle = "Threshold effort",
-        description = "25 min at 90% HR reserve. Targets the lactate threshold directly.",
+        description = "10-min warm-up \u2192 20-min at 90% HR reserve \u2192 5-min cool-down.",
         category = PresetCategory.THRESHOLD,
-        durationLabel = "25 min",
+        durationLabel = "~35 min",
         intensityLabel = "Hard",
         buildConfig = { maxHr, restHr ->
+            val thresholdHr = karvonen(maxHr, restHr, 0.90f)
+            val warmupHr = karvonen(maxHr, restHr, 0.65f)
+            val cooldownHr = karvonen(maxHr, restHr, 0.60f)
             WorkoutConfig(
-                mode = WorkoutMode.STEADY_STATE,
-                steadyStateTargetHr = karvonen(maxHr, restHr, 0.90f),
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(durationSeconds = 600, targetHr = warmupHr, label = "Warm-up"),
+                    HrSegment(durationSeconds = 1200, targetHr = thresholdHr, label = "Threshold"),
+                    HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
+                ),
                 bufferBpm = 3,
                 presetId = "lactate_threshold"
             )
