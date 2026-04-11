@@ -7,6 +7,7 @@ import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
+import com.hrcoach.domain.model.WorkoutMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,12 +23,12 @@ class CoachingAudioManager(
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val earconPlayer = EarconPlayer(context)
-    private val voiceCoach = VoiceCoach(context)
+    private val voicePlayer = VoicePlayer(context)
     private val vibrationManager = VibrationManager(context)
-    private val ttsBriefingPlayer = TtsBriefingPlayer(context)
-    private val startupSequencer = StartupSequencer()
+    private val startupSequencer = StartupSequencer(context)
     private val escalationTracker = EscalationTracker()
     private var currentSettings: AudioSettings = settings
+    private var currentWorkoutMode: WorkoutMode = WorkoutMode.STEADY_STATE
 
     init {
         applySettings(settings)
@@ -36,23 +37,27 @@ class CoachingAudioManager(
     fun applySettings(settings: AudioSettings) {
         currentSettings = settings
         earconPlayer.setVolume(settings.earconVolume)
-        voiceCoach.setVolume(settings.voiceVolume)
-        voiceCoach.verbosity = settings.voiceVerbosity
-        ttsBriefingPlayer.verbosity = settings.voiceVerbosity
+        voicePlayer.setVolume(settings.voiceVolume)
+        voicePlayer.verbosity = settings.voiceVerbosity
         vibrationManager.enabled = settings.enableVibration
     }
 
-    /**
-     * Plays the full startup sequence: 3-2-1-GO countdown beeps followed by
-     * a TTS voice briefing of the workout config. Suspends for the duration
-     * of the countdown (~4s); the TTS briefing plays asynchronously after.
-     */
-    suspend fun playStartSequence(config: WorkoutConfig) {
-        startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
-        ttsBriefingPlayer.speakBriefing(config)
+    fun setWorkoutMode(mode: WorkoutMode) {
+        currentWorkoutMode = mode
     }
 
-    fun fireEvent(event: CoachingEvent, guidanceText: String? = null) {
+    /**
+     * Plays the full startup sequence: TTS voice briefing of the workout config,
+     * followed by a 3-2-1-GO countdown WAV. Suspends for the full duration.
+     */
+    suspend fun playStartSequence(config: WorkoutConfig) {
+        currentWorkoutMode = config.mode
+        voicePlayer.speakBriefing(config)
+        delay(500L)
+        startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
+    }
+
+    fun fireEvent(event: CoachingEvent, guidanceText: String? = null, paceMinPerKm: Float? = null) {
         // Filter informational cues by individual toggles
         when (event) {
             CoachingEvent.HALFWAY -> if (currentSettings.enableHalfwayReminder == false) return
@@ -73,15 +78,7 @@ class CoachingAudioManager(
                 ) {
                     scope.launch {
                         delay(300L)
-                        voiceCoach.speak(event, guidanceText)
-                        // In FULL verbosity, follow the static clip with dynamic TTS guidance
-                        if (currentSettings.voiceVerbosity == VoiceVerbosity.FULL &&
-                            !guidanceText.isNullOrBlank()
-                        ) {
-                            voiceCoach.awaitCompletion()  // wait for MP3 to finish
-                            delay(200L)                   // small breath gap between clips
-                            ttsBriefingPlayer.speak(guidanceText)
-                        }
+                        voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode)
                     }
                 }
                 if (escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION) {
@@ -92,21 +89,12 @@ class CoachingAudioManager(
             CoachingEvent.RETURN_TO_ZONE -> {
                 escalationTracker.reset()
                 if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
-                voiceCoach.speak(event, guidanceText)
+                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode)
             }
 
             else -> {
                 if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
-                if (event == CoachingEvent.KM_SPLIT) {
-                    val km = guidanceText?.toIntOrNull()
-                    if (km != null && km > 50) {
-                        ttsBriefingPlayer.speak(TtsBriefingPlayer.kmAnnouncementText(km))
-                    } else {
-                        voiceCoach.speak(event, guidanceText)
-                    }
-                } else {
-                    voiceCoach.speak(event, guidanceText)
-                }
+                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm)
             }
         }
     }
@@ -151,8 +139,7 @@ class CoachingAudioManager(
     fun destroy() {
         scope.cancel()
         earconPlayer.destroy()
-        voiceCoach.destroy()
-        ttsBriefingPlayer.destroy()
+        voicePlayer.destroy()
         vibrationManager.destroy()
     }
 
