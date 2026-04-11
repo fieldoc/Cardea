@@ -1,5 +1,6 @@
 package com.hrcoach.domain.bootcamp
 
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 import org.junit.Assert.*
@@ -114,25 +115,25 @@ class PhaseEngineTest {
     fun `isRecoveryWeek triggers on 2-on-1-off pattern`() {
         // weekInPhase=2 (0-indexed) means the 3rd week — recovery week
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 2)
-        assertTrue(engine.isRecoveryWeek)
+        assertTrue(engine.isRecoveryWeek())
     }
 
     @Test
     fun `isRecoveryWeek is false for buildup weeks`() {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 0)
-        assertFalse(engine.isRecoveryWeek)
+        assertFalse(engine.isRecoveryWeek())
     }
 
     @Test
     fun `weeksUntilNextRecovery returns zero during recovery week`() {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 2)
-        assertEquals(0, engine.weeksUntilNextRecovery)
+        assertEquals(0, engine.weeksUntilNextRecovery())
     }
 
     @Test
     fun `weeksUntilNextRecovery counts down to next recovery week`() {
         val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 0)
-        assertEquals(2, engine.weeksUntilNextRecovery)
+        assertEquals(2, engine.weeksUntilNextRecovery())
     }
 
     @Test
@@ -172,5 +173,54 @@ class PhaseEngineTest {
         for (week in lookahead) {
             assertTrue(week.sessions.all { it.type == SessionType.EASY || it.type == SessionType.LONG })
         }
+    }
+
+    // --- Fitness-aware recovery week tests ---
+
+    @Test
+    fun `EASE_BACK triggers recovery every 2nd week`() {
+        // weekInPhase=1 → (1+1)%2==0 → true
+        val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 1)
+        assertTrue(engine.isRecoveryWeek(TuningDirection.EASE_BACK))
+        // weekInPhase=2 → (2+1)%2==1 → false
+        val engine2 = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 2)
+        assertFalse(engine2.isRecoveryWeek(TuningDirection.EASE_BACK))
+    }
+
+    @Test
+    fun `PUSH_HARDER defers recovery to every 4th week`() {
+        // weekInPhase=2 → (2+1)%4==3 → false (would be recovery under default)
+        val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 2)
+        assertFalse(engine.isRecoveryWeek(TuningDirection.PUSH_HARDER))
+        // weekInPhase=3 → (3+1)%4==0 → true
+        val engine2 = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 3)
+        assertTrue(engine2.isRecoveryWeek(TuningDirection.PUSH_HARDER))
+    }
+
+    @Test
+    fun `week 0 is never recovery regardless of tuning direction`() {
+        val engine = PhaseEngine(goal = BootcampGoal.MARATHON, phaseIndex = 1, weekInPhase = 0)
+        assertFalse(engine.isRecoveryWeek())
+        assertFalse(engine.isRecoveryWeek(TuningDirection.EASE_BACK))
+        assertFalse(engine.isRecoveryWeek(TuningDirection.PUSH_HARDER))
+    }
+
+    @Test
+    fun `planCurrentWeek applies recovery multiplier when tuning-aware`() {
+        // weekInPhase=1 is recovery for EASE_BACK (cadence=2) but not for HOLD (cadence=3)
+        val engine = PhaseEngine(
+            goal = BootcampGoal.RACE_5K,
+            phaseIndex = 1, // BUILD
+            weekInPhase = 1,
+            runsPerWeek = 3,
+            targetMinutes = 30
+        )
+        val holdSessions = engine.planCurrentWeek(tierIndex = 1, tuningDirection = TuningDirection.HOLD)
+        val easeBackSessions = engine.planCurrentWeek(tierIndex = 1, tuningDirection = TuningDirection.EASE_BACK)
+        val holdTotal = holdSessions.sumOf { it.minutes }
+        val easeTotal = easeBackSessions.sumOf { it.minutes }
+        // EASE_BACK at weekInPhase=1 triggers recovery (0.65x) + tuning factor (0.90x)
+        // HOLD at weekInPhase=1 is NOT recovery, just tuning factor 1.0x
+        assertTrue("EASE_BACK recovery should reduce total minutes", easeTotal < holdTotal)
     }
 }

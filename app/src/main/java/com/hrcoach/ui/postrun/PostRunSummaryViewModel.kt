@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.domain.engine.MetricsCalculator
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.util.formatDuration
@@ -59,7 +61,8 @@ class PostRunSummaryViewModel @Inject constructor(
     private val workoutMetricsRepository: WorkoutMetricsRepository,
     private val bootcampSessionCompleter: BootcampSessionCompleter,
     private val achievementEvaluator: AchievementEvaluator,
-    private val achievementDao: AchievementDao
+    private val achievementDao: AchievementDao,
+    private val adaptiveProfileRepository: AdaptiveProfileRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostRunSummaryUiState())
@@ -130,9 +133,12 @@ class PostRunSummaryViewModel @Inject constructor(
                 val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
                 if (pendingId != null) {
                     runCatching {
+                        val tuningDirection = adaptiveProfileRepository.getProfile().lastTuningDirection
+                            ?: TuningDirection.HOLD
                         val result = bootcampSessionCompleter.complete(
                             workoutId = id,
-                            pendingSessionId = pendingId
+                            pendingSessionId = pendingId,
+                            tuningDirection = tuningDirection
                         )
                         if (result.completed) {
                             _uiState.value = _uiState.value.copy(

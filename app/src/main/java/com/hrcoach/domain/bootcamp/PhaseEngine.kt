@@ -1,5 +1,6 @@
 package com.hrcoach.domain.bootcamp
 
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 
@@ -25,28 +26,39 @@ data class PhaseEngine(
             return sum + weekInPhase + 1
         }
 
-    val isRecoveryWeek: Boolean
-        get() = weekInPhase > 0 && (weekInPhase + 1) % 3 == 0
-
-    val weeksUntilNextRecovery: Int
-        get() {
-            if (isRecoveryWeek) return 0
-            var w = weekInPhase + 1
-            var steps = 0
-            while (steps < 10) {
-                if (w > 0 && (w + 1) % 3 == 0) return steps + 1
-                w++
-                steps++
-            }
-            return steps
+    fun isRecoveryWeek(tuningDirection: TuningDirection? = null): Boolean {
+        if (weekInPhase == 0) return false
+        val cadence = when (tuningDirection) {
+            TuningDirection.EASE_BACK -> 2
+            TuningDirection.PUSH_HARDER -> 4
+            TuningDirection.HOLD, null -> 3
         }
+        return (weekInPhase + 1) % cadence == 0
+    }
+
+    fun weeksUntilNextRecovery(tuningDirection: TuningDirection? = null): Int {
+        if (isRecoveryWeek(tuningDirection)) return 0
+        val cadence = when (tuningDirection) {
+            TuningDirection.EASE_BACK -> 2
+            TuningDirection.PUSH_HARDER -> 4
+            TuningDirection.HOLD, null -> 3
+        }
+        var w = weekInPhase + 1
+        var steps = 0
+        while (steps < 10) {
+            if (w > 0 && (w + 1) % cadence == 0) return steps + 1
+            w++
+            steps++
+        }
+        return steps
+    }
 
     fun planCurrentWeek(
         tierIndex: Int = 0,
         tuningDirection: com.hrcoach.domain.engine.TuningDirection = com.hrcoach.domain.engine.TuningDirection.HOLD,
         currentPresetIndices: Map<String, Int> = emptyMap()
     ): List<PlannedSession> {
-        val effectiveMinutes = if (isRecoveryWeek) {
+        val effectiveMinutes = if (isRecoveryWeek(tuningDirection)) {
             (targetMinutes * 0.65f).toInt()
         } else {
             targetMinutes
@@ -77,7 +89,11 @@ data class PhaseEngine(
         }
     }
 
-    fun lookaheadWeeks(count: Int, tierIndex: Int = 1): List<WeekLookahead> {
+    fun lookaheadWeeks(
+        count: Int,
+        tierIndex: Int = 1,
+        tuningDirection: TuningDirection? = null
+    ): List<WeekLookahead> {
         if (count <= 0) return emptyList()
         val result = mutableListOf<WeekLookahead>()
         var cursor = this
@@ -90,8 +106,11 @@ data class PhaseEngine(
             result.add(
                 WeekLookahead(
                     weekNumber = cursor.absoluteWeek,
-                    isRecovery = cursor.isRecoveryWeek,
-                    sessions = cursor.planCurrentWeek(tierIndex = tierIndex)
+                    isRecovery = cursor.isRecoveryWeek(tuningDirection),
+                    sessions = cursor.planCurrentWeek(
+                        tierIndex = tierIndex,
+                        tuningDirection = tuningDirection ?: TuningDirection.HOLD
+                    )
                 )
             )
         }

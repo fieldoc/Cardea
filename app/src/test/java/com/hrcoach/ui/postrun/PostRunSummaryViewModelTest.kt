@@ -3,11 +3,14 @@ package com.hrcoach.ui.postrun
 import androidx.lifecycle.SavedStateHandle
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
+import com.hrcoach.domain.engine.TuningDirection
+import com.hrcoach.domain.model.AdaptiveProfile
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.service.WorkoutSnapshot
 import io.mockk.coEvery
@@ -40,6 +43,7 @@ class PostRunSummaryViewModelTest {
     private val achievementEvaluator: AchievementEvaluator = mockk(relaxed = true)
     private val achievementDao: AchievementDao = mockk(relaxed = true)
     private val bootcampRepository: BootcampRepository = mockk(relaxed = true)
+    private val adaptiveProfileRepository: AdaptiveProfileRepository = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -86,7 +90,8 @@ class PostRunSummaryViewModelTest {
             workoutMetricsRepository = workoutMetricsRepository,
             bootcampSessionCompleter = bootcampSessionCompleter,
             achievementEvaluator = achievementEvaluator,
-            achievementDao = achievementDao
+            achievementDao = achievementDao,
+            adaptiveProfileRepository = adaptiveProfileRepository
         )
     }
 
@@ -224,6 +229,34 @@ class PostRunSummaryViewModelTest {
         advanceUntilIdle()
 
         assertNull(WorkoutState.snapshot.value.pendingBootcampSessionId)
+    }
+
+    @Test
+    fun `tuningDirection from adaptive profile is forwarded to bootcamp completer`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        val profile = AdaptiveProfile(lastTuningDirection = TuningDirection.PUSH_HARDER)
+        coEvery { adaptiveProfileRepository.getProfile() } returns profile
+        coEvery { bootcampSessionCompleter.complete(1L, 42L, TuningDirection.PUSH_HARDER) } returns
+            BootcampSessionCompleter.CompletionResult(completed = true)
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { bootcampSessionCompleter.complete(1L, 42L, TuningDirection.PUSH_HARDER) }
+    }
+
+    @Test
+    fun `tuningDirection defaults to HOLD when adaptive profile has no direction`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        val profile = AdaptiveProfile(lastTuningDirection = null)
+        coEvery { adaptiveProfileRepository.getProfile() } returns profile
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { bootcampSessionCompleter.complete(1L, 42L, TuningDirection.HOLD) }
     }
 
     @Test
