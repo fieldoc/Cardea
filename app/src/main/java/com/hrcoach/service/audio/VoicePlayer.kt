@@ -26,17 +26,17 @@ import java.util.Locale
 class VoicePlayer(context: Context) {
 
     private var tts: TextToSpeech? = null
-    private var ttsReady = false
+    @Volatile private var ttsReady = false
     private var pendingBriefingConfig: WorkoutConfig? = null
-    private var pendingBriefingDeferred: CompletableDeferred<Unit>? = null
+    @Volatile private var pendingBriefingDeferred: CompletableDeferred<Unit>? = null
 
     var verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL
 
     /** Tracks the priority of the currently speaking utterance. */
-    private var currentPriority: VoiceEventPriority? = null
+    @Volatile private var currentPriority: VoiceEventPriority? = null
 
     /** Deferred that completes when the current utterance finishes. */
-    private var utteranceDeferred: CompletableDeferred<Unit>? = null
+    @Volatile private var utteranceDeferred: CompletableDeferred<Unit>? = null
 
     /** TTS per-utterance volume scalar (0.0–1.0). */
     private var volumeScalar: Float = 0.8f
@@ -358,7 +358,7 @@ class VoicePlayer(context: Context) {
             return when {
                 minutes < 1 -> if (seconds == 1L) "1 second" else "$seconds seconds"
                 minutes == 1L -> "1 minute"
-                else -> "$minutes minute"
+                else -> "$minutes minutes"
             }
         }
 
