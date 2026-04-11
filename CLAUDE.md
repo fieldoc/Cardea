@@ -150,11 +150,20 @@ Never read `WorkoutState.snapshot.value` in the same function that called `Worko
 
 Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on every drag frame (hundreds of times). Use `onValueChangeFinished` for persistence; update in-memory `StateFlow` in `onValueChange` for smooth UI.
 
+## Recent Architectural Changes (2026-04-11)
+
+- **`PhaseEngine.isRecoveryWeek()`** is now a function (not a property) accepting optional `TuningDirection`. Cadence: EASE_BACK=2w, HOLD/null=3w, PUSH_HARDER=4w. `weeksUntilNextRecovery()` and `lookaheadWeeks()` also accept `tuningDirection`. All three call sites in `BootcampViewModel` pass `fitnessSignals.tuningDirection`.
+- **`FitnessSignalEvaluator.efTrend`** uses least-squares regression slope scaled to total span (not endpoint delta). More robust against single-session outliers. Threshold (0.04) is unchanged.
+- **`PostRunSummaryViewModel`** now injects `AdaptiveProfileRepository` and forwards `lastTuningDirection` to `bootcampSessionCompleter.complete()`. Previously defaulted to HOLD.
+- **HRmax fallback** in `WorkoutForegroundService` is now `220 - age` when age is known (via `userProfileRepository.getAge()`), falling back to 180 only when age is also null.
+
 ## Adaptive Engine Invariants
 
 - **`AdaptivePaceController` is per-workout, not a singleton** — new instance created each workout; state (`sessionBuckets`, settle lists, `lastProjectedHr`) resets.
 - **`hrSlopeBpmPerMin` clamp** — `instSlope` is clamped to `±30 BPM/min` before EMA blend. Do not widen; BLE at 1 Hz with 3 s minimum window can produce 800 BPM/min from a single glitch.
 - **TRIMP formula is non-standard** — uses `duration * avgHR * (avgHR/HRmax)^2`, not Bannister's exponential. Consistent across the codebase; don't "fix" it to match literature values.
+- **Three `bootcampSessionCompleter.complete()` call sites:** (1) PostRunSummaryViewModel (reads lastTuningDirection from AdaptiveProfileRepository), (2) WorkoutForegroundService sim path (reads from saved profile), (3) BootcampViewModel.onWorkoutCompleted (reads from UI state). All three pass tuningDirection.
+- **`efTrend` regression math** — slope is `(n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX)`, then multiplied by `(n-1)` to give total estimated change across the window. Comparable to the old endpoint delta and the existing 0.04 threshold.
 
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
