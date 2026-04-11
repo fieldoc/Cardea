@@ -373,15 +373,18 @@ class WorkoutForegroundService : LifecycleService() {
 
         // Auto-pause detection: run before elapsed-time math so state is fresh this tick
         // Skip during grace period after start so runner can pocket phone without "Auto-Paused"
+        var isAutoPaused = WorkoutState.snapshot.value.isAutoPaused  // read BEFORE potential update
         if (sessionAutoPauseEnabled && nowMs >= autoPauseGraceUntilMs) {
             when (autoPauseDetector?.update(tick.speed, nowMs)) {
                 AutoPauseEvent.PAUSED -> {
+                    isAutoPaused = true  // use local var immediately — no StateFlow lag
                     autoPauseStartMs = nowMs
                     locationSource?.setMoving(false)
                     WorkoutState.update { it.copy(isAutoPaused = true) }
                     coachingAudioManager?.playPauseFeedback(paused = true)
                 }
                 AutoPauseEvent.RESUMED -> {
+                    isAutoPaused = false  // use local var immediately
                     totalAutoPausedMs += nowMs - autoPauseStartMs
                     autoPauseStartMs = 0L
                     locationSource?.setMoving(true)
@@ -391,8 +394,6 @@ class WorkoutForegroundService : LifecycleService() {
                 else -> Unit
             }
         }
-
-        val isAutoPaused = WorkoutState.snapshot.value.isAutoPaused
         val currentAutoPauseMs = if (isAutoPaused && autoPauseStartMs > 0L) nowMs - autoPauseStartMs else 0L
         val elapsedSeconds = if (workoutStartMs > 0L) {
             ((nowMs - workoutStartMs - totalPausedMs - totalAutoPausedMs - currentAutoPauseMs).coerceAtLeast(0L)) / 1000L
