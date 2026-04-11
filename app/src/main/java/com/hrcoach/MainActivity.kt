@@ -1,9 +1,14 @@
 package com.hrcoach
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -15,6 +20,7 @@ import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.ui.navigation.HrCoachNavGraph
 import com.hrcoach.ui.theme.HrCoachTheme
 import com.hrcoach.util.MapsApiKeyRuntime
+import com.hrcoach.util.PermissionGate
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
@@ -30,6 +36,32 @@ class MainActivity : ComponentActivity() {
 
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
 
+    private val permissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val denied = results.filterValues { !it }.keys
+        if (denied.isNotEmpty()) {
+            val permanentlyDenied = denied.any { perm ->
+                !shouldShowRequestPermissionRationale(perm)
+            }
+            if (permanentlyDenied) {
+                Toast.makeText(
+                    this,
+                    "Permissions required for workouts. Tap to open Settings.",
+                    Toast.LENGTH_LONG
+                ).show()
+                startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", packageName, null)
+                    }
+                )
+            } else {
+                val names = denied.joinToString { PermissionGate.describePermission(it) }
+                Toast.makeText(this, "Denied: $names", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
@@ -38,9 +70,6 @@ class MainActivity : ComponentActivity() {
 
         val mapsApiKey = mapsSettingsRepository.getMapsApiKey()
         MapsApiKeyRuntime.applyIfPresent(this, mapsApiKey)
-
-        // Permissions are now requested contextually during onboarding flow.
-        // SetupScreen safety-net permission check remains as fallback.
 
         setContent {
             val themeMode by _themeMode.collectAsStateWithLifecycle()
@@ -59,6 +88,11 @@ class MainActivity : ComponentActivity() {
                     currentThemeMode = themeMode
                 )
             }
+        }
+
+        val missing = PermissionGate.missingRuntimePermissions(this)
+        if (missing.isNotEmpty()) {
+            permissionLauncher.launch(missing.toTypedArray())
         }
     }
 }
