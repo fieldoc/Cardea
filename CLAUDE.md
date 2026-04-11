@@ -70,7 +70,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - `domain/model/` — Domain models: `WorkoutConfig`, `WorkoutMode`, `AdaptiveProfile`, `ZoneStatus`
 - `domain/engine/` — `ZoneEngine` (static zone eval), `AdaptivePaceController` (predictive HR-pace modeling)
 - `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `AlertManager`, `WorkoutState`
-- `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoiceCoach`, `TtsBriefingPlayer`, `StartupSequencer`, `VoiceEventPriority`
+- `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoicePlayer`, `StartupSequencer`, `VoiceEventPriority`
 - `ui/home/` — Home dashboard screen + ViewModel (new)
 - `ui/setup/` — Workout setup screen + ViewModel (config, BLE scanning); maps to "Workout" nav tab
 - `ui/workout/` — Active workout display
@@ -125,16 +125,16 @@ Five-tab bottom bar: **Home**, **Workout** (setup), **History**, **Progress**, *
 
 ## Audio Pipeline
 
-Four-component layered audio system in `service/audio/`:
+Three-component layered audio system in `service/audio/`:
 
 - **`EarconPlayer`** — SoundPool, plays short WAV clips for zone alerts. `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE`.
-- **`VoiceCoach`** — MediaPlayer, plays pre-recorded voice clips. Priority-gated via `VoiceEventPriority` (CRITICAL > NORMAL > INFORMATIONAL) — lower-priority events cannot interrupt higher-priority playback. KM_SPLIT clips exist for km 1–50 only; km >50 routes to TTS.
-- **`TtsBriefingPlayer`** — TextToSpeech for workout briefings and ad-hoc text. Buffers via `pendingAdHocText` / `pendingBriefingConfig` if TTS engine isn't ready yet.
-- **`StartupSequencer`** — ToneGenerator countdown sequence before workout starts.
-- **`CoachingAudioManager`** — Orchestrator. `VoiceVerbosity.OFF` gates ALL audio (earcons + voice + TTS). `shouldPlayEarcon(verbosity)` is the single gate for earcon playback.
+- **`VoicePlayer`** — Android TTS for all spoken coaching: workout briefings, zone alerts (using adaptive guidance text), km splits, and informational cues. Priority-gated via `VoiceEventPriority` (CRITICAL > NORMAL > INFORMATIONAL). Uses `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` to layer over music.
+- **`StartupSequencer`** — MediaPlayer playing `countdown_321_go.wav` (custom marimba 3-2-1-GO). Updates `WorkoutState.countdownSecondsRemaining` for UI countdown display.
+- **`CoachingAudioManager`** — Orchestrator. Startup sequence: TTS briefing (await) → countdown WAV (await) → return (timer starts). `VoiceVerbosity.OFF` gates ALL audio (earcons + voice). `shouldPlayEarcon(verbosity)` is the single gate for earcon playback.
 - **Pause/resume tones are exempt from verbosity gating** — `playPauseFeedback()` always plays regardless of `VoiceVerbosity` setting. These are safety-critical (runner needs to know autopause activated/deactivated).
-- **VoiceCoach `awaitCompletion()`** — TTS must call `voiceCoach.awaitCompletion()` before speaking to prevent overlapping playback. Uses `CompletableDeferred` internally. Never use hardcoded delays.
 - **`AudioSettings`** — `earconVolume` and `voiceVolume` are independent (both 0–100 int percent).
+- **Verbosity levels:** OFF (silent), MINIMAL (earcons + voice for critical/normal events only), FULL (earcons + voice for all events including informational).
+- **KM splits:** Simple "Kilometer N" for STEADY_STATE/DISTANCE_PROFILE. Rich "Kilometer N. Pace: X minutes Y." for FREE_RUN.
 
 ## WorkoutState / Same-Tick Race Pattern
 

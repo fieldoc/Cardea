@@ -496,7 +496,8 @@ class WorkoutForegroundService : LifecycleService() {
                 guidance = guidance,
                 nowMs = nowMs,
                 emitEvent = { event, eventGuidance ->
-                    coachingAudioManager?.fireEvent(event, eventGuidance)
+                    val pace = adaptiveResult?.currentPaceMinPerKm
+                    coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
                 }
             )
             alertPolicy.handle(
@@ -507,7 +508,8 @@ class WorkoutForegroundService : LifecycleService() {
                 guidanceText = guidance,
                 onResetEscalation = { coachingAudioManager?.resetEscalation() },
                 onAlert = { event, eventGuidance ->
-                    coachingAudioManager?.fireEvent(event, eventGuidance)
+                    val pace = adaptiveResult?.currentPaceMinPerKm
+                    coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
                 }
             )
         }
