@@ -30,6 +30,10 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **Worktree builds:** `local.properties` is gitignored and won't exist in worktrees. Copy from the main repo: `cp ../../local.properties .` (or from project root).
 
+**Safe APK reinstall:** Use `adb install -r <apk-path>` — preserves Room DB and DataStore. Do NOT use `mobile_install_app` (unknown whether it does a replace or full uninstall).
+
+**mobile-mcp taps:** Always call `mobile_list_elements_on_screen` to get exact device screen coordinates before tapping. Screenshot pixels ≠ screen coordinates (device is 1080×2340).
+
 **Worktree build path-length issue (Windows):** KSP/AAPT can fail in worktrees due to Windows path-length limits on deeply-nested build directories (`.claude/worktrees/<name>/app/build/...`). Workaround: run tests from the main repo after copying changed files, or use `subst` to shorten the path.
 
 **Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
@@ -208,6 +212,12 @@ Registered in `.mcp.json`. **Requires a GitHub Personal Access Token (PAT)** —
 - Creating issues from discovered bugs
 
 See `.claude/rules/github-mcp.md` for tool reference.
+
+### Firebase (Realtime Database rules & deploy)
+
+**Deploy:** `firebase deploy --only database --project cardea-1c8fc` — no `.firebaserc` exists, always pass `--project`. Project ID also in `app/google-services.json`.
+
+**Security rules — validate scope:** Use `$wildcardVar !== $uid` (not `$wildcardVar !== auth.uid`) when the constraint is about node identity. `auth.uid` breaks bidirectional writes where the caller writes their own UID as a key under another user's node.
 
 ### Figma MCP (design → code, code → design)
 
