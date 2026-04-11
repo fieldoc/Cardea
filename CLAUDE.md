@@ -34,7 +34,7 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **mobile-mcp taps:** Always call `mobile_list_elements_on_screen` to get exact device screen coordinates before tapping. Screenshot pixels ≠ screen coordinates (device is 1080×2340).
 
-**Worktree build path-length issue (Windows):** KSP/AAPT can fail in worktrees due to Windows path-length limits on deeply-nested build directories (`.claude/worktrees/<name>/app/build/...`). Workaround: run tests from the main repo after copying changed files, or use `subst` to shorten the path.
+**Worktree build path-length issue (Windows):** KSP/AAPT can fail in worktrees due to Windows path-length limits on deeply-nested build directories (`.claude/worktrees/<name>/app/build/...`). Workaround: run tests from the main repo after copying changed files. **Do NOT use `subst` to map a drive letter** — the compiler writes back through the mapped path and silently reverts edits made via the original path. Prefer the copy-to-main-repo approach.
 
 **Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
 
@@ -152,10 +152,19 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 
 ## Recent Architectural Changes (2026-04-11)
 
-- **`PhaseEngine.isRecoveryWeek()`** is now a function (not a property) accepting optional `TuningDirection`. Cadence: EASE_BACK=2w, HOLD/null=3w, PUSH_HARDER=4w. `weeksUntilNextRecovery()` and `lookaheadWeeks()` also accept `tuningDirection`. All three call sites in `BootcampViewModel` pass `fitnessSignals.tuningDirection`.
+- **`PhaseEngine.isRecoveryWeek()`** accepts optional `TuningDirection`. Cadence: EASE_BACK=2w, HOLD/null=3w, PUSH_HARDER=4w. `weeksUntilNextRecovery()` simulates phase transitions (walks through `advancePhase()` boundaries); for EVERGREEN it computes distance to week D of the 4-week micro-cycle. All call sites in `BootcampViewModel` pass `fitnessSignals.tuningDirection`.
 - **`FitnessSignalEvaluator.efTrend`** uses least-squares regression slope scaled to total span (not endpoint delta). More robust against single-session outliers. Threshold (0.04) is unchanged.
 - **`PostRunSummaryViewModel`** now injects `AdaptiveProfileRepository` and forwards `lastTuningDirection` to `bootcampSessionCompleter.complete()`. Previously defaulted to HOLD.
 - **HRmax fallback** in `WorkoutForegroundService` is now `220 - age` when age is known (via `userProfileRepository.getAge()`), falling back to 180 only when age is also null.
+
+## Bootcamp Scheduling Architecture
+
+- **`TrainingPhase` enum:** BASE, BUILD, PEAK, TAPER, EVERGREEN. Race goals use BASE→BUILD→PEAK→TAPER; CARDIO_HEALTH uses BASE→EVERGREEN.
+- **EVERGREEN phase:** Perpetual 4-week micro-cycle (A: Tempo, B: Strides, C: Intervals/Hills tier 2+, D: Recovery). Wraps to itself on `advancePhase()` — never graduates.
+- **`SessionSelector.weekSessions()`** accepts `weekInPhase`, `absoluteWeek`, and `isRecoveryWeek` params (used by EVERGREEN rotation and tier-dependent recovery composition).
+- **Interval variety:** PEAK and EVERGREEN alternate presets based on `absoluteWeek % 2` (norwegian_4x4/hill_repeats for race goals; hill_repeats/hiit_30_30 for EVERGREEN).
+- **Recovery week composition:** Tier 0-1 get all-easy weeks; Tier 2+ get downgraded quality (interval→tempo, tempo→strides). EVERGREEN handles its own recovery on week D.
+- **Tempo presets** (`aerobic_tempo`, `lactate_threshold`) use `DISTANCE_PROFILE` with 10-min warm-up, 20-min main block, 5-min cool-down segments.
 
 ## Adaptive Engine Invariants
 
