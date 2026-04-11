@@ -48,6 +48,7 @@ import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
@@ -183,7 +184,7 @@ private fun SectionGoal(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .then(
-                            if (isSelected) Modifier.background(CardeaGradient)
+                            if (isSelected) Modifier.background(CardeaCtaGradient)
                             else Modifier.border(
                                 1.dp,
                                 CardeaTheme.colors.glassBorder,
@@ -308,7 +309,7 @@ private fun SectionAbility(
                         modifier = Modifier
                             .clip(RoundedCornerShape(14.dp))
                             .then(
-                                if (isSelected) Modifier.background(CardeaGradient)
+                                if (isSelected) Modifier.background(CardeaCtaGradient)
                                 else Modifier.border(
                                     1.dp,
                                     CardeaTheme.colors.glassBorder,
@@ -358,7 +359,7 @@ private fun SectionRunsPerWeek(
                         .weight(1f)
                         .clip(RoundedCornerShape(14.dp))
                         .then(
-                            if (isSelected) Modifier.background(CardeaGradient)
+                            if (isSelected) Modifier.background(CardeaCtaGradient)
                             else Modifier.border(
                                 1.dp,
                                 CardeaTheme.colors.glassBorder,
@@ -444,7 +445,7 @@ private fun SectionDayPicker(
                         .then(
                             when {
                                 isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
-                                isSelected -> Modifier.background(CardeaGradient)
+                                isSelected -> Modifier.background(CardeaCtaGradient)
                                 else -> Modifier.border(
                                     1.dp,
                                     CardeaTheme.colors.glassBorder,
@@ -515,7 +516,7 @@ private fun SetupDayLegendChip(label: String, level: DaySelectionLevel) {
                 .then(
                     when (level) {
                         DaySelectionLevel.AVAILABLE,
-                        DaySelectionLevel.LONG_RUN_BIAS -> Modifier.background(CardeaGradient)
+                        DaySelectionLevel.LONG_RUN_BIAS -> Modifier.background(CardeaCtaGradient)
                         DaySelectionLevel.BLACKOUT -> Modifier
                             .background(CardeaTheme.colors.blackoutBg)
                             .border(1.dp, CardeaTheme.colors.blackoutBorder, CircleShape)

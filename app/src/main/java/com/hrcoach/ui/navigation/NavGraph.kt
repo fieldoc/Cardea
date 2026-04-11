@@ -61,6 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.service.WorkoutForegroundService
 import com.hrcoach.service.WorkoutState
+import com.hrcoach.service.simulation.SimulationController
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import com.hrcoach.ui.account.AccountScreen
@@ -359,7 +360,7 @@ fun HrCoachNavGraph(
                 SetupScreen(
                     isWideLayout = isWideLayout,
                     onStartWorkout = { configJson, deviceAddress ->
-                        if (!PermissionGate.hasAllRuntimePermissions(context)) {
+                        if (!PermissionGate.hasAllRuntimePermissions(context) && !SimulationController.isActive) {
                             Toast.makeText(
                                 context,
                                 "Grant required permissions before starting workout.",
@@ -503,7 +504,7 @@ fun HrCoachNavGraph(
                     navController.previousBackStackEntry?.destination?.route == Routes.HOME
                 BootcampScreen(
                     onStartWorkout = { configJson, deviceAddress ->
-                        if (!PermissionGate.hasAllRuntimePermissions(context)) {
+                        if (!PermissionGate.hasAllRuntimePermissions(context) && !SimulationController.isActive) {
                             Toast.makeText(
                                 context,
                                 "Grant required permissions before starting workout.",

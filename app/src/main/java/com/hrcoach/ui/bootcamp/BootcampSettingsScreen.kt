@@ -283,7 +283,7 @@ fun BootcampSettingsScreen(
                                     .height(40.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .then(
-                                        if (isSelected) Modifier.background(CardeaGradient)
+                                        if (isSelected) Modifier.background(CardeaCtaGradient)
                                         else Modifier.background(CardeaTheme.colors.glassHighlight)
                                     )
                                     .clickable { viewModel.setRunsPerWeek(runs) },
@@ -533,7 +533,7 @@ private fun GoalSelector(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
+                    .then(if (isSelected) Modifier.background(CardeaCtaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
                     .clickable { onGoalSelected(goal) }
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
@@ -637,7 +637,7 @@ private fun TierSelector(
                     .weight(1f)
                     .height(42.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .then(if (isSelected) Modifier.background(CardeaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
+                    .then(if (isSelected) Modifier.background(CardeaCtaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
                     .clickable { onTierSelected(index) },
                 contentAlignment = Alignment.Center
             ) {
@@ -727,7 +727,7 @@ private fun DayChipRow(
                     .then(
                         when {
                             isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
-                            isSelected -> Modifier.background(CardeaGradient)
+                            isSelected -> Modifier.background(CardeaCtaGradient)
                             else       -> Modifier
                         }
                     )
@@ -794,7 +794,7 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
             .then(
                 when {
                     isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
-                    isSelected -> Modifier.background(CardeaGradient)
+                    isSelected -> Modifier.background(CardeaCtaGradient)
                     else       -> Modifier
                 }
             )

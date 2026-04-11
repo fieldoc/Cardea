@@ -17,14 +17,24 @@ class WorkoutNotificationHelper(
     private val channelId: String,
     private val notificationId: Int
 ) {
+    @Volatile
+    private var stopped = false
+
     fun startForeground(service: Service, text: String) {
+        stopped = false
         createChannelIfNeeded()
         service.startForeground(notificationId, buildNotification(text))
     }
 
     fun update(text: String) {
+        if (stopped) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, buildNotification(text))
+    }
+
+    /** Call before stopForeground to prevent late notification updates from re-posting. */
+    fun stop() {
+        stopped = true
     }
 
     private fun createChannelIfNeeded() {

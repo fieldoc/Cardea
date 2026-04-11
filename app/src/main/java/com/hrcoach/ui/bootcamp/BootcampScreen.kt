@@ -1059,7 +1059,7 @@ private fun OnboardingStep3Frequency(
                         .height(48.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .then(
-                            if (isSelected) Modifier.background(CardeaGradient)
+                            if (isSelected) Modifier.background(CardeaCtaGradient)
                             else Modifier.background(CardeaTheme.colors.glassHighlight)
                         )
                         .clickable { onRunsPerWeekChanged(runs) },
@@ -1478,7 +1478,7 @@ private fun PreferredDaysStrip(
                         .size(18.dp)
                         .clip(CircleShape)
                         .then(
-                            if (enabled) Modifier.background(CardeaGradient)
+                            if (enabled) Modifier.background(CardeaCtaGradient)
                             else Modifier.background(CardeaTheme.colors.glassHighlight)
                         ),
                     contentAlignment = Alignment.Center
@@ -2590,7 +2590,7 @@ private fun DayChipRow(
                     .then(
                         when {
                             isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
-                            isSelected -> Modifier.background(CardeaGradient)
+                            isSelected -> Modifier.background(CardeaCtaGradient)
                             else       -> Modifier.border(1.dp, CardeaTheme.colors.glassBorder, CircleShape)
                         }
                     )
@@ -2648,7 +2648,7 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
                 .then(
                     when (level) {
                         DaySelectionLevel.AVAILABLE,
-                        DaySelectionLevel.LONG_RUN_BIAS -> Modifier.background(CardeaGradient)
+                        DaySelectionLevel.LONG_RUN_BIAS -> Modifier.background(CardeaCtaGradient)
                         DaySelectionLevel.BLACKOUT      -> Modifier
                             .background(CardeaTheme.colors.blackoutBg)
                             .border(1.dp, CardeaTheme.colors.blackoutBorder, CircleShape)
@@ -2944,7 +2944,7 @@ private fun MaxHrGateSheet(
                     .fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(CardeaGradient)
+                    .background(CardeaCtaGradient)
                     .clickable { onConfirm() },
                 contentAlignment = Alignment.Center
             ) {
