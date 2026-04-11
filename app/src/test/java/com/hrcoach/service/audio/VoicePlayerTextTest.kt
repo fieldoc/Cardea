@@ -105,9 +105,9 @@ class VoicePlayerKmSplitTextTest {
     }
 
     @Test
-    fun `FREE_RUN with pace includes pace`() {
+    fun `FREE_RUN with pace includes pace with seconds unit`() {
         assertEquals(
-            "Kilometer 5. Pace: 5 minutes 40.",
+            "Kilometer 5. Pace: 5 minutes 40 seconds.",
             VoicePlayer.kmSplitText(5, WorkoutMode.FREE_RUN, 5.67f)
         )
     }
@@ -121,9 +121,9 @@ class VoicePlayerKmSplitTextTest {
     }
 
     @Test
-    fun `exact minutes pace formats correctly`() {
+    fun `exact minutes pace omits zero seconds`() {
         assertEquals(
-            "Kilometer 1. Pace: 6 minutes 0.",
+            "Kilometer 1. Pace: 6 minutes.",
             VoicePlayer.kmSplitText(1, WorkoutMode.FREE_RUN, 6.0f)
         )
     }

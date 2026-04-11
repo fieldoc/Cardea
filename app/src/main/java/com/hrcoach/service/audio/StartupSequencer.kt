@@ -6,8 +6,8 @@ import android.media.MediaPlayer
 import com.hrcoach.R
 import com.hrcoach.service.WorkoutState
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -54,11 +54,18 @@ class StartupSequencer(private val context: Context) {
             it.release()
             completion.complete(Unit)
         }
+        player.setOnErrorListener { mp, _, _ ->
+            mp.release()
+            completion.complete(Unit)
+            true
+        }
 
         player.start()
 
-        // Update WorkoutState countdown at ~1s intervals while audio plays
+        // coroutineScope ensures both the countdown UI updates and the audio
+        // completion run concurrently as sibling coroutines.
         coroutineScope {
+            // Launch countdown UI updates as a child — runs concurrently with audio
             launch {
                 // 3...
                 WorkoutState.update { it.copy(countdownSecondsRemaining = 3) }
@@ -75,12 +82,16 @@ class StartupSequencer(private val context: Context) {
                 // GO!
                 WorkoutState.update { it.copy(countdownSecondsRemaining = 0) }
             }
+
+            // Wait for the MediaPlayer to finish (concurrent with the countdown updates)
+            try {
+                completion.await()
+            } finally {
+                // If cancelled, release player if still alive
+                try { player.release() } catch (_: Exception) {}
+                clearCountdownState()
+            }
         }
-
-        // Wait for the MediaPlayer to finish
-        completion.await()
-
-        clearCountdownState()
     }
 
     private fun clearCountdownState() {

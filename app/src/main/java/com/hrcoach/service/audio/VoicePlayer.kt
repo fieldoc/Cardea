@@ -38,6 +38,9 @@ class VoicePlayer(context: Context) {
     /** Deferred that completes when the current utterance finishes. */
     private var utteranceDeferred: CompletableDeferred<Unit>? = null
 
+    /** TTS per-utterance volume scalar (0.0–1.0). */
+    private var volumeScalar: Float = 0.8f
+
     init {
         tts = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
@@ -52,44 +55,12 @@ class VoicePlayer(context: Context) {
                 tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
                     override fun onDone(utteranceId: String?) {
-                        currentPriority = null
-                        when {
-                            utteranceId?.startsWith("briefing") == true -> {
-                                pendingBriefingDeferred?.complete(Unit)
-                                pendingBriefingDeferred = null
-                            }
-                            utteranceId?.startsWith("event_") == true -> {
-                                utteranceDeferred?.complete(Unit)
-                                utteranceDeferred = null
-                            }
-                            else -> {
-                                utteranceDeferred?.complete(Unit)
-                                utteranceDeferred = null
-                                pendingBriefingDeferred?.complete(Unit)
-                                pendingBriefingDeferred = null
-                            }
-                        }
+                        handleUtteranceEnd(utteranceId)
                     }
 
                     @Deprecated("Deprecated in API")
                     override fun onError(utteranceId: String?) {
-                        currentPriority = null
-                        when {
-                            utteranceId?.startsWith("briefing") == true -> {
-                                pendingBriefingDeferred?.complete(Unit)
-                                pendingBriefingDeferred = null
-                            }
-                            utteranceId?.startsWith("event_") == true -> {
-                                utteranceDeferred?.complete(Unit)
-                                utteranceDeferred = null
-                            }
-                            else -> {
-                                utteranceDeferred?.complete(Unit)
-                                utteranceDeferred = null
-                                pendingBriefingDeferred?.complete(Unit)
-                                pendingBriefingDeferred = null
-                            }
-                        }
+                        handleUtteranceEnd(utteranceId)
                     }
                 })
 
@@ -97,7 +68,7 @@ class VoicePlayer(context: Context) {
                 pendingBriefingConfig?.let { bufferedConfig ->
                     val text = buildBriefingText(bufferedConfig)
                     if (text.isNotBlank() && verbosity != VoiceVerbosity.OFF) {
-                        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "briefing_delayed")
+                        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, speechParams(), "briefing_delayed")
                     } else {
                         pendingBriefingDeferred?.complete(Unit)
                         pendingBriefingDeferred = null
@@ -113,12 +84,45 @@ class VoicePlayer(context: Context) {
     }
 
     /**
-     * Sets the voice volume. Currently a no-op because TTS volume is
-     * system-controlled via the navigation guidance audio stream.
+     * Routes utterance completion/error to the correct deferred based on utterance ID prefix.
      */
-    @Suppress("UNUSED_PARAMETER")
+    private fun handleUtteranceEnd(utteranceId: String?) {
+        currentPriority = null
+        when {
+            utteranceId?.startsWith("briefing") == true -> {
+                pendingBriefingDeferred?.complete(Unit)
+                pendingBriefingDeferred = null
+            }
+            utteranceId?.startsWith("event_") == true -> {
+                utteranceDeferred?.complete(Unit)
+                utteranceDeferred = null
+            }
+            else -> {
+                utteranceDeferred?.complete(Unit)
+                utteranceDeferred = null
+                pendingBriefingDeferred?.complete(Unit)
+                pendingBriefingDeferred = null
+            }
+        }
+    }
+
+    /**
+     * Builds a Bundle with the current volume scalar for TTS per-utterance volume control.
+     */
+    private fun speechParams(): Bundle {
+        return Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volumeScalar)
+        }
+    }
+
+    /**
+     * Sets the voice volume.
+     *
+     * @param percent Volume level (0-100). Applied to subsequent TTS utterances
+     *   via [TextToSpeech.Engine.KEY_PARAM_VOLUME].
+     */
     fun setVolume(percent: Int) {
-        // No-op: TTS volume is controlled by the system audio stream
+        volumeScalar = percent.coerceIn(0, 100) / 100f
     }
 
     /**
@@ -134,7 +138,7 @@ class VoicePlayer(context: Context) {
 
         if (ttsReady) {
             pendingBriefingDeferred = deferred
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing")
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, speechParams(), "briefing_workout")
         } else {
             // Set deferred BEFORE config so the init callback can complete it
             // if TTS init fires synchronously before await() is reached.
@@ -194,16 +198,28 @@ class VoicePlayer(context: Context) {
         currentPriority = priority
 
         if (ttsReady) {
-            tts?.speak(text, queueMode, Bundle.EMPTY, "event_${event.name}_${System.nanoTime()}")
+            tts?.speak(text, queueMode, speechParams(), "event_${event.name}_${System.nanoTime()}")
         }
     }
 
     fun isSpeaking(): Boolean = tts?.isSpeaking == true
 
     suspend fun awaitCompletion() {
+        // Check existing deferred first — avoids race where onDone fires
+        // between the isSpeaking check and setting utteranceDeferred.
+        val existing = utteranceDeferred
+        if (existing != null) {
+            existing.await()
+            return
+        }
         if (tts?.isSpeaking != true) return
+        // Still speaking but no deferred — set it before re-checking
         val deferred = CompletableDeferred<Unit>()
         utteranceDeferred = deferred
+        // Double-check after setting — if speaking stopped in the gap, complete immediately
+        if (tts?.isSpeaking != true) {
+            deferred.complete(Unit)
+        }
         deferred.await()
     }
 
@@ -244,7 +260,8 @@ class VoicePlayer(context: Context) {
         /**
          * Builds km split text, varying by workout mode:
          * - STEADY_STATE / DISTANCE_PROFILE: "Kilometer N" (number only)
-         * - FREE_RUN with pace: "Kilometer N. Pace: M minutes S."
+         * - FREE_RUN with pace: "Kilometer N. Pace: M minutes S seconds."
+         * - FREE_RUN with pace and 0 seconds: "Kilometer N. Pace: M minutes."
          * - FREE_RUN without pace: "Kilometer N"
          */
         fun kmSplitText(km: Int, mode: WorkoutMode, paceMinPerKm: Float? = null): String {
@@ -254,7 +271,11 @@ class VoicePlayer(context: Context) {
             val totalSeconds = (paceMinPerKm * 60).toInt()
             val minutes = totalSeconds / 60
             val seconds = totalSeconds % 60
-            return "$base. Pace: $minutes minutes $seconds."
+            return if (seconds == 0) {
+                "$base. Pace: $minutes minutes."
+            } else {
+                "$base. Pace: $minutes minutes $seconds seconds."
+            }
         }
 
         /**
@@ -337,7 +358,7 @@ class VoicePlayer(context: Context) {
             return when {
                 minutes < 1 -> if (seconds == 1L) "1 second" else "$seconds seconds"
                 minutes == 1L -> "1 minute"
-                else -> "$minutes minutes"
+                else -> "$minutes minute"
             }
         }
 
