@@ -219,6 +219,10 @@ See `.claude/rules/github-mcp.md` for tool reference.
 
 ### Firebase (Realtime Database rules & deploy)
 
+**App Distribution:** `./gradlew assembleDebug appDistributionUploadDebug` — builds debug APK and uploads to Firebase App Distribution. Testers are managed via the `testers` group in Firebase console (not hardcoded). `firebase login --reauth` requires an interactive terminal if auth expires.
+
+**Versioning:** `versionCode` increments by 1 each release, `versionName` uses semver (`0.x.0` during pre-release). Both live in `app/build.gradle.kts` `defaultConfig`. Release notes are in `debug { firebaseAppDistribution { releaseNotes = "..." } }`.
+
 **Deploy:** `firebase deploy --only database --project cardea-1c8fc` — no `.firebaserc` exists, always pass `--project`. Project ID also in `app/google-services.json`.
 
 **Security rules — validate scope:** Use `$wildcardVar !== $uid` (not `$wildcardVar !== auth.uid`) when the constraint is about node identity. `auth.uid` breaks bidirectional writes where the caller writes their own UID as a key under another user's node.
