@@ -6,6 +6,7 @@ import android.media.MediaPlayer
 import com.hrcoach.R
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.VoiceVerbosity
+import kotlinx.coroutines.CompletableDeferred
 
 class VoiceCoach(private val context: Context) {
 
@@ -14,6 +15,7 @@ class VoiceCoach(private val context: Context) {
     private var currentPriority: VoiceEventPriority = VoiceEventPriority.INFORMATIONAL
 
     private var mediaPlayer: MediaPlayer? = null
+    private var completionSignal: CompletableDeferred<Unit>? = null
 
     private val audioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
@@ -49,14 +51,26 @@ class VoiceCoach(private val context: Context) {
             mp.setOnCompletionListener {
                 it.release()
                 mediaPlayer = null
-                currentPriority = VoiceEventPriority.INFORMATIONAL  // reset after clip ends
+                currentPriority = VoiceEventPriority.INFORMATIONAL
+                completionSignal?.complete(Unit)
+                completionSignal = null
             }
+            completionSignal?.complete(Unit)  // cancel any prior signal
+            completionSignal = CompletableDeferred()
             mp.start()
         }
     }
 
     /** Returns true if a voice clip is currently playing. */
     fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
+
+    /**
+     * Suspends until the current voice clip finishes playing.
+     * Returns immediately if nothing is playing.
+     */
+    suspend fun awaitCompletion() {
+        completionSignal?.await()
+    }
 
     fun destroy() {
         releasePlayer()
@@ -65,6 +79,8 @@ class VoiceCoach(private val context: Context) {
     private fun releasePlayer() {
         val mp = mediaPlayer
         mediaPlayer = null
+        completionSignal?.complete(Unit)
+        completionSignal = null
         if (mp != null) {
             try { if (mp.isPlaying) mp.stop() } catch (_: IllegalStateException) {}
             try { mp.release() } catch (_: IllegalStateException) {}
