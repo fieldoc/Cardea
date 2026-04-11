@@ -20,7 +20,7 @@ sealed class RescheduleResult {
 
 object SessionRescheduler {
 
-    private val hardTypes = setOf("TEMPO", "INTERVAL", "INTERVALS")
+    private val hardTypes = setOf("TEMPO", "INTERVAL", "INTERVALS", "LONG", "RACE_SIM")
 
     fun reschedule(req: RescheduleRequest): RescheduleResult {
         val validDays = availableDays(req)
@@ -63,10 +63,11 @@ object SessionRescheduler {
 
     /** Lower number = drop first */
     private fun dropPriority(type: String): Int = when (type) {
-        "EASY"      -> 0
-        "TEMPO"     -> 1
+        "EASY"                  -> 0
+        "STRIDES"               -> 0
+        "TEMPO"                 -> 1
         "INTERVAL", "INTERVALS" -> 2
-        "LONG_RUN"  -> 3
-        else        -> 1
+        "LONG", "RACE_SIM"      -> 3
+        else                    -> 1
     }
 }
