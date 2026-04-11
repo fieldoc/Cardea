@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -29,7 +29,7 @@ internal val SPEED_OPTIONS = listOf(1f, 5f, 10f, 50f)
 
 @Composable
 fun SimulationOverlay(modifier: Modifier = Modifier) {
-    val simState by SimulationController.state.collectAsState()
+    val simState by SimulationController.state.collectAsStateWithLifecycle()
     if (!simState.isActive) return
 
     var speedIndex by remember {
