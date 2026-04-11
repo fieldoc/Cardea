@@ -107,13 +107,16 @@ class VoicePlayer(context: Context) {
         if (text.isBlank()) return
 
         val deferred = CompletableDeferred<Unit>()
-        pendingBriefingDeferred = deferred
 
         if (ttsReady) {
+            pendingBriefingDeferred = deferred
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, "workout_briefing")
         } else {
-            Log.d(TAG, "TTS not ready, buffering briefing until init completes")
+            // Set deferred BEFORE config so the init callback can complete it
+            // if TTS init fires synchronously before await() is reached.
+            pendingBriefingDeferred = deferred
             pendingBriefingConfig = config
+            Log.d(TAG, "TTS not ready, buffering briefing until init completes")
         }
 
         deferred.await()
@@ -133,10 +136,13 @@ class VoicePlayer(context: Context) {
         if (!shouldSpeak(event, verbosity)) return
 
         val text = if (event == CoachingEvent.KM_SPLIT) {
-            // KM_SPLIT needs special text with pace info
-            // km value is not passed here — caller should use kmSplitText() directly
-            // For speakEvent, use eventText which gives a generic fallback
-            eventText(event, guidanceText, workoutMode)
+            // guidanceText carries the km number as a string (e.g. "5")
+            val km = guidanceText?.toIntOrNull()
+            if (km != null) {
+                kmSplitText(km, workoutMode, paceMinPerKm)
+            } else {
+                eventText(event, guidanceText, workoutMode)
+            }
         } else {
             eventText(event, guidanceText, workoutMode)
         }
@@ -165,19 +171,6 @@ class VoicePlayer(context: Context) {
 
         if (ttsReady) {
             tts?.speak(text, queueMode, Bundle.EMPTY, "event_${event.name}_${System.nanoTime()}")
-        }
-    }
-
-    /**
-     * Speaks a km split announcement with pace information.
-     */
-    fun speakKmSplit(km: Int, workoutMode: WorkoutMode, paceMinPerKm: Float? = null) {
-        if (!shouldSpeak(CoachingEvent.KM_SPLIT, verbosity)) return
-        val text = kmSplitText(km, workoutMode, paceMinPerKm)
-        if (text.isBlank()) return
-
-        if (ttsReady) {
-            tts?.speak(text, TextToSpeech.QUEUE_ADD, Bundle.EMPTY, "km_split_$km")
         }
     }
 
