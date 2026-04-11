@@ -23,6 +23,7 @@ import com.hrcoach.domain.engine.AutoPauseEvent
 import com.hrcoach.domain.engine.EnvironmentFlagDetector
 import com.hrcoach.domain.engine.FitnessLoadCalculator
 import com.hrcoach.domain.engine.FitnessSignalEvaluator
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.engine.HrArtifactDetector
 import com.hrcoach.domain.engine.HrCalibrator
 import com.hrcoach.domain.engine.MetricsCalculator
@@ -652,8 +653,9 @@ class WorkoutForegroundService : LifecycleService() {
                     var currentProfile = session?.updatedProfile ?: adaptiveProfileRepository.getProfile()
 
                     // hrMax: only update if cadence lock was NOT suspected
+                    val ageBasedFallback = userProfileRepository.getAge()?.let { 220 - it } ?: 180
                     val newHrMax = HrCalibrator.detectNewHrMax(
-                        currentHrMax = currentProfile.hrMax ?: 180,
+                        currentHrMax = currentProfile.hrMax ?: ageBasedFallback,
                         recentSamples = hrSessionSamples.toList(),
                         cadenceLockSuspected = cadenceLockSuspected
                     )
@@ -704,7 +706,7 @@ class WorkoutForegroundService : LifecycleService() {
                     val durationMin = (now - workoutStartMs) / 60_000f
                     val sessionAvgHr = reliableMetrics?.avgHr
                         ?: if (finalHrSampleCount > 0) (finalHrSampleSum.toFloat() / finalHrSampleCount) else null
-                    val hrMaxEst = currentProfile.hrMax?.toFloat() ?: 180f
+                    val hrMaxEst = currentProfile.hrMax?.toFloat() ?: ageBasedFallback.toFloat()
                     val trimpScore = reliableMetrics?.trimpScore
                         ?: if (sessionAvgHr != null && durationMin > 0f) {
                             val intensity = sessionAvgHr / hrMaxEst
@@ -800,9 +802,11 @@ class WorkoutForegroundService : LifecycleService() {
                     val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
                     if (pendingId != null) {
                         runCatching {
+                            val simProfile = adaptiveProfileRepository.getProfile()
                             bootcampSessionCompleter.complete(
                                 workoutId = workoutId,
-                                pendingSessionId = pendingId
+                                pendingSessionId = pendingId,
+                                tuningDirection = simProfile.lastTuningDirection ?: TuningDirection.HOLD
                             )
                         }.onFailure { e ->
                             Log.w("WorkoutService", "Sim bootcamp session completion failed", e)
