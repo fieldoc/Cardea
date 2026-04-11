@@ -1,5 +1,6 @@
 package com.hrcoach.ui.history
 
+import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -412,7 +413,8 @@ private fun HrHeatmapRouteMap(
             val boundsBuilder = LatLngBounds.builder()
             trackPoints.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
             cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 64))
-        }.onFailure {
+        }.onFailure { e ->
+            Log.w("HistoryDetail", "Map bounds calculation failed, centering on first point", e)
             val first = trackPoints.first()
             cameraPositionState.move(
                 CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), 15f)
