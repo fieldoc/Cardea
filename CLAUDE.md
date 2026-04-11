@@ -61,7 +61,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - **WorkoutForegroundService** is the central orchestrator. It combines BLE HR and GPS flows, evaluates zones, triggers alerts, saves track points every 5s, and persists completed workouts to Room.
 - **Three workout modes:** `STEADY_STATE` (single target HR ± buffer), `DISTANCE_PROFILE` (ordered distance segments each with a target HR), and `FREE_RUN` (no target, data collection only).
 - **Adaptive learning** (`AdaptivePaceController`) tracks HR slope, pace-HR buckets, response lag, and trim offsets across sessions. Profile persists via `AdaptiveProfileRepository`.
-- **Alerts** use `ToneGenerator` on `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` to layer tones over music without requesting audio focus. Do NOT change this to `NOTIFICATION_EVENT` — it would be ducked by music.
+- **Audio stream** — All audio components use `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` to layer over music without requesting audio focus. Do NOT change to `NOTIFICATION_EVENT` — it would be ducked by music. `ToneGenerator` is only used for pause/resume feedback tones.
 
 ## Key Packages
 
