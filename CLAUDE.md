@@ -66,19 +66,25 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 ## Key Packages
 
 - `data/db/` — Room database (`AppDatabase`), entities (`WorkoutEntity`, `TrackPointEntity`), DAOs
-- `data/repository/` — `WorkoutRepository`, `WorkoutMetricsRepository`, `AdaptiveProfileRepository`, `AudioSettingsRepository`, `MapsSettingsRepository`
+- `data/repository/` — `WorkoutRepository`, `WorkoutMetricsRepository`, `AdaptiveProfileRepository`, `AudioSettingsRepository`, `MapsSettingsRepository`, `BootcampRepository`, `AutoPauseSettingsRepository`, `OnboardingRepository`, `ThemePreferencesRepository`, `UserProfileRepository`
 - `domain/model/` — Domain models: `WorkoutConfig`, `WorkoutMode`, `AdaptiveProfile`, `ZoneStatus`
 - `domain/engine/` — `ZoneEngine` (static zone eval), `AdaptivePaceController` (predictive HR-pace modeling)
 - `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `AlertManager`, `WorkoutState`
 - `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoicePlayer`, `StartupSequencer`, `VoiceEventPriority`
-- `ui/home/` — Home dashboard screen + ViewModel (new)
-- `ui/setup/` — Workout setup screen + ViewModel (config, BLE scanning); maps to "Workout" nav tab
-- `ui/workout/` — Active workout display
-- `ui/history/` — History list + detail with Google Maps route heatmap
-- `ui/account/` — Account & settings screen + ViewModel (new); includes Maps API key + audio settings
+- `ui/account/` — Account & settings screen + ViewModel; includes Maps API key + audio settings
+- `ui/bootcamp/` — Bootcamp dashboard, setup flow, settings, day-state logic
 - `ui/components/` — Shared composables: `CardeaLogo`, `GlassCard`
-- `ui/splash/` — Branded splash screen
+- `ui/debug/` — Debug/diagnostic screens
+- `ui/emblem/` — Achievement emblem composables
+- `ui/history/` — History list + detail with Google Maps route heatmap
+- `ui/home/` — Home dashboard screen + ViewModel
 - `ui/navigation/` — `NavGraph.kt` (function: `HrCoachNavGraph`) with routes: `home`, `setup`, `workout`, `progress`, `history`, `history/{workoutId}`, `postrun/{workoutId}`, `account`
+- `ui/onboarding/` — First-run onboarding flow
+- `ui/postrun/` — Post-workout summary screen
+- `ui/progress/` — Training progress/stats screens
+- `ui/setup/` — Workout setup screen + ViewModel (config, BLE scanning); maps to "Workout" nav tab
+- `ui/splash/` — Branded splash screen
+- `ui/workout/` — Active workout display
 - `di/` — Hilt `AppModule` providing Room database and DAOs
 
 ## DI & Entry Points
@@ -87,7 +93,7 @@ Hilt is the DI framework. `HrCoachApp` is `@HiltAndroidApp`. `MainActivity` and 
 
 ## Database
 
-Room database `hr_coach_db` with two tables: `workouts` and `track_points` (FK to workout with CASCADE delete). `targetConfig` column stores workout zone configuration as JSON.
+Room database `hr_coach_db` with tables: `workouts`, `track_points` (FK to workout, CASCADE delete), `bootcamp_enrollments`, `bootcamp_sessions` (FK to enrollment, CASCADE delete), `achievements`, `workout_metrics`. `targetConfig` column stores workout zone configuration as JSON.
 
 ## Navigation
 
@@ -144,22 +150,11 @@ Never read `WorkoutState.snapshot.value` in the same function that called `Worko
 
 Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on every drag frame (hundreds of times). Use `onValueChangeFinished` for persistence; update in-memory `StateFlow` in `onValueChange` for smooth UI.
 
-## Recent Architectural Changes (audit 2026-04-09)
-
-- **`CoachingEventRouter.reset()`** now accepts `reset(workoutStartMs: Long = 0L)` — pass the workout clock timestamp after countdown completes so `IN_ZONE_CONFIRM` fires correctly from the start of a quiet in-zone session.
-- **`AlertPolicy`** now resets `lastAlertTime` on zone-direction flip (ABOVE→BELOW or vice versa) — cooldown no longer bleeds across directions, so overcorrection in both directions alerts promptly.
-- **`WorkoutForegroundService.handleStartFailure()`** now clears `pendingBootcampSessionId` — stale bootcamp session IDs no longer pollute the next workout attempt after a failed start.
-- **`AdaptivePaceController`** (commit 91b0812): `hrSlopeBpmPerMin` is now clamped via `instSlope.coerceIn(-30f, 30f)` before blending — prevents BLE spike artifacts from corrupting projections for several ticks. Settle samples are pooled across directions before averaging to compute `responseLagSec`. `AdaptiveProfileRebuilder` now applies zero-load CTL/ATL decay (`trimpScore=0f`) for TRIMP-less workouts instead of carrying values forward unchanged. `FitnessSignalEvaluator.tuningDirection` when block had unreachable EASE_BACK arm removed.
-
-## Adaptive Engine Invariants (as of 2026-04-09 audit)
+## Adaptive Engine Invariants
 
 - **`AdaptivePaceController` is per-workout, not a singleton** — new instance created each workout; state (`sessionBuckets`, settle lists, `lastProjectedHr`) resets.
 - **`hrSlopeBpmPerMin` clamp** — `instSlope` is clamped to `±30 BPM/min` before EMA blend. Do not widen; BLE at 1 Hz with 3 s minimum window can produce 800 BPM/min from a single glitch.
-- **`FitnessLoadCalculator.updateLoads(trimpScore=0f)`** applies pure exponential decay with no load — the correct pattern for time gaps with no workouts.
 - **TRIMP formula is non-standard** — uses `duration * avgHR * (avgHR/HRmax)^2`, not Bannister's exponential. Consistent across the codebase; don't "fix" it to match literature values.
-- **`finishSession()` always increments `totalSessions`** even when no pace samples were collected (GPS failure mid-run). Known limitation, not fixed.
-- **`projectionConfidence` thresholds**: LOW < 2 effective sessions or < 80 samples; MEDIUM ≥ 2 or ≥ 80; HIGH ≥ 4 or ≥ 180. "Effective sessions" = `initialTotalSessions + 1` if current session has ≥ 20 pace samples.
-- **`WorkoutConfig.totalDurationSeconds()` and FREE_RUN** — Returns `plannedDurationMinutes * 60` for FREE_RUN mode (fixed 2026-04-10). Previously returned `null` unconditionally for FREE_RUN, breaking time-target UI, halfway prompts, and workout-complete triggers for bootcamp timed sessions.
 
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
