@@ -156,6 +156,15 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **`FitnessSignalEvaluator.efTrend`** uses least-squares regression slope scaled to total span (not endpoint delta). More robust against single-session outliers. Threshold (0.04) is unchanged.
 - **`PostRunSummaryViewModel`** now injects `AdaptiveProfileRepository` and forwards `lastTuningDirection` to `bootcampSessionCompleter.complete()`. Previously defaulted to HOLD.
 - **HRmax fallback** in `WorkoutForegroundService` is now `220 - age` when age is known (via `userProfileRepository.getAge()`), falling back to 180 only when age is also null.
+- **hrMax dual-store sync is complete** — all 6 write sites (Service, Setup, Bootcamp, BootcampSettings, PostRunSummary, Onboarding) now sync to both `UserProfileRepository` and `AdaptiveProfileRepository`. No gaps remain.
+- **MainActivity permission handling** — `registerForActivityResult` callback handles permanent denial (Settings redirect) and temporary denial (Toast). `PermissionGate.missingRuntimePermissions()` checked in `onCreate`.
+
+## Error Handling & Crash Resilience (audited 2026-04-11)
+
+- **Audit plan:** `docs/superpowers/plans/2026-04-11-error-handling-audit.md` — health scorecard + deferred items
+- **stopWorkout() essential/best-effort split** — essential ops (save workout, stop GPS/BLE) wrapped in individual `runCatching`; best-effort ops (metrics, achievements) grouped separately. Both log on failure.
+- **All `collectAsState()` calls are now lifecycle-aware** — `collectAsStateWithLifecycle()` used everywhere.
+- **Deferred (not yet fixed):** Per-operation BLE permission checks (8 `@SuppressLint`), mid-session permission revocation, Room migration tests, full state restoration (`START_REDELIVER_INTENT`).
 
 ## Bootcamp Scheduling Architecture
 
