@@ -2,6 +2,7 @@ package com.hrcoach.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.OnboardingRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,6 +32,7 @@ data class OnboardingUiState(
 class OnboardingViewModel @Inject constructor(
     private val onboardingRepository: OnboardingRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val adaptiveProfileRepository: AdaptiveProfileRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -90,6 +92,8 @@ class OnboardingViewModel @Inject constructor(
             val hrMax = effectiveHrMax()
             if (hrMax != null && hrMax in 100..220) {
                 userProfileRepository.setMaxHr(hrMax)
+                val profile = adaptiveProfileRepository.getProfile()
+                adaptiveProfileRepository.saveProfile(profile.copy(hrMax = hrMax))
             }
         }
     }

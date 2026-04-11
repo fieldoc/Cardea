@@ -1057,7 +1057,9 @@ class BootcampViewModel @Inject constructor(
     }
 
     private fun sessionTypePresetKey(rawType: String): String? {
-        val type = runCatching { SessionType.valueOf(rawType) }.getOrNull() ?: return null
+        val type = runCatching { SessionType.valueOf(rawType) }
+            .onFailure { Log.w("BootcampVM", "Unknown session type: $rawType") }
+            .getOrNull() ?: return null
         return when (type) {
             SessionType.EASY -> "easy"
             SessionType.TEMPO -> "tempo"
@@ -1079,7 +1081,8 @@ class BootcampViewModel @Inject constructor(
 
         return runCatching {
             SessionType.valueOf(rawType)
-        }.getOrNull()?.let { sessionType ->
+        }.onFailure { Log.w("BootcampVM", "Unknown session type for label: $rawType") }
+            .getOrNull()?.let { sessionType ->
             when (sessionType) {
                 SessionType.EASY -> "Easy"
                 SessionType.LONG -> "Long"
@@ -1094,7 +1097,9 @@ class BootcampViewModel @Inject constructor(
     }
 
     private fun BootcampSessionEntity.toPlannedSession(): PlannedSession = PlannedSession(
-        type = runCatching { SessionType.valueOf(sessionType) }.getOrDefault(SessionType.EASY),
+        type = runCatching { SessionType.valueOf(sessionType) }
+            .onFailure { Log.w("BootcampVM", "Unknown session type in entity: $sessionType") }
+            .getOrDefault(SessionType.EASY),
         minutes = targetMinutes,
         presetId = presetId,
         weekNumber = weekNumber
@@ -1232,7 +1237,8 @@ class BootcampViewModel @Inject constructor(
     private fun reconnectLastDevice(address: String) {
         val connected = runCatching {
             bleCoordinator.connectToAddress(address)
-        }.getOrDefault(false)
+        }.onFailure { Log.w("BootcampVM", "BLE reconnect failed for $address", it) }
+            .getOrDefault(false)
         if (!connected) {
             // Fallback to scanning if reconnect fails
             startBleScan()
