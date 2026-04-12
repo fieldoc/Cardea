@@ -108,6 +108,11 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-messaging")
 
+    // Google Sign-In via Credential Manager
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+    implementation("androidx.credentials:credentials:1.5.0-rc01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0-rc01")
+
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-service:2.8.7")
