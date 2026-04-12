@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -932,10 +933,10 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(16.dp))
-        // 7c: Wrap-content width button (no fillMaxWidth)
         CardeaButton(
             text = "View Training",
-            onClick = onGoToTraining
+            onClick = onGoToTraining,
+            innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
         )
     }
 }
