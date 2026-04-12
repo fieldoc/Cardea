@@ -216,6 +216,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **Recovery week composition:** Tier 0-1 get all-easy weeks; Tier 2+ get downgraded quality (interval→tempo, tempo→strides). EVERGREEN handles its own recovery on week D.
 - **Tempo presets** (`aerobic_tempo`, `lactate_threshold`) use `DISTANCE_PROFILE` with 10-min warm-up, 20-min main block, 5-min cool-down segments.
 - **`getNextSession()` is date-unaware** — returns earliest SCHEDULED/DEFERRED by weekNumber+dayOfWeek, even if that day already passed. HomeViewModel uses `getScheduledAndDeferredSessions()` + computed-date filtering to match bootcamp screen behavior. Don't regress to `getNextSession()` for UI display.
+- **Session date computation** — `session.dayOfWeek` is ISO (1=Mon, 7=Sun), NOT a positional offset from enrollment start. To compute the calendar date: `enrollStartDate.with(DayOfWeek.MONDAY).plusWeeks(weekNumber-1).plusDays(dayOfWeek-1)`. The old formula `enrollStartDate + ((weekNumber-1)*7 + (dayOfWeek-1))` was wrong when enrollment didn't start on Monday — it mapped to the wrong calendar day. Fixed 2026-04-12.
 - **Manual-run CTA** — contextual inline "Manual run →" in `RestDay` and `RunDone` hero states only. No global catch-all at the bottom of the bootcamp page (removed: caused duplication on rest days).
 
 ## Adaptive Engine Invariants
