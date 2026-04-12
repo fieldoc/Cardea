@@ -84,7 +84,7 @@ fun ProgressScreen(
             .background(CardeaTheme.colors.bgPrimary)
     ) {
         // ── Header ──────────────────────────────────────────────────────────
-        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = "Trends",
@@ -157,7 +157,7 @@ fun ProgressScreen(
                             onClick = onStartWorkout,
                             modifier = Modifier
                                 .height(48.dp)
-                                .fillMaxWidth(0.7f),
+                                .fillMaxWidth(),
                             innerPadding = PaddingValues(horizontal = 16.dp)
                         )
                     }
@@ -173,12 +173,13 @@ fun ProgressScreen(
 private fun DashboardContent(uiState: ProgressUiState) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item { KeyMetricsGrid(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { CoachTakeCard(uiState, Modifier.padding(horizontal = 16.dp)) }
 
         // Efficiency — how much effort each kilometer costs
+        item { Spacer(modifier = Modifier.height(16.dp)) }
         item { SectionHeader("Efficiency", "How economically you convert effort into speed.", Modifier.padding(horizontal = 16.dp)) }
         item { HeartbeatsPerKmCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { Vo2MaxCard(uiState, Modifier.padding(horizontal = 16.dp)) }
@@ -186,6 +187,7 @@ private fun DashboardContent(uiState: ProgressUiState) {
         item { AerobicEfficiencyCard(uiState, Modifier.padding(horizontal = 16.dp)) }
 
         // Load — volume, intensity, and speed profile
+        item { Spacer(modifier = Modifier.height(16.dp)) }
         item { SectionHeader("Load", "Volume, intensity distribution, and pace fingerprint.", Modifier.padding(horizontal = 16.dp)) }
         item { WeeklyDistanceCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { WeeklyLoadCard(uiState, Modifier.padding(horizontal = 16.dp)) }
@@ -193,6 +195,7 @@ private fun DashboardContent(uiState: ProgressUiState) {
         item { SpeedVsHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
 
         // Health — recovery markers and consistency
+        item { Spacer(modifier = Modifier.height(16.dp)) }
         item { SectionHeader("Health", "Recovery quality and training consistency.", Modifier.padding(horizontal = 16.dp)) }
         item { RestingHrCard(uiState, Modifier.padding(horizontal = 16.dp)) }
         item { HrRecoveryCard(uiState, Modifier.padding(horizontal = 16.dp)) }
@@ -218,7 +221,7 @@ private fun CoachTakeCard(uiState: ProgressUiState, modifier: Modifier = Modifie
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                 letterSpacing = 1.sp
             ),
-            color = GradientPink
+            color = CardeaTheme.colors.textSecondary
         )
         Spacer(modifier = Modifier.height(6.dp))
         lines.forEach { line ->
@@ -332,7 +335,7 @@ private fun MetricCell(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.04.sp
             ),
@@ -469,7 +472,7 @@ private fun HrRecoveryCard(uiState: ProgressUiState, modifier: Modifier = Modifi
 private fun Vo2MaxCard(uiState: ProgressUiState, modifier: Modifier = Modifier) {
     ProgressChartCard(
         title = "VO2 Max Estimate",
-        subtitle = "Current estimate with expected model variance.",
+        subtitle = "Current estimate (\u00B110% variance).",
         trendInfo = seriesTrendInfo(uiState.vo2MaxSeries, lowerIsBetter = false) {
             "${if (it >= 0f) "+" else ""}${String.format("%.1f", it)} ml/kg/min"
         },
@@ -478,12 +481,6 @@ private fun Vo2MaxCard(uiState: ProgressUiState, modifier: Modifier = Modifier) 
         TrendLineChart(
             series = uiState.vo2MaxSeries,
             yFormatter = { String.format("%.0f", it) }
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "(estimated +/-10%)",
-            style = MaterialTheme.typography.bodySmall,
-            color = CardeaTheme.colors.textSecondary
         )
     }
 }
@@ -561,10 +558,10 @@ private fun ZoneEducationLegend() {
                     text = label,
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp
+                        fontSize = 11.sp
                     ),
                     color = CardeaTheme.colors.textSecondary,
-                    modifier = Modifier.width(30.dp)
+                    modifier = Modifier.width(36.dp)
                 )
                 Text(
                     text = ZoneEducationProvider.getContent(zoneId, ContentDensity.ONE_LINER),
@@ -642,6 +639,9 @@ private fun TrendLineChart(
                     )
 
                     onDrawBehind {
+                        val dotRadiusPx = 5.dp.toPx()
+                        val strokeWidthPx = 5.dp.toPx()
+
                         threshold?.let { tv ->
                             val ty = h - ((tv - chartMin) / range * h)
                             drawLine(
@@ -659,7 +659,7 @@ private fun TrendLineChart(
                                 asFrameworkPaint().apply {
                                     isAntiAlias = true
                                     style = android.graphics.Paint.Style.STROKE
-                                    strokeWidth = 5f
+                                    strokeWidth = strokeWidthPx
                                     strokeCap = android.graphics.Paint.Cap.ROUND
                                     maskFilter = BlurMaskFilter(16f, BlurMaskFilter.Blur.NORMAL)
                                     color = android.graphics.Color.argb(100, 0xFF, 0x2D, 0xA6)
@@ -671,13 +671,13 @@ private fun TrendLineChart(
                         drawPath(
                             path = path,
                             brush = chartGradient,
-                            style = Stroke(width = 5f, cap = StrokeCap.Round)
+                            style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
                         )
 
                         series.forEachIndexed { i, pt ->
                             val x = stepX * i
                             val y = h - ((pt.value - chartMin) / range * h)
-                            drawCircle(GradientCyan, radius = 5f, center = Offset(x, y))
+                            drawCircle(GradientCyan, radius = dotRadiusPx, center = Offset(x, y))
                         }
                     }
                 }
