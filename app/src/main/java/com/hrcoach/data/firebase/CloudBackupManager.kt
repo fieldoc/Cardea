@@ -55,6 +55,7 @@ class CloudBackupManager @Inject constructor(
                     "onboardingCompleted" to onboardingRepo.isOnboardingCompleted(),
                 )
                 ref.child("profile").setValue(data).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncProfile failed", it) }
     }
@@ -80,6 +81,7 @@ class CloudBackupManager @Inject constructor(
                     "themeMode" to themePrefsRepo.getThemeMode().name,
                 )
                 ref.child("settings").setValue(data).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncSettings failed", it) }
     }
@@ -109,6 +111,7 @@ class CloudBackupManager @Inject constructor(
                     "lastTuningDirection" to profile.lastTuningDirection?.name,
                 )
                 ref.child("adaptive").setValue(data).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncAdaptiveProfile failed", it) }
     }
@@ -179,6 +182,7 @@ class CloudBackupManager @Inject constructor(
                 }
 
                 ref.updateChildren(updates).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncWorkout failed for id=${workout.id}", it) }
     }
@@ -208,6 +212,7 @@ class CloudBackupManager @Inject constructor(
                     "targetFinishingTimeMinutes" to enrollment.targetFinishingTimeMinutes,
                 )
                 ref.child("bootcamp/enrollment").setValue(data).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncBootcampEnrollment failed", it) }
     }
@@ -232,6 +237,7 @@ class CloudBackupManager @Inject constructor(
                     "completedAtMs" to session.completedAtMs,
                 )
                 ref.child("bootcamp/sessions/$id").setValue(data).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncBootcampSession failed for id=${session.id}", it) }
     }
@@ -256,6 +262,7 @@ class CloudBackupManager @Inject constructor(
                     "shown" to achievement.shown,
                 )
                 ref.child("achievements/$id").setValue(data).await()
+                stampSync()
             }
         }.onFailure { Log.w(TAG, "syncAchievement failed for id=${achievement.id}", it) }
     }
@@ -304,6 +311,17 @@ class CloudBackupManager @Inject constructor(
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    /** Writes version marker and lastSyncMs timestamp. Called by every incremental sync. */
+    private suspend fun stampSync() {
+        val ref = backupRef() ?: return
+        ref.updateChildren(
+            mapOf(
+                "version" to BACKUP_VERSION,
+                "lastSyncMs" to System.currentTimeMillis(),
+            )
+        ).await()
+    }
 
     private fun backupRef() =
         authManager.getCurrentUid()?.let { db.reference.child("users/$it/backup") }

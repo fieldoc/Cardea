@@ -8,6 +8,9 @@ interface BootcampDao {
     @Insert
     suspend fun insertEnrollment(enrollment: BootcampEnrollmentEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertEnrollment(enrollment: BootcampEnrollmentEntity)
+
     @Update
     suspend fun updateEnrollment(enrollment: BootcampEnrollmentEntity)
 
@@ -26,6 +29,9 @@ interface BootcampDao {
 
     @Insert
     suspend fun insertSession(session: BootcampSessionEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSession(session: BootcampSessionEntity)
 
     @Insert
     suspend fun insertSessions(sessions: List<BootcampSessionEntity>)

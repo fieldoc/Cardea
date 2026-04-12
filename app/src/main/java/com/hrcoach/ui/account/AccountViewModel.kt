@@ -202,19 +202,17 @@ class AccountViewModel @Inject constructor(
             partnerNudgesEnabled = nudgesEnabled,
         )
     }.combine(
-        combine(_isGoogleLinked, _linkedEmail, _isLinking, _linkError, _isRestoring, _restoreResult) { values ->
-            @Suppress("UNCHECKED_CAST")
-            values.toList()
+        combine(_isGoogleLinked, _linkedEmail, _isLinking) { linked, email, linking ->
+            Triple(linked, email, linking)
         }
-    ) { base, parts ->
-        base.copy(
-            isGoogleLinked = parts[0] as Boolean,
-            linkedEmail = parts[1] as String?,
-            isLinking = parts[2] as Boolean,
-            linkError = parts[3] as String?,
-            isRestoring = parts[4] as Boolean,
-            restoreResult = parts[5] as RestoreResult?,
-        )
+    ) { base, (linked, email, linking) ->
+        base.copy(isGoogleLinked = linked, linkedEmail = email, isLinking = linking)
+    }.combine(
+        combine(_linkError, _isRestoring, _restoreResult) { error, restoring, result ->
+            Triple(error, restoring, result)
+        }
+    ) { base, (error, restoring, result) ->
+        base.copy(linkError = error, isRestoring = restoring, restoreResult = result)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
     fun setMapsApiKey(key: String) {
@@ -369,8 +367,20 @@ class AccountViewModel @Inject constructor(
         }
     }
 
+    fun signOut() {
+        viewModelScope.launch {
+            runCatching { firebaseAuthManager.signOut() }
+            _isGoogleLinked.value = false
+            _linkedEmail.value = null
+        }
+    }
+
     fun clearRestoreResult() {
         _restoreResult.value = null
+    }
+
+    fun clearLinkError() {
+        _linkError.value = null
     }
 
     private suspend fun performFullBackup() {

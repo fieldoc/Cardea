@@ -1,5 +1,7 @@
 package com.hrcoach.ui.onboarding
 
+import com.hrcoach.data.firebase.CloudBackupManager
+import com.hrcoach.data.firebase.FirebaseAuthManager
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.OnboardingRepository
 import com.hrcoach.data.repository.UserProfileRepository
@@ -30,6 +32,8 @@ class OnboardingViewModelTest {
     private lateinit var onboardingRepo: OnboardingRepository
     private lateinit var userProfileRepo: UserProfileRepository
     private lateinit var adaptiveProfileRepo: AdaptiveProfileRepository
+    private lateinit var firebaseAuthManager: FirebaseAuthManager
+    private lateinit var cloudBackupManager: CloudBackupManager
     private lateinit var vm: OnboardingViewModel
 
     @Before
@@ -45,6 +49,8 @@ class OnboardingViewModelTest {
         adaptiveProfileRepo = mockk(relaxed = true) {
             coEvery { getProfile() } returns AdaptiveProfile()
         }
+        firebaseAuthManager = mockk(relaxed = true)
+        cloudBackupManager = mockk(relaxed = true)
     }
 
     @After
@@ -52,7 +58,7 @@ class OnboardingViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createVm() = OnboardingViewModel(onboardingRepo, userProfileRepo, adaptiveProfileRepo)
+    private fun createVm() = OnboardingViewModel(onboardingRepo, userProfileRepo, adaptiveProfileRepo, firebaseAuthManager, cloudBackupManager)
 
     @Test
     fun `initial state has empty fields and page 0`() {

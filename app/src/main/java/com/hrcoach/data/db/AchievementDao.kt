@@ -2,6 +2,7 @@ package com.hrcoach.data.db
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
@@ -10,6 +11,9 @@ interface AchievementDao {
 
     @Insert
     suspend fun insert(achievement: AchievementEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(achievement: AchievementEntity)
 
     @Query("SELECT * FROM achievements WHERE shown = 0 ORDER BY earnedAtMs DESC")
     suspend fun getUnshownAchievements(): List<AchievementEntity>

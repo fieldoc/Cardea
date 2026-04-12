@@ -163,6 +163,8 @@ fun AccountScreen(
                 onLinkGoogle = viewModel::linkGoogleAccount,
                 onRestore = viewModel::restoreFromCloud,
                 onDismissRestore = viewModel::clearRestoreResult,
+                onSignOut = viewModel::signOut,
+                onClearError = viewModel::clearLinkError,
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -776,7 +778,52 @@ private fun CloudBackupSection(
     onLinkGoogle: () -> Unit,
     onRestore: () -> Unit,
     onDismissRestore: () -> Unit,
+    onSignOut: () -> Unit,
+    onClearError: () -> Unit,
 ) {
+    var showRestoreConfirm by remember { mutableStateOf(false) }
+    var showSignOutConfirm by remember { mutableStateOf(false) }
+
+    if (showRestoreConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showRestoreConfirm = false },
+            title = { Text("Restore from cloud?", color = CardeaTheme.colors.textPrimary) },
+            text = { Text("This will replace your local data with the cloud backup.", color = CardeaTheme.colors.textSecondary) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showRestoreConfirm = false
+                    onRestore()
+                }) { Text("Restore", color = CardeaTheme.colors.textPrimary) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showRestoreConfirm = false }) {
+                    Text("Cancel", color = CardeaTheme.colors.textSecondary)
+                }
+            },
+            containerColor = CardeaTheme.colors.bgSecondary,
+        )
+    }
+
+    if (showSignOutConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showSignOutConfirm = false },
+            title = { Text("Sign out?", color = CardeaTheme.colors.textPrimary) },
+            text = { Text("Backup will stop syncing. Your data stays in the cloud until you sign back in.", color = CardeaTheme.colors.textSecondary) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showSignOutConfirm = false
+                    onSignOut()
+                }) { Text("Sign out", color = CardeaTheme.colors.textPrimary) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showSignOutConfirm = false }) {
+                    Text("Cancel", color = CardeaTheme.colors.textSecondary)
+                }
+            },
+            containerColor = CardeaTheme.colors.bgSecondary,
+        )
+    }
+
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -810,7 +857,7 @@ private fun CloudBackupSection(
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedButton(
-                    onClick = onRestore,
+                    onClick = { showRestoreConfirm = true },
                     enabled = !state.isRestoring,
                     border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder),
                     modifier = Modifier.fillMaxWidth(),
@@ -819,6 +866,14 @@ private fun CloudBackupSection(
                         if (state.isRestoring) "Restoring..." else "Restore from cloud",
                         color = CardeaTheme.colors.textSecondary,
                     )
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { showSignOutConfirm = true },
+                    border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Sign out", color = CardeaTheme.colors.textSecondary)
                 }
             } else {
                 Text(

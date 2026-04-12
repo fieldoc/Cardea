@@ -5,6 +5,8 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import androidx.room.withTransaction
+import com.hrcoach.data.db.AppDatabase
 import com.hrcoach.data.db.BootcampDao
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
@@ -47,6 +49,7 @@ class CloudRestoreManager @Inject constructor(
     private val autoPauseRepo: AutoPauseSettingsRepository,
     private val adaptiveProfileRepo: AdaptiveProfileRepository,
     private val onboardingRepo: OnboardingRepository,
+    private val roomDb: AppDatabase,
     private val workoutDao: WorkoutDao,
     private val trackPointDao: TrackPointDao,
     private val workoutMetricsDao: WorkoutMetricsDao,
@@ -73,18 +76,20 @@ class CloudRestoreManager @Inject constructor(
     }
 
     /**
-     * Returns true when Google is linked, local DB is empty, and a cloud backup exists.
-     * Used to prompt the user on first launch after signing in on a new device.
+     * Returns true when Google is linked, local DB is empty, onboarding is not complete,
+     * and a cloud backup exists. Used to trigger auto-restore on a new device.
      */
     suspend fun needsRestore(): Boolean {
         if (!authManager.isGoogleLinked()) return false
+        if (onboardingRepo.isOnboardingCompleted()) return false
         val localCount = workoutDao.getWorkoutCount()
         if (localCount > 0) return false
         return hasCloudBackup()
     }
 
     /**
-     * Reads the entire backup snapshot and populates all local stores.
+     * Reads the entire backup snapshot and populates all local stores atomically.
+     * Room inserts are wrapped in a transaction — partial failure rolls back all DB changes.
      * Returns a [RestoreResult] with counts, or throws on catastrophic failure.
      */
     suspend fun restore(): RestoreResult {
@@ -97,23 +102,28 @@ class CloudRestoreManager @Inject constructor(
 
         if (!snapshot.exists()) throw IllegalStateException("No backup found")
 
+        // SharedPrefs-based restores (outside Room transaction)
         restoreProfile(snapshot.child("profile"))
         restoreSettings(snapshot.child("settings"))
         restoreAdaptiveProfile(snapshot.child("adaptive"))
 
-        val workoutCount = restoreWorkouts(snapshot.child("workouts"))
-        restoreTrackPoints(snapshot.child("trackPoints"))
-        restoreMetrics(snapshot.child("metrics"))
-
-        val sessionCount = restoreBootcamp(snapshot.child("bootcamp"))
-        val achievementCount = restoreAchievements(snapshot.child("achievements"))
+        // Room inserts — atomic transaction so partial failure rolls back cleanly
+        data class Counts(val workouts: Int, val sessions: Int, val achievements: Int)
+        val counts = roomDb.withTransaction {
+            val w = restoreWorkouts(snapshot.child("workouts"))
+            restoreTrackPoints(snapshot.child("trackPoints"))
+            restoreMetrics(snapshot.child("metrics"))
+            val s = restoreBootcamp(snapshot.child("bootcamp"))
+            val a = restoreAchievements(snapshot.child("achievements"))
+            Counts(w, s, a)
+        }
 
         // Mark onboarding complete after successful restore
         runCatching { onboardingRepo.setOnboardingCompleted() }
             .onFailure { Log.w(TAG, "Failed to mark onboarding complete", it) }
 
-        Log.d(TAG, "Restore complete: $workoutCount workouts, $sessionCount sessions, $achievementCount achievements")
-        return RestoreResult(workoutCount, sessionCount, achievementCount)
+        Log.d(TAG, "Restore complete: ${counts.workouts} workouts, ${counts.sessions} sessions, ${counts.achievements} achievements")
+        return RestoreResult(counts.workouts, counts.sessions, counts.achievements)
     }
 
     // ── Profile ─────────────────────────────────────────────────────────
@@ -232,7 +242,7 @@ class CloudRestoreManager @Inject constructor(
                     targetConfig = child.child("targetConfig").getValue(String::class.java) ?: "{}",
                     isSimulated = child.child("isSimulated").getValue(Boolean::class.java) ?: false,
                 )
-                workoutDao.insert(entity)
+                workoutDao.upsert(entity)
                 count++
             }.onFailure { Log.w(TAG, "restoreWorkout failed for key=${child.key}", it) }
         }
@@ -257,7 +267,7 @@ class CloudRestoreManager @Inject constructor(
                         distanceMeters = pointSnap.child("dist").getValue(Float::class.java) ?: 0f,
                         altitudeMeters = pointSnap.child("alt").getValue(Double::class.java),
                     )
-                    trackPointDao.insert(entity)
+                    trackPointDao.upsert(entity)
                 }.onFailure { Log.w(TAG, "restoreTrackPoint failed for workout=$workoutId", it) }
             }
         }
@@ -323,7 +333,7 @@ class CloudRestoreManager @Inject constructor(
                     pausedAtMs = enrollmentSnap.child("pausedAtMs").getValue(Long::class.java) ?: 0,
                     targetFinishingTimeMinutes = enrollmentSnap.child("targetFinishingTimeMinutes").getValue(Int::class.java),
                 )
-                bootcampDao.insertEnrollment(enrollment)
+                bootcampDao.upsertEnrollment(enrollment)
             }.onFailure { Log.w(TAG, "restoreBootcamp: enrollment failed", it) }
         }
 
@@ -345,7 +355,7 @@ class CloudRestoreManager @Inject constructor(
                     presetIndex = child.child("presetIndex").getValue(Int::class.java),
                     completedAtMs = child.child("completedAtMs").getValue(Long::class.java),
                 )
-                bootcampDao.insertSession(session)
+                bootcampDao.upsertSession(session)
                 sessionCount++
             }.onFailure { Log.w(TAG, "restoreBootcamp: session failed for key=${child.key}", it) }
         }
@@ -370,7 +380,7 @@ class CloudRestoreManager @Inject constructor(
                     triggerWorkoutId = child.child("triggerWorkoutId").getValue(Long::class.java),
                     shown = child.child("shown").getValue(Boolean::class.java) ?: false,
                 )
-                achievementDao.insert(entity)
+                achievementDao.upsert(entity)
                 count++
             }.onFailure { Log.w(TAG, "restoreAchievement failed for key=${child.key}", it) }
         }

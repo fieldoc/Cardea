@@ -38,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MusicNote
@@ -1242,7 +1243,77 @@ private data class TabInfo(
     val isHighlighted: Boolean,
 )
 
-// ── Screen 8: Launch Pad ────────────────────────────────────────────
+// ── Screen 8: Google Backup ─────────────────────────────────────────
+
+@Composable
+fun GoogleBackupPage(
+    isLinking: Boolean,
+    isLinked: Boolean,
+    error: String?,
+    onLink: () -> Unit,
+    onSkip: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Default.Favorite,
+            contentDescription = null,
+            tint = CardeaTheme.colors.textSecondary,
+            modifier = Modifier.size(56.dp),
+        )
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = "Back up your data",
+            style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
+            color = CardeaTheme.colors.textPrimary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Sign in with Google to keep your workouts, bootcamp progress, and settings safe across devices.",
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+            color = CardeaTheme.colors.textSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Spacer(Modifier.height(32.dp))
+
+        if (isLinked) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Check, contentDescription = null, tint = CardeaTheme.colors.zoneGreen, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Google account linked", color = CardeaTheme.colors.zoneGreen, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium)
+            }
+        } else {
+            com.hrcoach.ui.components.CardeaButton(
+                text = if (isLinking) "Linking..." else "Sign in with Google",
+                onClick = onLink,
+                enabled = !isLinking,
+                modifier = Modifier.fillMaxWidth(),
+                innerPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+            )
+        }
+
+        error?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, color = CardeaTheme.colors.zoneRed, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+        }
+
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Skip",
+            color = CardeaTheme.colors.textTertiary,
+            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.clickable { onSkip() }.padding(8.dp),
+        )
+    }
+}
+
+// ── Screen 9: Launch Pad ────────────────────────────────────────────
 
 @Composable
 fun LaunchPadPage(onStartBootcamp: () -> Unit, onExploreFirst: () -> Unit) {

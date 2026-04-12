@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.BootcampEnrollmentEntity
+import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
@@ -28,7 +29,8 @@ import java.time.ZoneId
 class BootcampSettingsViewModel @Inject constructor(
     private val bootcampRepository: BootcampRepository,
     private val userProfileRepository: UserProfileRepository,
-    private val adaptiveProfileRepository: AdaptiveProfileRepository
+    private val adaptiveProfileRepository: AdaptiveProfileRepository,
+    private val cloudBackupManager: CloudBackupManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampSettingsUiState())
@@ -284,6 +286,16 @@ class BootcampSettingsViewModel @Inject constructor(
                 }
 
                 bootcampRepository.deleteScheduledSessionsFromWeek(enrollment.id, resetFromWeek + 1)
+
+                // Sync updated enrollment to cloud backup
+                val updatedEnrollment = bootcampRepository.getActiveEnrollmentOnce()
+                if (updatedEnrollment != null) {
+                    cloudBackupManager.syncBootcampEnrollment(updatedEnrollment)
+                }
+                if (parsedHrMax != null && parsedHrMax in 100..220 && parsedHrMax != state.hrMax) {
+                    cloudBackupManager.syncProfile()
+                }
+
                 _uiState.update {
                     it.copy(
                         isSaving = false,
