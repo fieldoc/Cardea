@@ -166,7 +166,6 @@ fun AccountScreen(
                 SettingToggleRow(
                     icon = Icons.Default.Group,
                     title = "Partner nudges",
-                    iconTint = GradientBlue,
                     subtitle = "Notify you when a partner completes a run",
                     checked = state.partnerNudgesEnabled,
                     onCheckedChange = viewModel::setPartnerNudgesEnabled
@@ -181,7 +180,7 @@ fun AccountScreen(
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                 // Max HR row
-                SettingSection(icon = Icons.Default.Favorite, title = "Max Heart Rate", iconTint = GradientPink) {
+                SettingSection(icon = Icons.Default.Favorite, title = "Max Heart Rate") {
                     OutlinedTextField(
                         value = state.maxHrInput,
                         onValueChange = viewModel::setMaxHrInput,
@@ -229,7 +228,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Distance unit
-                SettingSection(icon = Icons.Default.Map, title = "Distance Unit", iconTint = GradientBlue) {
+                SettingSection(icon = Icons.Default.Map, title = "Distance Unit") {
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         listOf(DistanceUnit.KM to "km", DistanceUnit.MI to "mi")
                             .forEachIndexed { i, (unit, label) ->
@@ -249,7 +248,6 @@ fun AccountScreen(
                 SettingToggleRow(
                     icon = Icons.Default.Timer,
                     title = "Auto-pause when stopped",
-                    iconTint = ZoneAmber,
                     subtitle = "Pauses timer and alerts at red lights or breaks",
                     checked = state.autoPauseEnabled,
                     onCheckedChange = viewModel::setAutoPauseEnabled
@@ -264,7 +262,7 @@ fun AccountScreen(
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                 // Volume
-                SettingSection(icon = Icons.Default.VolumeUp, title = "Alert Volume", iconTint = GradientPink) {
+                SettingSection(icon = Icons.Default.VolumeUp, title = "Alert Volume") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -290,7 +288,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Voice volume
-                SettingSection(icon = Icons.Default.Mic, title = "Voice Volume", iconTint = GradientCyan) {
+                SettingSection(icon = Icons.Default.Mic, title = "Voice Volume") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -316,7 +314,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Voice Coaching
-                SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching", iconTint = GradientCyan) {
+                SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching") {
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         listOf(VoiceVerbosity.OFF to "Off", VoiceVerbosity.MINIMAL to "Minimal", VoiceVerbosity.FULL to "Full")
                             .forEachIndexed { i, (v, label) ->
@@ -339,7 +337,6 @@ fun AccountScreen(
                 SettingToggleRow(
                     icon = Icons.Default.Notifications,
                     title = "Vibration Alerts",
-                    iconTint = ZoneAmber,
                     checked = state.enableVibration,
                     onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() }
                 )
@@ -347,7 +344,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Fine-tune Cues
-                SettingSection(icon = Icons.Default.Mic, title = "Fine-tune Cues", iconTint = GradientCyan) {
+                SettingSection(icon = Icons.Default.Mic, title = "Fine-tune Cues") {
                     val cuesEnabled = state.voiceVerbosity != VoiceVerbosity.OFF
                     Text(
                         text = "These only apply when Voice Coaching is set to Full.",
@@ -393,7 +390,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Maps API Key
-                SettingSection(icon = Icons.Default.Map, title = "Maps API Key", iconTint = GradientBlue) {
+                SettingSection(icon = Icons.Default.Map, title = "Maps API Key") {
                     OutlinedTextField(
                         value = state.mapsApiKey,
                         onValueChange = viewModel::setMapsApiKey,
