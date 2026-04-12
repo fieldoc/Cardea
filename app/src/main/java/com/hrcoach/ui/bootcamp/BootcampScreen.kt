@@ -579,7 +579,7 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
                     Text(
                         text = "!",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = ZoneRed.copy(alpha = 0.7f)
+                        color = ZoneRed
                     )
                 }
             }
@@ -663,7 +663,7 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
             Text(
                 text = typeLabel,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 7.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.3.sp
                 ),
@@ -992,7 +992,7 @@ private fun OnboardingStep1Goal(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Next",
@@ -1046,7 +1046,7 @@ private fun OnboardingStepFinishingTime(
             colors = SliderDefaults.colors(
                 thumbColor = GradientPink,
                 activeTrackColor = GradientPink,
-                inactiveTrackColor = CardeaTheme.colors.glassHighlight
+                inactiveTrackColor = CardeaTheme.colors.glassBorder
             )
         )
         Row(
@@ -1074,7 +1074,7 @@ private fun OnboardingStepFinishingTime(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Next",
@@ -1124,7 +1124,7 @@ private fun OnboardingStep2Time(
             colors = SliderDefaults.colors(
                 thumbColor = GradientPink,
                 activeTrackColor = GradientPink,
-                inactiveTrackColor = CardeaTheme.colors.glassHighlight
+                inactiveTrackColor = CardeaTheme.colors.glassBorder
             )
         )
         Row(
@@ -1169,7 +1169,7 @@ private fun OnboardingStep2Time(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = if (canProceed) "Next" else "Increase time",
@@ -1240,7 +1240,7 @@ private fun OnboardingStep3Frequency(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Next",
@@ -1313,7 +1313,7 @@ private fun OnboardingStep4Days(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Start Program",
