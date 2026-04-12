@@ -132,17 +132,32 @@ class HomeViewModel @Inject constructor(
                 nowMs = System.currentTimeMillis()
             )
 
-            val nextSession = activeEnrollment?.let {
-                bootcampRepository.getNextSession(it.id)
-            }
-
             val today = now.toLocalDate()
-            val nextSessionDate: LocalDate? = if (activeEnrollment != null && nextSession != null) {
+
+            // Find next session that is today or in the future (not past-day leftovers).
+            // The DAO's getNextSession() returns the earliest SCHEDULED/DEFERRED by
+            // weekNumber+dayOfWeek, which may be a past day still marked SCHEDULED.
+            // Bootcamp screen filters these out — home screen must match.
+            val nextSession: BootcampSessionEntity?
+            val nextSessionDate: LocalDate?
+            if (activeEnrollment != null) {
                 val enrollStartDate = Instant.ofEpochMilli(activeEnrollment.startDate)
                     .atZone(zone).toLocalDate()
-                val daysOffset = ((nextSession.weekNumber - 1) * 7L) + (nextSession.dayOfWeek - 1)
-                enrollStartDate.plusDays(daysOffset)
-            } else null
+                val allPending = bootcampRepository.getScheduledAndDeferredSessions(activeEnrollment.id)
+                val match = allPending.firstOrNull { session ->
+                    val daysOffset = ((session.weekNumber - 1) * 7L) + (session.dayOfWeek - 1)
+                    val sessionDate = enrollStartDate.plusDays(daysOffset)
+                    !sessionDate.isBefore(today)
+                }
+                nextSession = match
+                nextSessionDate = match?.let { session ->
+                    val daysOffset = ((session.weekNumber - 1) * 7L) + (session.dayOfWeek - 1)
+                    enrollStartDate.plusDays(daysOffset)
+                }
+            } else {
+                nextSession = null
+                nextSessionDate = null
+            }
 
             val isNextSessionToday = nextSessionDate == today
             val nextSessionDayLabel = nextSessionDate?.dayOfWeek

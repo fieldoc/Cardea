@@ -54,6 +54,14 @@ interface BootcampDao {
     """)
     suspend fun getNextSession(enrollmentId: Long): BootcampSessionEntity?
 
+    @Query("""
+        SELECT * FROM bootcamp_sessions
+        WHERE enrollmentId = :enrollmentId
+          AND status IN ('SCHEDULED', 'DEFERRED')
+        ORDER BY weekNumber, dayOfWeek
+    """)
+    suspend fun getScheduledAndDeferredSessions(enrollmentId: Long): List<BootcampSessionEntity>
+
     @Query("SELECT * FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId ORDER BY weekNumber, dayOfWeek")
     suspend fun getSessionsForEnrollmentOnce(enrollmentId: Long): List<BootcampSessionEntity>
 

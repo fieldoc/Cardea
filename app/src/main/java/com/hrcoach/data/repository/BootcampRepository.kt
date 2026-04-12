@@ -64,6 +64,9 @@ class BootcampRepository @Inject constructor(
     suspend fun getNextSession(enrollmentId: Long): BootcampSessionEntity? =
         bootcampDao.getNextSession(enrollmentId)
 
+    suspend fun getScheduledAndDeferredSessions(enrollmentId: Long): List<BootcampSessionEntity> =
+        bootcampDao.getScheduledAndDeferredSessions(enrollmentId)
+
     suspend fun getSessionsForEnrollmentOnce(enrollmentId: Long): List<BootcampSessionEntity> =
         bootcampDao.getSessionsForEnrollmentOnce(enrollmentId)
 

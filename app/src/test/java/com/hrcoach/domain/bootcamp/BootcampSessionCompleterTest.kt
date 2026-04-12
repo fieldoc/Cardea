@@ -265,13 +265,15 @@ private class FakeBootcampDao(
             .firstOrNull()
 
     override suspend fun getNextSession(enrollmentId: Long): BootcampSessionEntity? =
+        getScheduledAndDeferredSessions(enrollmentId).firstOrNull()
+
+    override suspend fun getScheduledAndDeferredSessions(enrollmentId: Long): List<BootcampSessionEntity> =
         sessionsByWeek.values.flatten()
             .filter {
                 it.enrollmentId == enrollmentId &&
                 (it.status == BootcampSessionEntity.STATUS_SCHEDULED || it.status == BootcampSessionEntity.STATUS_DEFERRED)
             }
             .sortedWith(compareBy({ it.weekNumber }, { it.dayOfWeek }))
-            .firstOrNull()
 
     override suspend fun getSessionsForEnrollmentOnce(enrollmentId: Long): List<BootcampSessionEntity> =
         sessionsByWeek.values.flatten()

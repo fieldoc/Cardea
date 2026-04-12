@@ -1351,19 +1351,6 @@ private fun ActiveBootcampDashboard(
             if (uiState.showGraduationCta) {
                 GraduationCard(onGraduateGoal = onGraduateGoal)
             }
-
-            if (onGoToManualSetup != null) {
-                TextButton(
-                    onClick = onGoToManualSetup,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text(
-                        text = "Set up a manual run \u2192",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CardeaTheme.colors.textTertiary
-                    )
-                }
-            }
         }
     }
 }
@@ -2205,18 +2192,36 @@ private fun TodayHeroSection(
                             color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
-                        // ── Pull forward next run ────────────────────────
-                        if (today.nextFutureSessionId != null && onPullForward != null) {
-                            TextButton(
-                                onClick = { onPullForward(today.nextFutureSessionId) },
-                                contentPadding = PaddingValues(horizontal = 4.dp),
-                                modifier = Modifier.padding(top = 2.dp)
+                        // ── Action row: pull forward + manual run ────────
+                        if (today.nextFutureSessionId != null || onGoToManualSetup != null) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(
-                                    text = "Pull forward next run",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CardeaTheme.colors.textSecondary
-                                )
+                                if (today.nextFutureSessionId != null && onPullForward != null) {
+                                    TextButton(
+                                        onClick = { onPullForward(today.nextFutureSessionId) },
+                                        contentPadding = PaddingValues(horizontal = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Pull forward next run",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CardeaTheme.colors.textSecondary
+                                        )
+                                    }
+                                }
+                                if (onGoToManualSetup != null) {
+                                    TextButton(
+                                        onClick = onGoToManualSetup,
+                                        contentPadding = PaddingValues(horizontal = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Manual run \u2192",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = CardeaTheme.colors.textTertiary
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

@@ -702,16 +702,25 @@ private fun VolumeTile(
             .background(CardeaTheme.colors.glassHighlight)
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
             .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
     ) {
+        Text(
+            text = "THIS WEEK",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.2.sp,
+                fontSize = 8.sp
+            ),
+            color = CardeaTheme.colors.textTertiary
+        )
         VolumeRow(
-            label = "DST",
-            value = "%.0f/%.0f".format(distanceKm, distanceTargetKm),
+            label = "DIST",
+            value = "%.0f / %.0f km".format(distanceKm, distanceTargetKm),
             progress = (distanceKm / distanceTargetKm.toFloat()).coerceIn(0f, 1f)
         )
         VolumeRow(
-            label = "MIN",
-            value = "$timeMinutes/$timeTargetMinutes",
+            label = "TIME",
+            value = "$timeMinutes / $timeTargetMinutes min",
             progress = (timeMinutes.toFloat() / timeTargetMinutes.coerceAtLeast(1)).coerceIn(0f, 1f)
         )
     }
@@ -728,11 +737,11 @@ private fun VolumeRow(label: String, value: String, progress: Float) {
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp,
+                letterSpacing = 0.8.sp,
                 fontSize = 9.sp
             ),
             color = CardeaTheme.colors.textTertiary,
-            modifier = Modifier.width(26.dp)
+            modifier = Modifier.width(30.dp)
         )
         Box(
             modifier = Modifier

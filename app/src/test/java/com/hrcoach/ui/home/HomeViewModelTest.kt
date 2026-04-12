@@ -108,6 +108,7 @@ class HomeViewModelTest {
         every { workoutRepository.getAllWorkouts() } returns flowOf(emptyList())
         every { bootcampRepository.getActiveEnrollment() } returns flowOf(enrollment)
         coEvery { bootcampRepository.getNextSession(1L) } returns nextSession
+        coEvery { bootcampRepository.getScheduledAndDeferredSessions(1L) } returns listOf(nextSession)
         coEvery { bootcampRepository.getSessionsForEnrollmentOnce(1L) } returns listOf(nextSession)
 
         val vm = createViewModel()
