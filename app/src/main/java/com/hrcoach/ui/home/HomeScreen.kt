@@ -254,7 +254,7 @@ private fun PulseHero(
                 ),
                 color = CardeaTheme.colors.textTertiary
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             val heroGradient = CardeaTheme.colors.gradient
             Text(
                 text = sessionLabel,
@@ -271,7 +271,7 @@ private fun PulseHero(
                         drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
                     }
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = "${session.targetMinutes} min \u00B7 $sessionLabel",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
@@ -299,7 +299,7 @@ private fun PulseHero(
             ZoneEducationProvider.forSessionType(
                 session.sessionType, ContentDensity.ONE_LINER
             )?.let { oneLiner ->
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.Top
@@ -441,7 +441,7 @@ private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Tier 1: Goal + Streak tiles — fill available space when peers exist, fixed otherwise
@@ -506,7 +506,7 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.5.sp,
-                fontSize = 9.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -524,7 +524,7 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
         Text(
             text = subText,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-            color = CardeaTheme.colors.textSecondary.copy(alpha = 0.7f)
+            color = CardeaTheme.colors.textTertiary
         )
     }
 }
@@ -547,7 +547,7 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.5.sp,
-                fontSize = 9.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -565,7 +565,7 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
         Text(
             text = subText,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-            color = CardeaTheme.colors.textSecondary.copy(alpha = 0.7f)
+            color = CardeaTheme.colors.textTertiary
         )
     }
 }
@@ -663,7 +663,7 @@ private fun BootcampTile(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.5.sp,
-                        fontSize = 9.sp
+                        fontSize = 10.sp
                     ),
                     color = CardeaTheme.colors.textSecondary
                 )
@@ -719,7 +719,7 @@ private fun VolumeTile(
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.2.sp,
-                fontSize = 8.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -748,7 +748,7 @@ private fun VolumeRow(label: String, value: String, progress: Float) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 0.8.sp,
-                fontSize = 9.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary,
             modifier = Modifier.width(30.dp)
