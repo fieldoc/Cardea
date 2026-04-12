@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,9 +64,12 @@ import com.hrcoach.R
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
+import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.ui.components.CardeaButton
-import com.hrcoach.ui.theme.HrCoachThemeTokens
 import kotlinx.coroutines.delay
 
 private enum class PostRunContentState {
@@ -158,7 +162,7 @@ fun PostRunSummaryScreen(
                         Text(
                             text = uiState.errorMessage ?: "Unable to load summary.",
                             style = MaterialTheme.typography.bodyLarge,
-                            color = HrCoachThemeTokens.subtleText
+                            color = CardeaTheme.colors.textSecondary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = onDone) {
@@ -183,7 +187,7 @@ fun PostRunSummaryScreen(
                             Text(
                                 text = "Run Complete",
                                 style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.primary
+                                color = GradientPink
                             )
                         }
 
@@ -227,7 +231,7 @@ fun PostRunSummaryScreen(
                         Text(
                             text = "Compared to Similar Runs",
                             style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = CardeaTheme.colors.textPrimary
                         )
 
                         if (uiState.comparisons.isEmpty()) {
@@ -239,18 +243,18 @@ fun PostRunSummaryScreen(
                                     Icon(
                                         imageVector = Icons.Default.Insights,
                                         contentDescription = null,
-                                        tint = HrCoachThemeTokens.subtleText
+                                        tint = CardeaTheme.colors.textSecondary
                                     )
                                     Column {
                                         Text(
                                             text = "Not enough data yet.",
                                             style = MaterialTheme.typography.bodyLarge,
-                                            color = MaterialTheme.colorScheme.onSurface
+                                            color = CardeaTheme.colors.textPrimary
                                         )
                                         Text(
                                             text = "Complete a few similar sessions to unlock this view.",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = HrCoachThemeTokens.subtleText
+                                            color = CardeaTheme.colors.textSecondary
                                         )
                                     }
                                 }
@@ -259,7 +263,7 @@ fun PostRunSummaryScreen(
                             Text(
                                 text = "Based on ${uiState.similarRunCount} similar sessions",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = HrCoachThemeTokens.subtleText
+                                color = CardeaTheme.colors.textSecondary
                             )
                             uiState.comparisons.forEach { item ->
                                 GlassCard {
@@ -271,18 +275,18 @@ fun PostRunSummaryScreen(
                                             Text(
                                                 text = item.title,
                                                 style = MaterialTheme.typography.titleMedium,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = CardeaTheme.colors.textPrimary
                                             )
                                             Text(
                                                 text = item.value,
                                                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = CardeaTheme.colors.textPrimary
                                             )
                                             item.insight?.let { insight ->
                                                 Text(
                                                     text = insight,
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = HrCoachThemeTokens.subtleText
+                                                    color = CardeaTheme.colors.textSecondary
                                                 )
                                             }
                                         }
@@ -291,9 +295,9 @@ fun PostRunSummaryScreen(
                                                 text = delta,
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = when (item.positive) {
-                                                    true -> MaterialTheme.colorScheme.tertiary
-                                                    false -> MaterialTheme.colorScheme.secondary
-                                                    null -> HrCoachThemeTokens.subtleText
+                                                    true -> ZoneGreen
+                                                    false -> ZoneRed
+                                                    null -> CardeaTheme.colors.textSecondary
                                                 }
                                             )
                                         }
@@ -308,9 +312,10 @@ fun PostRunSummaryScreen(
                         ) {
                             OutlinedButton(
                                 onClick = onViewHistory,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
                             ) {
-                                Text("View Route")
+                                Text("View Route", color = CardeaTheme.colors.textPrimary)
                             }
                             CardeaButton(
                                 text = stringResource(R.string.button_done),
@@ -344,19 +349,19 @@ private fun SummaryStatCard(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = GradientPink,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.labelSmall,
-            color = HrCoachThemeTokens.subtleText
+            color = CardeaTheme.colors.textSecondary
         )
         Text(
             text = value,
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
+            color = CardeaTheme.colors.textPrimary
         )
     }
 }
@@ -385,7 +390,7 @@ private fun HrrCooldownCard(endTimeMs: Long) {
             Icon(
                 imageVector = Icons.Default.DirectionsWalk,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = GradientPink,
                 modifier = Modifier.size(20.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -393,20 +398,20 @@ private fun HrrCooldownCard(endTimeMs: Long) {
                     text = if (isComplete) "Recovery measurement complete"
                            else "Calculating your 30-day recovery index\u2026",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 if (isComplete) {
                     Text(
                         text = "You can stop walking now.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = HrCoachThemeTokens.subtleText
+                        color = CardeaTheme.colors.textSecondary
                     )
                 } else {
                     Text(
                         text = "Walk slowly \u2014 ${remainingSeconds}s remaining",
                         style = MaterialTheme.typography.bodySmall,
-                        color = HrCoachThemeTokens.subtleText
+                        color = CardeaTheme.colors.textSecondary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     LinearProgressIndicator(
@@ -415,7 +420,7 @@ private fun HrrCooldownCard(endTimeMs: Long) {
                             .fillMaxWidth()
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp)),
-                        color = MaterialTheme.colorScheme.primary,
+                        color = GradientPink,
                         trackColor = GlassBorder
                     )
                 }
@@ -438,19 +443,19 @@ private fun BootcampContextCard(
             Icon(
                 imageVector = Icons.Default.Insights,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = GradientPink,
                 modifier = Modifier.size(20.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (weekComplete) "Bootcamp Week Complete" else "Bootcamp Progress",
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Text(
                     text = progressLabel,
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = CardeaTheme.colors.textPrimary
                 )
                 Text(
                     text = if (weekComplete) {
@@ -459,7 +464,7 @@ private fun BootcampContextCard(
                         "This run has been applied to your current bootcamp week."
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = HrCoachThemeTokens.subtleText
+                    color = CardeaTheme.colors.textSecondary
                 )
             }
         }
