@@ -64,7 +64,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -82,6 +84,7 @@ import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.model.BootcampGoal
+import com.hrcoach.domain.model.TrainingPhase
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
@@ -648,6 +651,160 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
                 contentAlignment = Alignment.Center
             ) {
                 dotContent()
+            }
+        }
+
+        // Session type label
+        val typeLabel = when {
+            day.isToday && session == null -> "Today"
+            session != null -> session.rawTypeName.split(" ")[0]
+            else -> ""
+        }
+        if (typeLabel.isNotEmpty()) {
+            Text(
+                text = typeLabel,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.3.sp
+                ),
+                color = if (day.isToday) GradientPink else CardeaTheme.colors.textTertiary,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+// ─── Phase Timeline ───────────────────────────────────────────────────────
+
+@Composable
+private fun PhaseTimelineCard(
+    currentPhase: TrainingPhase?,
+    absoluteWeek: Int,
+    totalWeeks: Int
+) {
+    // For EVERGREEN or null phase, show a simplified single-segment bar
+    val isEvergreen = currentPhase == TrainingPhase.EVERGREEN
+
+    // Standard 4-phase arc with typical proportional weights
+    val phases = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
+    val weights = listOf(3f, 4f, 3f, 2f) // proportional durations
+    val totalWeight = weights.sum()
+
+    val currentIndex = if (isEvergreen) -1 else phases.indexOf(currentPhase)
+
+    val ctaBrush = Brush.linearGradient(listOf(GradientPink, GradientRed))
+    val glassBorder = CardeaTheme.colors.glassBorder
+    val textTertiary = CardeaTheme.colors.textTertiary
+
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        // Section title
+        Text(
+            text = "PLAN PROGRESS",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
+            ),
+            color = textTertiary
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (isEvergreen) {
+            // Evergreen: single continuous bar showing week within 4-week cycle
+            val cycleProgress = if (totalWeeks > 0) {
+                ((absoluteWeek - 1) % 4 + 1).toFloat() / 4f
+            } else 0.25f
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+            ) {
+                val barHeight = size.height
+                val radius = CornerRadius(barHeight / 2f, barHeight / 2f)
+
+                // Background
+                drawRoundRect(
+                    color = glassBorder,
+                    size = Size(size.width, barHeight),
+                    cornerRadius = radius
+                )
+                // Filled portion
+                if (cycleProgress > 0f) {
+                    drawRoundRect(
+                        brush = ctaBrush,
+                        size = Size(size.width * cycleProgress, barHeight),
+                        cornerRadius = radius
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "Evergreen",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                color = GradientPink
+            )
+        } else {
+            // Standard 4-phase segmented bar
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+            ) {
+                val barHeight = size.height
+                val gapWidth = 2.dp.toPx()
+                val totalGaps = (phases.size - 1) * gapWidth
+                val availableWidth = size.width - totalGaps
+                val radius = CornerRadius(barHeight / 2f, barHeight / 2f)
+
+                var xOffset = 0f
+                phases.forEachIndexed { index, phase ->
+                    val segmentWidth = (weights[index] / totalWeight) * availableWidth
+                    val isPastOrCurrent = index <= currentIndex
+
+                    if (isPastOrCurrent) {
+                        drawRoundRect(
+                            brush = ctaBrush,
+                            topLeft = Offset(xOffset, 0f),
+                            size = Size(segmentWidth, barHeight),
+                            cornerRadius = radius
+                        )
+                    } else {
+                        drawRoundRect(
+                            color = glassBorder,
+                            topLeft = Offset(xOffset, 0f),
+                            size = Size(segmentWidth, barHeight),
+                            cornerRadius = radius
+                        )
+                    }
+
+                    xOffset += segmentWidth + gapWidth
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Phase labels
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                phases.forEachIndexed { index, phase ->
+                    val isCurrent = index == currentIndex
+                    Text(
+                        text = phase.displayName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium
+                        ),
+                        color = if (isCurrent) GradientPink else textTertiary
+                    )
+                }
             }
         }
     }
@@ -1314,6 +1471,12 @@ private fun ActiveBootcampDashboard(
                 days = uiState.currentWeekDays,
                 dateRange = uiState.currentWeekDateRange,
                 onSessionClick = onSessionClick
+            )
+
+            PhaseTimelineCard(
+                currentPhase = uiState.currentPhase,
+                absoluteWeek = uiState.absoluteWeek,
+                totalWeeks = uiState.totalWeeks
             )
 
             if (uiState.isPaused) {

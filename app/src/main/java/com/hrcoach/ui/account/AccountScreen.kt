@@ -24,6 +24,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Mic
@@ -78,7 +82,7 @@ import com.hrcoach.BuildConfig
 import com.hrcoach.ui.theme.ZoneRed
 import androidx.compose.material.icons.filled.Group
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AccountScreen(
     onThemeModeChanged: (ThemeMode) -> Unit = {},
@@ -398,6 +402,9 @@ fun AccountScreen(
                     }
                 }
 
+                // Voice mode explanation cards
+                VoiceModeExplanation(currentVerbosity = state.voiceVerbosity)
+
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Vibration toggle
@@ -410,9 +417,15 @@ fun AccountScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
-                // Informational Cues
-                SettingSection(icon = Icons.Default.Mic, title = "Informational Cues") {
+                // Fine-tune Cues
+                SettingSection(icon = Icons.Default.Mic, title = "Fine-tune Cues") {
                     val cuesEnabled = state.voiceVerbosity != VoiceVerbosity.OFF
+                    Text(
+                        text = "These only apply when Voice Coaching is set to Full.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CardeaTheme.colors.textTertiary,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
                     val cueAlpha = if (cuesEnabled) 1f else 0.4f
                     Column(modifier = Modifier.alpha(cueAlpha)) {
                         InfoCueToggle("Halfway reminder", state.enableHalfwayReminder && cuesEnabled, cuesEnabled) { viewModel.setEnableHalfwayReminder(it) }
@@ -764,6 +777,126 @@ private fun GradientSaveButton(onClick: () -> Unit) {
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             color = CardeaTheme.colors.onGradient
         )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun VoiceModeExplanation(currentVerbosity: VoiceVerbosity) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        VoiceModeCard(
+            name = "Off",
+            description = "Silent running. No voice or sound alerts. Pause/resume tones still play for safety.",
+            isActive = currentVerbosity == VoiceVerbosity.OFF,
+            tags = emptyList()
+        )
+        VoiceModeCard(
+            name = "Minimal",
+            description = "Only critical coaching. You'll hear zone change alerts and workout start/end cues.",
+            isActive = currentVerbosity == VoiceVerbosity.MINIMAL,
+            tags = listOf("Zone alerts", "Earcon tones", "Start/End")
+        )
+        VoiceModeCard(
+            name = "Full",
+            description = "Everything in Minimal plus distance splits, pacing guidance, and informational coaching cues.",
+            isActive = currentVerbosity == VoiceVerbosity.FULL,
+            tags = listOf("Zone alerts", "Earcon tones", "Start/End", "KM splits", "Pace coaching", "Halfway", "In-zone confirm")
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun VoiceModeCard(
+    name: String,
+    description: String,
+    isActive: Boolean,
+    tags: List<String>
+) {
+    val pink = GradientPink
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .then(
+                if (isActive) Modifier
+                    .background(pink.copy(alpha = 0.06f))
+                    .border(1.dp, pink.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                else Modifier
+                    .background(CardeaTheme.colors.glassHighlight.copy(alpha = 0.3f))
+                    .border(1.dp, CardeaTheme.colors.glassBorder.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+            )
+            .padding(10.dp)
+            .then(if (!isActive) Modifier.alpha(0.5f) else Modifier),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Indicator circle
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .clip(CircleShape)
+                .then(
+                    if (isActive) Modifier.background(CardeaCtaGradient)
+                    else Modifier.border(1.5.dp, CardeaTheme.colors.glassBorder, CircleShape)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isActive) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textSecondary,
+                lineHeight = 16.sp
+            )
+            if (tags.isNotEmpty()) {
+                Spacer(Modifier.height(5.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    tags.forEach { tag ->
+                        Text(
+                            text = tag.uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.4.sp
+                            ),
+                            color = if (isActive) pink else CardeaTheme.colors.textSecondary,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (isActive) pink.copy(alpha = 0.10f)
+                                    else CardeaTheme.colors.glassHighlight
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

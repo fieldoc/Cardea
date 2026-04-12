@@ -22,6 +22,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +49,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -892,48 +900,194 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
 // ── No-Bootcamp Card ────────────────────────────────────────────
 
 @Composable
-private fun NoBootcampCard(onSetupBootcamp: () -> Unit, modifier: Modifier = Modifier) {
-    Column(
+private fun NoBootcampCard(
+    onSetupBootcamp: () -> Unit,
+    onStartRun: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.padding(horizontal = 20.dp)) {
+        // ── Feature showcase hero ──
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .border(
+                    width = 1.dp,
+                    color = CardeaTheme.colors.glassBorder,
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .background(
+                    color = CardeaTheme.colors.glassHighlight,
+                    shape = RoundedCornerShape(20.dp)
+                )
+                .padding(20.dp)
+        ) {
+            // Badge
+            Text(
+                text = "YOUR PERSONAL RUNNING COACH",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp
+                ),
+                color = CardeaTheme.colors.textTertiary
+            )
+            Spacer(Modifier.height(10.dp))
+
+            // Title
+            Text(
+                text = "Train smarter, not harder.",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Spacer(Modifier.height(6.dp))
+
+            // Subtitle
+            Text(
+                text = "Cardea builds an adaptive plan around your life, fitness, and heart rate data.",
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textSecondary
+            )
+            Spacer(Modifier.height(20.dp))
+
+            // Feature items
+            FeatureItem(
+                icon = Icons.Default.FavoriteBorder,
+                iconTint = GradientRed,
+                iconBg = GradientRed.copy(alpha = 0.12f),
+                title = "HR zone coaching",
+                description = "Real-time alerts keep you in the right zone"
+            )
+            Spacer(Modifier.height(14.dp))
+            FeatureItem(
+                icon = Icons.Default.Timer,
+                iconTint = GradientBlue,
+                iconBg = GradientBlue.copy(alpha = 0.12f),
+                title = "Life-aware scheduling",
+                description = "Adapts to your week \u2014 block days, pick your long run"
+            )
+            Spacer(Modifier.height(14.dp))
+            FeatureItem(
+                icon = Icons.Default.Mic,
+                iconTint = GradientCyan,
+                iconBg = GradientCyan.copy(alpha = 0.12f),
+                title = "Voice coaching",
+                description = "Spoken pace, zone, and distance cues in your ear"
+            )
+            Spacer(Modifier.height(20.dp))
+
+            // CTA button
+            CardeaButton(
+                text = "Set Up Bootcamp",
+                onClick = onSetupBootcamp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // ── Just Run strip ──
+        Spacer(Modifier.height(8.dp))
+        JustRunStrip(onClick = onStartRun)
+    }
+}
+
+@Composable
+private fun FeatureItem(
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    title: String,
+    description: String,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Column {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun JustRunStrip(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .border(
                 width = 1.dp,
                 color = CardeaTheme.colors.glassBorder,
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(16.dp)
             )
             .background(
                 color = CardeaTheme.colors.glassHighlight,
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(16.dp)
             )
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = "STRUCTURED TRAINING",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp
-            ),
-            color = CardeaTheme.colors.textSecondary
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = "Start Bootcamp",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-            color = CardeaTheme.colors.textPrimary
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "Adaptive program \u2014 HR zones, life-aware scheduling",
-            style = MaterialTheme.typography.bodySmall,
-            color = CardeaTheme.colors.textSecondary,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(16.dp))
-        CardeaButton(
-            text = "Set Up Bootcamp",
-            onClick = onSetupBootcamp,
-            modifier = Modifier.fillMaxWidth()
+        // Play icon in glass circle
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(CardeaTheme.colors.glassBorder),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = CardeaTheme.colors.textPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+
+        // Text
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Just run",
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Text(
+                text = "Skip the plan \u2014 start a manual free run now",
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textSecondary
+            )
+        }
+
+        // Chevron
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = CardeaTheme.colors.textSecondary,
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -996,7 +1150,10 @@ fun HomeScreen(
                     AllCaughtUpCard(onGoToTraining = onGoToBootcamp)
                 }
                 else -> {
-                    NoBootcampCard(onSetupBootcamp = onGoToBootcamp)
+                    NoBootcampCard(
+                        onSetupBootcamp = onGoToBootcamp,
+                        onStartRun = onStartRun
+                    )
                 }
             }
 

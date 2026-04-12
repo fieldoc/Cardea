@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardea — UI Polish Proposals 2026-04-11</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Oxanium:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ──────────────────────────────────────────────────────
+       Cardea design tokens — mirroring Color.kt
+       ────────────────────────────────────────────────────── */
+    :root {
+      --bg:          #050505;
+      --bg2:         #0D0D0D;
+
+      --glass-fill:  rgba(255,255,255,0.08);
+      --glass-fill2: rgba(255,255,255,0.13);
+      --glass-bdr:   rgba(255,255,255,0.10);
+      --glass-hi:    rgba(255,255,255,0.04);
+
+      --grad-full:   linear-gradient(135deg,#FF4D5A 0%,#FF2DA6 35%,#4D61FF 65%,#00E5FF 100%);
+      --grad-cta:    linear-gradient(135deg,#FF4D5A,#FF2DA6);
+      --grad-nav:    linear-gradient(135deg,#4D61FF,#00E5FF);
+
+      --pink:        #FF2DA6;
+      --pink-dim:    rgba(255,45,166,0.12);
+      --red:         #FF4D5A;
+      --blue:        #4D61FF;
+      --cyan:        #00E5FF;
+
+      --t1: #FFFFFF;
+      --t2: #A1A1AA;
+      --t3: #6B6B73;
+
+      --zone-g: #22C55E;
+      --zone-a: #FACC15;
+      --zone-r: #EF4444;
+      --blackout: rgba(239,68,68,0.15);
+      --blackout-bdr: rgba(239,68,68,0.30);
+
+      --r1: 18px;
+      --r2: 14px;
+      --r3: 12px;
+
+      --f-ui:     'DM Sans', system-ui, sans-serif;
+      --f-metric: 'Oxanium', monospace;
+    }
+
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+      background: radial-gradient(ellipse at 12% 8%, #111 0%, #050505 55%);
+      color: var(--t1);
+      font-family: var(--f-ui);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Page layout
+       ────────────────────────────────────────────────────── */
+    .page { max-width: 1400px; margin: 0 auto; padding: 56px 36px 120px; }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 72px;
+      animation: rise 0.55s ease-out both;
+    }
+    .brand {
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1;
+      background: var(--grad-full);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-sub {
+      font-size: 11px; font-weight: 500;
+      letter-spacing: .12em; text-transform: uppercase;
+      color: var(--t3); margin-top: 10px;
+    }
+    .header-tagline {
+      font-size: 13px; color: var(--t2);
+      margin-top: 6px; font-style: italic;
+    }
+
+    /* Sections */
+    .section { margin-bottom: 80px; }
+    .section-label {
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--t3);
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      margin-bottom: 36px;
+    }
+
+    .section-desc {
+      font-size: 13px; color: var(--t2);
+      line-height: 1.7; max-width: 720px;
+      margin-bottom: 40px;
+    }
+
+    .phones {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .phone-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      animation: rise .6s ease-out both;
+    }
+    .phone-wrap:nth-child(1) { animation-delay: .05s; }
+    .phone-wrap:nth-child(2) { animation-delay: .15s; }
+    .phone-wrap:nth-child(3) { animation-delay: .25s; }
+
+    .phone-caption {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--t3);
+    }
+    .phone-note {
+      font-size: 11px; color: var(--t2);
+      text-align: center; max-width: 280px;
+      line-height: 1.6; margin-top: -4px;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Phone frame
+       ────────────────────────────────────────────────────── */
+    .frame {
+      width: 320px;
+      height: 700px;
+      background: #080808;
+      border-radius: 46px;
+      border: 1.5px solid rgba(255,255,255,0.13);
+      overflow: hidden;
+      position: relative;
+      box-shadow:
+        0 0 0 6px rgba(255,255,255,0.025),
+        0 48px 96px rgba(0,0,0,.85),
+        inset 0 1px 0 rgba(255,255,255,0.07);
+    }
+    .frame.tall { height: 780px; }
+
+    .screen {
+      width: 100%; height: 100%;
+      background: radial-gradient(ellipse at 25% 6%, #111 0%, #050505 68%);
+      display: flex; flex-direction: column;
+      overflow: hidden; position: relative;
+    }
+
+    /* status bar */
+    .sbar {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 12px 22px 0;
+      flex-shrink: 0;
+    }
+    .sbar-time { font-size: 12px; font-weight: 600; }
+
+    /* ──────────────────────────────────────────────────────
+       Glass card tiers
+       ────────────────────────────────────────────────────── */
+    .g1 {
+      border-radius: var(--r1);
+      background:
+        linear-gradient(var(--bg2), var(--bg2)) padding-box,
+        var(--grad-full) border-box;
+      border: 1.5px solid transparent;
+    }
+    .g2 {
+      background: var(--glass-fill);
+      border: 1px solid var(--glass-bdr);
+      border-radius: var(--r2);
+    }
+    .g3 {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--r3);
+    }
+
+    .gtext {
+      background: var(--grad-full);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ──────────────────────────────────────────────────────
+       Nav bar
+       ────────────────────────────────────────────────────── */
+    .nav {
+      height: 60px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: space-around;
+      padding: 0 8px; flex-shrink: 0;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .nav-lbl { font-size: 9px; font-weight: 500; }
+    .nav-item.active .nav-lbl {
+      background: var(--grad-nav);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nav-item.inactive .nav-lbl { color: var(--t3); }
+    .nav-item.inactive svg { opacity: 0.38; }
+
+    /* ──────────────────────────────────────────────────────
+       SCREEN 1: HOME — PRE-BOOTCAMP
+       ────────────────────────────────────────────────────── */
+    .home-scroll { flex: 1; overflow-y: auto; padding: 0; }
+    .home-scroll::-webkit-scrollbar { display: none; }
+
+    .greeting {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 4px 14px 6px;
+      flex-shrink: 0;
+    }
+    .greeting-txt { font-size: 12px; color: var(--t2); }
+    .greeting-btns { display: flex; gap: 7px; }
+    .icon-btn {
+      width: 29px; height: 29px; border-radius: 50%;
+      background: var(--glass-fill);
+      border: 1px solid var(--glass-bdr);
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Welcome hero card — pre-bootcamp state */
+    .welcome-hero {
+      margin: 0 12px;
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .welcome-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(circle at 80% 20%, rgba(255,77,90,.12) 0%, transparent 60%),
+        radial-gradient(circle at 20% 80%, rgba(77,97,255,.08) 0%, transparent 50%),
+        rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+    }
+    .welcome-content {
+      position: relative; z-index: 2;
+      padding: 18px 16px 20px;
+    }
+    .welcome-badge {
+      font-size: 8px; font-weight: 700;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 8px;
+    }
+    .welcome-title {
+      font-size: 20px; font-weight: 700;
+      color: var(--t1); line-height: 1.15;
+      margin-bottom: 6px;
+    }
+    .welcome-sub {
+      font-size: 11px; color: var(--t2);
+      line-height: 1.5; margin-bottom: 16px;
+    }
+
+    .feature-list {
+      display: flex; flex-direction: column; gap: 10px;
+      margin-bottom: 18px;
+    }
+    .feature-item {
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .feature-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+    }
+    .feature-icon.hr { background: rgba(255,77,90,0.12); }
+    .feature-icon.plan { background: rgba(77,97,255,0.12); }
+    .feature-icon.voice { background: rgba(0,229,255,0.12); }
+    .feature-text-wrap { flex: 1; }
+    .feature-label { font-size: 11px; font-weight: 600; color: var(--t1); }
+    .feature-desc { font-size: 9px; color: var(--t2); line-height: 1.4; margin-top: 1px; }
+
+    .btn-cta {
+      width: 100%; height: 44px;
+      border-radius: 14px;
+      background: var(--grad-cta);
+      border: none; cursor: pointer;
+      color: #fff; font-family: var(--f-ui);
+      font-size: 12px; font-weight: 600;
+      letter-spacing: .03em;
+      box-shadow: 0 6px 24px rgba(255,77,90,.28);
+    }
+    .btn-cta.sm { height: 36px; font-size: 11px; }
+
+    /* Quick-start strip */
+    .quickstart-strip {
+      margin: 10px 12px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px;
+    }
+    .qs-icon {
+      width: 32px; height: 32px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .qs-text { flex: 1; }
+    .qs-title { font-size: 11px; font-weight: 600; color: var(--t1); }
+    .qs-desc  { font-size: 9px; color: var(--t2); margin-top: 1px; }
+    .qs-arrow { color: var(--t3); font-size: 14px; }
+
+    /* Stat tiles — pre-bootcamp (thinner) */
+    .stat-row-pre {
+      display: flex; gap: 6px;
+      padding: 0 12px; flex-shrink: 0;
+    }
+    .stat-tile-pre {
+      flex: 1; padding: 12px;
+      display: flex; flex-direction: column;
+      justify-content: center;
+    }
+    .tile-lbl { font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+    .tile-num { font-family: var(--f-metric); font-size: 28px; font-weight: 700; line-height: 1; }
+    .tile-sub { font-size: 9px; color: var(--t2); margin-top: 3px; }
+
+    /* ──────────────────────────────────────────────────────
+       SCREEN 2: BOOTCAMP DASHBOARD
+       ────────────────────────────────────────────────────── */
+    .boot-scroll { flex: 1; overflow-y: auto; padding: 0 12px 8px; }
+    .boot-scroll::-webkit-scrollbar { display: none; }
+
+    .boot-header { padding: 8px 14px 6px; flex-shrink: 0; }
+    .boot-title-row { display: flex; align-items: baseline; gap: 8px; }
+    .boot-title { font-size: 19px; font-weight: 700; }
+    .boot-goal-badge {
+      font-size: 10px; font-weight: 700;
+      background: var(--grad-cta);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .boot-phase {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 100px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 9px; font-weight: 600; color: var(--t2);
+      margin-top: 4px;
+    }
+    .boot-progress-bar {
+      height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,0.06);
+      margin: 8px 14px 0;
+      overflow: hidden; flex-shrink: 0;
+    }
+    .boot-progress-fill {
+      height: 100%; border-radius: 2px;
+      background: var(--grad-cta);
+    }
+
+    /* Hero status card */
+    .hero-status {
+      margin: 10px 0 8px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-status-bg {
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 85% 30%, rgba(255,77,90,.08) 0%, transparent 55%);
+      pointer-events: none;
+    }
+    .hero-status-content { position: relative; z-index: 2; }
+    .hero-label {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 3px;
+    }
+    .hero-title-big {
+      font-size: 20px; font-weight: 700;
+      color: var(--t1); line-height: 1.15;
+    }
+    .hero-detail { font-size: 10px; color: var(--t2); margin-top: 3px; }
+    .hero-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .hero-btn-primary {
+      flex: 1; height: 36px; border-radius: 12px;
+      background: var(--grad-cta); border: none;
+      color: #fff; font-family: var(--f-ui);
+      font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    .hero-btn-secondary {
+      height: 36px; padding: 0 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: var(--t2); font-family: var(--f-ui);
+      font-size: 11px; font-weight: 500; cursor: pointer;
+    }
+
+    /* Week strip — visual calendar */
+    .week-strip {
+      margin: 0 0 8px;
+      padding: 12px;
+    }
+    .week-strip-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 8px;
+    }
+    .week-strip-title { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); }
+    .week-strip-range { font-size: 9px; color: var(--t3); }
+
+    .week-days {
+      display: flex; gap: 4px;
+    }
+    .wday {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+    }
+    .wday-letter { font-size: 9px; font-weight: 600; color: var(--t3); }
+    .wday-dot {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8px; font-weight: 700;
+      position: relative;
+    }
+    .wday-dot.done {
+      background: var(--grad-cta);
+      color: #fff;
+    }
+    .wday-dot.today {
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,45,166,0.5);
+      color: var(--t1);
+    }
+    .wday-dot.scheduled {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--t2);
+    }
+    .wday-dot.rest {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.05);
+      color: var(--t3);
+    }
+    .wday-type {
+      font-size: 7px; font-weight: 600;
+      letter-spacing: .03em; text-transform: uppercase;
+      color: var(--t3); margin-top: 1px;
+    }
+    .wday-type.highlight { color: var(--pink); }
+
+    /* Coming Up section */
+    .coming-up { margin: 0 0 8px; padding: 10px 12px; }
+    .coming-up-title {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 8px;
+    }
+    .session-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .session-row:last-child { border-bottom: none; }
+    .session-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 11px;
+    }
+    .session-icon.easy { background: rgba(34,197,94,0.12); }
+    .session-icon.tempo { background: rgba(250,204,21,0.12); }
+    .session-icon.strides { background: rgba(255,77,90,0.12); }
+    .session-icon.long { background: rgba(77,97,255,0.12); }
+    .session-icon.recovery { background: rgba(0,229,255,0.08); }
+    .session-info { flex: 1; }
+    .session-name { font-size: 11px; font-weight: 600; color: var(--t1); }
+    .session-meta { font-size: 9px; color: var(--t2); margin-top: 1px; }
+    .session-day { font-size: 9px; color: var(--t3); text-align: right; }
+
+    /* Phase timeline */
+    .phase-timeline {
+      margin: 0 0 8px;
+      padding: 12px 12px 10px;
+    }
+    .phase-timeline-title {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 10px;
+    }
+    .phase-bar {
+      display: flex; height: 6px; border-radius: 3px;
+      overflow: hidden; gap: 2px; margin-bottom: 6px;
+    }
+    .phase-seg {
+      height: 100%; border-radius: 3px;
+    }
+    .phase-seg.active { background: var(--grad-cta); }
+    .phase-seg.future { background: rgba(255,255,255,0.08); }
+    .phase-seg.done { background: rgba(255,45,166,0.35); }
+    .phase-labels {
+      display: flex; justify-content: space-between;
+    }
+    .phase-label {
+      font-size: 8px; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+    }
+    .phase-label.current { color: var(--pink); }
+    .phase-label.other { color: var(--t3); }
+
+    /* ──────────────────────────────────────────────────────
+       SCREEN 3: DAY PICKER (improved)
+       ────────────────────────────────────────────────────── */
+    .setup-scroll { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+    .setup-scroll::-webkit-scrollbar { display: none; }
+
+    .setup-header { padding: 8px 14px 0; flex-shrink: 0; }
+    .setup-title { font-size: 20px; font-weight: 700; }
+    .setup-sub { font-size: 11px; color: var(--t2); margin-top: 3px; line-height: 1.45; }
+
+    /* Progress bar dots */
+    .step-progress {
+      display: flex; gap: 4px; padding: 6px 12px;
+      flex-shrink: 0;
+    }
+    .step-dot {
+      flex: 1; height: 3px; border-radius: 2px;
+    }
+    .step-dot.done { background: var(--grad-cta); }
+    .step-dot.current { background: var(--grad-nav); }
+    .step-dot.future { background: rgba(255,255,255,0.08); }
+
+    /* Legend — enlarged */
+    .day-legend {
+      padding: 14px;
+      margin: 12px 0 8px;
+    }
+    .day-legend-title {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); margin-bottom: 10px;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+    }
+    .legend-dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 9px; font-weight: 700;
+    }
+    .legend-dot.open {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      color: var(--t3);
+    }
+    .legend-dot.run {
+      background: var(--grad-cta);
+      color: #fff;
+    }
+    .legend-dot.long {
+      background: var(--grad-cta);
+      color: #fff;
+    }
+    .legend-dot.blocked {
+      background: var(--blackout);
+      border: 1px solid var(--blackout-bdr);
+      color: var(--zone-r);
+    }
+    .legend-text { flex: 1; }
+    .legend-name { font-size: 10px; font-weight: 600; color: var(--t1); }
+    .legend-desc { font-size: 8px; color: var(--t2); line-height: 1.35; margin-top: 1px; }
+
+    /* Day selection circles — larger */
+    .day-picker-grid {
+      display: flex; gap: 4px;
+      justify-content: center;
+      padding: 6px 0 4px;
+      margin: 12px 0;
+    }
+    .dpick {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+      position: relative; cursor: pointer;
+      transition: all .15s ease;
+    }
+    .dpick.open {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      color: var(--t3);
+    }
+    .dpick.run {
+      background: var(--grad-cta);
+      color: #fff;
+      border: none;
+    }
+    .dpick.long {
+      background: var(--grad-cta);
+      color: #fff;
+      border: none;
+    }
+    .dpick.blocked {
+      background: var(--blackout);
+      border: 1px solid var(--blackout-bdr);
+      color: var(--zone-r);
+    }
+    .dpick .star {
+      position: absolute;
+      top: -3px; right: -2px;
+      font-size: 11px;
+      filter: drop-shadow(0 0 2px rgba(255,255,255,0.6));
+    }
+
+    /* Interaction hints */
+    .interaction-hints {
+      padding: 0 12px;
+      margin: 4px 0 16px;
+    }
+    .hint-card {
+      padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .hint-row {
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .hint-icon {
+      width: 22px; height: 22px; border-radius: 6px;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px;
+      background: rgba(255,255,255,0.06);
+    }
+    .hint-text { flex: 1; font-size: 10px; color: var(--t2); line-height: 1.45; }
+    .hint-text strong { color: var(--t1); font-weight: 600; }
+
+    /* Bottom buttons */
+    .setup-bottom {
+      padding: 8px 12px 10px;
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+    }
+    .btn-back {
+      font-size: 12px; font-weight: 500;
+      color: var(--t2); background: none; border: none;
+      cursor: pointer; font-family: var(--f-ui);
+    }
+
+    /* Status text */
+    .day-status {
+      text-align: center;
+      font-size: 11px; color: var(--t2);
+      margin: 12px 0 4px;
+    }
+    .day-status strong { color: var(--t1); }
+    .day-status .ok { color: var(--zone-g); }
+    .day-status .warn { color: var(--zone-a); }
+
+    /* ──────────────────────────────────────────────────────
+       SCREEN 4: VOICE COACHING SETTINGS
+       ────────────────────────────────────────────────────── */
+    .acc-scroll { flex: 1; overflow-y: auto; padding: 6px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+    .acc-scroll::-webkit-scrollbar { display: none; }
+
+    .acc-header { padding: 8px 14px 6px; flex-shrink: 0; }
+    .acc-title { font-size: 20px; font-weight: 700; }
+
+    .settings-card { padding: 2px 0; }
+    .settings-hdr {
+      font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--t3); padding: 8px 14px 3px;
+    }
+    .s-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 11px;
+    }
+    .s-row:last-child { border-bottom: none; }
+    .s-lbl { color: var(--t1); display: flex; align-items: center; gap: 7px; }
+    .s-val { color: var(--t2); font-size: 10px; }
+
+    .s-icon {
+      width: 26px; height: 26px; border-radius: 7px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .toggle {
+      width: 34px; height: 19px; border-radius: 100px; position: relative;
+    }
+    .toggle.on { background: var(--grad-cta); }
+    .toggle.off { background: rgba(255,255,255,.12); }
+    .thumb {
+      width: 15px; height: 15px; border-radius: 50%; background: #fff;
+      position: absolute; top: 2px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.4);
+    }
+    .toggle.on .thumb { right: 2px; }
+    .toggle.off .thumb { left: 2px; }
+
+    /* Segmented control */
+    .seg-ctrl { display: flex; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); }
+    .seg-opt { flex: 1; padding: 5px 8px; font-size: 9px; font-weight: 600; text-align: center; color: var(--t3); cursor: pointer; }
+    .seg-opt.on { background: var(--grad-cta); color: #fff; }
+
+    /* Voice mode explanation cards */
+    .voice-explain {
+      padding: 6px 14px 12px;
+    }
+    .voice-mode-cards {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .voice-mode-card {
+      padding: 10px 12px;
+      border-radius: 10px;
+      display: flex; align-items: flex-start; gap: 10px;
+      transition: all .2s;
+    }
+    .voice-mode-card.active {
+      background: rgba(255,45,166,0.06);
+      border: 1px solid rgba(255,45,166,0.15);
+    }
+    .voice-mode-card.inactive {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      opacity: 0.6;
+    }
+    .vmc-indicator {
+      width: 16px; height: 16px; border-radius: 50%;
+      flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vmc-indicator.on {
+      background: var(--grad-cta);
+    }
+    .vmc-indicator.off {
+      border: 1.5px solid rgba(255,255,255,0.15);
+    }
+    .vmc-content { flex: 1; }
+    .vmc-name { font-size: 11px; font-weight: 600; color: var(--t1); }
+    .vmc-desc { font-size: 9px; color: var(--t2); line-height: 1.45; margin-top: 2px; }
+    .vmc-items {
+      display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;
+    }
+    .vmc-tag {
+      font-size: 7px; font-weight: 600;
+      letter-spacing: .04em; text-transform: uppercase;
+      padding: 2px 6px; border-radius: 4px;
+      background: rgba(255,255,255,0.06);
+      color: var(--t2);
+    }
+    .vmc-tag.active {
+      background: rgba(255,45,166,0.10);
+      color: var(--pink);
+    }
+
+    /* Volume slider mockup */
+    .volume-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 14px 8px;
+    }
+    .vol-label { font-size: 10px; color: var(--t2); width: 34px; flex-shrink: 0; }
+    .vol-track {
+      flex: 1; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      position: relative;
+    }
+    .vol-fill { height: 100%; border-radius: 2px; background: var(--grad-cta); }
+    .vol-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--pink);
+      position: absolute; top: -5px;
+      box-shadow: 0 0 6px rgba(255,45,166,0.4);
+    }
+    .vol-val { font-size: 10px; color: var(--t2); width: 30px; text-align: right; }
+
+    /* ──────────────────────────────────────────────────────
+       Annotations & callouts
+       ────────────────────────────────────────────────────── */
+    .annotation-panel {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 32px;
+      margin-top: 36px;
+    }
+    .ann-title { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+    .ann-desc { font-size: 12px; color: var(--t2); line-height: 1.7; margin-bottom: 20px; max-width: 640px; }
+
+    .change-list { display: flex; flex-direction: column; gap: 14px; }
+    .change-item { display: flex; gap: 10px; }
+    .change-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      margin-top: 5px; flex-shrink: 0;
+    }
+    .change-dot.new { background: var(--zone-g); }
+    .change-dot.fix { background: var(--zone-a); }
+    .change-dot.remove { background: var(--zone-r); }
+    .change-text { font-size: 11px; color: var(--t2); line-height: 1.5; }
+    .change-text strong { color: var(--t1); }
+
+    /* ──────────────────────────────────────────────────────
+       Animations
+       ────────────────────────────────────────────────────── */
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes breathe {
+      0%,100% { transform: scale(1); opacity: .18; }
+      50%      { transform: scale(1.15); opacity: .28; }
+    }
+    @keyframes pulse-ring {
+      0%   { transform: scale(0.95); opacity: .6; }
+      50%  { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(0.95); opacity: .6; }
+    }
+    @keyframes ecg-run {
+      from { stroke-dashoffset: 600; }
+      to   { stroke-dashoffset: 0; }
+    }
+    .ecg-path {
+      stroke-dasharray: 600;
+      animation: ecg-run 3.2s linear infinite;
+    }
+
+    .section { animation: rise .55s ease-out both; }
+    .section:nth-child(2) { animation-delay: .1s; }
+    .section:nth-child(3) { animation-delay: .18s; }
+    .section:nth-child(4) { animation-delay: .26s; }
+    .section:nth-child(5) { animation-delay: .34s; }
+    .section:nth-child(6) { animation-delay: .42s; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Page Header ─────────────────────────────── -->
+  <div class="page-header">
+    <div class="brand">Cardea</div>
+    <div class="header-sub">UI Polish Proposals &nbsp;·&nbsp; 2026-04-11</div>
+    <div class="header-tagline">Four screens refined for clarity and delight.</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 1: HOME — PRE-BOOTCAMP
+       ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">1. Home Screen — Before Bootcamp Enrollment</div>
+    <div class="section-desc">
+      The current pre-bootcamp home screen shows a minimal "Start Bootcamp" card with empty stat tiles.
+      The proposed version fills the space with a compelling feature showcase, a quick-start option for manual runs,
+      and contextual stat tiles that feel alive even before the user commits to structured training.
+    </div>
+
+    <div class="phones">
+      <!-- Current state -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:38</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:6px 0 0;">
+              <div class="greeting">
+                <span class="greeting-txt">Good evening</span>
+                <div class="greeting-btns">
+                  <div class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                  <div class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+                </div>
+              </div>
+
+              <!-- Old: Minimal card -->
+              <div style="margin:0 12px;padding:24px 16px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);text-align:center;">
+                <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);">STRUCTURED TRAINING</div>
+                <div style="font-size:20px;font-weight:700;margin:6px 0 4px;">Start Bootcamp</div>
+                <div style="font-size:11px;color:var(--t2);margin-bottom:16px;">Adaptive program — HR zones, life-aware scheduling</div>
+                <button class="btn-cta">Set Up Bootcamp</button>
+              </div>
+
+              <!-- Old: Empty stat tiles -->
+              <div style="flex:1;display:flex;gap:6px;padding:12px;align-items:stretch;">
+                <div class="g2" style="flex:1;padding:14px;display:flex;flex-direction:column;justify-content:center;">
+                  <div class="tile-lbl">WEEKLY GOAL</div>
+                  <div class="tile-num" style="margin-top:6px;">0/4</div>
+                  <div class="tile-sub">4 more runs</div>
+                </div>
+                <div class="g2" style="flex:1;padding:14px;display:flex;flex-direction:column;justify-content:center;">
+                  <div class="tile-lbl">STREAK</div>
+                  <div class="tile-num" style="margin-top:6px;">0</div>
+                  <div class="tile-sub">start today</div>
+                </div>
+              </div>
+
+              <div style="padding:8px 12px;">
+                <div class="g3" style="display:flex;align-items:center;gap:8px;padding:10px 12px;">
+                  <svg width="14" height="10" viewBox="0 0 32 16" fill="none" opacity=".5"><path d="M0,8 L6,8 L8,4 L10,12 L12,2 L14,14 L16,8 L20,8 C23,5 25,5 28,8 L32,8" stroke="#A1A1AA" stroke-width="1.5"/></svg>
+                  <div style="font-size:9px;color:var(--t2);">Start your first run</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="nh1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="url(#nh1)" stroke-width="1.8" fill="none"/><polyline points="9,22 9,12 15,12 15,22" stroke="url(#nh1)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Current — sparse</div>
+      </div>
+
+      <!-- Proposed state -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:38</span></div>
+            <div class="home-scroll" style="padding:6px 0 0;">
+              <div class="greeting">
+                <span class="greeting-txt">Good evening</span>
+                <div class="greeting-btns">
+                  <div class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                  <div class="icon-btn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+                </div>
+              </div>
+
+              <!-- Rich welcome hero -->
+              <div class="welcome-hero">
+                <div class="welcome-bg"></div>
+                <div class="welcome-content">
+                  <div class="welcome-badge">Your personal running coach</div>
+                  <div class="welcome-title">Train smarter,<br>not harder.</div>
+                  <div class="welcome-sub">Cardea builds an adaptive plan around your life, fitness, and heart rate data.</div>
+
+                  <div class="feature-list">
+                    <div class="feature-item">
+                      <div class="feature-icon hr">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF4D5A" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                      </div>
+                      <div class="feature-text-wrap">
+                        <div class="feature-label">HR zone coaching</div>
+                        <div class="feature-desc">Real-time alerts keep you in the right zone</div>
+                      </div>
+                    </div>
+                    <div class="feature-item">
+                      <div class="feature-icon plan">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4D61FF" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      </div>
+                      <div class="feature-text-wrap">
+                        <div class="feature-label">Life-aware scheduling</div>
+                        <div class="feature-desc">Adapts to your week — block days, pick your long run</div>
+                      </div>
+                    </div>
+                    <div class="feature-item">
+                      <div class="feature-icon voice">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                      </div>
+                      <div class="feature-text-wrap">
+                        <div class="feature-label">Voice coaching</div>
+                        <div class="feature-desc">Spoken pace, zone, and distance cues in your ear</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button class="btn-cta">Set Up Bootcamp</button>
+                </div>
+              </div>
+
+              <!-- Quick-start strip -->
+              <div class="quickstart-strip g3">
+                <div class="qs-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
+                </div>
+                <div class="qs-text">
+                  <div class="qs-title">Just run</div>
+                  <div class="qs-desc">Skip the plan — start a manual free run now</div>
+                </div>
+                <span class="qs-arrow">&rsaquo;</span>
+              </div>
+
+              <!-- Stat tiles -->
+              <div class="stat-row-pre">
+                <div class="g2 stat-tile-pre">
+                  <div class="tile-lbl">WEEKLY GOAL</div>
+                  <div class="tile-num" style="margin-top:6px;color:#fff;">0/4</div>
+                  <div class="tile-sub">4 more runs</div>
+                </div>
+                <div class="g2 stat-tile-pre">
+                  <div class="tile-lbl">STREAK</div>
+                  <div class="tile-num" style="margin-top:6px;color:#fff;">0</div>
+                  <div class="tile-sub">start today</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="nh2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="url(#nh2)" stroke-width="1.8" fill="none"/><polyline points="9,22 9,12 15,12 15,22" stroke="url(#nh2)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Proposed — rich onboarding</div>
+        <div class="phone-note">Feature showcase fills the void. "Just run" offers an escape hatch without requiring bootcamp commitment.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 2: BOOTCAMP DASHBOARD
+       ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">2. Bootcamp Dashboard — Filled &amp; Polished</div>
+    <div class="section-desc">
+      The current dashboard shows a hero card and text-only "Coming Up" list, leaving the bottom half blank.
+      The proposed version adds a visual week strip (showing completed/today/upcoming days),
+      richer session cards with type-colored icons, and a phase timeline showing where you are in your plan.
+    </div>
+
+    <div class="phones">
+      <!-- Current state -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:39</span></div>
+
+            <div class="boot-header">
+              <div class="boot-title-row">
+                <div class="boot-title">Training</div>
+                <div class="boot-goal-badge">10K</div>
+              </div>
+              <div class="boot-phase">Wk 1/12 &middot; Base</div>
+            </div>
+            <div class="boot-progress-bar"><div class="boot-progress-fill" style="width:8%;"></div></div>
+
+            <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+              <!-- Hero -->
+              <div style="margin:10px 12px;padding:16px;border-radius:14px;background:var(--glass-fill);border:1px solid var(--glass-bdr);">
+                <div style="font-size:20px;font-weight:700;">Rest day</div>
+                <div style="font-size:11px;color:var(--t2);margin-top:3px;">Next: Long &middot; Sun &middot; tomorrow</div>
+                <div style="display:flex;gap:16px;margin-top:10px;">
+                  <span style="font-size:11px;color:var(--t2);">Pull forward next run</span>
+                  <span style="font-size:11px;color:var(--t2);">Manual run &rarr;</span>
+                </div>
+              </div>
+
+              <!-- Week dots (old style — gray, indistinct) -->
+              <div style="margin:0 12px;padding:12px;border-radius:14px;background:var(--glass-fill);border:1px solid var(--glass-bdr);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <span style="font-size:10px;color:var(--t3);">M&nbsp;&nbsp;&nbsp;&nbsp;T&nbsp;&nbsp;&nbsp;&nbsp;W&nbsp;&nbsp;&nbsp;&nbsp;T&nbsp;&nbsp;&nbsp;&nbsp;F&nbsp;&nbsp;&nbsp;&nbsp;S&nbsp;&nbsp;&nbsp;&nbsp;S</span>
+                  <span style="font-size:9px;color:var(--t3);">Apr 6-12</span>
+                </div>
+                <div style="display:flex;gap:6px;">
+                  <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);"></div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:transparent;border:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--t3);">&mdash;</div>
+                  <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--t2);">LO</div>
+                </div>
+              </div>
+
+              <!-- Coming Up — text only -->
+              <div style="margin:8px 12px;padding:12px;border-radius:14px;background:var(--glass-fill);border:1px solid var(--glass-bdr);">
+                <div style="font-size:11px;font-weight:600;margin-bottom:8px;">Coming Up</div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                  <span style="font-size:11px;"><strong>Week 2</strong> <span style="color:var(--t2);">Build</span></span>
+                  <span style="font-size:10px;color:var(--t2);">Easy, Strides, Long</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                  <span style="font-size:11px;"><strong>Week 3</strong> <span style="color:var(--zone-g);">Recovery</span></span>
+                  <span style="font-size:10px;color:var(--t2);">Long, Easy</span>
+                </div>
+              </div>
+
+              <!-- EMPTY SPACE -->
+              <div style="flex:1;"></div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="nt1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" stroke="url(#nt1)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Current — empty bottom half</div>
+      </div>
+
+      <!-- Proposed state -->
+      <div class="phone-wrap">
+        <div class="frame tall">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:39</span></div>
+
+            <div class="boot-header">
+              <div class="boot-title-row">
+                <div class="boot-title">Training</div>
+                <div class="boot-goal-badge">10K</div>
+              </div>
+              <div class="boot-phase">Wk 1/12 &middot; Base</div>
+            </div>
+            <div class="boot-progress-bar"><div class="boot-progress-fill" style="width:8%;"></div></div>
+
+            <div class="boot-scroll">
+              <!-- Hero status card -->
+              <div class="hero-status g2">
+                <div class="hero-status-bg"></div>
+                <div class="hero-status-content">
+                  <div class="hero-label">Today</div>
+                  <div class="hero-title-big">Rest day</div>
+                  <div class="hero-detail">Next up: Long Run &middot; Sunday</div>
+                  <div class="hero-actions">
+                    <button class="hero-btn-secondary">Pull forward</button>
+                    <button class="hero-btn-secondary">Manual run &rarr;</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Week strip — visual calendar -->
+              <div class="week-strip g2">
+                <div class="week-strip-header">
+                  <span class="week-strip-title">This week</span>
+                  <span class="week-strip-range">Apr 6 &ndash; 12</span>
+                </div>
+                <div class="week-days">
+                  <div class="wday">
+                    <span class="wday-letter">M</span>
+                    <div class="wday-dot done">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+                    </div>
+                    <span class="wday-type">Easy</span>
+                  </div>
+                  <div class="wday">
+                    <span class="wday-letter">T</span>
+                    <div class="wday-dot done">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+                    </div>
+                    <span class="wday-type">Strides</span>
+                  </div>
+                  <div class="wday">
+                    <span class="wday-letter">W</span>
+                    <div class="wday-dot done">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+                    </div>
+                    <span class="wday-type">Easy</span>
+                  </div>
+                  <div class="wday">
+                    <span class="wday-letter">T</span>
+                    <div class="wday-dot rest">&mdash;</div>
+                    <span class="wday-type">&nbsp;</span>
+                  </div>
+                  <div class="wday">
+                    <span class="wday-letter">F</span>
+                    <div class="wday-dot rest">&mdash;</div>
+                    <span class="wday-type">&nbsp;</span>
+                  </div>
+                  <div class="wday">
+                    <span class="wday-letter">S</span>
+                    <div class="wday-dot today">
+                      <span style="font-size:9px;">&#9679;</span>
+                    </div>
+                    <span class="wday-type highlight">Today</span>
+                  </div>
+                  <div class="wday">
+                    <span class="wday-letter">S</span>
+                    <div class="wday-dot scheduled">LO</div>
+                    <span class="wday-type">Long</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- This week's sessions -->
+              <div class="coming-up g2">
+                <div class="coming-up-title">This Week's Sessions</div>
+                <div class="session-row">
+                  <div class="session-icon easy">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="20,6 9,17 4,12"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-name">Easy Run</div>
+                    <div class="session-meta">30 min &middot; Zone 2</div>
+                  </div>
+                  <div class="session-day" style="color:var(--zone-g);">Done</div>
+                </div>
+                <div class="session-row">
+                  <div class="session-icon strides">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FF4D5A" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="20,6 9,17 4,12"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-name">Strides</div>
+                    <div class="session-meta">25 min &middot; Zone 2-4</div>
+                  </div>
+                  <div class="session-day" style="color:var(--zone-g);">Done</div>
+                </div>
+                <div class="session-row">
+                  <div class="session-icon easy">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="20,6 9,17 4,12"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-name">Easy Run</div>
+                    <div class="session-meta">30 min &middot; Zone 2</div>
+                  </div>
+                  <div class="session-day" style="color:var(--zone-g);">Done</div>
+                </div>
+                <div class="session-row">
+                  <div class="session-icon long">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4D61FF" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-name">Long Run</div>
+                    <div class="session-meta">45 min &middot; Zone 2</div>
+                  </div>
+                  <div class="session-day">Sun</div>
+                </div>
+              </div>
+
+              <!-- Phase timeline -->
+              <div class="phase-timeline g2">
+                <div class="phase-timeline-title">Plan Progress</div>
+                <div class="phase-bar">
+                  <div class="phase-seg active" style="flex:1;"></div>
+                  <div class="phase-seg future" style="flex:3;"></div>
+                  <div class="phase-seg future" style="flex:3;"></div>
+                  <div class="phase-seg future" style="flex:2;"></div>
+                </div>
+                <div class="phase-labels">
+                  <span class="phase-label current">Base</span>
+                  <span class="phase-label other">Build</span>
+                  <span class="phase-label other">Peak</span>
+                  <span class="phase-label other">Taper</span>
+                </div>
+              </div>
+
+              <!-- Coming up — next weeks -->
+              <div class="coming-up g2">
+                <div class="coming-up-title">Coming Up</div>
+                <div class="session-row">
+                  <div class="session-icon easy">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-name">Week 2 &middot; Build</div>
+                    <div class="session-meta">Easy, Strides, Long</div>
+                  </div>
+                </div>
+                <div class="session-row">
+                  <div class="session-icon recovery">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                  </div>
+                  <div class="session-info">
+                    <div class="session-name" style="color:var(--zone-g);">Week 3 &middot; Recovery</div>
+                    <div class="session-meta">Long, Easy</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="nt2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" stroke="url(#nt2)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Proposed — filled &amp; visual</div>
+        <div class="phone-note">Week strip with completion checkmarks, session cards with type icons, and phase timeline fill the screen with non-redundant context.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 3: DAY PICKER
+       ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">3. Day Picker — Clearer Legend &amp; Interaction Hints</div>
+    <div class="section-desc">
+      The current day picker has a tiny inline legend that doesn't distinguish the long-run star from regular run dots.
+      Users don't discover that holding a day blocks it, or that tapping cycles through states.
+      The proposed version has a 2&times;2 visual legend with descriptive text, a visible star on the long-run day,
+      and clear interaction hints explaining tap/hold behavior.
+    </div>
+
+    <div class="phones">
+      <!-- Current state -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:39</span></div>
+            <div class="step-progress">
+              <div class="step-dot done"></div>
+              <div class="step-dot done"></div>
+              <div class="step-dot done"></div>
+              <div class="step-dot current"></div>
+              <div class="step-dot future"></div>
+            </div>
+
+            <div class="setup-header">
+              <div class="setup-title">Pick your days</div>
+              <div class="setup-sub">Tap to toggle, hold to block</div>
+            </div>
+
+            <div class="setup-scroll">
+              <!-- Old legend — tiny -->
+              <div style="margin:12px 0;padding:14px;border-radius:14px;background:var(--glass-fill);border:1px solid var(--glass-bdr);">
+                <div style="font-size:10px;color:var(--t2);margin-bottom:6px;">Select exactly 4 days &middot; 4 selected</div>
+                <div style="display:flex;gap:14px;font-size:9px;color:var(--t2);margin-bottom:12px;">
+                  <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;border:1px solid rgba(255,255,255,0.15);display:inline-block;"></span> open</span>
+                  <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--grad-cta);display:inline-block;"></span> run</span>
+                  <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--grad-cta);display:inline-block;"></span> long</span>
+                  <span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.15);display:inline-block;"></span> blocked</span>
+                </div>
+
+                <!-- Day circles — old -->
+                <div style="display:flex;gap:6px;justify-content:center;">
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--grad-cta);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;">M</div>
+                  <div style="width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--t3);">T</div>
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--grad-cta);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;">W</div>
+                  <div style="width:36px;height:36px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--t3);">T</div>
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--grad-cta);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;">F</div>
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--blackout);border:1px solid var(--blackout-bdr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--zone-r);">S</div>
+                  <div style="width:36px;height:36px;border-radius:50%;background:var(--grad-cta);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;position:relative;">S<span style="position:absolute;top:-2px;right:-1px;font-size:10px;">&#9733;</span></div>
+                </div>
+
+                <div style="text-align:center;font-size:9px;color:var(--t3);margin-top:8px;">Tap to toggle &middot; Hold to block</div>
+              </div>
+            </div>
+
+            <div class="setup-bottom">
+              <button class="btn-back">Back</button>
+              <button class="btn-cta sm" style="flex:1;">Start Program</button>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="nt3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" stroke="url(#nt3)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Current — tiny legend</div>
+      </div>
+
+      <!-- Proposed state -->
+      <div class="phone-wrap">
+        <div class="frame tall">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:39</span></div>
+            <div class="step-progress">
+              <div class="step-dot done"></div>
+              <div class="step-dot done"></div>
+              <div class="step-dot done"></div>
+              <div class="step-dot current"></div>
+              <div class="step-dot future"></div>
+            </div>
+
+            <div class="setup-header">
+              <div class="setup-title">Pick your days</div>
+              <div class="setup-sub">Choose which days work for running, and pick a day for your long run.</div>
+            </div>
+
+            <div class="setup-scroll">
+              <!-- Status -->
+              <div class="day-status"><strong class="ok">4 selected</strong> of 4 needed</div>
+
+              <!-- Day circles — larger, star visible -->
+              <div class="day-picker-grid">
+                <div class="dpick run">M</div>
+                <div class="dpick open">T</div>
+                <div class="dpick run">W</div>
+                <div class="dpick open">T</div>
+                <div class="dpick run">F</div>
+                <div class="dpick blocked">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </div>
+                <div class="dpick long">S<span class="star">&#9733;</span></div>
+              </div>
+
+              <!-- Legend — enlarged 2x2 grid -->
+              <div class="day-legend g2">
+                <div class="day-legend-title">Legend</div>
+                <div class="legend-grid">
+                  <div class="legend-item">
+                    <div class="legend-dot open">T</div>
+                    <div class="legend-text">
+                      <div class="legend-name">Available</div>
+                      <div class="legend-desc">No run scheduled</div>
+                    </div>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-dot run">M</div>
+                    <div class="legend-text">
+                      <div class="legend-name">Run day</div>
+                      <div class="legend-desc">Regular session</div>
+                    </div>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-dot long" style="position:relative;">S<span style="position:absolute;top:-3px;right:-2px;font-size:10px;">&#9733;</span></div>
+                    <div class="legend-text">
+                      <div class="legend-name">Long run</div>
+                      <div class="legend-desc">Your biggest effort of the week</div>
+                    </div>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-dot blocked">
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </div>
+                    <div class="legend-text">
+                      <div class="legend-name">Blocked</div>
+                      <div class="legend-desc">Never schedule here</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interaction hints -->
+              <div class="interaction-hints">
+                <div class="hint-card g3">
+                  <div class="hint-row">
+                    <div class="hint-icon">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><circle cx="12" cy="12" r="1"/></svg>
+                    </div>
+                    <div class="hint-text"><strong>Tap</strong> a day to cycle: available &rarr; run &rarr; long run &rarr; available</div>
+                  </div>
+                  <div class="hint-row">
+                    <div class="hint-icon">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+                    </div>
+                    <div class="hint-text"><strong>Hold</strong> a day to block it — Cardea will never schedule a run on a blocked day (e.g. school pickup)</div>
+                  </div>
+                  <div class="hint-row">
+                    <div class="hint-icon">&#9733;</div>
+                    <div class="hint-text"><strong>Long run day</strong> is when you have the most time. Tap a run day again to promote it</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="setup-bottom">
+              <button class="btn-back">Back</button>
+              <button class="btn-cta sm" style="flex:1;">Start Program</button>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="nt4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z" stroke="url(#nt4)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Proposed — clear legend + hints</div>
+        <div class="phone-note">2&times;2 legend grid with descriptions. Star is prominent. Interaction hints explain tap/hold/promote with real examples.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       SECTION 4: VOICE COACHING SETTINGS
+       ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">4. Voice Coaching — Mode Explanations</div>
+    <div class="section-desc">
+      The current settings show a bare Off/Minimal/Full segmented control with no explanation of what each mode includes.
+      The proposed version adds mode cards below the selector that describe exactly what you'll hear in each mode,
+      with tagged feature chips that make the difference between Minimal and Full immediately obvious.
+    </div>
+
+    <div class="phones">
+      <!-- Current state -->
+      <div class="phone-wrap">
+        <div class="frame">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:40</span></div>
+            <div class="acc-header"><div class="acc-title">Profile</div></div>
+
+            <div class="acc-scroll">
+              <!-- Volume slider -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Audio</div>
+                <div class="s-row">
+                  <span class="s-lbl">
+                    <span class="s-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
+                    Voice volume
+                  </span>
+                  <span class="s-val">80%</span>
+                </div>
+                <div class="volume-row">
+                  <div class="vol-track">
+                    <div class="vol-fill" style="width:80%;"></div>
+                    <div class="vol-thumb" style="left:calc(80% - 7px);"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Coaching</div>
+                <div class="s-row">
+                  <span class="s-lbl">
+                    <span class="s-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg></span>
+                    Voice Coaching
+                  </span>
+                </div>
+                <div style="padding:2px 14px 10px;">
+                  <div class="seg-ctrl">
+                    <div class="seg-opt">Off</div>
+                    <div class="seg-opt">Minimal</div>
+                    <div class="seg-opt on">Full</div>
+                  </div>
+                </div>
+                <!-- No explanation — that's the problem -->
+              </div>
+
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Alerts</div>
+                <div class="s-row">
+                  <span class="s-lbl">
+                    <span class="s-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+                    Vibration Alerts
+                  </span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+              </div>
+
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Informational Cues</div>
+                <div class="s-row">
+                  <span class="s-lbl">Halfway reminder</span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+                <div class="s-row">
+                  <span class="s-lbl">Mile splits</span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="np1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><circle cx="12" cy="8" r="4" stroke="url(#np1)" stroke-width="1.8" fill="none"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="url(#np1)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Current — no explanation</div>
+      </div>
+
+      <!-- Proposed state -->
+      <div class="phone-wrap">
+        <div class="frame tall">
+          <div class="screen">
+            <div class="sbar"><span class="sbar-time">9:40</span></div>
+            <div class="acc-header"><div class="acc-title">Profile</div></div>
+
+            <div class="acc-scroll">
+              <!-- Volume -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Audio</div>
+                <div class="s-row">
+                  <span class="s-lbl">
+                    <span class="s-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>
+                    Voice volume
+                  </span>
+                  <span class="s-val">80%</span>
+                </div>
+                <div class="volume-row">
+                  <div class="vol-track">
+                    <div class="vol-fill" style="width:80%;"></div>
+                    <div class="vol-thumb" style="left:calc(80% - 7px);"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Voice coaching — with mode explanation -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Voice Coaching</div>
+                <div style="padding:2px 14px 6px;">
+                  <div class="seg-ctrl">
+                    <div class="seg-opt">Off</div>
+                    <div class="seg-opt">Minimal</div>
+                    <div class="seg-opt on">Full</div>
+                  </div>
+                </div>
+
+                <!-- Mode explanation cards -->
+                <div class="voice-explain">
+                  <div class="voice-mode-cards">
+                    <div class="voice-mode-card inactive">
+                      <div class="vmc-indicator off"></div>
+                      <div class="vmc-content">
+                        <div class="vmc-name">Off</div>
+                        <div class="vmc-desc">Silent running. No voice or sound alerts. Pause/resume tones still play for safety.</div>
+                      </div>
+                    </div>
+
+                    <div class="voice-mode-card inactive">
+                      <div class="vmc-indicator off"></div>
+                      <div class="vmc-content">
+                        <div class="vmc-name">Minimal</div>
+                        <div class="vmc-desc">Only critical coaching. You'll hear zone change alerts and workout start/end cues.</div>
+                        <div class="vmc-items">
+                          <span class="vmc-tag">Zone alerts</span>
+                          <span class="vmc-tag">Earcon tones</span>
+                          <span class="vmc-tag">Start/End</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="voice-mode-card active">
+                      <div class="vmc-indicator on">
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20,6 9,17 4,12"/></svg>
+                      </div>
+                      <div class="vmc-content">
+                        <div class="vmc-name">Full</div>
+                        <div class="vmc-desc">Everything in Minimal plus distance splits, pacing guidance, and informational coaching cues.</div>
+                        <div class="vmc-items">
+                          <span class="vmc-tag active">Zone alerts</span>
+                          <span class="vmc-tag active">Earcon tones</span>
+                          <span class="vmc-tag active">Start/End</span>
+                          <span class="vmc-tag active">KM splits</span>
+                          <span class="vmc-tag active">Pace coaching</span>
+                          <span class="vmc-tag active">Halfway</span>
+                          <span class="vmc-tag active">In-zone confirm</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Alerts -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Haptic Feedback</div>
+                <div class="s-row">
+                  <span class="s-lbl">
+                    <span class="s-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#A1A1AA" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg></span>
+                    Vibration Alerts
+                  </span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+              </div>
+
+              <!-- Informational cues — fine toggles -->
+              <div class="g2 settings-card">
+                <div class="settings-hdr">Fine-tune Cues</div>
+                <div style="padding:2px 14px 6px;">
+                  <div style="font-size:9px;color:var(--t3);line-height:1.5;">These only apply when Voice Coaching is set to Full.</div>
+                </div>
+                <div class="s-row">
+                  <span class="s-lbl">Halfway reminder</span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+                <div class="s-row">
+                  <span class="s-lbl">Mile splits</span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+                <div class="s-row">
+                  <span class="s-lbl">Workout complete</span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+                <div class="s-row">
+                  <span class="s-lbl">In-zone confirmation</span>
+                  <div class="toggle on"><div class="thumb"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav">
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg><span class="nav-lbl">Home</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg><span class="nav-lbl">Training</span></div>
+              <div class="nav-item inactive"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#52525B" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="nav-lbl">Activity</span></div>
+              <div class="nav-item active"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="np2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4D61FF"/><stop offset="100%" stop-color="#00E5FF"/></linearGradient></defs><circle cx="12" cy="8" r="4" stroke="url(#np2)" stroke-width="1.8" fill="none"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="url(#np2)" stroke-width="1.8" fill="none"/></svg><span class="nav-lbl">Profile</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-caption">Proposed — mode descriptions</div>
+        <div class="phone-note">Each mode shows exactly what you'll hear. Active mode is highlighted with pink accent. Feature tags make Minimal vs Full difference obvious at a glance.</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════
+       SUMMARY OF CHANGES
+       ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-label">Summary of Proposed Changes</div>
+
+    <div class="annotation-panel">
+      <div class="ann-title">Implementation Notes</div>
+      <div class="ann-desc">Each proposal targets a specific UX gap identified from device screenshots. Changes are additive — no existing behavior is removed, only enriched.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:36px;">
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.05);">Home Pre-Bootcamp</div>
+          <div class="change-list">
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Feature showcase hero</strong> replaces minimal text card — HR zones, scheduling, voice coaching with icons</div></div>
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>"Just run" strip</strong> — quick escape hatch for users who want to try a manual run before committing to bootcamp</div></div>
+            <div class="change-item"><div class="change-dot fix"></div><div class="change-text"><strong>Stat tiles kept</strong> but now feel less empty since the hero fills the visual weight above</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.05);">Bootcamp Dashboard</div>
+          <div class="change-list">
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Visual week strip</strong> shows completed/today/upcoming days with type labels and completion checkmarks</div></div>
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Session cards with icons</strong> — type-colored icons (green=easy, red=strides, blue=long) replace text-only Coming Up list</div></div>
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Phase timeline</strong> — segmented progress bar showing Base/Build/Peak/Taper with current phase highlighted</div></div>
+            <div class="change-item"><div class="change-dot fix"></div><div class="change-text"><strong>No dead space</strong> — content fills the screen without being redundant</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.05);">Day Picker</div>
+          <div class="change-list">
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>2&times;2 legend grid</strong> with descriptive text for each state — no more guessing what "long" means</div></div>
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Visible star</strong> in both the legend and the day circle makes long-run day unmistakable</div></div>
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Interaction hints card</strong> explains tap cycling, hold-to-block, and long-run promotion with plain language</div></div>
+            <div class="change-item"><div class="change-dot fix"></div><div class="change-text"><strong>Subtitle updated</strong> from generic "Tap to toggle, hold to block" to "Choose which days work for running, and pick a day for your long run"</div></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.05);">Voice Coaching Settings</div>
+          <div class="change-list">
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Mode description cards</strong> below the segmented control explain what each mode includes</div></div>
+            <div class="change-item"><div class="change-dot new"></div><div class="change-text"><strong>Feature tags</strong> (zone alerts, km splits, pace coaching, etc.) make the Minimal vs Full difference scannable</div></div>
+            <div class="change-item"><div class="change-dot fix"></div><div class="change-text"><strong>"Fine-tune Cues" label</strong> + helper text explains that sub-toggles only apply in Full mode</div></div>
+            <div class="change-item"><div class="change-dot fix"></div><div class="change-text"><strong>Active card highlighted</strong> with pink accent border — always shows what your current selection means</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

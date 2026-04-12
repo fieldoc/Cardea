@@ -37,11 +37,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
@@ -49,7 +54,6 @@ import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaCtaGradient
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneAmber
@@ -399,30 +403,21 @@ private fun SectionDayPicker(
     val isValid = selectedCount == runsPerWeek
 
     SectionHeader("Which Days Work?")
+    Text(
+        text = "Choose which days work for running, and pick a day for your long run.",
+        style = MaterialTheme.typography.bodySmall,
+        color = CardeaTheme.colors.textSecondary,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = if (isValid)
-                "Select exactly $runsPerWeek days \u00b7 $selectedCount selected"
-            else
-                "Select exactly $runsPerWeek days \u00b7 $selectedCount selected",
+            text = "$selectedCount selected of $runsPerWeek needed",
             style = MaterialTheme.typography.bodySmall,
-            color = if (isValid) CardeaTheme.colors.textSecondary
-            else CardeaTheme.colors.textSecondary
+            color = if (isValid) ZoneGreen else ZoneAmber
         )
 
-        // Legend
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SetupDayLegendChip("open", DaySelectionLevel.NONE)
-            SetupDayLegendChip("run", DaySelectionLevel.AVAILABLE)
-            SetupDayLegendChip("long", DaySelectionLevel.LONG_RUN_BIAS)
-            SetupDayLegendChip("blocked", DaySelectionLevel.BLACKOUT)
-        }
+        // Legend — 2x2 grid
+        DayPickerLegendGrid()
 
         // Day chips
         val dayLetters = listOf("M", "T", "W", "T", "F", "S", "S")
@@ -494,41 +489,208 @@ private fun SectionDayPicker(
             }
         }
 
-        Text(
-            text = "Tap to toggle \u00b7 Hold to block",
-            style = MaterialTheme.typography.labelSmall,
-            color = CardeaTheme.colors.textTertiary,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+        // Interaction hints card
+        Spacer(Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(CardeaTheme.colors.glassHighlight.copy(alpha = 0.5f))
+                .border(1.dp, CardeaTheme.colors.glassBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Hint 1: Tap
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardeaTheme.colors.glassHighlight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier
+                            .size(5.dp)
+                            .clip(CircleShape)
+                            .background(CardeaTheme.colors.textSecondary)
+                    )
+                }
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = CardeaTheme.colors.textPrimary)) { append("Tap") }
+                        append(" a day to cycle: available \u2192 run \u2192 long run \u2192 available")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textSecondary,
+                    lineHeight = 16.sp
+                )
+            }
+            // Hint 2: Hold
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardeaTheme.colors.glassHighlight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        Modifier
+                            .size(8.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(CardeaTheme.colors.textSecondary)
+                    )
+                }
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = CardeaTheme.colors.textPrimary)) { append("Hold") }
+                        append(" a day to block it \u2014 Cardea will never schedule a run on a blocked day (e.g. school pickup)")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textSecondary,
+                    lineHeight = 16.sp
+                )
+            }
+            // Hint 3: Star
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CardeaTheme.colors.glassHighlight),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Star, contentDescription = null, tint = CardeaTheme.colors.textSecondary, modifier = Modifier.size(12.dp))
+                }
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = CardeaTheme.colors.textPrimary)) { append("Long run day") }
+                        append(" is when you have the most time. Tap a run day again to promote it")
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textSecondary,
+                    lineHeight = 16.sp
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun SetupDayLegendChip(label: String, level: DaySelectionLevel) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
+private fun DayPickerLegendGrid() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .then(
-                    when (level) {
-                        DaySelectionLevel.AVAILABLE,
-                        DaySelectionLevel.LONG_RUN_BIAS -> Modifier.background(CardeaCtaGradient)
-                        DaySelectionLevel.BLACKOUT -> Modifier
-                            .background(CardeaTheme.colors.blackoutBg)
-                            .border(1.dp, CardeaTheme.colors.blackoutBorder, CircleShape)
-                        DaySelectionLevel.NONE -> Modifier.background(CardeaTheme.colors.glassHighlight)
-                    }
+        // Row 1: Available + Run day
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            DayPickerLegendItem(
+                circleContent = { /* empty circle — just the border */ },
+                circleBg = null,
+                label = "Available",
+                description = "No run scheduled",
+                modifier = Modifier.weight(1f)
+            )
+            DayPickerLegendItem(
+                circleContent = {},
+                circleBg = CardeaCtaGradient,
+                label = "Run day",
+                description = "Regular session",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        // Row 2: Long run + Blocked
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            DayPickerLegendItem(
+                circleContent = {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = CardeaTheme.colors.onGradient,
+                        modifier = Modifier.size(10.dp)
+                    )
+                },
+                circleBg = CardeaCtaGradient,
+                label = "Long run",
+                description = "Your biggest effort of the week",
+                modifier = Modifier.weight(1f)
+            )
+            DayPickerLegendItem(
+                circleContent = {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = null,
+                        tint = CardeaTheme.colors.blackoutText,
+                        modifier = Modifier.size(10.dp)
+                    )
+                },
+                circleBg = null,
+                isBlackout = true,
+                label = "Blocked",
+                description = "Never schedule here",
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayPickerLegendItem(
+    circleContent: @Composable () -> Unit,
+    circleBg: Brush?,
+    label: String,
+    description: String,
+    modifier: Modifier = Modifier,
+    isBlackout: Boolean = false
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(CardeaTheme.colors.glassHighlight.copy(alpha = 0.5f))
+            .padding(8.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // 24dp circle matching real day circle styling
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .then(
+                        when {
+                            isBlackout -> Modifier.background(CardeaTheme.colors.blackoutBg)
+                            circleBg != null -> Modifier.background(circleBg)
+                            else -> Modifier.border(1.dp, CardeaTheme.colors.glassBorder, CircleShape)
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                circleContent()
+            }
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = CardeaTheme.colors.textPrimary
                 )
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = CardeaTheme.colors.textTertiary
-        )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textSecondary
+                )
+            }
+        }
     }
 }
 
