@@ -1,7 +1,15 @@
 package com.hrcoach.data.firebase
 
+import android.content.Context
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.hrcoach.data.repository.UserProfileRepository
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.tasks.await
@@ -13,7 +21,15 @@ import javax.inject.Singleton
 class FirebaseAuthManager @Inject constructor(
     private val auth: FirebaseAuth,
     private val userProfileRepository: UserProfileRepository,
+    @ApplicationContext private val context: Context,
 ) {
+    companion object {
+        private const val WEB_CLIENT_ID =
+            "471429338135-21dh3trc6g8lqt47k5kmev47le8b23qb.apps.googleusercontent.com"
+    }
+
+    // ── Existing anonymous auth ──────────────────────────────────────────
+
     suspend fun ensureSignedIn(): String {
         val currentUser = auth.currentUser
         if (currentUser != null) return currentUser.uid
@@ -31,4 +47,98 @@ class FirebaseAuthManager @Inject constructor(
     }
 
     fun getCurrentUid(): String? = auth.currentUser?.uid
+
+    // ── Google account helpers ───────────────────────────────────────────
+
+    /** True when the current anonymous user has linked a Google account. */
+    fun isGoogleLinked(): Boolean =
+        auth.currentUser?.providerData?.any {
+            it.providerId == GoogleAuthProvider.PROVIDER_ID
+        } ?: false
+
+    /** Returns the linked Google email, or null if not linked. */
+    fun getLinkedEmail(): String? =
+        auth.currentUser?.providerData
+            ?.firstOrNull { it.providerId == GoogleAuthProvider.PROVIDER_ID }
+            ?.email
+
+    /**
+     * Link a Google account to the current anonymous user.
+     * The UID stays the same — all existing data remains accessible.
+     * Returns the (unchanged) UID.
+     */
+    suspend fun linkGoogleAccount(): String {
+        val user = auth.currentUser
+            ?: throw IllegalStateException("Must be signed in before linking")
+
+        val idToken = getGoogleIdToken()
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+        val result = runCatching {
+            withTimeout(15_000) { user.linkWithCredential(credential).await() }
+        }.getOrElse { e ->
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            throw Exception("Failed to link Google account: ${e.message}")
+        }
+
+        return result.user?.uid
+            ?: throw IllegalStateException("linkWithCredential returned null user")
+    }
+
+    /**
+     * Sign in with Google on a new device (restore flow).
+     * Returns the UID of the Google-linked account.
+     */
+    suspend fun signInWithGoogle(): String {
+        val idToken = getGoogleIdToken()
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+
+        val result = runCatching {
+            withTimeout(15_000) { auth.signInWithCredential(credential).await() }
+        }.getOrElse { e ->
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            throw Exception("Google sign-in failed: ${e.message}")
+        }
+
+        val uid = result.user?.uid
+            ?: throw IllegalStateException("signInWithCredential returned null user")
+        userProfileRepository.setUserId(uid)
+        return uid
+    }
+
+    /** Clear Credential Manager state and sign out of Firebase. */
+    suspend fun signOut() {
+        val credentialManager = CredentialManager.create(context)
+        runCatching {
+            credentialManager.clearCredentialState(ClearCredentialStateRequest())
+        }
+        auth.signOut()
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────
+
+    private suspend fun getGoogleIdToken(): String {
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(WEB_CLIENT_ID)
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        val credentialManager = CredentialManager.create(context)
+
+        val response = runCatching {
+            withTimeout(15_000) {
+                credentialManager.getCredential(context, request)
+            }
+        }.getOrElse { e ->
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            throw Exception("Google credential request failed: ${e.message}")
+        }
+
+        val googleCredential = GoogleIdTokenCredential.createFrom(response.credential.data)
+        return googleCredential.idToken
+    }
 }
