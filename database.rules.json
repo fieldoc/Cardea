@@ -9,6 +9,10 @@
             ".write": "auth.uid === $uid || auth.uid === $partnerId",
             ".validate": "$partnerId !== $uid"
           }
+        },
+        "backup": {
+          ".read": "auth.uid === $uid",
+          ".write": "auth.uid === $uid"
         }
       }
     },
