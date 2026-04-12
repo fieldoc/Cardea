@@ -82,6 +82,9 @@ import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.BuildConfig
 import com.hrcoach.ui.theme.ZoneRed
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.OutlinedButton
+import com.hrcoach.ui.components.CardeaButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,7 +107,10 @@ fun AccountScreen(
                 viewModel.saveProfile()
                 showProfileSheet = false
             },
-            onDismiss = { showProfileSheet = false }
+            onDismiss = {
+                viewModel.discardProfileChanges()
+                showProfileSheet = false
+            }
         )
     }
 
@@ -150,6 +156,15 @@ fun AccountScreen(
             } else {
                 Spacer(modifier = Modifier.height(24.dp))
             }
+
+            // ── Cloud Backup ─────────────────────────────────────────────────
+            CloudBackupSection(
+                state = state,
+                onLinkGoogle = viewModel::linkGoogleAccount,
+                onRestore = viewModel::restoreFromCloud,
+                onDismissRestore = viewModel::clearRestoreResult,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
             // ── Partners ──────────────────────────────────────────────────────
             PartnerSection(
@@ -750,5 +765,102 @@ private fun InfoCueToggle(
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
         CardeaSwitch(checked = checked, onCheckedChange = { if (enabled) onCheckedChange(it) })
+    }
+}
+
+// ── Cloud Backup Section ──────────────────────────────────────────────────────
+
+@Composable
+private fun CloudBackupSection(
+    state: AccountUiState,
+    onLinkGoogle: () -> Unit,
+    onRestore: () -> Unit,
+    onDismissRestore: () -> Unit,
+) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Cloud Backup",
+                    tint = CardeaTheme.colors.textSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Cloud Backup",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CardeaTheme.colors.textPrimary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+
+            if (state.isGoogleLinked) {
+                Text(
+                    text = state.linkedEmail ?: "Google account linked",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CardeaTheme.colors.textSecondary,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Your training data is backed up",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textTertiary,
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onRestore,
+                    enabled = !state.isRestoring,
+                    border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        if (state.isRestoring) "Restoring..." else "Restore from cloud",
+                        color = CardeaTheme.colors.textSecondary,
+                    )
+                }
+            } else {
+                Text(
+                    text = "Link a Google account to back up your workouts, bootcamp progress, and partner connections.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textTertiary,
+                )
+                Spacer(Modifier.height(12.dp))
+                CardeaButton(
+                    text = if (state.isLinking) "Linking..." else "Link Google Account",
+                    onClick = onLinkGoogle,
+                    enabled = !state.isLinking,
+                    modifier = Modifier.fillMaxWidth(),
+                    innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                )
+            }
+
+            state.linkError?.let { error ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.zoneRed,
+                )
+            }
+
+            state.restoreResult?.let { result ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Restored ${result.workoutCount} workouts, ${result.sessionCount} sessions, ${result.achievementCount} achievements",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.zoneGreen,
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onDismissRestore,
+                    border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Dismiss", color = CardeaTheme.colors.textSecondary)
+                }
+            }
+        }
     }
 }

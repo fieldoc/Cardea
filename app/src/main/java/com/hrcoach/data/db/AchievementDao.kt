@@ -25,4 +25,7 @@ interface AchievementDao {
 
     @Query("UPDATE achievements SET shown = 1 WHERE id IN (:ids)")
     suspend fun markShown(ids: List<Long>)
+
+    @Query("SELECT * FROM achievements ORDER BY earnedAtMs DESC")
+    suspend fun getAllAchievementsOnce(): List<AchievementEntity>
 }

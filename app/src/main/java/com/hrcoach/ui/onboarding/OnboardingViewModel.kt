@@ -118,4 +118,17 @@ enum class PermissionType { BLUETOOTH, LOCATION, NOTIFICATION }
 @HiltViewModel
 class OnboardingSplashViewModel @Inject constructor(
     val onboardingRepository: OnboardingRepository,
-) : ViewModel()
+    private val cloudRestoreManager: com.hrcoach.data.firebase.CloudRestoreManager,
+) : ViewModel() {
+
+    /** Triggers a restore if the user is Google-linked, has cloud backup, and 0 local workouts. */
+    fun checkAndRestoreIfNeeded() {
+        viewModelScope.launch {
+            runCatching {
+                if (cloudRestoreManager.needsRestore()) {
+                    cloudRestoreManager.restore()
+                }
+            }
+        }
+    }
+}

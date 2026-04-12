@@ -4,8 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.db.BootcampDao
+import com.hrcoach.data.db.TrackPointDao
+import com.hrcoach.data.db.WorkoutMetricsDao
 import com.hrcoach.data.firebase.CloudBackupManager
+import com.hrcoach.data.firebase.CloudRestoreManager
 import com.hrcoach.data.firebase.FirebaseAuthManager
+import com.hrcoach.data.firebase.RestoreResult
 import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.firebase.FcmTokenManager
 import com.hrcoach.data.repository.AdaptiveProfileRepository
@@ -52,6 +57,12 @@ data class AccountUiState(
     val partnerCount: Int = 0,
     val partnerNudgesEnabled: Boolean = true,
     val distanceUnit: DistanceUnit = DistanceUnit.KM,
+    val isGoogleLinked: Boolean = false,
+    val linkedEmail: String? = null,
+    val isLinking: Boolean = false,
+    val linkError: String? = null,
+    val isRestoring: Boolean = false,
+    val restoreResult: RestoreResult? = null,
 )
 
 @HiltViewModel
@@ -67,6 +78,10 @@ class AccountViewModel @Inject constructor(
     private val firebaseAuthManager: FirebaseAuthManager,
     private val fcmTokenManager: FcmTokenManager,
     private val cloudBackupManager: CloudBackupManager,
+    private val cloudRestoreManager: CloudRestoreManager,
+    private val trackPointDao: TrackPointDao,
+    private val workoutMetricsDao: WorkoutMetricsDao,
+    private val bootcampDao: BootcampDao,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -91,6 +106,13 @@ class AccountViewModel @Inject constructor(
 
     private val _displayName = MutableStateFlow("Runner")
     private val _emblemId = MutableStateFlow("pulse")
+
+    private val _isGoogleLinked = MutableStateFlow(false)
+    private val _linkedEmail = MutableStateFlow<String?>(null)
+    private val _isLinking = MutableStateFlow(false)
+    private val _linkError = MutableStateFlow<String?>(null)
+    private val _isRestoring = MutableStateFlow(false)
+    private val _restoreResult = MutableStateFlow<RestoreResult?>(null)
 
     private val _partners = partnerRepository.observePartners()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -117,6 +139,8 @@ class AccountViewModel @Inject constructor(
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
         _partnerNudgesEnabled.value = userProfileRepo.isPartnerNudgesEnabled()
         initFirebase()
+        _isGoogleLinked.value = firebaseAuthManager.isGoogleLinked()
+        _linkedEmail.value = firebaseAuthManager.getLinkedEmail()
     }
 
     val uiState: StateFlow<AccountUiState> = combine(
@@ -176,6 +200,20 @@ class AccountViewModel @Inject constructor(
             partners = partners,
             partnerCount = partners.size,
             partnerNudgesEnabled = nudgesEnabled,
+        )
+    }.combine(
+        combine(_isGoogleLinked, _linkedEmail, _isLinking, _linkError, _isRestoring, _restoreResult) { values ->
+            @Suppress("UNCHECKED_CAST")
+            values.toList()
+        }
+    ) { base, parts ->
+        base.copy(
+            isGoogleLinked = parts[0] as Boolean,
+            linkedEmail = parts[1] as String?,
+            isLinking = parts[2] as Boolean,
+            linkError = parts[3] as String?,
+            isRestoring = parts[4] as Boolean,
+            restoreResult = parts[5] as RestoreResult?,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountUiState())
 
@@ -296,5 +334,54 @@ class AccountViewModel @Inject constructor(
     fun setPartnerNudgesEnabled(enabled: Boolean) {
         _partnerNudgesEnabled.value = enabled
         userProfileRepo.setPartnerNudgesEnabled(enabled)
+    }
+
+    fun linkGoogleAccount() {
+        viewModelScope.launch {
+            _isLinking.value = true
+            _linkError.value = null
+            runCatching {
+                firebaseAuthManager.linkGoogleAccount()
+                _isGoogleLinked.value = true
+                _linkedEmail.value = firebaseAuthManager.getLinkedEmail()
+                performFullBackup()
+            }.onFailure { e ->
+                _linkError.value = when {
+                    e.message?.contains("CREDENTIAL_ALREADY_IN_USE") == true ->
+                        "This Google account is already linked to another profile."
+                    else -> "Failed to link: ${e.message}"
+                }
+            }
+            _isLinking.value = false
+        }
+    }
+
+    fun restoreFromCloud() {
+        viewModelScope.launch {
+            _isRestoring.value = true
+            runCatching {
+                val result = cloudRestoreManager.restore()
+                _restoreResult.value = result
+            }.onFailure { e ->
+                _linkError.value = "Restore failed: ${e.message}"
+            }
+            _isRestoring.value = false
+        }
+    }
+
+    fun clearRestoreResult() {
+        _restoreResult.value = null
+    }
+
+    private suspend fun performFullBackup() {
+        val workouts = workoutRepo.getAllWorkoutsOnce()
+        val trackPointsByWorkout = workouts.associate { w ->
+            w.id to trackPointDao.getPointsForWorkout(w.id)
+        }
+        val metrics = workoutMetricsDao.getAllMetricsOnce()
+        val enrollment = bootcampDao.getActiveEnrollmentOnce()
+        val sessions = enrollment?.let { bootcampDao.getSessionsForEnrollmentOnce(it.id) } ?: emptyList()
+        val achievements = achievementDao.getAllAchievementsOnce()
+        cloudBackupManager.performFullBackup(workouts, trackPointsByWorkout, metrics, enrollment, sessions, achievements)
     }
 }

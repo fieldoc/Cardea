@@ -27,4 +27,7 @@ interface WorkoutMetricsDao {
 
     @Query("SELECT * FROM workout_metrics WHERE recordedAtMs >= :cutoffMs ORDER BY recordedAtMs DESC")
     suspend fun getMetricsSince(cutoffMs: Long): List<WorkoutMetricsEntity>
+
+    @Query("SELECT * FROM workout_metrics ORDER BY recordedAtMs DESC")
+    suspend fun getAllMetricsOnce(): List<WorkoutMetricsEntity>
 }
