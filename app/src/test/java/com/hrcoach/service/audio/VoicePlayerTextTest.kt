@@ -2,6 +2,7 @@ package com.hrcoach.service.audio
 
 import com.hrcoach.domain.model.CoachingEvent
 import com.hrcoach.domain.model.VoiceVerbosity
+import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -208,6 +209,55 @@ class VoicePlayerEventTextTest {
         assertEquals(
             "Heart rate rising fast",
             VoicePlayer.eventText(CoachingEvent.PREDICTIVE_WARNING, "Heart rate rising fast", WorkoutMode.STEADY_STATE)
+        )
+    }
+}
+
+class VoicePlayerBriefingTextTest {
+
+    @Test
+    fun `STEADY_STATE briefing includes planned duration when set`() {
+        val config = WorkoutConfig(
+            mode = WorkoutMode.STEADY_STATE,
+            steadyStateTargetHr = 142,
+            plannedDurationMinutes = 51
+        )
+        assertEquals(
+            "51 minutes run. Aim for heart rate around 142.",
+            VoicePlayer.buildBriefingText(config)
+        )
+    }
+
+    @Test
+    fun `STEADY_STATE briefing without duration says steady state`() {
+        val config = WorkoutConfig(
+            mode = WorkoutMode.STEADY_STATE,
+            steadyStateTargetHr = 142
+        )
+        assertEquals(
+            "Steady state run. Aim for heart rate around 142.",
+            VoicePlayer.buildBriefingText(config)
+        )
+    }
+
+    @Test
+    fun `FREE_RUN briefing includes duration when plannedDurationMinutes set`() {
+        val config = WorkoutConfig(
+            mode = WorkoutMode.FREE_RUN,
+            plannedDurationMinutes = 30
+        )
+        assertEquals(
+            "30 minute run. No heart rate target. Enjoy your run.",
+            VoicePlayer.buildBriefingText(config)
+        )
+    }
+
+    @Test
+    fun `FREE_RUN briefing without duration uses generic text`() {
+        val config = WorkoutConfig(mode = WorkoutMode.FREE_RUN)
+        assertEquals(
+            "Free run. No heart rate target. Enjoy your run.",
+            VoicePlayer.buildBriefingText(config)
         )
     }
 }

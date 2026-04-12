@@ -318,7 +318,14 @@ class VoicePlayer(context: Context) {
             return when (config.mode) {
                 WorkoutMode.STEADY_STATE -> buildSteadyStateBriefing(config)
                 WorkoutMode.DISTANCE_PROFILE -> buildSegmentedBriefing(config)
-                WorkoutMode.FREE_RUN -> "Free run. No heart rate target. Enjoy your run."
+                WorkoutMode.FREE_RUN -> {
+                    val duration = config.plannedDurationMinutes
+                    if (duration != null) {
+                        "$duration minute run. No heart rate target. Enjoy your run."
+                    } else {
+                        "Free run. No heart rate target. Enjoy your run."
+                    }
+                }
             }
         }
 
