@@ -24,15 +24,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -75,14 +72,17 @@ import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.GradientBlue
+import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.BuildConfig
 import com.hrcoach.ui.theme.ZoneRed
 import androidx.compose.material.icons.filled.Group
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onThemeModeChanged: (ThemeMode) -> Unit = {},
@@ -159,12 +159,13 @@ fun AccountScreen(
                 onRemovePartner = viewModel::removePartner,
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                 SettingToggleRow(
                     icon = Icons.Default.Group,
                     title = "Partner nudges",
+                    iconTint = GradientBlue,
                     subtitle = "Notify you when a partner completes a run",
                     checked = state.partnerNudgesEnabled,
                     onCheckedChange = viewModel::setPartnerNudgesEnabled
@@ -173,99 +174,13 @@ fun AccountScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Appearance ────────────────────────────────────────────────────
-            SectionLabel("Appearance")
-            Spacer(modifier = Modifier.height(6.dp))
-
-            GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 10.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
-                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = null,
-                            tint = CardeaTheme.colors.textSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Theme",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTheme.colors.textPrimary
-                    )
-                }
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    listOf(ThemeMode.SYSTEM to "System", ThemeMode.LIGHT to "Light", ThemeMode.DARK to "Dark")
-                        .forEachIndexed { i, (mode, label) ->
-                            SegmentedButton(
-                                shape = SegmentedButtonDefaults.itemShape(i, 3),
-                                selected = currentThemeMode == mode,
-                                onClick = { onThemeModeChanged(mode) },
-                                colors = cardeaSegmentedButtonColors()
-                            ) { Text(label) }
-                        }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── Configuration ────────────────────────────────────────────────
-            SectionLabel("Configuration")
+            // ── Training ─────────────────────────────────────────────────────
+            SectionLabel("Training")
             Spacer(modifier = Modifier.height(6.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                // Maps row
-                SettingSection(icon = Icons.Default.Map, title = "Maps API Key") {
-                    OutlinedTextField(
-                        value = state.mapsApiKey,
-                        onValueChange = viewModel::setMapsApiKey,
-                        singleLine = true,
-                        label = { Text("Google Maps API key") },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CardeaTheme.colors.accentPink,
-                            unfocusedBorderColor = CardeaTheme.colors.glassBorder,
-                            cursorColor = CardeaTheme.colors.accentPink,
-                            focusedTextColor = CardeaTheme.colors.textPrimary,
-                            unfocusedTextColor = CardeaTheme.colors.textPrimary,
-                            focusedLabelColor = CardeaTheme.colors.accentPink,
-                            unfocusedLabelColor = CardeaTheme.colors.textTertiary,
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (state.mapsApiKeySaved) "Saved. Restart if map still appears blank."
-                                   else "Used for route rendering in History.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (state.mapsApiKeySaved) ZoneGreen else CardeaTheme.colors.textTertiary,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        GradientSaveButton(onClick = viewModel::saveMapsApiKey)
-                    }
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = CardeaTheme.colors.glassBorder
-                )
-
                 // Max HR row
-                SettingSection(icon = Icons.Default.Favorite, title = "Max Heart Rate") {
+                SettingSection(icon = Icons.Default.Favorite, title = "Max Heart Rate", iconTint = GradientPink) {
                     OutlinedTextField(
                         value = state.maxHrInput,
                         onValueChange = viewModel::setMaxHrInput,
@@ -313,7 +228,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Distance unit
-                SettingSection(icon = Icons.Default.Map, title = "Distance Unit") {
+                SettingSection(icon = Icons.Default.Map, title = "Distance Unit", iconTint = GradientBlue) {
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         listOf(DistanceUnit.KM to "km", DistanceUnit.MI to "mi")
                             .forEachIndexed { i, (unit, label) ->
@@ -326,17 +241,29 @@ fun AccountScreen(
                             }
                     }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
+
+                // Auto-pause
+                SettingToggleRow(
+                    icon = Icons.Default.Timer,
+                    title = "Auto-pause when stopped",
+                    iconTint = ZoneAmber,
+                    subtitle = "Pauses timer and alerts at red lights or breaks",
+                    checked = state.autoPauseEnabled,
+                    onCheckedChange = viewModel::setAutoPauseEnabled
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Audio & Alerts ───────────────────────────────────────────────
-            SectionLabel("Audio & Alerts")
+            // ── Audio & Coaching ─────────────────────────────────────────────
+            SectionLabel("Audio & Coaching")
             Spacer(modifier = Modifier.height(6.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                 // Volume
-                SettingSection(icon = Icons.Default.VolumeUp, title = "Alert Volume") {
+                SettingSection(icon = Icons.Default.VolumeUp, title = "Alert Volume", iconTint = GradientPink) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -346,7 +273,7 @@ fun AccountScreen(
                             value = state.earconVolume.toFloat(),
                             onValueChange = viewModel::setVolume,
                             valueRange = 0f..100f,
-                            steps = 19,
+                            steps = 0,
                             onValueChangeFinished = viewModel::saveAudioSettings,
                             modifier = Modifier.weight(1f)
                         )
@@ -362,7 +289,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Voice volume
-                SettingSection(icon = Icons.Default.Mic, title = "Voice Volume") {
+                SettingSection(icon = Icons.Default.Mic, title = "Voice Volume", iconTint = GradientCyan) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -372,7 +299,7 @@ fun AccountScreen(
                             value = state.voiceVolume.toFloat(),
                             onValueChange = viewModel::setVoiceVolume,
                             valueRange = 0f..100f,
-                            steps = 19,
+                            steps = 0,
                             onValueChangeFinished = viewModel::saveAudioSettings,
                             modifier = Modifier.weight(1f)
                         )
@@ -388,7 +315,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Voice Coaching
-                SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching") {
+                SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching", iconTint = GradientCyan) {
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         listOf(VoiceVerbosity.OFF to "Off", VoiceVerbosity.MINIMAL to "Minimal", VoiceVerbosity.FULL to "Full")
                             .forEachIndexed { i, (v, label) ->
@@ -402,8 +329,8 @@ fun AccountScreen(
                     }
                 }
 
-                // Voice mode explanation cards
-                VoiceModeExplanation(currentVerbosity = state.voiceVerbosity)
+                // Show only the active voice mode description (not all 3)
+                ActiveVoiceModeHint(currentVerbosity = state.voiceVerbosity)
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
@@ -411,6 +338,7 @@ fun AccountScreen(
                 SettingToggleRow(
                     icon = Icons.Default.Notifications,
                     title = "Vibration Alerts",
+                    iconTint = ZoneAmber,
                     checked = state.enableVibration,
                     onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() }
                 )
@@ -418,7 +346,7 @@ fun AccountScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
                 // Fine-tune Cues
-                SettingSection(icon = Icons.Default.Mic, title = "Fine-tune Cues") {
+                SettingSection(icon = Icons.Default.Mic, title = "Fine-tune Cues", iconTint = GradientCyan) {
                     val cuesEnabled = state.voiceVerbosity != VoiceVerbosity.OFF
                     Text(
                         text = "These only apply when Voice Coaching is set to Full.",
@@ -441,27 +369,68 @@ fun AccountScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ── Workout ───────────────────────────────────────────────────────
-            SectionLabel("Workout")
+            // ── App ──────────────────────────────────────────────────────────
+            SectionLabel("App")
             Spacer(modifier = Modifier.height(6.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                SettingToggleRow(
-                    icon = Icons.Default.Settings,
-                    title = "Auto-pause when stopped",
-                    subtitle = "Silences alerts and pauses the timer at red lights or breaks",
-                    checked = state.autoPauseEnabled,
-                    onCheckedChange = viewModel::setAutoPauseEnabled
-                )
-            }
+                // Theme
+                SettingSection(icon = Icons.Default.Settings, title = "Theme") {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        listOf(ThemeMode.SYSTEM to "System", ThemeMode.LIGHT to "Light", ThemeMode.DARK to "Dark")
+                            .forEachIndexed { i, (mode, label) ->
+                                SegmentedButton(
+                                    shape = SegmentedButtonDefaults.itemShape(i, 3),
+                                    selected = currentThemeMode == mode,
+                                    onClick = { onThemeModeChanged(mode) },
+                                    colors = cardeaSegmentedButtonColors()
+                                ) { Text(label) }
+                            }
+                    }
+                }
 
-            // ── Simulation (debug only) ────────────────────────────────────
-            if (BuildConfig.DEBUG) {
-                Spacer(modifier = Modifier.height(20.dp))
-                SectionLabel("Simulation")
-                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
 
-                GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                // Maps API Key
+                SettingSection(icon = Icons.Default.Map, title = "Maps API Key", iconTint = GradientBlue) {
+                    OutlinedTextField(
+                        value = state.mapsApiKey,
+                        onValueChange = viewModel::setMapsApiKey,
+                        singleLine = true,
+                        label = { Text("Google Maps API key") },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CardeaTheme.colors.accentPink,
+                            unfocusedBorderColor = CardeaTheme.colors.glassBorder,
+                            cursorColor = CardeaTheme.colors.accentPink,
+                            focusedTextColor = CardeaTheme.colors.textPrimary,
+                            unfocusedTextColor = CardeaTheme.colors.textPrimary,
+                            focusedLabelColor = CardeaTheme.colors.accentPink,
+                            unfocusedLabelColor = CardeaTheme.colors.textTertiary,
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (state.mapsApiKeySaved) "Saved. Restart if map still appears blank."
+                                   else "Used for route rendering in History.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (state.mapsApiKeySaved) ZoneGreen else CardeaTheme.colors.textTertiary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        GradientSaveButton(onClick = viewModel::saveMapsApiKey)
+                    }
+                }
+
+                // Simulation (debug only) — inside the App card
+                if (BuildConfig.DEBUG) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -469,20 +438,7 @@ fun AccountScreen(
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
-                                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = null,
-                                tint = CardeaTheme.colors.textSecondary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
+                        SettingIconBox(icon = Icons.Default.Settings)
                         Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -532,8 +488,8 @@ private fun ProfileHeroCard(
             .background(
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        GradientRed.copy(alpha = 0.10f),
-                        GradientPink.copy(alpha = 0.06f),
+                        GradientRed.copy(alpha = 0.16f),
+                        GradientPink.copy(alpha = 0.10f),
                         Color.Transparent
                     )
                 ),
@@ -656,15 +612,38 @@ private fun ProfileEditBottomSheet(
 @Composable
 private fun SectionLabel(text: String) {
     Text(
-        text = text,
+        text = text.uppercase(),
         style = MaterialTheme.typography.labelSmall.copy(
             fontWeight = FontWeight.Bold,
-            letterSpacing = 0.08.sp,
-            fontSize = 10.sp
+            letterSpacing = 0.8.sp,
+            fontSize = 11.sp
         ),
-        color = CardeaTheme.colors.textTertiary,
+        color = CardeaTheme.colors.textSecondary,
         modifier = Modifier.padding(horizontal = 4.dp)
     )
+}
+
+// ── Setting icon box with semantic tint ──────────────────────────────────────
+
+@Composable
+private fun SettingIconBox(
+    icon: ImageVector,
+    tint: Color = CardeaTheme.colors.textSecondary
+) {
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .background(tint.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+            .border(1.dp, tint.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint.copy(alpha = 0.7f),
+            modifier = Modifier.size(16.dp)
+        )
+    }
 }
 
 // ── Setting section (icon + title + content slot) ─────────────────────────────
@@ -673,6 +652,7 @@ private fun SectionLabel(text: String) {
 private fun SettingSection(
     icon: ImageVector,
     title: String,
+    iconTint: Color = CardeaTheme.colors.textSecondary,
     content: @Composable () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -680,20 +660,7 @@ private fun SettingSection(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(bottom = 10.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
-                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = CardeaTheme.colors.textSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
+            SettingIconBox(icon = icon, tint = iconTint)
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = title,
@@ -713,7 +680,8 @@ private fun SettingToggleRow(
     title: String,
     subtitle: String? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    iconTint: Color = CardeaTheme.colors.textSecondary
 ) {
     Row(
         modifier = Modifier
@@ -721,20 +689,7 @@ private fun SettingToggleRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(30.dp)
-                .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(8.dp))
-                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = CardeaTheme.colors.textSecondary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
+        SettingIconBox(icon = icon, tint = iconTint)
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
@@ -780,124 +735,19 @@ private fun GradientSaveButton(onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun VoiceModeExplanation(currentVerbosity: VoiceVerbosity) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        VoiceModeCard(
-            name = "Off",
-            description = "Silent running. No voice or sound alerts. Pause/resume tones still play for safety.",
-            isActive = currentVerbosity == VoiceVerbosity.OFF,
-            tags = emptyList()
-        )
-        VoiceModeCard(
-            name = "Minimal",
-            description = "Only critical coaching. You'll hear zone change alerts and workout start/end cues.",
-            isActive = currentVerbosity == VoiceVerbosity.MINIMAL,
-            tags = listOf("Zone alerts", "Earcon tones", "Start/End")
-        )
-        VoiceModeCard(
-            name = "Full",
-            description = "Everything in Minimal plus distance splits, pacing guidance, and informational coaching cues.",
-            isActive = currentVerbosity == VoiceVerbosity.FULL,
-            tags = listOf("Zone alerts", "Earcon tones", "Start/End", "KM splits", "Pace coaching", "Halfway", "In-zone confirm")
-        )
+private fun ActiveVoiceModeHint(currentVerbosity: VoiceVerbosity) {
+    val hint = when (currentVerbosity) {
+        VoiceVerbosity.OFF -> "Silent running. Pause/resume tones still play for safety."
+        VoiceVerbosity.MINIMAL -> "Zone change alerts and workout start/end cues only."
+        VoiceVerbosity.FULL -> "All coaching: zone alerts, splits, pacing, and informational cues."
     }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun VoiceModeCard(
-    name: String,
-    description: String,
-    isActive: Boolean,
-    tags: List<String>
-) {
-    val pink = GradientPink
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .then(
-                if (isActive) Modifier
-                    .background(pink.copy(alpha = 0.06f))
-                    .border(1.dp, pink.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                else Modifier
-                    .background(CardeaTheme.colors.glassHighlight.copy(alpha = 0.3f))
-                    .border(1.dp, CardeaTheme.colors.glassBorder.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-            )
-            .padding(10.dp)
-            .then(if (!isActive) Modifier.alpha(0.5f) else Modifier),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        // Indicator circle
-        Box(
-            modifier = Modifier
-                .size(16.dp)
-                .clip(CircleShape)
-                .then(
-                    if (isActive) Modifier.background(CardeaCtaGradient)
-                    else Modifier.border(1.5.dp, CardeaTheme.colors.glassBorder, CircleShape)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            if (isActive) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(10.dp)
-                )
-            }
-        }
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                color = CardeaTheme.colors.textPrimary
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.labelSmall,
-                color = CardeaTheme.colors.textSecondary,
-                lineHeight = 16.sp
-            )
-            if (tags.isNotEmpty()) {
-                Spacer(Modifier.height(5.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    tags.forEach { tag ->
-                        Text(
-                            text = tag.uppercase(),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 8.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 0.4.sp
-                            ),
-                            color = if (isActive) pink else CardeaTheme.colors.textSecondary,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(
-                                    if (isActive) pink.copy(alpha = 0.10f)
-                                    else CardeaTheme.colors.glassHighlight
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
+    Text(
+        text = hint,
+        style = MaterialTheme.typography.bodySmall,
+        color = CardeaTheme.colors.textTertiary,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+    )
 }
 
 @Composable

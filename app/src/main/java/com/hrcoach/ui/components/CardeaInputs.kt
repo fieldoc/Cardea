@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.hrcoach.ui.theme.CardeaTheme
-import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
 
 @Composable
@@ -44,8 +43,8 @@ fun CardeaSlider(
 @Composable
 fun cardeaSegmentedButtonColors() = SegmentedButtonDefaults.colors(
     activeContainerColor = CardeaTheme.colors.glassHighlight,
-    activeContentColor = GradientBlue,
-    activeBorderColor = GradientBlue,
+    activeContentColor = GradientPink,
+    activeBorderColor = GradientPink,
     inactiveContainerColor = Color.Transparent,
     inactiveContentColor = CardeaTheme.colors.textSecondary,
     inactiveBorderColor = CardeaTheme.colors.glassBorder
