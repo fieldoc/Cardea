@@ -23,29 +23,11 @@
       "Bash(wmic process:*)",
       "Bash(./gradlew.bat help:*)",
       "Bash(xargs cat:*)",
-      "Bash(where uvx:*)",
-      "Bash(\"/c/Users/glm_6/.local/bin/uvx\":*)",
-      "mcp__plugin_serena_serena__activate_project",
-      "mcp__plugin_serena_serena__get_symbols_overview",
-      "Bash(powershell.exe:*)",
-      "mcp__plugin_serena_serena__find_referencing_symbols",
-      "mcp__plugin_serena_serena__find_symbol",
-      "mcp__plugin_serena_serena__check_onboarding_performed",
-      "mcp__plugin_serena_serena__search_for_pattern",
-      "mcp__plugin_serena_serena__read_file"
+      "Bash(powershell.exe:*)"
     ]
   },
   "hooks": {
     "PreToolUse": [
-      {
-        "matcher": "mcp__plugin_serena_serena__.*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "count=$(wmic process where \"commandline like '%KotlinLspServerKt%'\" get Handle 2>/dev/null | grep -c '[0-9]' || echo 0); if [ \"$count\" -gt 1 ]; then wmic process where \"commandline like '%KotlinLspServerKt%'\" delete 2>/dev/null; fi; true"
-          }
-        ]
-      },
       {
         "matcher": "Bash",
         "hooks": [
