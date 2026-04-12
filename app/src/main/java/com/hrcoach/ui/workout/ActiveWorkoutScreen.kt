@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -147,7 +149,7 @@ fun ActiveWorkoutScreen(
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .padding(bottom = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Mission Card: goal context, zone status, timer, target HR
@@ -202,7 +204,7 @@ fun ActiveWorkoutScreen(
             if (projectedText != null) {
                 Box(
                     modifier = Modifier
-                        .background(GlassHighlight, RoundedCornerShape(20.dp))
+                        .background(GlassBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -293,7 +295,7 @@ fun ActiveWorkoutScreen(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (state.isPaused) {
                 // Paused: gradient Resume (high urgency) + low-opacity outlined End run
@@ -317,14 +319,14 @@ fun ActiveWorkoutScreen(
                         .fillMaxWidth()
                         .height(44.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .border(1.dp, ZoneRed.copy(alpha = 0.30f), RoundedCornerShape(14.dp))
+                        .border(1.dp, ZoneRed.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
                         .clickable { stopConfirmationVisible = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.button_stop),
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = ZoneRed.copy(alpha = 0.60f)
+                        color = ZoneRed.copy(alpha = 0.80f)
                     )
                 }
             } else {
@@ -424,7 +426,7 @@ private fun HeroStatCard(
             Text(
                 text = value,
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    fontWeight = FontWeight.ExtraBold
+                    fontWeight = FontWeight.Bold
                 ),
                 color = CardeaTextPrimary,
                 maxLines = 1,
@@ -447,6 +449,7 @@ private fun TertiaryStatsRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(12.dp))
             .background(GlassHighlight)
             .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
@@ -473,7 +476,7 @@ private fun TertiaryStatsRow(
         Box(
             modifier = Modifier
                 .width(1.dp)
-                .height(40.dp)
+                .fillMaxHeight()
                 .align(Alignment.CenterVertically)
                 .background(GlassBorder)
         )
@@ -488,7 +491,7 @@ private fun TertiaryStatsRow(
         ) {
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(8.dp)
                     .background(
                         if (state.autoPauseEnabled) ZoneGreen else CardeaTextTertiary,
                         CircleShape
@@ -561,6 +564,7 @@ private fun GuidanceCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .clip(RoundedCornerShape(14.dp))
             .background(GlassHighlight)
             .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
@@ -569,7 +573,7 @@ private fun GuidanceCard(
         Box(
             modifier = Modifier
                 .width(4.dp)
-                .height(56.dp)
+                .fillMaxHeight()
                 .background(zoneColor.copy(alpha = stripAlpha))
         )
         Column(
