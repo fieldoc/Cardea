@@ -957,7 +957,8 @@ private fun OnboardingStep1Goal(
                         shape = RoundedCornerShape(18.dp)
                     ) else Modifier
                 )
-                .clickable { onGoalSelected(goal) }
+                .clickable { onGoalSelected(goal) },
+            borderColor = if (isSelected) Color.Transparent else CardeaTheme.colors.glassBorder
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1543,7 +1544,7 @@ private fun MissedSessionCard(
     onDismiss: () -> Unit,
     onReschedule: () -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp))) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(end = 32.dp)) {
                 Text(
@@ -1569,7 +1570,7 @@ private fun MissedSessionCard(
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopEnd).size(40.dp)
+                modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -1720,7 +1721,7 @@ private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
 
 @Composable
 private fun GraduationCard(onGraduateGoal: () -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneGreen.copy(alpha = 0.15f), RoundedCornerShape(18.dp))) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneGreen.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
         Text(
             text = "You finished!",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
@@ -2377,7 +2378,7 @@ private fun TodayHeroSection(
                                         Text(
                                             text = "Manual run \u2192",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textSecondary
+                                            color = CardeaTheme.colors.textTertiary
                                         )
                                     }
                                 }
@@ -2433,7 +2434,7 @@ private fun TodayHeroSection(
                                         Text(
                                             text = "Manual run \u2192",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textSecondary
+                                            color = CardeaTheme.colors.textTertiary
                                         )
                                     }
                                 }
@@ -2523,7 +2524,7 @@ private fun IllnessPromptCard(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp))) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
         Text(
             text = "Check in with your body",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
