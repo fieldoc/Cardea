@@ -386,7 +386,7 @@ private fun WeekWorkoutCard(
                     Text(
                         text = dayName,
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 8.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.06.sp
                         ),
@@ -430,11 +430,11 @@ private fun WeekWorkoutCard(
                         Text(
                             text = modeLabel,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.06.sp
                             ),
-                            color = CardeaTheme.colors.textTertiary,
+                            color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }

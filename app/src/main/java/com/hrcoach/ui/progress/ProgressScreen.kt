@@ -332,7 +332,7 @@ private fun MetricCell(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 9.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.04.sp
             ),
