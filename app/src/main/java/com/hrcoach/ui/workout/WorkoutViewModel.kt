@@ -277,6 +277,29 @@ class WorkoutViewModel @Inject constructor(
                 )
             }
 
+            config.mode == WorkoutMode.STEADY_STATE -> {
+                val duration = config.plannedDurationMinutes
+                val label = config.sessionLabel
+                when {
+                    duration != null -> {
+                        val typeLabel = if (label != null) "$duration min \u00b7 $label"
+                                        else "$duration min \u00b7 Steady-state"
+                        ProgressInfo(
+                            totalDurationSeconds = duration.toLong() * 60,
+                            workoutTypeLabel = typeLabel,
+                            bootcampWeekNumber = week,
+                            rawSessionType = rawType
+                        )
+                    }
+                    label != null -> ProgressInfo(
+                        workoutTypeLabel = label,
+                        bootcampWeekNumber = week,
+                        rawSessionType = rawType
+                    )
+                    else -> ProgressInfo(bootcampWeekNumber = week, rawSessionType = rawType)
+                }
+            }
+
             config.mode == WorkoutMode.DISTANCE_PROFILE && config.segments.isNotEmpty() -> {
                 val totalDist = config.segments.lastOrNull()?.distanceMeters
                 val distVal = totalDist?.let { "%.1f".format(metersToUnit(it, distanceUnit)) } ?: "?"
