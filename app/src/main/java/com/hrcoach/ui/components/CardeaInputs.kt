@@ -43,8 +43,8 @@ fun CardeaSlider(
 @Composable
 fun cardeaSegmentedButtonColors() = SegmentedButtonDefaults.colors(
     activeContainerColor = CardeaTheme.colors.glassHighlight,
-    activeContentColor = GradientPink,
-    activeBorderColor = GradientPink,
+    activeContentColor = CardeaTheme.colors.textPrimary,
+    activeBorderColor = CardeaTheme.colors.textSecondary,
     inactiveContainerColor = Color.Transparent,
     inactiveContentColor = CardeaTheme.colors.textSecondary,
     inactiveBorderColor = CardeaTheme.colors.glassBorder

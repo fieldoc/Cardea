@@ -117,7 +117,7 @@ fun HistoryDetailScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -125,9 +125,9 @@ fun HistoryDetailScreen(
                     contentDescription = "Back",
                     tint = CardeaTheme.colors.textSecondary,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(48.dp)
                         .clickable(onClick = onBack)
-                        .padding(8.dp)
+                        .padding(12.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
@@ -329,7 +329,7 @@ private fun EmptyMapState(
                     onClick = onAction,
                     border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
                 ) {
-                    Text(actionLabel)
+                    Text(actionLabel, color = CardeaTheme.colors.textPrimary)
                 }
             }
         }
@@ -489,12 +489,12 @@ private fun StatsCard(
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold),
             color = CardeaTheme.colors.textPrimary
         )
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             DetailStatCell("Distance", "%.2f %s".format(distanceInUnit, unitLabel), modifier = Modifier.weight(1f))
             DetailStatCell("Duration", duration, modifier = Modifier.weight(1f))
         }
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             DetailStatCell("Avg HR", if (avgHrValue > 0) "$avgHrValue bpm" else "--", modifier = Modifier.weight(1f))
             DetailStatCell("Avg pace", pace, modifier = Modifier.weight(1f))

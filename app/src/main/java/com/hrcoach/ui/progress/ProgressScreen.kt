@@ -155,10 +155,8 @@ fun ProgressScreen(
                         CardeaButton(
                             text = stringResource(R.string.button_start_workout),
                             onClick = onStartWorkout,
-                            modifier = Modifier
-                                .height(48.dp)
-                                .fillMaxWidth(),
-                            innerPadding = PaddingValues(horizontal = 16.dp)
+                            modifier = Modifier.height(48.dp),
+                            innerPadding = PaddingValues(horizontal = 28.dp)
                         )
                     }
                 }

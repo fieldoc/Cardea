@@ -131,10 +131,11 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **`WorkoutSnapshot` has no elapsed time** — compute elapsed seconds in the ViewModel via a ticker flow when `isRunning && !isPaused`.
 - **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
 - **`CardeaSlider` uses `GradientPink`** — thumb and active track are pink (matching CTA accent), not blue. Changed from `GradientBlue` (2026-04-11) to distinguish from Material3 defaults. Bootcamp sliders also use `GradientPink` directly.
-- **Segmented button accent is Blue, everything else is Pink** — `cardeaSegmentedButtonColors()` in `CardeaInputs.kt` uses `GradientBlue` for active border/text, while toggles (`CardeaSwitch`), sliders (`CardeaSlider`), and CTA buttons all use `GradientPink`. This is a known design tension — unifying to one accent color is an open polish item.
+- **Segmented button accent is neutral** — `cardeaSegmentedButtonColors()` uses `textPrimary`/`textSecondary` (not `GradientBlue`). Changed 2026-04-12 to eliminate competing blue accent. Active segment stands out via white text + visible border, deferring to the CTA gradient hierarchy.
 - **`SectionLabel` is 10sp** — used on AccountScreen and potentially other settings pages. At 10sp with `textTertiary` color, these are borderline for scannability. If redesigning, consider 11–12sp with wider letter spacing.
 - **Home screen gradient hierarchy** — `PulseHero` is the sole Tier 1 gradient element (gradient text headline). `GoalTile` is Tier 2 (glass border, white text). `BootcampTile` progress bar uses `ctaGradient`. `VolumeTile` progress bars use subtle inline gradient. Do not add gradient borders or gradient text to the stat tiles.
-- **10sp minimum text floor on Home screen** — all label/caption text must be ≥ 10sp. Enforced 2026-04-11 across tile labels, volume headers, and volume row labels. The existing `SectionLabel` at 10sp (AccountScreen) is the floor, not 8-9sp.
+- **Material3 button text color leak** — `OutlinedButton` and `TextButton` default text color to `colorScheme.primary` (= `GradientBlue`). Always pass explicit `color = CardeaTheme.colors.textPrimary` (or `textSecondary` for tertiary actions) to `Text()` inside these buttons. `CardeaButton` is exempt (custom composable).
+- **10sp minimum text size** — Established 2026-04-12. All user-facing text must be ≥ 10sp for WCAG readability on dark background. Known remaining violations: `HomeScreen.kt` (8sp line ~722, 9sp lines ~509/550/666/751), `BootcampSettingsScreen.kt` (9sp ~811), `CalendarHeatmap.kt` (9sp ~90), `MissionCard.kt` (9sp ~135).
 - **`CardeaButton` default `innerPadding` is `0.dp`** — when using wrap-content width (no `fillMaxWidth`), always pass `innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)` or similar to ensure ≥ 44dp touch target height.
 - **PulseHero gradient title is conditional** — gradient text via `SrcIn` only when `isToday = true`. Future sessions: title uses `textSecondary` (no gradient) for upcoming sessions, ECG alpha drops from 0.45f to 0.20f. Three dimming mechanisms: background alpha, text color switch, ECG alpha.
 - **One green in the palette** — `ZoneGreen` (#22C55E) is used everywhere including `PartnerNudgeBanner`. The old `NudgeGreen` (#4ADE80) was removed (2026-04-11). Do not introduce a second green without design rationale.
@@ -229,6 +230,8 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
 `BleHrManager.kt` MissingPermission, `WorkoutForegroundService.kt` MissingSuperCall, `NavGraph.kt` NewApi (×2), `build.gradle.kts` WrongGradleMethod — all pre-date this codebase's Claude sessions.
+
+**Pre-existing compile error:** `PartnerSection.kt:294` — `WindowInsets` unresolved reference + `@Composable` scope errors. Blocks `assembleDebug`. Unrelated to UI polish work.
 
 ## Ralph Loop (ralph-loop skill)
 

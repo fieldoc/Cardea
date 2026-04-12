@@ -386,11 +386,11 @@ private fun WeekWorkoutCard(
                     Text(
                         text = dayName,
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontSize = 8.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.06.sp
                         ),
-                        color = CardeaTheme.colors.textTertiary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
 
@@ -430,11 +430,11 @@ private fun WeekWorkoutCard(
                         Text(
                             text = modeLabel,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.06.sp
                             ),
-                            color = CardeaTheme.colors.textTertiary,
+                            color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
@@ -561,8 +561,8 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
         CardeaButton(
             text = "Start a Run",
             onClick = onStartWorkout,
-            modifier = Modifier.height(44.dp),
-            innerPadding = PaddingValues(horizontal = 24.dp)
+            modifier = Modifier.height(48.dp),
+            innerPadding = PaddingValues(horizontal = 28.dp)
         )
     }
 }
