@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "471429338135",
+    "firebase_url": "https://cardea-1c8fc-default-rtdb.firebaseio.com",
     "project_id": "cardea-1c8fc",
     "storage_bucket": "cardea-1c8fc.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.hrcoach"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "471429338135-gho12ocqetprod6prn033a8j7gkaus2j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hrcoach",
+            "certificate_hash": "2cb18b32b8b877d4ac4d792f2ddc186e77e6df51"
+          }
+        },
+        {
+          "client_id": "471429338135-21dh3trc6g8lqt47k5kmev47le8b23qb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAwXoQ5wdxhNVDfapTKohxuT85V6z7VejU"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "471429338135-21dh3trc6g8lqt47k5kmev47le8b23qb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
