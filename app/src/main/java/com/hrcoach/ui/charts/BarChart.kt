@@ -3,16 +3,13 @@ package com.hrcoach.ui.charts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -21,9 +18,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.theme.CardeaTheme
-import com.hrcoach.ui.theme.GradientBlue
-import com.hrcoach.ui.theme.GradientCyan
-import com.hrcoach.ui.theme.GradientPink
 
 data class BarEntry(val label: String, val value: Float)
 
@@ -39,7 +33,7 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
     }
 
     val gridColor = CardeaTheme.colors.chartGrid
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val labelColor = CardeaTheme.colors.textSecondary
     val density = LocalDensity.current
     val axisTextSizePx = with(density) { 12.sp.toPx() }
 
@@ -131,7 +125,7 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
 
         bars.forEachIndexed { index, entry ->
             val isLast = index == bars.size - 1
-            val barColor = if (isLast) color else color.copy(alpha = 0.55f)
+            val barAlpha = if (isLast) 1f else 0.55f
 
             val slotLeft = chartLeft + index * totalBarSlotWidth
             val barLeft = slotLeft + halfGap
@@ -140,20 +134,15 @@ fun BarChart(bars: List<BarEntry>, color: Color, modifier: Modifier = Modifier) 
             val barTop = chartBottom - barHeight
             val barCenterX = barLeft + barWidth / 2f
 
-            val barGradient = Brush.verticalGradient(
-                colors = listOf(GradientCyan, GradientBlue, GradientPink),
-                startY = barTop,
-                endY = chartBottom
-            )
             drawRoundRect(
-                brush = barGradient,
+                color = color,
                 topLeft = Offset(barLeft, barTop),
                 size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
                 cornerRadius = CornerRadius(cornerRadius, cornerRadius),
-                alpha = if (isLast) 1f else 0.55f
+                alpha = barAlpha
             )
 
-            // X-axis label centered below each bar — skipped when labels would overlap
+            // X-axis label — skipped when labels would overlap
             if (index % labelStep == 0) {
                 drawIntoCanvas { canvas ->
                     canvas.nativeCanvas.drawText(
