@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Mic
@@ -66,6 +68,7 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.util.metersToUnit
@@ -254,7 +257,7 @@ private fun PulseHero(
                 ),
                 color = CardeaTheme.colors.textTertiary
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             val heroGradient = CardeaTheme.colors.gradient
             Text(
                 text = sessionLabel,
@@ -263,15 +266,19 @@ private fun PulseHero(
                     fontSize = 34.sp,
                     letterSpacing = (-0.5).sp
                 ),
-                color = CardeaTheme.colors.textPrimary,
-                modifier = Modifier
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
-                    }
+                color = if (isToday) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary,
+                modifier = if (isToday) {
+                    Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
+                        }
+                } else {
+                    Modifier
+                }
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = "${session.targetMinutes} min \u00B7 $sessionLabel",
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
@@ -299,7 +306,7 @@ private fun PulseHero(
             ZoneEducationProvider.forSessionType(
                 session.sessionType, ContentDensity.ONE_LINER
             )?.let { oneLiner ->
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.Top
@@ -310,7 +317,7 @@ private fun PulseHero(
                             .width(2.dp)
                             .height(30.dp)
                             .background(
-                                CardeaTheme.colors.glassBorder,
+                                CardeaTheme.colors.textTertiary,
                                 RoundedCornerShape(1.dp)
                             )
                     )
@@ -353,7 +360,7 @@ private fun PulseHero(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(85.dp),
-                alpha = 0.45f
+                alpha = if (isToday) 0.45f else 0.20f
             )
         }
     }
@@ -441,7 +448,7 @@ private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Tier 1: Goal + Streak tiles — fill available space when peers exist, fixed otherwise
@@ -506,7 +513,7 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.5.sp,
-                fontSize = 9.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -515,8 +522,8 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
             text = "$current/$target",
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 30.sp,
-                lineHeight = 30.sp
+                fontSize = 28.sp,
+                lineHeight = 28.sp
             ),
             color = CardeaTheme.colors.textPrimary
         )
@@ -524,7 +531,7 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
         Text(
             text = subText,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-            color = CardeaTheme.colors.textSecondary.copy(alpha = 0.7f)
+            color = CardeaTheme.colors.textTertiary
         )
     }
 }
@@ -547,7 +554,7 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.5.sp,
-                fontSize = 9.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -565,7 +572,7 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
         Text(
             text = subText,
             style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-            color = CardeaTheme.colors.textSecondary.copy(alpha = 0.7f)
+            color = CardeaTheme.colors.textTertiary
         )
     }
 }
@@ -663,7 +670,7 @@ private fun BootcampTile(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.5.sp,
-                        fontSize = 9.sp
+                        fontSize = 10.sp
                     ),
                     color = CardeaTheme.colors.textSecondary
                 )
@@ -719,7 +726,7 @@ private fun VolumeTile(
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 1.2.sp,
-                fontSize = 8.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -748,7 +755,7 @@ private fun VolumeRow(label: String, value: String, progress: Float) {
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 0.8.sp,
-                fontSize = 9.sp
+                fontSize = 10.sp
             ),
             color = CardeaTheme.colors.textTertiary,
             modifier = Modifier.width(30.dp)
@@ -876,9 +883,46 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
             color = CardeaTheme.colors.textSecondary
         )
         Spacer(Modifier.height(8.dp))
+        // 7a: Celebration ring
+        val checkColor = ZoneGreen
+        val ringTrack = CardeaTheme.colors.glassBorder
+        val animatedSweep by animateFloatAsState(
+            targetValue = 360f,
+            animationSpec = tween(durationMillis = 800),
+            label = "checkRing"
+        )
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(40.dp)) {
+                val strokeW = 3.dp.toPx()
+                val radius = (size.minDimension - strokeW) / 2f
+                drawCircle(
+                    color = ringTrack,
+                    radius = radius,
+                    style = Stroke(width = strokeW)
+                )
+                drawArc(
+                    color = checkColor,
+                    startAngle = -90f,
+                    sweepAngle = animatedSweep,
+                    useCenter = false,
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = checkColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        // 7b: Elevated title (headlineMedium instead of titleLarge)
         Text(
             text = "All done for now",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
             color = CardeaTheme.colors.textPrimary
         )
         Spacer(Modifier.height(6.dp))
@@ -892,7 +936,7 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
         CardeaButton(
             text = "View Training",
             onClick = onGoToTraining,
-            modifier = Modifier.fillMaxWidth()
+            innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
         )
     }
 }
@@ -905,6 +949,7 @@ private fun NoBootcampCard(
     onStartRun: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val heroGradient = CardeaTheme.colors.gradient
     Column(modifier = modifier.padding(horizontal = 20.dp)) {
         // ── Feature showcase hero ──
         Column(
@@ -937,7 +982,13 @@ private fun NoBootcampCard(
             Text(
                 text = "Train smarter, not harder.",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = CardeaTheme.colors.textPrimary
+                color = CardeaTheme.colors.textPrimary,
+                modifier = Modifier
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
+                    }
             )
             Spacer(Modifier.height(6.dp))
 
@@ -957,7 +1008,7 @@ private fun NoBootcampCard(
                 title = "HR zone coaching",
                 description = "Real-time alerts keep you in the right zone"
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(18.dp))
             FeatureItem(
                 icon = Icons.Default.Timer,
                 iconTint = GradientBlue,
@@ -965,7 +1016,7 @@ private fun NoBootcampCard(
                 title = "Life-aware scheduling",
                 description = "Adapts to your week \u2014 block days, pick your long run"
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(18.dp))
             FeatureItem(
                 icon = Icons.Default.Mic,
                 iconTint = GradientCyan,
@@ -984,7 +1035,7 @@ private fun NoBootcampCard(
         }
 
         // ── Just Run strip ──
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
         JustRunStrip(onClick = onStartRun)
     }
 }
@@ -1005,8 +1056,8 @@ private fun FeatureItem(
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
@@ -1014,7 +1065,7 @@ private fun FeatureItem(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
         Column {
@@ -1057,7 +1108,7 @@ private fun JustRunStrip(onClick: () -> Unit, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(CardeaTheme.colors.glassBorder),
+                .background(CardeaTheme.colors.glassSurface),
             contentAlignment = Alignment.Center
         ) {
             Icon(

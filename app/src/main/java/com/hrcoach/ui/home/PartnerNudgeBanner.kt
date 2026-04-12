@@ -40,12 +40,11 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
-
-private val NudgeGreen = Color(0xFF4ADE80)
+import com.hrcoach.ui.theme.ZoneGreen
 
 private val NudgeBackground = Brush.linearGradient(
     colors = listOf(
-        Color(0xFF4ADE80).copy(alpha = 0.06f),
+        ZoneGreen.copy(alpha = 0.06f),
         Color(0xFF00D1FF).copy(alpha = 0.04f),
     )
 )
@@ -90,7 +89,7 @@ fun PartnerNudgeBanner(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = buildAnnotatedString {
-                    withStyle(SpanStyle(color = NudgeGreen, fontWeight = FontWeight.SemiBold)) {
+                    withStyle(SpanStyle(color = ZoneGreen, fontWeight = FontWeight.SemiBold)) {
                         append(state.text)
                     }
                 },
@@ -153,7 +152,7 @@ private fun StackedEmblems(emblems: List<Emblem>) {
 
 private fun DrawScope.drawNudgeLeftBorder() {
     drawRect(
-        color = Color(0xFF4ADE80),
+        color = ZoneGreen,
         topLeft = Offset.Zero,
         size = Size(width = 3.dp.toPx(), height = size.height),
     )
