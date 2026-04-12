@@ -149,16 +149,21 @@ class HomeViewModel @Inject constructor(
             if (activeEnrollment != null) {
                 val enrollStartDate = Instant.ofEpochMilli(activeEnrollment.startDate)
                     .atZone(zone).toLocalDate()
+                // Anchor to the Monday of the enrollment start week.
+                // session.dayOfWeek is ISO (1=Mon, 7=Sun), NOT an offset from enrollStartDate.
+                val enrollWeekMonday = enrollStartDate.with(DayOfWeek.MONDAY)
                 val allPending = bootcampRepository.getScheduledAndDeferredSessions(activeEnrollment.id)
                 val match = allPending.firstOrNull { session ->
-                    val daysOffset = ((session.weekNumber - 1) * 7L) + (session.dayOfWeek - 1)
-                    val sessionDate = enrollStartDate.plusDays(daysOffset)
+                    val sessionDate = enrollWeekMonday
+                        .plusWeeks((session.weekNumber - 1).toLong())
+                        .plusDays((session.dayOfWeek - 1).toLong())
                     !sessionDate.isBefore(today)
                 }
                 nextSession = match
                 nextSessionDate = match?.let { session ->
-                    val daysOffset = ((session.weekNumber - 1) * 7L) + (session.dayOfWeek - 1)
-                    enrollStartDate.plusDays(daysOffset)
+                    enrollWeekMonday
+                        .plusWeeks((session.weekNumber - 1).toLong())
+                        .plusDays((session.dayOfWeek - 1).toLong())
                 }
             } else {
                 nextSession = null
