@@ -37,7 +37,6 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -529,7 +528,7 @@ private fun QuickLaunchCard(
             text = "Last setup",
             style = MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
-                fontSize = 10.sp
+                letterSpacing = 1.sp
             ),
             color = CardeaTheme.colors.textTertiary
         )
@@ -644,7 +643,7 @@ private fun ModeOptionsCard(
                         .clip(RoundedCornerShape(10.dp))
                         .background(
                             if (isSelected) GradientRed.copy(alpha = 0.10f)
-                            else Color(0x14FFFFFF)
+                            else CardeaTheme.colors.glassBorder
                         )
                         .border(
                             1.dp,
@@ -1266,7 +1265,6 @@ private fun DeviceRow(device: BluetoothDevice, onClick: () -> Unit) {
             Text(text = device.name ?: "Unknown Device", style = MaterialTheme.typography.bodyLarge)
             Text(text = device.address, style = MaterialTheme.typography.bodySmall, color = CardeaTheme.colors.textSecondary)
         }
-        Icon(imageVector = Icons.Default.Bluetooth, contentDescription = null, tint = CardeaTheme.colors.textSecondary)
-        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = CardeaTheme.colors.textTertiary, modifier = Modifier.size(16.dp))
+        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = CardeaTheme.colors.textTertiary, modifier = Modifier.size(20.dp))
     }
 }
