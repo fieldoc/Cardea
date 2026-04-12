@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,7 +73,7 @@ fun MissionCard(
                     size = Size(3.dp.toPx(), size.height)
                 )
             }
-            .padding(start = 7.dp, end = 14.dp, top = 14.dp, bottom = 12.dp)
+            .padding(start = 11.dp, end = 14.dp, top = 14.dp, bottom = 12.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Top row: session label (left) + zone badge (right)
@@ -126,13 +129,13 @@ fun MissionCard(
                     }?.let { badge ->
                         Text(
                             text = "\u00B7",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                             color = zoneColor.copy(alpha = 0.5f)
                         )
                         Text(
                             text = badge,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 0.2.sp
                             ),
@@ -238,10 +241,11 @@ fun MissionCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Text(
-                                text = "\u2665",
-                                fontSize = 11.sp,
-                                color = zoneColor
+                            Icon(
+                                imageVector = Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                tint = zoneColor,
+                                modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = "Target ${snapshot.targetHr} bpm",

@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextTertiary
-import com.hrcoach.ui.theme.GlassHighlight
+import com.hrcoach.ui.theme.GlassBorder
 
 @Composable
 fun ProgressBarWithTurnMarker(
@@ -46,7 +46,7 @@ fun ProgressBarWithTurnMarker(
 
             // Track
             drawRoundRect(
-                color = GlassHighlight,
+                color = GlassBorder,
                 cornerRadius = cornerRadius
             )
 
@@ -79,11 +79,11 @@ fun ProgressBarWithTurnMarker(
             Text(
                 text = turnLabel,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.3.sp
                 ),
-                color = CardeaTextTertiary.copy(alpha = 0.7f),
+                color = CardeaTextTertiary,
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
