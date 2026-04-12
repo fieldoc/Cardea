@@ -123,6 +123,7 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
 - **`CardeaSlider` uses `GradientPink`** — thumb and active track are pink (matching CTA accent), not blue. Changed from `GradientBlue` (2026-04-11) to distinguish from Material3 defaults. Bootcamp sliders also use `GradientPink` directly.
 - **Home screen gradient hierarchy** — `PulseHero` is the sole Tier 1 gradient element (gradient text headline). `GoalTile` is Tier 2 (glass border, white text). `BootcampTile` progress bar uses `ctaGradient`. `VolumeTile` progress bars use subtle inline gradient. Do not add gradient borders or gradient text to the stat tiles.
+- **Material Icons availability** — `Icons.Default` only includes a subset of Material icons. Before using an icon, verify it compiles by checking existing usage in the codebase (`grep "Icons.Default\."`). Icons confirmed working: `Home`, `Map`, `Favorite`, `FavoriteBorder`, `VolumeUp`, `Mic`, `Settings`, `Notifications`, `Group`, `Timer`, `Person`, `Check`, `Close`, `Add`, `Search`, `Bluetooth`, `ExpandLess`, `ExpandMore`, `ArrowUpward`, `ArrowDownward`, `ChevronRight`.
 
 ## Design Documents
 
@@ -146,6 +147,14 @@ Three-component layered audio system in `service/audio/`:
 - **`AudioSettings`** — `earconVolume` and `voiceVolume` are independent (both 0–100 int percent).
 - **Verbosity levels:** OFF (silent), MINIMAL (earcons + voice for critical/normal events only), FULL (earcons + voice for all events including informational).
 - **KM splits:** Simple "Kilometer N" for STEADY_STATE/DISTANCE_PROFILE. Rich "Kilometer N. Pace: X minutes Y." for FREE_RUN.
+
+## Distance Unit Architecture
+
+- **`DistanceUnit`** (`domain/model/DistanceUnit.kt`) — enum `KM`/`MI` with conversion constants. Single source of truth.
+- **Internal storage is always meters** — conversion to km/mi happens at display time only via `metersToUnit()`.
+- **`formatPace(paceMinPerKm, unit)`** always takes pace in **min/km** and converts internally for imperial. Do NOT pass pre-converted min/mi values — causes double conversion. Compute pace as `durationMin / (meters / 1000f)`, then let `formatPace` handle the rest.
+- **`UserProfileRepository.getDistanceUnit()`** returns `"km"` or `"mi"`. Read synchronously at ViewModel construction time.
+- **Mile splits** fire every 1609m (not 1000m) — threshold is `DistanceUnit.METERS_PER_MILE` in `CoachingEventRouter`.
 
 ## Notification Stop Gate
 
