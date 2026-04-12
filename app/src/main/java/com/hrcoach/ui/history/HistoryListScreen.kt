@@ -390,7 +390,7 @@ private fun WeekWorkoutCard(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.06.sp
                         ),
-                        color = CardeaTheme.colors.textTertiary
+                        color = CardeaTheme.colors.textSecondary
                     )
                 }
 

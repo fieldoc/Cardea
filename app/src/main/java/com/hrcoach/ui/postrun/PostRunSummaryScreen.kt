@@ -328,7 +328,7 @@ fun PostRunSummaryScreen(
                             onClick = onViewProgress,
                             modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
-                            Text(stringResource(R.string.button_view_progress))
+                            Text(stringResource(R.string.button_view_progress), color = CardeaTheme.colors.textSecondary)
                         }
                     }
                 }

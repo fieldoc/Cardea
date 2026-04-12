@@ -329,7 +329,7 @@ private fun EmptyMapState(
                     onClick = onAction,
                     border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
                 ) {
-                    Text(actionLabel)
+                    Text(actionLabel, color = CardeaTheme.colors.textPrimary)
                 }
             }
         }
@@ -570,7 +570,7 @@ private fun MoreActionsCard(
             onClick = onViewPostRunSummary,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(44.dp)
+                .height(48.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
