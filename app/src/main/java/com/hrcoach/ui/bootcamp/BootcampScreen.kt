@@ -89,7 +89,6 @@ import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
@@ -693,7 +692,7 @@ private fun PhaseTimelineCard(
 
     val currentIndex = if (isEvergreen) -1 else phases.indexOf(currentPhase)
 
-    val ctaBrush = Brush.linearGradient(listOf(GradientPink, GradientRed))
+    val ctaBrush = CardeaCtaGradient
     val glassBorder = CardeaTheme.colors.glassBorder
     val textTertiary = CardeaTheme.colors.textTertiary
 
@@ -849,7 +848,7 @@ private fun OnboardingWizard(
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .then(
-                            if (index <= step) Modifier.background(CardeaGradient)
+                            if (index <= step) Modifier.background(CardeaCtaGradient)
                             else Modifier.background(CardeaTheme.colors.glassBorder)
                         )
                 )
@@ -954,7 +953,7 @@ private fun OnboardingStep1Goal(
                 .then(
                     if (isSelected) Modifier.border(
                         width = 1.5.dp,
-                        brush = CardeaGradient,
+                        brush = CardeaCtaGradient,
                         shape = RoundedCornerShape(18.dp)
                     ) else Modifier
                 )
@@ -2151,9 +2150,6 @@ private fun TodayHeroSection(
             Spacer(modifier = Modifier.height(10.dp))
             if (uiState.totalWeeks > 0) {
                 val progress = uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
-                val barGradient = Brush.linearGradient(
-                    colors = listOf(GradientPink, GradientBlue)
-                )
                 val trackColor = CardeaTheme.colors.glassBorder
                 Canvas(
                     modifier = Modifier
@@ -2170,7 +2166,7 @@ private fun TodayHeroSection(
                     )
                     // Filled progress
                     drawRoundRect(
-                        brush = barGradient,
+                        brush = CardeaCtaGradient,
                         size = size.copy(width = size.width * progress),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
                     )
@@ -2960,7 +2956,7 @@ private fun GoalDetailSheet(
                             modifier = Modifier
                                 .fillMaxWidth(progressPercentage / 100f)
                                 .fillMaxHeight()
-                                .background(CardeaGradient)
+                                .background(CardeaCtaGradient)
                         )
                     }
                 }
