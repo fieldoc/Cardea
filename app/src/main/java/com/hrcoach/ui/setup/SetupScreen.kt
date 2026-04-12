@@ -724,6 +724,14 @@ private fun AlertBehaviorCard(
         }
 
         if (state.showAdvancedSettings) {
+            Text(
+                text = "TIMING",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    letterSpacing = 1.5.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                color = CardeaTheme.colors.textTertiary
+            )
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 value = state.bufferBpm,
@@ -772,6 +780,7 @@ private fun AlertBehaviorCard(
                 steps = 19
             )
 
+            Spacer(Modifier.height(4.dp))
             Text("Voice Coaching", style = MaterialTheme.typography.bodyLarge, color = CardeaTheme.colors.textPrimary)
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 listOf(
@@ -788,6 +797,7 @@ private fun AlertBehaviorCard(
                 }
             }
 
+            Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -797,6 +807,7 @@ private fun AlertBehaviorCard(
                 CardeaSwitch(checked = state.enableVibration, onCheckedChange = onVibrationChange)
             }
 
+            Spacer(Modifier.height(4.dp))
             Text("Preview Sounds", style = MaterialTheme.typography.labelSmall, color = CardeaTheme.colors.textSecondary)
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 PreviewSoundButton(icon = Icons.Default.ArrowUpward, label = "Speed Up",  onClick = { onPreview(CoachingEvent.SPEED_UP) })
@@ -848,8 +859,16 @@ private fun AlertBehaviorCard(
                 CardeaSwitch(checked = state.enableInZoneConfirm && cuesEnabled, onCheckedChange = { if (cuesEnabled) onInZoneConfirmChange(it) })
             }
         } else {
+            val summaryParts = mutableListOf<String>()
+            summaryParts.add("Vol ${state.earconVolume}%")
+            when (state.voiceVerbosity) {
+                VoiceVerbosity.OFF -> summaryParts.add("Voice off")
+                VoiceVerbosity.MINIMAL -> summaryParts.add("Voice minimal")
+                VoiceVerbosity.FULL -> summaryParts.add("Voice full")
+            }
+            if (state.enableVibration) summaryParts.add("Vibration")
             Text(
-                text = "Audio alerts and timing",
+                text = summaryParts.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = CardeaTheme.colors.textSecondary
             )
@@ -994,9 +1013,9 @@ private fun SegmentEditor(
         }
     }
     TextButton(onClick = onAddSegment) {
-        Icon(imageVector = Icons.Default.Add, contentDescription = null)
+        Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = CardeaTheme.colors.textSecondary)
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Add Segment")
+        Text("Add Segment", color = CardeaTheme.colors.textSecondary)
     }
 }
 
