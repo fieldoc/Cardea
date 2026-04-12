@@ -10,7 +10,7 @@ val CardeaBgSecondary = Color(0xFF0D0D0D) // Elevated Matte Black
 
 // ── Cardea Glass Surface ───────────────────────────────────
 // Neutralized glass effects to pop against pure black.
-val GlassBorder    = Color(0x1AFFFFFF)   // Slightly higher contrast border
+val GlassBorder    = Color(0x26FFFFFF)   // 15% white — visible card edges on OLED
 val GlassHighlight = Color(0x0AFFFFFF)   // Subtle highlight
 val GlassSurface   = Color(0x33FFFFFF)   // 0.20 alpha — interactive glass overlay
 
