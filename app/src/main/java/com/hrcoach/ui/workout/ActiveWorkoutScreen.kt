@@ -62,7 +62,6 @@ import com.hrcoach.domain.model.ZoneStatus
 import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextPrimary
 import com.hrcoach.ui.theme.CardeaTextTertiary
 import com.hrcoach.ui.theme.GlassBorder

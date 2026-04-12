@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTextTertiary
 import com.hrcoach.ui.theme.GlassBorder
-import com.hrcoach.ui.theme.GlassHighlight
 
 @Composable
 fun ProgressBarWithTurnMarker(
