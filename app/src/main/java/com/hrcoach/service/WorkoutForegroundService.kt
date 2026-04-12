@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.domain.achievement.StreakCalculator
@@ -97,6 +98,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     @Inject
     lateinit var partnerRepository: FirebasePartnerRepository
+
+    @Inject
+    lateinit var cloudBackupManager: CloudBackupManager
 
     @Inject
     lateinit var bootcampRepository: BootcampRepository
@@ -799,6 +803,19 @@ class WorkoutForegroundService : LifecycleService() {
                     } catch (e: Exception) {
                         Log.w("WorkoutService", "Failed to sync partner activity", e)
                     }
+                }
+
+                // Cloud backup (real runs only)
+                if (!SimulationController.isActive) {
+                    runCatching {
+                        val savedWorkout = repository.getWorkoutById(workoutId)
+                        if (savedWorkout != null) {
+                            val points = repository.getTrackPoints(workoutId)
+                            val metricsEntity = workoutMetricsRepository.getMetricsEntity(workoutId)
+                            cloudBackupManager.syncWorkout(savedWorkout, points, metricsEntity)
+                            cloudBackupManager.syncAdaptiveProfile()
+                        }
+                    }.onFailure { Log.w("WorkoutService", "Cloud backup failed", it) }
                 }
 
                 // Sim runs: complete bootcamp session (if any) before deleting the workout row.

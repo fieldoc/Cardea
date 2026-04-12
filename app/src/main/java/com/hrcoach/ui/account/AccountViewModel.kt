@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.firebase.FirebaseAuthManager
 import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.firebase.FcmTokenManager
@@ -65,6 +66,7 @@ class AccountViewModel @Inject constructor(
     private val partnerRepository: FirebasePartnerRepository,
     private val firebaseAuthManager: FirebaseAuthManager,
     private val fcmTokenManager: FcmTokenManager,
+    private val cloudBackupManager: CloudBackupManager,
 ) : ViewModel() {
 
     private val _mapsKey      = MutableStateFlow("")
@@ -200,11 +202,13 @@ class AccountViewModel @Inject constructor(
     fun setDistanceUnit(unit: DistanceUnit) {
         _distanceUnit.value = unit
         userProfileRepo.setDistanceUnit(if (unit == DistanceUnit.MI) "mi" else "km")
+        viewModelScope.launch { cloudBackupManager.syncProfile() }
     }
 
     fun setAutoPauseEnabled(enabled: Boolean) {
         _autoPauseEnabled.value = enabled
         autoPauseRepo.setAutoPauseEnabled(enabled)
+        viewModelScope.launch { cloudBackupManager.syncSettings() }
     }
 
     fun saveAudioSettings() {
@@ -221,6 +225,7 @@ class AccountViewModel @Inject constructor(
                     enableInZoneConfirm = _inZoneConfirm.value,
                 )
             )
+            cloudBackupManager.syncSettings()
         }
     }
 
@@ -241,6 +246,12 @@ class AccountViewModel @Inject constructor(
     fun saveProfile() {
         userProfileRepo.setDisplayName(_displayName.value)
         userProfileRepo.setEmblemId(_emblemId.value)
+        viewModelScope.launch { cloudBackupManager.syncProfile() }
+    }
+
+    fun discardProfileChanges() {
+        _displayName.value = userProfileRepo.getDisplayName()
+        _emblemId.value = userProfileRepo.getEmblemId()
     }
 
     fun saveMaxHr() {
@@ -259,6 +270,7 @@ class AccountViewModel @Inject constructor(
         adaptiveProfileRepo.saveProfile(profile.copy(hrMax = value))
         _maxHr.value = value
         _maxHrSaved.value = true
+        viewModelScope.launch { cloudBackupManager.syncProfile() }
     }
 
     fun initFirebase() {

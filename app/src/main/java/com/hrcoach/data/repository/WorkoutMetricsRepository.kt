@@ -25,6 +25,10 @@ class WorkoutMetricsRepository @Inject constructor(
             .associate { entity -> entity.workoutId to entity.toDomain() }
     }
 
+    suspend fun getMetricsEntity(workoutId: Long): WorkoutMetricsEntity? {
+        return workoutMetricsDao.getByWorkoutId(workoutId)
+    }
+
     suspend fun deleteWorkoutMetrics(workoutId: Long) {
         workoutMetricsDao.deleteByWorkoutId(workoutId)
     }
