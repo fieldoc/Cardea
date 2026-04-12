@@ -231,11 +231,10 @@ fun SetupScreen(
                 text = "Manual run",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.08.sp,
-                    fontSize = 10.sp
+                    letterSpacing = 1.sp
                 ),
                 color = CardeaTheme.colors.textTertiary,
-                modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+                modifier = Modifier.padding(start = 4.dp, top = 10.dp)
             )
 
             // Quick-launch — last settings + one-tap start
@@ -250,11 +249,10 @@ fun SetupScreen(
                 text = "Change setup",
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 0.08.sp,
-                    fontSize = 10.sp
+                    letterSpacing = 1.sp
                 ),
                 color = CardeaTheme.colors.textTertiary,
-                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+                modifier = Modifier.padding(start = 4.dp, top = 10.dp)
             )
 
             // All config rows in a single grouped card
@@ -601,7 +599,7 @@ private fun ConfigSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 14.dp, vertical = 13.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
