@@ -87,9 +87,9 @@ fun CalendarHeatmap(days: List<CalendarDay>, modifier: Modifier = Modifier) {
                     if (label.isNotEmpty()) {
                         Text(
                             text = label,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp,
                             color = textSecondary,
-                            lineHeight = 9.sp
+                            lineHeight = 10.sp
                         )
                     }
                 }
