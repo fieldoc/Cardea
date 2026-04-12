@@ -18,9 +18,6 @@
 .firecrawl/
 .gemini/
 .gradle-codex/
-.serena/logs/
-.serena/memories/
-.serena/project.yml
 .superpowers/
 GEMINI.md
 tmp_*

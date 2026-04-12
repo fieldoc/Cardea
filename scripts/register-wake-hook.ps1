@@ -33,7 +33,7 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -RunLevel Highest `
-    -Description 'Kills zombie KotlinLspServerKt JVM processes after PC wakes from sleep, so Serena MCP can reconnect cleanly in Claude Code.' `
+    -Description 'Kills zombie KotlinLspServerKt JVM processes after PC wakes from sleep, so the Kotlin LSP can reconnect cleanly in Claude Code.' `
     -Force
 
 Write-Host "Task registered. Test it with: Start-ScheduledTask -TaskName KillKotlinLspOnWake"

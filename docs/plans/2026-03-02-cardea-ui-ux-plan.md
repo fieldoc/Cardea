@@ -1,7 +1,7 @@
 # Cardea UI/UX Redesign — Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
-> Use Serena MCP tools for semantic code search/navigation. Use Serena's `activate_project` before working.
+> Use LSP tools for semantic code search/navigation (findReferences, goToDefinition, hover, documentSymbol). Fall back to Grep for non-Kotlin files.
 
 **Goal:** Rebrand HR Coach → Cardea with full UI/UX redesign per spec, add Home tab (dashboard) and Account tab (settings), apply Cardea design tokens + glass material system across all screens.
 
@@ -188,7 +188,7 @@ fun HrCoachTheme(
 ```
 
 **Step 4: Find and update MainActivity** to call `CardeaTheme {}` instead of `HrCoachTheme(dynamicColor = false)`.
-Use Serena: `find_symbol("HrCoachTheme")` to locate callers, then update them.
+Use LSP `findReferences` on `HrCoachTheme` to locate callers, then update them.
 
 **Step 5: Verify it compiles**
 
@@ -590,13 +590,13 @@ git commit -m "feat(ui): update GlassCard to Cardea glass material system"
 **Context:**
 - Home is the new dashboard tab. Shows: greeting, Efficiency Ring, last run card, Start Run CTA, quick links to Progress/History.
 - HomeViewModel queries `WorkoutRepository` for recent workouts.
-- Use Serena to find WorkoutRepository and WorkoutEntity to understand available data before writing the ViewModel.
+- Use LSP to find WorkoutRepository and WorkoutEntity to understand available data before writing the ViewModel.
 - The Efficiency Ring shows: workouts this week as a fraction of a weekly target (default 4). Value is clamped 0–100.
 
 **Step 1: Inspect existing repository**
 
-Use Serena `find_symbol("WorkoutRepository", include_body=false, depth=1)` to see available methods.
-Use Serena `find_symbol("WorkoutEntity", include_body=false, depth=1)` to see entity fields.
+Use LSP `hover` on `WorkoutRepository` to see available methods.
+Use LSP `hover` on `WorkoutEntity` to see entity fields.
 
 Key fields to expect on WorkoutEntity:
 - `id: Long`
@@ -667,7 +667,7 @@ class HomeViewModel @Inject constructor(
 }
 ```
 
-> **Note:** If `WorkoutRepository` does not expose `allWorkoutsFlow()`, use Serena to find the actual method name. If the repository returns a List rather than Flow, wrap with `flowOf()`. Adapt as needed but do not change the repository or DAO.
+> **Note:** If `WorkoutRepository` does not expose `allWorkoutsFlow()`, use LSP `documentSymbol` to find the actual method name. If the repository returns a List rather than Flow, wrap with `flowOf()`. Adapt as needed but do not change the repository or DAO.
 
 **Step 3: Create HomeScreen.kt**
 
@@ -969,11 +969,11 @@ private fun QuickLinkChip(label: String, modifier: Modifier = Modifier, onClick:
 
 **Step 4: Check field names match WorkoutEntity**
 
-Use Serena: `find_symbol("WorkoutEntity", include_body=true)` — confirm `startEpochMs`, `distanceKm`, `avgHr` exist. If field names differ, update the ViewModel and screen accordingly.
+Use LSP `hover` on `WorkoutEntity` — confirm `startEpochMs`, `distanceKm`, `avgHr` exist. If field names differ, update the ViewModel and screen accordingly.
 
 **Step 5: Check WorkoutRepository flow method name**
 
-Use Serena: `find_symbol("WorkoutRepository", depth=1)` — find the method that returns all workouts as a Flow. Update `HomeViewModel.kt` line `workoutRepository.allWorkoutsFlow()` to use the correct method name.
+Use LSP `documentSymbol` on `WorkoutRepository` — find the method that returns all workouts as a Flow. Update `HomeViewModel.kt` line `workoutRepository.allWorkoutsFlow()` to use the correct method name.
 
 **Step 6: Build**
 
@@ -999,14 +999,14 @@ git commit -m "feat(home): add HomeScreen dashboard with Efficiency Ring and las
 **Context:**
 - Account is the settings hub. Surfaces: Maps API key, voice verbosity, volume, vibration, app info.
 - These settings currently live in a dialog in SetupScreen. After this task, we remove the settings dialog from SetupScreen (Task 7).
-- Use Serena to find `AudioSettingsRepository` and `MapsSettingsRepository` before writing ViewModel.
-- Use Serena: `find_symbol("SetupViewModel", depth=1, include_body=false)` to find how settings are currently read/saved.
+- Use LSP to find `AudioSettingsRepository` and `MapsSettingsRepository` before writing ViewModel.
+- Use LSP `documentSymbol` on `SetupViewModel` to find how settings are currently read/saved.
 
 **Step 1: Inspect existing repos and SetupUiState**
 
-Use Serena `find_symbol("AudioSettingsRepository", depth=1)` — find available read/write methods.
-Use Serena `find_symbol("MapsSettingsRepository", depth=1)` — find available read/write methods.
-Use Serena `find_symbol("SetupUiState", include_body=true)` — see what fields exist.
+Use LSP `documentSymbol` on `AudioSettingsRepository` — find available read/write methods.
+Use LSP `documentSymbol` on `MapsSettingsRepository` — find available read/write methods.
+Use LSP `hover` on `SetupUiState` — see what fields exist.
 
 Expected fields in AudioSettingsRepository: earconVolume (Int 0-100), voiceVerbosity (VoiceVerbosity enum), enableVibration (Boolean).
 Expected fields in MapsSettingsRepository: mapsApiKey (String).
@@ -1098,7 +1098,7 @@ class AccountViewModel @Inject constructor(
 }
 ```
 
-> **Note:** Adapt method names to match actual repository API found via Serena. If `audioRepo.load()` returns individual fields or a data class, adjust accordingly.
+> **Note:** Adapt method names to match actual repository API found via LSP. If `audioRepo.load()` returns individual fields or a data class, adjust accordingly.
 
 **Step 3: Create AccountScreen.kt**
 
@@ -1306,7 +1306,7 @@ fun AccountScreen(
 }
 ```
 
-**Step 4: Verify repository method signatures with Serena**
+**Step 4: Verify repository method signatures with LSP**
 
 Use `find_symbol("AudioSettingsRepository", depth=1, include_body=true)` and adapt the ViewModel's `audioRepo.load()` and `audioRepo.save(...)` calls to the actual API.
 
@@ -1724,7 +1724,7 @@ private fun defaultExit(dir: Int): ExitTransition =
 
 **Step 3: Check `Outlined.Home` and `Outlined.AccountCircle` availability**
 
-These icons may not exist in the standard Icons set. If `Icons.Outlined.Home` doesn't resolve, use `Icons.Default.Home` for both states. Verify with: `find_symbol("Icons.Outlined.Home")` via Serena or just try building.
+These icons may not exist in the standard Icons set. If `Icons.Outlined.Home` doesn't resolve, use `Icons.Default.Home` for both states. Verify by trying to build.
 
 **Step 4: Build**
 
@@ -1756,11 +1756,11 @@ git commit -m "feat(nav): expand to 5-tab Cardea navigation (Home, Workout, Hist
 - Update TopAppBar to transparent/glass style.
 - Keep ALL existing content and logic.
 
-Use Serena `find_symbol("SetupScreen", include_body=true)` to read the current state, then make targeted edits.
+Read `SetupScreen.kt` to review the current state, then make targeted edits.
 
 **Step 1: Remove settings dialog**
 
-Use Serena `replace_content` or Edit to:
+Use Edit to:
 1. Remove `var showMapsDialog by remember { mutableStateOf(false) }` line.
 2. Remove the `IconButton(onClick = { showMapsDialog = true })` block in `actions = { }`.
 3. Remove the `if (showMapsDialog) { AlertDialog(...) }` block at the bottom.
@@ -1846,11 +1846,11 @@ git commit -m "feat(setup): apply Cardea gradient CTA, remove settings dialog (m
 - Modify: `app/src/main/java/com/hrcoach/ui/charts/CalendarHeatmap.kt`
 - Modify: `app/src/main/java/com/hrcoach/ui/charts/PieChart.kt`
 
-**Context:** All graphs need: Cardea gradient stroke, glow layer (duplicate line 6dp blur 0.15 alpha), round caps, grid lines rgba(255,255,255,0.04). Use Serena to read each file before editing.
+**Context:** All graphs need: Cardea gradient stroke, glow layer (duplicate line 6dp blur 0.15 alpha), round caps, grid lines rgba(255,255,255,0.04). Read each file before editing.
 
 **For each file — General approach:**
 
-1. Use Serena `read_file("relative/path")` to read the file.
+1. Read the file.
 2. Identify where `drawLine`, `drawPath`, `drawArc`, or `drawRect` calls are used for the primary data lines/bars.
 3. Replace solid-color strokes with `CardeaGradient` brush.
 4. Add a glow pass before the main draw call.
@@ -1889,7 +1889,7 @@ drawRect(
 
 **Step: Read, update, build each file one by one.**
 
-Use Serena `read_file` for each chart file, then `replace_content` to make targeted changes. Don't rewrite the entire file — only change the color/brush references.
+Read each chart file, then use Edit to make targeted changes. Don't rewrite the entire file — only change the color/brush references.
 
 **Build after all chart changes:**
 
@@ -1913,7 +1913,7 @@ git commit -m "feat(charts): apply Cardea gradient and glow layer to all chart c
 
 **Context:** Spec says: use gradient ONLY for active recording indicators. Don't recolor everything. Add Cardea background. Polish glass cards.
 
-Use Serena `read_file("app/src/main/java/com/hrcoach/ui/workout/ActiveWorkoutScreen.kt")` to review current state.
+Read `ActiveWorkoutScreen.kt` to review current state.
 
 **Step 1: Add Cardea background**
 
@@ -1976,7 +1976,7 @@ git commit -m "feat(workout): add Cardea background and gradient recording indic
 
 **Step 1: Update CLAUDE.md**
 
-Find `HR Coach` references (use Serena search or grep) and update:
+Find `HR Coach` references (use grep) and update:
 - App name: "Cardea (formerly HR Coach)"
 - Theme section: add note about `CardeaTheme` and token locations
 - Navigation section: update routes list to include `home` and `account`
@@ -1991,7 +1991,7 @@ Add to the top of `docs/plans/2026-02-25-hr-coaching-app-design.md`:
 
 **Step 3: Add transparent TopAppBar to remaining screens**
 
-In `HistoryListScreen.kt`, `ProgressScreen.kt`, and `PostRunSummaryScreen.kt`: update TopAppBar colors to transparent (same pattern as Task 7 Step 3). Use Serena `find_symbol` to locate each TopAppBar.
+In `HistoryListScreen.kt`, `ProgressScreen.kt`, and `PostRunSummaryScreen.kt`: update TopAppBar colors to transparent (same pattern as Task 7 Step 3). Use LSP `findReferences` or grep to locate each TopAppBar.
 
 **Step 4: Add background gradient to remaining screens**
 
