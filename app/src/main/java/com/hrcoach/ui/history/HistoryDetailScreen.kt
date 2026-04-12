@@ -75,12 +75,14 @@ import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.util.JsonCodec
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.util.asModeLabel
+import com.hrcoach.util.distanceUnitLabel
 import com.hrcoach.util.durationMinutes
 import com.hrcoach.util.formatDuration
-import com.hrcoach.util.formatPaceMinPerKm
+import com.hrcoach.util.formatPace
 import com.hrcoach.util.formatWorkoutDate
-import com.hrcoach.util.metersToKm
+import com.hrcoach.util.metersToUnit
 
 private enum class HistoryDetailContentState { LOADING, EMPTY, CONTENT }
 
@@ -206,6 +208,7 @@ fun HistoryDetailScreen(
                                     trackPoints = trackPoints,
                                     avgHr = metrics?.avgHr,
                                     targetSummary = targetSummary,
+                                    distanceUnit = viewModel.distanceUnit,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 MoreActionsCard(
@@ -465,16 +468,19 @@ private fun StatsCard(
     trackPoints: List<TrackPointEntity>,
     avgHr: Float?,
     targetSummary: String?,
+    distanceUnit: DistanceUnit,
     modifier: Modifier = Modifier
 ) {
     val duration = formatDuration(workout.startTime, workout.endTime)
     val fallbackAvg = trackPoints.map { it.heartRate }.filter { it > 0 }
         .takeIf { it.isNotEmpty() }?.average()?.toInt()
     val avgHrValue = avgHr?.toInt() ?: fallbackAvg ?: 0
-    val distanceKm = metersToKm(workout.totalDistanceMeters)
+    val distanceInUnit = metersToUnit(workout.totalDistanceMeters, distanceUnit)
+    val unitLabel = distanceUnitLabel(distanceUnit)
+    val distanceKm = workout.totalDistanceMeters / 1000f
     val durationMin = workout.durationMinutes
     val pace = if (distanceKm > 0f && durationMin > 0f) {
-        formatPaceMinPerKm(durationMin / distanceKm)
+        formatPace(durationMin / distanceKm, distanceUnit)
     } else "--"
 
     GlassCard(modifier = modifier, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)) {
@@ -485,7 +491,7 @@ private fun StatsCard(
         )
         Spacer(modifier = Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            DetailStatCell("Distance", "%.2f km".format(distanceKm), modifier = Modifier.weight(1f))
+            DetailStatCell("Distance", "%.2f %s".format(distanceInUnit, unitLabel), modifier = Modifier.weight(1f))
             DetailStatCell("Duration", duration, modifier = Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(10.dp))

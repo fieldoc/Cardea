@@ -82,7 +82,8 @@ data class SetupUiState(
     val maxHrInput: String = "",
     val maxHr: Int? = null,
     val pendingPresetId: String? = null,
-    val validation: SetupValidationState = SetupValidationState()
+    val validation: SetupValidationState = SetupValidationState(),
+    val distanceUnit: com.hrcoach.domain.model.DistanceUnit = com.hrcoach.domain.model.DistanceUnit.KM
 )
 
 @HiltViewModel
@@ -114,7 +115,8 @@ class SetupViewModel @Inject constructor(
             enableKmSplits = audioSettings.enableKmSplits != false,
             enableWorkoutComplete = audioSettings.enableWorkoutComplete != false,
             enableInZoneConfirm = audioSettings.enableInZoneConfirm != false,
-            maxHr = userProfileRepository.getMaxHr()
+            maxHr = userProfileRepository.getMaxHr(),
+            distanceUnit = com.hrcoach.domain.model.DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
         )
         startBleCollectors()
         recomputeValidation()

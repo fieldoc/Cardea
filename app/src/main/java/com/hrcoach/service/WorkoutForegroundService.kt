@@ -135,6 +135,7 @@ class WorkoutForegroundService : LifecycleService() {
     private var totalAutoPausedMs: Long = 0L
     private var autoPauseGraceUntilMs: Long = 0L
 
+    private var sessionDistanceUnit = com.hrcoach.domain.model.DistanceUnit.KM
     private var workoutId: Long = 0L
     private var workoutStartMs: Long = 0L
     private var totalPausedMs: Long = 0L
@@ -294,6 +295,8 @@ class WorkoutForegroundService : LifecycleService() {
                     )
                 )
                 workoutStartMs = clock.now()
+                sessionDistanceUnit = com.hrcoach.domain.model.DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
+                coachingAudioManager?.distanceUnit = sessionDistanceUnit
                 coachingEventRouter.reset(workoutStartMs)  // stamp the start time for IN_ZONE_CONFIRM baseline
 
                 // Suppress auto-pause for 15 seconds so the runner can pocket
@@ -496,6 +499,7 @@ class WorkoutForegroundService : LifecycleService() {
                 adaptiveResult = adaptiveResult,
                 guidance = guidance,
                 nowMs = nowMs,
+                distanceUnit = sessionDistanceUnit,
                 emitEvent = { event, eventGuidance ->
                     val pace = adaptiveResult?.currentPaceMinPerKm
                     coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)

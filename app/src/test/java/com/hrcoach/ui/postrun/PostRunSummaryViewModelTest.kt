@@ -5,6 +5,7 @@ import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.BootcampRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
@@ -44,6 +45,7 @@ class PostRunSummaryViewModelTest {
     private val achievementDao: AchievementDao = mockk(relaxed = true)
     private val bootcampRepository: BootcampRepository = mockk(relaxed = true)
     private val adaptiveProfileRepository: AdaptiveProfileRepository = mockk(relaxed = true)
+    private val userProfileRepository: UserProfileRepository = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -91,7 +93,8 @@ class PostRunSummaryViewModelTest {
             bootcampSessionCompleter = bootcampSessionCompleter,
             achievementEvaluator = achievementEvaluator,
             achievementDao = achievementDao,
-            adaptiveProfileRepository = adaptiveProfileRepository
+            adaptiveProfileRepository = adaptiveProfileRepository,
+            userProfileRepository = userProfileRepository
         )
     }
 

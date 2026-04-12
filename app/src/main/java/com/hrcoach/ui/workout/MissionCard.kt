@@ -40,7 +40,7 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
-import com.hrcoach.util.formatDistanceKm
+import com.hrcoach.util.formatDistance
 import com.hrcoach.util.formatDurationSeconds
 
 @Composable
@@ -177,7 +177,7 @@ fun MissionCard(
                     )
                 } else if (hasDistanceGoal) {
                     Text(
-                        text = formatDistanceKm(snapshot.distanceMeters),
+                        text = formatDistance(snapshot.distanceMeters, uiState.distanceUnit),
                         style = MaterialTheme.typography.displaySmall.copy(
                             fontSize = 36.sp,
                             fontWeight = FontWeight.Black,
@@ -194,7 +194,7 @@ fun MissionCard(
                         color = Color.White.copy(alpha = 0.15f)
                     )
                     Text(
-                        text = "${formatDistanceKm(uiState.totalDistanceMeters!!)} km",
+                        text = formatDistance(uiState.totalDistanceMeters!!, uiState.distanceUnit),
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontSize = 22.sp,
                             fontWeight = FontWeight.SemiBold,

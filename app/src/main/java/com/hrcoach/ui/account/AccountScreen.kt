@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.emblem.Emblem
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.EmblemIconWithRing
@@ -304,6 +305,23 @@ fun AccountScreen(
                         GradientSaveButton(onClick = viewModel::saveMaxHr)
                     }
                 }
+
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
+
+                // Distance unit
+                SettingSection(icon = Icons.Default.Map, title = "Distance Unit") {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        listOf(DistanceUnit.KM to "km", DistanceUnit.MI to "mi")
+                            .forEachIndexed { i, (unit, label) ->
+                                SegmentedButton(
+                                    shape = SegmentedButtonDefaults.itemShape(i, 2),
+                                    selected = state.distanceUnit == unit,
+                                    onClick = { viewModel.setDistanceUnit(unit) },
+                                    colors = cardeaSegmentedButtonColors()
+                                ) { Text(label) }
+                            }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -398,7 +416,10 @@ fun AccountScreen(
                     val cueAlpha = if (cuesEnabled) 1f else 0.4f
                     Column(modifier = Modifier.alpha(cueAlpha)) {
                         InfoCueToggle("Halfway reminder", state.enableHalfwayReminder && cuesEnabled, cuesEnabled) { viewModel.setEnableHalfwayReminder(it) }
-                        InfoCueToggle("Kilometer splits", state.enableKmSplits && cuesEnabled, cuesEnabled) { viewModel.setEnableKmSplits(it) }
+                        InfoCueToggle(
+                            if (state.distanceUnit == DistanceUnit.MI) "Mile splits" else "Kilometer splits",
+                            state.enableKmSplits && cuesEnabled, cuesEnabled
+                        ) { viewModel.setEnableKmSplits(it) }
                         InfoCueToggle("Workout complete", state.enableWorkoutComplete && cuesEnabled, cuesEnabled) { viewModel.setEnableWorkoutComplete(it) }
                         InfoCueToggle("In-zone confirmation", state.enableInZoneConfirm && cuesEnabled, cuesEnabled) { viewModel.setEnableInZoneConfirm(it) }
                     }

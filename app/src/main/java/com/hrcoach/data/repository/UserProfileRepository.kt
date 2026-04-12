@@ -19,6 +19,7 @@ class UserProfileRepository @Inject constructor(
         private const val PREF_AGE = "age"
         private const val PREF_WEIGHT = "weight"
         private const val PREF_WEIGHT_UNIT = "weight_unit" // "lbs" or "kg"
+        private const val PREF_DISTANCE_UNIT = "distance_unit" // "km" or "mi"
         private const val UNSET = -1
         private const val DEFAULT_NAME = "Runner"
         private const val DEFAULT_EMBLEM = "pulse"
@@ -115,6 +116,17 @@ class UserProfileRepository @Inject constructor(
     fun setWeightUnit(unit: String) {
         require(unit == "lbs" || unit == "kg") { "unit must be 'lbs' or 'kg'" }
         prefs.edit().putString(PREF_WEIGHT_UNIT, unit).apply()
+    }
+
+    @Synchronized
+    fun getDistanceUnit(): String {
+        return prefs.getString(PREF_DISTANCE_UNIT, "km") ?: "km"
+    }
+
+    @Synchronized
+    fun setDistanceUnit(unit: String) {
+        require(unit == "km" || unit == "mi") { "unit must be 'km' or 'mi'" }
+        prefs.edit().putString(PREF_DISTANCE_UNIT, unit).apply()
     }
 }
 

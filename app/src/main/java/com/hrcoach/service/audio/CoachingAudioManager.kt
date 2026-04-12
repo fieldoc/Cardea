@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.ToneGenerator
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
@@ -57,6 +58,8 @@ class CoachingAudioManager(
         startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
     }
 
+    var distanceUnit: DistanceUnit = DistanceUnit.KM
+
     fun fireEvent(event: CoachingEvent, guidanceText: String? = null, paceMinPerKm: Float? = null) {
         // Filter informational cues by individual toggles
         when (event) {
@@ -78,7 +81,7 @@ class CoachingAudioManager(
                 ) {
                     scope.launch {
                         delay(300L)
-                        voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode)
+                        voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
                     }
                 }
                 if (escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION) {
@@ -89,12 +92,12 @@ class CoachingAudioManager(
             CoachingEvent.RETURN_TO_ZONE -> {
                 escalationTracker.reset()
                 if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
-                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode)
+                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
             }
 
             else -> {
                 if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
-                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm)
+                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm, distanceUnit)
             }
         }
     }

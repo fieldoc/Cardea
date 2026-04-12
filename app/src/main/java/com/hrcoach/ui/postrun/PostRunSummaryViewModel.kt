@@ -17,7 +17,10 @@ import com.hrcoach.service.WorkoutState
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.util.formatDuration
 import com.hrcoach.util.formatWorkoutDate
-import com.hrcoach.util.metersToKm
+import com.hrcoach.data.repository.UserProfileRepository
+import com.hrcoach.domain.model.DistanceUnit
+import com.hrcoach.util.distanceUnitLabel
+import com.hrcoach.util.metersToUnit
 import com.hrcoach.util.recordedAtMs
 import com.hrcoach.ui.common.MetricLabels
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +65,8 @@ class PostRunSummaryViewModel @Inject constructor(
     private val bootcampSessionCompleter: BootcampSessionCompleter,
     private val achievementEvaluator: AchievementEvaluator,
     private val achievementDao: AchievementDao,
-    private val adaptiveProfileRepository: AdaptiveProfileRepository
+    private val adaptiveProfileRepository: AdaptiveProfileRepository,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostRunSummaryUiState())
@@ -111,7 +115,10 @@ class PostRunSummaryViewModel @Inject constructor(
                     isLoading = false,
                     errorMessage = null,
                     titleText = formatWorkoutDate(workout.startTime),
-                    distanceText = String.format("%.2f km", metersToKm(workout.totalDistanceMeters)),
+                    distanceText = run {
+                        val unit = DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
+                        String.format("%.2f %s", metersToUnit(workout.totalDistanceMeters, unit), distanceUnitLabel(unit))
+                    },
                     durationText = formatDuration(workout.startTime, workout.endTime),
                     avgHrText = avgHr?.let { "${it.toInt()} bpm" } ?: "--",
                     similarRunCount = similar.size,

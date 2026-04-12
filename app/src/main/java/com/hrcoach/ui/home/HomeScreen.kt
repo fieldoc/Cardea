@@ -60,7 +60,7 @@ import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
-import com.hrcoach.util.metersToKm
+import com.hrcoach.util.metersToUnit
 
 // ── Zone pill color mapping ─────────────────────────────────────
 
@@ -579,10 +579,11 @@ private fun MidRow(state: HomeUiState, modifier: Modifier = Modifier) {
             modifier = Modifier.weight(1f).fillMaxHeight()
         )
         VolumeTile(
-            distanceKm = metersToKm(state.totalDistanceThisWeekMeters.toFloat()),
+            distanceKm = metersToUnit(state.totalDistanceThisWeekMeters.toFloat(), state.distanceUnit),
             distanceTargetKm = state.weeklyDistanceTargetKm,
             timeMinutes = state.totalTimeThisWeekMinutes,
             timeTargetMinutes = state.weeklyTimeTargetMinutes,
+            distanceLabel = if (state.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "mi" else "km",
             modifier = Modifier.weight(1f).fillMaxHeight()
         )
     }
@@ -694,6 +695,7 @@ private fun VolumeTile(
     distanceTargetKm: Double,
     timeMinutes: Long,
     timeTargetMinutes: Long,
+    distanceLabel: String = "km",
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -715,7 +717,7 @@ private fun VolumeTile(
         )
         VolumeRow(
             label = "DIST",
-            value = "%.0f / %.0f km".format(distanceKm, distanceTargetKm),
+            value = "%.0f / %.0f %s".format(distanceKm, distanceTargetKm, distanceLabel),
             progress = (distanceKm / distanceTargetKm.toFloat()).coerceIn(0f, 1f)
         )
         VolumeRow(

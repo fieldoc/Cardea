@@ -73,10 +73,12 @@ import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.util.asModeLabel
+import com.hrcoach.util.distanceUnitLabel
 import com.hrcoach.util.formatDuration
-import com.hrcoach.util.formatPaceMinPerKm
-import com.hrcoach.util.metersToKm
+import com.hrcoach.util.formatPace
+import com.hrcoach.util.metersToUnit
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -87,15 +89,17 @@ import java.util.Locale
 private data class WeekGroup(
     val label: String,
     val runCount: Int,
-    val totalKm: Float,
+    val totalDistance: Float,
+    val distanceLabel: String,
     val workouts: List<WorkoutEntity>
 )
 
-private fun groupWorkoutsByWeek(workouts: List<WorkoutEntity>): List<WeekGroup> {
+private fun groupWorkoutsByWeek(workouts: List<WorkoutEntity>, distanceUnit: DistanceUnit): List<WeekGroup> {
     if (workouts.isEmpty()) return emptyList()
     val cal = Calendar.getInstance()
     val nowYear = cal.get(Calendar.YEAR)
     val nowWeek = cal.get(Calendar.WEEK_OF_YEAR)
+    val unitLabel = distanceUnitLabel(distanceUnit)
 
     return workouts
         .groupBy { w ->
@@ -109,11 +113,12 @@ private fun groupWorkoutsByWeek(workouts: List<WorkoutEntity>): List<WeekGroup> 
             val week = key % 100
             val isThisWeek = year == nowYear && week == nowWeek
             val label = if (isThisWeek) "This Week" else weekRangeLabel(items)
-            val totalKm = metersToKm(items.sumOf { it.totalDistanceMeters.toDouble() }.toFloat())
+            val totalDistance = metersToUnit(items.sumOf { it.totalDistanceMeters.toDouble() }.toFloat(), distanceUnit)
             WeekGroup(
                 label = label,
                 runCount = items.size,
-                totalKm = totalKm,
+                totalDistance = totalDistance,
+                distanceLabel = unitLabel,
                 workouts = items.sortedByDescending { it.startTime }
             )
         }
@@ -143,7 +148,8 @@ fun HistoryListScreen(
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val workouts by viewModel.workouts.collectAsStateWithLifecycle()
-    val weekGroups = remember(workouts) { groupWorkoutsByWeek(workouts) }
+    val distanceUnit = viewModel.distanceUnit
+    val weekGroups = remember(workouts, distanceUnit) { groupWorkoutsByWeek(workouts, distanceUnit) }
     var deleteModeId by remember { mutableStateOf<Long?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -205,6 +211,7 @@ fun HistoryListScreen(
                         items(group.workouts, key = { it.id }) { workout ->
                             WeekWorkoutCard(
                                 workout = workout,
+                                distanceUnit = distanceUnit,
                                 isDeleteMode = deleteModeId == workout.id,
                                 onClick = {
                                     if (deleteModeId != null) {
@@ -285,7 +292,7 @@ private fun WeekHeader(group: WeekGroup) {
                 color = if (isThisWeek) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
             )
             Text(
-                text = "${group.runCount} run${if (group.runCount != 1) "s" else ""} · ${"%.1f".format(group.totalKm)} km",
+                text = "${group.runCount} run${if (group.runCount != 1) "s" else ""} · ${"%.1f".format(group.totalDistance)} ${group.distanceLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = CardeaTheme.colors.textTertiary
             )
@@ -317,6 +324,7 @@ private fun WeekHeader(group: WeekGroup) {
 @Composable
 private fun WeekWorkoutCard(
     workout: WorkoutEntity,
+    distanceUnit: DistanceUnit,
     isDeleteMode: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -326,10 +334,11 @@ private fun WeekWorkoutCard(
     val dayNumber = SimpleDateFormat("d", Locale.getDefault()).format(cal.time)
     val dayName = SimpleDateFormat("EEE", Locale.getDefault()).format(cal.time).uppercase()
 
-    val distanceKm = metersToKm(workout.totalDistanceMeters)
-    val distanceText = "%.2f".format(distanceKm)
+    val distanceInUnit = metersToUnit(workout.totalDistanceMeters, distanceUnit)
+    val distanceText = "%.2f".format(distanceInUnit)
+    val unitLabel = distanceUnitLabel(distanceUnit)
     val duration = formatDuration(workout.startTime, workout.endTime)
-    val pace = averagePaceLabel(workout, distanceKm)
+    val pace = averagePaceLabel(workout, distanceUnit)
     val modeLabel = workout.mode.asModeLabel()
 
     val modeBrush = if (workout.mode == "DISTANCE_PROFILE") {
@@ -412,7 +421,7 @@ private fun WeekWorkoutCard(
                             color = if (modeBrush != null) Color.Unspecified else modeColor
                         )
                         Text(
-                            text = " km",
+                            text = " $unitLabel",
                             style = MaterialTheme.typography.bodySmall,
                             color = CardeaTheme.colors.textTertiary,
                             modifier = Modifier.padding(bottom = 2.dp)
@@ -560,10 +569,11 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-private fun averagePaceLabel(workout: WorkoutEntity, distanceKm: Float): String {
+private fun averagePaceLabel(workout: WorkoutEntity, unit: DistanceUnit): String {
+    val distanceKm = workout.totalDistanceMeters / 1000f
     if (distanceKm <= 0f || workout.endTime <= workout.startTime) return "--"
     val durationMinutes = (workout.endTime - workout.startTime) / 60_000f
     if (durationMinutes <= 0f) return "--"
-    return formatPaceMinPerKm(durationMinutes / distanceKm)
+    return formatPace(durationMinutes / distanceKm, unit)
 }
 

@@ -823,7 +823,11 @@ private fun AlertBehaviorCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Kilometer splits", style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
+                Text(
+                    if (state.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "Mile splits" else "Kilometer splits",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CardeaTheme.colors.textSecondary
+                )
                 CardeaSwitch(checked = state.enableKmSplits && cuesEnabled, onCheckedChange = { if (cuesEnabled) onKmSplitsChange(it) })
             }
             Row(

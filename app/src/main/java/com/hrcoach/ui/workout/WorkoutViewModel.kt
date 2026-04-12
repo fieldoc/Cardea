@@ -3,13 +3,15 @@ package com.hrcoach.ui.workout
 import android.util.Log
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.util.JsonCodec
-import com.hrcoach.util.metersToKm
+import com.hrcoach.util.metersToUnit
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,13 +49,17 @@ data class ActiveWorkoutUiState(
     val workoutTypeLabel: String? = null,
     val bootcampWeekNumber: Int? = null,
     val remainingSeconds: Long? = null,
-    val rawSessionType: String? = null
+    val rawSessionType: String? = null,
+    val distanceUnit: DistanceUnit = DistanceUnit.KM
 )
 
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
-    private val workoutRepository: WorkoutRepository
+    private val workoutRepository: WorkoutRepository,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
+
+    private val distanceUnit = DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
 
     private val _uiState = MutableStateFlow(
         ActiveWorkoutUiState(snapshot = WorkoutState.snapshot.value)
@@ -97,7 +103,8 @@ class WorkoutViewModel @Inject constructor(
                         workoutTypeLabel = prog.workoutTypeLabel,
                         bootcampWeekNumber = prog.bootcampWeekNumber,
                         remainingSeconds = prog.totalDurationSeconds?.let { (it - newElapsed).coerceAtLeast(0L) },
-                        rawSessionType = prog.rawSessionType
+                        rawSessionType = prog.rawSessionType,
+                        distanceUnit = distanceUnit
                     )
                 }
             }
@@ -163,7 +170,8 @@ class WorkoutViewModel @Inject constructor(
                 workoutTypeLabel = prog.workoutTypeLabel,
                 bootcampWeekNumber = prog.bootcampWeekNumber,
                 remainingSeconds = prog.totalDurationSeconds?.let { (it - newElapsed).coerceAtLeast(0L) },
-                rawSessionType = prog.rawSessionType
+                rawSessionType = prog.rawSessionType,
+                distanceUnit = distanceUnit
             )
         }
     }
@@ -199,7 +207,8 @@ class WorkoutViewModel @Inject constructor(
                     workoutTypeLabel = prog.workoutTypeLabel,
                     bootcampWeekNumber = prog.bootcampWeekNumber,
                     remainingSeconds = prog.totalDurationSeconds?.let { (it - newElapsed).coerceAtLeast(0L) },
-                    rawSessionType = prog.rawSessionType
+                    rawSessionType = prog.rawSessionType,
+                    distanceUnit = distanceUnit
                 )
             }
         } finally {
@@ -270,10 +279,11 @@ class WorkoutViewModel @Inject constructor(
 
             config.mode == WorkoutMode.DISTANCE_PROFILE && config.segments.isNotEmpty() -> {
                 val totalDist = config.segments.lastOrNull()?.distanceMeters
-                val km = totalDist?.let { "%.1f".format(metersToKm(it)) } ?: "?"
+                val distVal = totalDist?.let { "%.1f".format(metersToUnit(it, distanceUnit)) } ?: "?"
+                val unitLabel = if (distanceUnit == DistanceUnit.MI) "mi" else "km"
                 ProgressInfo(
                     totalDistanceMeters = totalDist,
-                    workoutTypeLabel = "$km km \u00b7 Distance profile",
+                    workoutTypeLabel = "$distVal $unitLabel \u00b7 Distance profile",
                     bootcampWeekNumber = week,
                     rawSessionType = rawType
                 )

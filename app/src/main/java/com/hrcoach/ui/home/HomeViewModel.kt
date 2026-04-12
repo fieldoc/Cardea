@@ -7,7 +7,9 @@ import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.firebase.FirebasePartnerRepository
 import com.hrcoach.data.repository.BootcampRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.achievement.StreakCalculator
 import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.coaching.CoachingInsight
@@ -55,6 +57,7 @@ data class HomeUiState(
     val bootcampPercentComplete: Float = 0f,
     val coachingInsight: CoachingInsight? = null,
     val nudgeBanner: NudgeBannerState? = null,
+    val distanceUnit: DistanceUnit = DistanceUnit.KM,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -63,8 +66,11 @@ class HomeViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
     private val bootcampRepository: BootcampRepository,
     private val partnerRepository: FirebasePartnerRepository,
+    private val userProfileRepository: UserProfileRepository,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
+
+    private val distanceUnit = DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
 
     val uiState: StateFlow<HomeUiState> = combine(
         combine(
@@ -205,6 +211,7 @@ class HomeViewModel @Inject constructor(
                 bootcampPercentComplete = bootcampPercentComplete,
                 coachingInsight = coachingInsight,
                 nudgeBanner = nudgeBanner,
+                distanceUnit = distanceUnit,
             ))
         }
     }

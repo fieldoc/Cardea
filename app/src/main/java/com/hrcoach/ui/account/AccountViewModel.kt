@@ -14,6 +14,7 @@ import com.hrcoach.data.repository.MapsSettingsRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.model.AudioSettings
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.PartnerActivity
 import com.hrcoach.domain.model.VoiceVerbosity
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,6 +50,7 @@ data class AccountUiState(
     val partners: List<PartnerActivity> = emptyList(),
     val partnerCount: Int = 0,
     val partnerNudgesEnabled: Boolean = true,
+    val distanceUnit: DistanceUnit = DistanceUnit.KM,
 )
 
 @HiltViewModel
@@ -81,6 +83,8 @@ class AccountViewModel @Inject constructor(
     private val _maxHrSaved = MutableStateFlow(false)
     private val _maxHrError = MutableStateFlow<String?>(null)
 
+    private val _distanceUnit = MutableStateFlow(DistanceUnit.KM)
+
     private val _autoPauseEnabled = MutableStateFlow(true)
 
     private val _displayName = MutableStateFlow("Runner")
@@ -103,6 +107,7 @@ class AccountViewModel @Inject constructor(
             _workoutComplete.value = settings.enableWorkoutComplete != false
             _inZoneConfirm.value = settings.enableInZoneConfirm != false
             _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
+            _distanceUnit.value = DistanceUnit.fromString(userProfileRepo.getDistanceUnit())
             _displayName.value = userProfileRepo.getDisplayName()
             _emblemId.value = userProfileRepo.getEmblemId()
         }
@@ -154,6 +159,8 @@ class AccountViewModel @Inject constructor(
         )
     }.combine(_autoPauseEnabled) { base, autoPause ->
         base.copy(autoPauseEnabled = autoPause)
+    }.combine(_distanceUnit) { base, unit ->
+        base.copy(distanceUnit = unit)
     }.combine(
         combine(_displayName, _emblemId) { name, emblemId -> name to emblemId }
     ) { base, (name, emblemId) ->
@@ -189,6 +196,11 @@ class AccountViewModel @Inject constructor(
     fun setEnableKmSplits(v: Boolean) { _kmSplits.value = v; saveAudioSettings() }
     fun setEnableWorkoutComplete(v: Boolean) { _workoutComplete.value = v; saveAudioSettings() }
     fun setEnableInZoneConfirm(v: Boolean) { _inZoneConfirm.value = v; saveAudioSettings() }
+
+    fun setDistanceUnit(unit: DistanceUnit) {
+        _distanceUnit.value = unit
+        userProfileRepo.setDistanceUnit(if (unit == DistanceUnit.MI) "mi" else "km")
+    }
 
     fun setAutoPauseEnabled(enabled: Boolean) {
         _autoPauseEnabled.value = enabled

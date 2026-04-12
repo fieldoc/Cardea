@@ -7,6 +7,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
@@ -159,20 +160,21 @@ class VoicePlayer(context: Context) {
         event: CoachingEvent,
         guidanceText: String?,
         workoutMode: WorkoutMode,
-        paceMinPerKm: Float? = null
+        paceMinPerKm: Float? = null,
+        distanceUnit: DistanceUnit = DistanceUnit.KM
     ) {
         if (!shouldSpeak(event, verbosity)) return
 
         val text = if (event == CoachingEvent.KM_SPLIT) {
-            // guidanceText carries the km number as a string (e.g. "5")
-            val km = guidanceText?.toIntOrNull()
-            if (km != null) {
-                kmSplitText(km, workoutMode, paceMinPerKm)
+            // guidanceText carries the split number as a string (e.g. "5")
+            val splitNum = guidanceText?.toIntOrNull()
+            if (splitNum != null) {
+                splitText(splitNum, workoutMode, distanceUnit, paceMinPerKm)
             } else {
-                eventText(event, guidanceText, workoutMode)
+                eventText(event, guidanceText, workoutMode, distanceUnit)
             }
         } else {
-            eventText(event, guidanceText, workoutMode)
+            eventText(event, guidanceText, workoutMode, distanceUnit)
         }
 
         if (text.isBlank()) return
@@ -264,11 +266,20 @@ class VoicePlayer(context: Context) {
          * - FREE_RUN with pace and 0 seconds: "Kilometer N. Pace: M minutes."
          * - FREE_RUN without pace: "Kilometer N"
          */
-        fun kmSplitText(km: Int, mode: WorkoutMode, paceMinPerKm: Float? = null): String {
-            val base = "Kilometer $km"
+        fun kmSplitText(km: Int, mode: WorkoutMode, paceMinPerKm: Float? = null): String =
+            splitText(km, mode, DistanceUnit.KM, paceMinPerKm)
+
+        fun splitText(splitNum: Int, mode: WorkoutMode, unit: DistanceUnit, paceMinPerKm: Float? = null): String {
+            val unitWord = if (unit == DistanceUnit.MI) "Mile" else "Kilometer"
+            val base = "$unitWord $splitNum"
             if (mode != WorkoutMode.FREE_RUN || paceMinPerKm == null) return base
 
-            val totalSeconds = (paceMinPerKm * 60).toInt()
+            // Convert pace to the target unit if imperial
+            val pace = if (unit == DistanceUnit.MI)
+                paceMinPerKm * (DistanceUnit.METERS_PER_MILE / DistanceUnit.METERS_PER_KM)
+            else paceMinPerKm
+
+            val totalSeconds = (pace * 60).toInt()
             val minutes = totalSeconds / 60
             val seconds = totalSeconds % 60
             return if (seconds == 0) {
@@ -285,7 +296,7 @@ class VoicePlayer(context: Context) {
          * use the provided [guidanceText] if available, falling back to a fixed string.
          * Other events always use fixed text.
          */
-        fun eventText(event: CoachingEvent, guidanceText: String?, mode: WorkoutMode): String {
+        fun eventText(event: CoachingEvent, guidanceText: String?, mode: WorkoutMode, unit: DistanceUnit = DistanceUnit.KM): String {
             return when (event) {
                 CoachingEvent.SPEED_UP -> guidanceText ?: "Speed up"
                 CoachingEvent.SLOW_DOWN -> guidanceText ?: "Slow down"
@@ -297,7 +308,7 @@ class VoicePlayer(context: Context) {
                 CoachingEvent.SIGNAL_LOST -> "Signal lost"
                 CoachingEvent.SIGNAL_REGAINED -> "Signal regained"
                 CoachingEvent.SEGMENT_CHANGE -> "Next segment"
-                CoachingEvent.KM_SPLIT -> guidanceText ?: "Kilometer"
+                CoachingEvent.KM_SPLIT -> guidanceText ?: if (unit == DistanceUnit.MI) "Mile" else "Kilometer"
             }
         }
 

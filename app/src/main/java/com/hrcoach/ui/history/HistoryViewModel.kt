@@ -35,6 +35,8 @@ class HistoryViewModel @Inject constructor(
     private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
+    val distanceUnit = com.hrcoach.domain.model.DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
+
     val workouts: StateFlow<List<WorkoutEntity>> = repository.getAllWorkouts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

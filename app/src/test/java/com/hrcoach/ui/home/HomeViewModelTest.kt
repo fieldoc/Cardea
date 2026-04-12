@@ -12,6 +12,7 @@ import com.hrcoach.service.WorkoutSnapshot
 import com.hrcoach.service.WorkoutState
 import android.content.Context
 import com.hrcoach.data.firebase.FirebasePartnerRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -37,6 +38,7 @@ class HomeViewModelTest {
     private lateinit var workoutRepository: WorkoutRepository
     private lateinit var bootcampRepository: BootcampRepository
     private lateinit var partnerRepository: FirebasePartnerRepository
+    private lateinit var userProfileRepository: UserProfileRepository
     private lateinit var context: Context
 
     @Before
@@ -45,7 +47,9 @@ class HomeViewModelTest {
         workoutRepository = mockk(relaxed = true)
         bootcampRepository = mockk(relaxed = true)
         partnerRepository = mockk(relaxed = true)
+        userProfileRepository = mockk(relaxed = true)
         every { partnerRepository.observePartners() } returns flowOf(emptyList())
+        every { userProfileRepository.getDistanceUnit() } returns "km"
         context = mockk(relaxed = true)
     }
 
@@ -56,7 +60,7 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel(): HomeViewModel {
-        return HomeViewModel(workoutRepository, bootcampRepository, partnerRepository, context)
+        return HomeViewModel(workoutRepository, bootcampRepository, partnerRepository, userProfileRepository, context)
     }
 
     @Test

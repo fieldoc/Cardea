@@ -60,6 +60,8 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.domain.model.DistanceUnit
+import com.hrcoach.util.distanceUnitLabel
 import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.education.ZoneId
@@ -239,7 +241,7 @@ private fun buildCoachTakeLines(uiState: ProgressUiState): List<String> {
         lines += if (hbkmTrend.positive == true)
             "Your aerobic efficiency is trending in the right direction — keep your next runs at a comfortable effort."
         else
-            "Your heart is working harder per km lately. A few easy Zone 2 runs will help rebuild your aerobic base."
+            "Your heart is working harder lately. A few easy Zone 2 runs will help rebuild your aerobic base."
     }
 
     // Resting HR trend
@@ -272,10 +274,12 @@ private fun KeyMetricsGrid(uiState: ProgressUiState, modifier: Modifier = Modifi
         "${if (it >= 0f) "+" else ""}${String.format("%.1f", it)}"
     }
 
+    val unitLabel = distanceUnitLabel(uiState.distanceUnit)
+
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MetricCell(
             value = currentHbKm?.toInt()?.toString() ?: "--",
-            label = "HB / km",
+            label = "HB / $unitLabel",
             trendLabel = hbkmDelta?.let { d ->
                 val i = d.toInt()
                 if (i == 0) "flat" else "${if (i > 0) "+" else ""}$i"
@@ -294,7 +298,7 @@ private fun KeyMetricsGrid(uiState: ProgressUiState, modifier: Modifier = Modifi
         )
         MetricCell(
             value = String.format("%.1f", weeklyDistance),
-            label = "km / wk",
+            label = "$unitLabel / wk",
             trendLabel = null,
             trendPositive = null,
             valueColor = ZoneGreen,
@@ -351,8 +355,9 @@ private fun MetricCell(
 
 @Composable
 private fun HeartbeatsPerKmCard(uiState: ProgressUiState, modifier: Modifier = Modifier) {
+    val unitLabel = distanceUnitLabel(uiState.distanceUnit)
     ProgressChartCard(
-        title = "Heartbeats / km",
+        title = "Heartbeats / $unitLabel",
         subtitle = "Lower suggests better aerobic efficiency.",
         trendInfo = uiState.heartbeatsPerKmTrend,
         modifier = modifier
@@ -373,11 +378,12 @@ private fun HeartbeatsPerKmCard(uiState: ProgressUiState, modifier: Modifier = M
 
 @Composable
 private fun PaceAtFixedHrCard(uiState: ProgressUiState, modifier: Modifier = Modifier) {
+    val unitLabel = distanceUnitLabel(uiState.distanceUnit)
     ProgressChartCard(
         title = "Pace at ${uiState.paceReferenceHrBpm} bpm",
         subtitle = "Lower means faster at the same cardiac cost.",
         trendInfo = seriesTrendInfo(uiState.paceAtFixedHrSeries, lowerIsBetter = true) {
-            "${if (it >= 0f) "+" else ""}${String.format("%.2f", it)} min/km"
+            "${if (it >= 0f) "+" else ""}${String.format("%.2f", it)} min/$unitLabel"
         },
         modifier = modifier
     ) {

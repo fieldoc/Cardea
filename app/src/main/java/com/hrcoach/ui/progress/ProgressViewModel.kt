@@ -17,7 +17,9 @@ import com.hrcoach.ui.charts.PieSlice
 import com.hrcoach.ui.charts.ScatterPoint
 import com.hrcoach.ui.charts.TrendInfo
 import com.hrcoach.util.JsonCodec
-import com.hrcoach.util.metersToKm
+import com.hrcoach.data.repository.UserProfileRepository
+import com.hrcoach.domain.model.DistanceUnit
+import com.hrcoach.util.metersToUnit
 import com.hrcoach.util.recordedAtMs
 import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,7 +70,10 @@ data class ProgressUiState(
     val zoneDistribution: List<PieSlice> = emptyList(),
 
     // Section 5 – Consistency
-    val calendarDays: List<CalendarDay> = emptyList()
+    val calendarDays: List<CalendarDay> = emptyList(),
+
+    // Unit preference
+    val distanceUnit: DistanceUnit = DistanceUnit.KM
 )
 
 private data class WorkoutWithMetrics(
@@ -80,8 +85,11 @@ private data class WorkoutWithMetrics(
 @HiltViewModel
 class ProgressViewModel @Inject constructor(
     private val workoutRepository: WorkoutRepository,
-    private val workoutMetricsRepository: WorkoutMetricsRepository
+    private val workoutMetricsRepository: WorkoutMetricsRepository,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
+
+    private val distanceUnit = DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
 
     private val _uiState = MutableStateFlow(ProgressUiState())
     val uiState: StateFlow<ProgressUiState> = _uiState.asStateFlow()
@@ -253,7 +261,7 @@ class ProgressViewModel @Inject constructor(
             val weekStart = date.minusDays(date.dayOfWeek.value.toLong() - 1)
             if (weeklyDistanceMap.containsKey(weekStart)) {
                 weeklyDistanceMap[weekStart] = weeklyDistanceMap.getValue(weekStart) +
-                    metersToKm(item.workout.totalDistanceMeters)
+                    metersToUnit(item.workout.totalDistanceMeters, distanceUnit)
                 val durationMin = if (item.workout.endTime > item.workout.startTime)
                     (item.workout.endTime - item.workout.startTime) / 60_000f else 0f
                 val avgHr = item.metrics?.avgHr ?: 0f
@@ -310,7 +318,7 @@ class ProgressViewModel @Inject constructor(
             val date = Instant.ofEpochMilli(item.workout.startTime).atZone(zone).toLocalDate()
             if (!date.isBefore(oneYearAgo)) {
                 calendarMap[date] = calendarMap.getOrDefault(date, 0f) +
-                    metersToKm(item.workout.totalDistanceMeters)
+                    metersToUnit(item.workout.totalDistanceMeters, distanceUnit)
             }
         }
         val calendarDays = calendarMap.map { (date, km) ->
@@ -334,7 +342,8 @@ class ProgressViewModel @Inject constructor(
             weeklyDistanceBars = weeklyDistanceBars,
             weeklyLoadBars = weeklyLoadBars,
             zoneDistribution = zoneDistribution,
-            calendarDays = calendarDays
+            calendarDays = calendarDays,
+            distanceUnit = distanceUnit
         )
     }
 

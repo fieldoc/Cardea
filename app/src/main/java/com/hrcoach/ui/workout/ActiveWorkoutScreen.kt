@@ -73,9 +73,9 @@ import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.service.simulation.SimulationController
 import com.hrcoach.ui.debug.SimulationOverlay
-import com.hrcoach.util.formatDistanceKm
+import com.hrcoach.util.formatDistance
 import com.hrcoach.util.formatDurationSeconds
-import com.hrcoach.util.formatPaceMinPerKm
+import com.hrcoach.util.formatPace
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 
@@ -173,7 +173,7 @@ fun ActiveWorkoutScreen(
                         totalDur != null ->
                             "Turn ${formatDurationSeconds(totalDur / 2)}"
                         totalDist != null ->
-                            "Turn ${formatDistanceKm(totalDist / 2f)} km"
+                            "Turn ${formatDistance(totalDist / 2f, uiState.distanceUnit)}"
                         else -> null
                     }
                     ProgressBarWithTurnMarker(
@@ -220,15 +220,15 @@ fun ActiveWorkoutScreen(
             ) {
                 HeroStatCard(
                     label = "Distance",
-                    value = formatDistanceKm(state.distanceMeters),
-                    unit = "km",
+                    value = formatDistance(state.distanceMeters, uiState.distanceUnit),
+                    unit = if (uiState.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "mi" else "km",
                     zoneColor = zoneColor,
                     modifier = Modifier.weight(1f)
                 )
                 HeroStatCard(
                     label = "Pace",
-                    value = formatPaceMinPerKm(state.paceMinPerKm),
-                    unit = "/km",
+                    value = formatPace(state.paceMinPerKm, uiState.distanceUnit),
+                    unit = if (uiState.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "/mi" else "/km",
                     zoneColor = zoneColor,
                     modifier = Modifier.weight(1f)
                 )

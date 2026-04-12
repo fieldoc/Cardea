@@ -2,6 +2,7 @@ package com.hrcoach.service.workout
 
 import com.hrcoach.domain.engine.AdaptivePaceController
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
@@ -15,7 +16,7 @@ class CoachingEventRouter {
     // Informational cue state
     private var halfwayFired: Boolean = false
     private var completeFired: Boolean = false
-    private var lastKmAnnounced: Int = 0
+    private var lastSplitAnnounced: Int = 0
     private var lastVoiceCueTimeMs: Long = 0L
     private var workoutStartMs: Long = 0L
 
@@ -27,7 +28,7 @@ class CoachingEventRouter {
         lastPredictiveWarningTime = 0L
         halfwayFired = false
         completeFired = false
-        lastKmAnnounced = 0
+        lastSplitAnnounced = 0
         lastVoiceCueTimeMs = 0L
     }
 
@@ -40,6 +41,7 @@ class CoachingEventRouter {
         adaptiveResult: AdaptivePaceController.TickResult?,
         guidance: String,
         nowMs: Long,
+        distanceUnit: DistanceUnit = DistanceUnit.KM,
         emitEvent: (CoachingEvent, String?) -> Unit
     ) {
         if (wasHrConnected && !connected) {
@@ -84,11 +86,12 @@ class CoachingEventRouter {
 
         // ── Informational cues ──────────────────────────────────────
 
-        // KM_SPLIT
-        val currentKm = (distanceMeters / 1000f).toInt()
-        if (currentKm > lastKmAnnounced && currentKm >= 1) {
-            lastKmAnnounced = currentKm
-            emitEvent(CoachingEvent.KM_SPLIT, currentKm.toString())
+        // KM_SPLIT (or mile split when imperial)
+        val splitThreshold = if (distanceUnit == DistanceUnit.MI) DistanceUnit.METERS_PER_MILE else DistanceUnit.METERS_PER_KM
+        val currentSplit = (distanceMeters / splitThreshold).toInt()
+        if (currentSplit > lastSplitAnnounced && currentSplit >= 1) {
+            lastSplitAnnounced = currentSplit
+            emitEvent(CoachingEvent.KM_SPLIT, currentSplit.toString())
             lastVoiceCueTimeMs = nowMs
         }
 

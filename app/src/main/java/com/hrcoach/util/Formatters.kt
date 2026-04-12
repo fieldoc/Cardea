@@ -1,5 +1,6 @@
 package com.hrcoach.util
 
+import com.hrcoach.domain.model.DistanceUnit
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -19,15 +20,27 @@ fun formatDuration(startTime: Long, endTime: Long): String {
 }
 
 fun formatDistanceKm(distanceMeters: Float): String {
-    return String.format(Locale.getDefault(), "%.2f km", distanceMeters / 1000f)
+    return formatDistance(distanceMeters, DistanceUnit.KM)
+}
+
+fun formatDistance(distanceMeters: Float, unit: DistanceUnit): String {
+    val label = if (unit == DistanceUnit.MI) "mi" else "km"
+    val divisor = if (unit == DistanceUnit.MI) DistanceUnit.METERS_PER_MILE else DistanceUnit.METERS_PER_KM
+    return String.format(Locale.getDefault(), "%.2f %s", distanceMeters / divisor, label)
 }
 
 fun formatPaceMinPerKm(paceMinPerKm: Float): String {
-    if (paceMinPerKm <= 0f || paceMinPerKm > 30f) return "-- /km"
-    val totalSec = (paceMinPerKm * 60f).toInt()
+    return formatPace(paceMinPerKm, DistanceUnit.KM)
+}
+
+fun formatPace(paceMinPerKm: Float, unit: DistanceUnit): String {
+    val label = if (unit == DistanceUnit.MI) "mi" else "km"
+    val pace = if (unit == DistanceUnit.MI) paceMinPerKm * (DistanceUnit.METERS_PER_MILE / DistanceUnit.METERS_PER_KM) else paceMinPerKm
+    if (pace <= 0f || pace > 50f) return "-- /$label"
+    val totalSec = (pace * 60f).toInt()
     val min = totalSec / 60
     val sec = totalSec % 60
-    return String.format(Locale.getDefault(), "%d:%02d /km", min, sec)
+    return String.format(Locale.getDefault(), "%d:%02d /%s", min, sec, label)
 }
 
 fun formatWorkoutDate(timestampMs: Long): String {
@@ -47,6 +60,12 @@ fun formatDurationSeconds(totalSeconds: Long): String {
 }
 
 fun metersToKm(meters: Float): Float = meters / 1000f
+
+fun metersToUnit(meters: Float, unit: DistanceUnit): Float =
+    meters / if (unit == DistanceUnit.MI) DistanceUnit.METERS_PER_MILE else DistanceUnit.METERS_PER_KM
+
+fun distanceUnitLabel(unit: DistanceUnit): String =
+    if (unit == DistanceUnit.MI) "mi" else "km"
 
 fun String.asModeLabel(): String =
     split("_").joinToString(" ") { word ->
