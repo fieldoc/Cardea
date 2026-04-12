@@ -41,20 +41,17 @@ fun HrRing(
     onConnectHr: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Only run glow animation when connected — avoids per-frame ticks when idle
-    val glowAlpha = if (isConnected) {
-        val infiniteTransition = rememberInfiniteTransition(label = "ringGlow")
-        val alpha by infiniteTransition.animateFloat(
-            initialValue = 0.3f,
-            targetValue = 0.7f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(1200, easing = FastOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "glow"
-        )
-        alpha
-    } else 0f
+    val infiniteTransition = rememberInfiniteTransition(label = "ringGlow")
+    val glowAnimated by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+    val glowAlpha = if (isConnected) glowAnimated else 0f
 
     val colors = CardeaTheme.colors
     Box(
