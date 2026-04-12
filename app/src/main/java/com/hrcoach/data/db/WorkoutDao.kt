@@ -2,6 +2,7 @@ package com.hrcoach.data.db
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
@@ -10,6 +11,9 @@ import kotlinx.coroutines.flow.Flow
 interface WorkoutDao {
     @Insert
     suspend fun insert(workout: WorkoutEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(workout: WorkoutEntity)
 
     @Update
     suspend fun update(workout: WorkoutEntity)

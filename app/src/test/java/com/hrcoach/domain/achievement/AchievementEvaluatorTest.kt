@@ -17,11 +17,16 @@ class FakeAchievementDao : AchievementDao {
     val inserted = mutableListOf<AchievementEntity>()
 
     override suspend fun insert(achievement: AchievementEntity) { inserted.add(achievement) }
+    override suspend fun upsert(achievement: AchievementEntity) {
+        inserted.removeAll { it.id == achievement.id }
+        inserted.add(achievement)
+    }
     override suspend fun getUnshownAchievements(): List<AchievementEntity> = inserted.filter { !it.shown }
     override fun getAllAchievements(): Flow<List<AchievementEntity>> = flowOf(inserted.toList())
     override fun getAchievementsByType(type: String): Flow<List<AchievementEntity>> = flowOf(inserted.filter { it.type == type })
     override suspend fun hasAchievement(type: String, milestone: String): Boolean = inserted.any { it.type == type && it.milestone == milestone }
     override suspend fun markShown(ids: List<Long>) { /* no-op for tests */ }
+    override suspend fun getAllAchievementsOnce(): List<AchievementEntity> = inserted.toList()
 }
 
 class AchievementEvaluatorTest {

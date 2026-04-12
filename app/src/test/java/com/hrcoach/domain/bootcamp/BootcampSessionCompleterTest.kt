@@ -25,11 +25,13 @@ class BootcampSessionCompleterTest {
 
     private val noopAchievementEvaluator = AchievementEvaluator(object : AchievementDao {
         override suspend fun insert(achievement: AchievementEntity) {}
+        override suspend fun upsert(achievement: AchievementEntity) {}
         override suspend fun hasAchievement(type: String, milestone: String): Boolean = false
         override fun getAllAchievements(): Flow<List<AchievementEntity>> = emptyFlow()
         override fun getAchievementsByType(type: String): Flow<List<AchievementEntity>> = emptyFlow()
         override suspend fun getUnshownAchievements(): List<AchievementEntity> = emptyList()
         override suspend fun markShown(ids: List<Long>) {}
+        override suspend fun getAllAchievementsOnce(): List<AchievementEntity> = emptyList()
     }, noopCloudBackupManager)
 
     private fun makeCompleter(dao: FakeBootcampDao) =
@@ -216,6 +218,10 @@ private class FakeBootcampDao(
         return enrollment.id
     }
 
+    override suspend fun upsertEnrollment(enrollment: BootcampEnrollmentEntity) {
+        activeEnrollment = enrollment
+    }
+
     override suspend fun updateEnrollment(enrollment: BootcampEnrollmentEntity) {
         activeEnrollment = enrollment
     }
@@ -236,6 +242,12 @@ private class FakeBootcampDao(
     override suspend fun insertSession(session: BootcampSessionEntity): Long {
         sessionsByWeek.getOrPut(session.weekNumber) { mutableListOf() }.add(session)
         return session.id
+    }
+
+    override suspend fun upsertSession(session: BootcampSessionEntity) {
+        // Remove existing then re-insert
+        sessionsByWeek.values.forEach { list -> list.removeAll { it.id == session.id } }
+        sessionsByWeek.getOrPut(session.weekNumber) { mutableListOf() }.add(session)
     }
 
     override suspend fun insertSessions(sessions: List<BootcampSessionEntity>) {

@@ -2,6 +2,8 @@ package com.hrcoach.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.firebase.CloudBackupManager
+import com.hrcoach.data.firebase.FirebaseAuthManager
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.OnboardingRepository
 import com.hrcoach.data.repository.UserProfileRepository
@@ -26,6 +28,9 @@ data class OnboardingUiState(
     val bluetoothPermissionGranted: Boolean = false,
     val locationPermissionGranted: Boolean = false,
     val notificationPermissionGranted: Boolean = false,
+    val isGoogleLinking: Boolean = false,
+    val isGoogleLinked: Boolean = false,
+    val googleLinkError: String? = null,
 )
 
 @HiltViewModel
@@ -33,6 +38,8 @@ class OnboardingViewModel @Inject constructor(
     private val onboardingRepository: OnboardingRepository,
     private val userProfileRepository: UserProfileRepository,
     private val adaptiveProfileRepository: AdaptiveProfileRepository,
+    private val firebaseAuthManager: FirebaseAuthManager,
+    private val cloudBackupManager: CloudBackupManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
@@ -108,6 +115,19 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    fun linkGoogleAccount() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isGoogleLinking = true, googleLinkError = null) }
+            runCatching {
+                firebaseAuthManager.linkGoogleAccount()
+                _uiState.update { it.copy(isGoogleLinked = true) }
+            }.onFailure { e ->
+                _uiState.update { it.copy(googleLinkError = e.message) }
+            }
+            _uiState.update { it.copy(isGoogleLinking = false) }
+        }
+    }
+
     fun completeOnboarding() {
         onboardingRepository.setOnboardingCompleted()
     }
@@ -121,14 +141,17 @@ class OnboardingSplashViewModel @Inject constructor(
     private val cloudRestoreManager: com.hrcoach.data.firebase.CloudRestoreManager,
 ) : ViewModel() {
 
-    /** Triggers a restore if the user is Google-linked, has cloud backup, and 0 local workouts. */
-    fun checkAndRestoreIfNeeded() {
-        viewModelScope.launch {
-            runCatching {
-                if (cloudRestoreManager.needsRestore()) {
-                    cloudRestoreManager.restore()
-                }
+    private val _isRestoring = MutableStateFlow(false)
+    val isRestoring: StateFlow<Boolean> = _isRestoring.asStateFlow()
+
+    /** Triggers a restore if the user is Google-linked, has cloud backup, and local DB is empty. */
+    suspend fun checkAndRestoreIfNeeded() {
+        runCatching {
+            if (cloudRestoreManager.needsRestore()) {
+                _isRestoring.value = true
+                cloudRestoreManager.restore()
+                _isRestoring.value = false
             }
-        }
+        }.onFailure { _isRestoring.value = false }
     }
 }

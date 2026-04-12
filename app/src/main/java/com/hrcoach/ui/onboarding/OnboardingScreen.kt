@@ -21,7 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.ui.theme.*
 import kotlinx.coroutines.launch
 
-private const val PAGE_COUNT = 8
+private const val PAGE_COUNT = 9
 
 @Composable
 fun OnboardingScreen(
@@ -112,7 +112,14 @@ fun OnboardingScreen(
                         },
                     )
                     6 -> TabTourPage()
-                    7 -> LaunchPadPage(
+                    7 -> GoogleBackupPage(
+                        isLinking = uiState.isGoogleLinking,
+                        isLinked = uiState.isGoogleLinked,
+                        error = uiState.googleLinkError,
+                        onLink = viewModel::linkGoogleAccount,
+                        onSkip = { advancePage() },
+                    )
+                    8 -> LaunchPadPage(
                         onStartBootcamp = {
                             viewModel.completeOnboarding()
                             onNavigateToBootcamp()
