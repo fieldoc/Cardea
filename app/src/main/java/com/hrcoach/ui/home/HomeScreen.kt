@@ -265,13 +265,17 @@ private fun PulseHero(
                     fontSize = 34.sp,
                     letterSpacing = (-0.5).sp
                 ),
-                color = CardeaTheme.colors.textPrimary,
-                modifier = Modifier
-                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                    .drawWithContent {
-                        drawContent()
-                        drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
-                    }
+                color = if (isToday) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary,
+                modifier = if (isToday) {
+                    Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
+                        }
+                } else {
+                    Modifier
+                }
             )
             Spacer(Modifier.height(6.dp))
             Text(
@@ -312,7 +316,7 @@ private fun PulseHero(
                             .width(2.dp)
                             .height(30.dp)
                             .background(
-                                CardeaTheme.colors.glassBorder,
+                                CardeaTheme.colors.textTertiary,
                                 RoundedCornerShape(1.dp)
                             )
                     )
@@ -355,7 +359,7 @@ private fun PulseHero(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(85.dp),
-                alpha = 0.45f
+                alpha = if (isToday) 0.45f else 0.20f
             )
         }
     }
@@ -517,8 +521,8 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
             text = "$current/$target",
             style = MaterialTheme.typography.displaySmall.copy(
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 30.sp,
-                lineHeight = 30.sp
+                fontSize = 28.sp,
+                lineHeight = 28.sp
             ),
             color = CardeaTheme.colors.textPrimary
         )
