@@ -19,21 +19,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.HrCoachThemeTokens
+import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 
 data class TrendInfo(val label: String, val positive: Boolean?)
 
 @Composable
 fun TrendBadge(trendInfo: TrendInfo, modifier: Modifier = Modifier) {
     val backgroundColor = when (trendInfo.positive) {
-        true -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f)
-        false -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.18f)
-        null -> MaterialTheme.colorScheme.surfaceVariant
+        true -> ZoneGreen.copy(alpha = 0.18f)
+        false -> ZoneRed.copy(alpha = 0.18f)
+        null -> CardeaTheme.colors.textTertiary.copy(alpha = 0.18f)
     }
     val textColor = when (trendInfo.positive) {
-        true -> MaterialTheme.colorScheme.tertiary
-        false -> MaterialTheme.colorScheme.secondary
-        null -> HrCoachThemeTokens.subtleText
+        true -> ZoneGreen
+        false -> ZoneRed
+        null -> CardeaTheme.colors.textSecondary
     }
 
     Box(
@@ -80,7 +82,7 @@ fun ProgressChartCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.weight(1f))
             if (trendInfo != null) {
@@ -91,7 +93,7 @@ fun ProgressChartCard(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                color = CardeaTheme.colors.textSecondary
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -103,16 +105,19 @@ fun ProgressChartCard(
 fun SectionHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            ),
+            color = CardeaTheme.colors.textSecondary
         )
         if (subtitle != null) {
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = HrCoachThemeTokens.subtleText
+                color = CardeaTheme.colors.textTertiary
             )
         }
     }
