@@ -751,10 +751,3 @@ private fun seriesTrendInfo(
     val positive = (delta < 0f) == lowerIsBetter
     return TrendInfo(formatter(delta), positive)
 }
-
-private fun deltaLabel(delta: Float, lowerIsBetter: Boolean, suffix: String): String {
-    if (delta == 0f) return "flat"
-    val improved = if (lowerIsBetter) delta < 0f else delta > 0f
-    val sign = if (improved) "" else "+"
-    return "$sign${String.format("%.0f", delta)}$suffix"
-}

@@ -82,7 +82,7 @@ fun ProgressChartCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = CardeaTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.weight(1f))
             if (trendInfo != null) {
