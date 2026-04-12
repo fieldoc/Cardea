@@ -203,6 +203,34 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **Not suitable for:** UX design decisions, brainstorming, tasks requiring human judgment. Use `superpowers:brainstorming` for those first.
 - **Good for:** Well-defined TDD implementation tasks where the plan already specifies exact file changes and test commands.
 
+## ADB Data Backup Safety (CRITICAL — data loss risk)
+
+**NEVER use `adb shell run-as ... cat <binary-file> > /tmp/local`** — Git Bash CR/LF translation silently corrupts SQLite databases. The file looks valid (correct size, SQLite header) but B-tree pages are mangled and unrecoverable.
+
+**Safe backup procedure:**
+1. `adb shell "run-as com.hrcoach cp databases/hr_coach_db /data/local/tmp/hr_coach_backup.db"` (also `-shm` and `-wal`)
+2. `adb pull //data/local/tmp/hr_coach_backup.db /tmp/hr_coach_backup.db` (double-slash prevents Git Bash path translation)
+3. Verify: `sqlite3 /tmp/hr_coach_backup.db "SELECT COUNT(*) FROM workouts"`
+4. Clean up: `adb shell "rm /data/local/tmp/hr_coach_backup.db*"`
+
+**Safe restore procedure:**
+1. `adb shell am force-stop com.hrcoach`
+2. `adb push /tmp/hr_coach_backup.db //data/local/tmp/hr_coach_restore.db` (also `-shm`, `-wal`)
+3. `adb shell "run-as com.hrcoach cp /data/local/tmp/hr_coach_restore.db databases/hr_coach_db"` (also `-shm`, `-wal`)
+4. Clean up temp files, launch app, verify
+
+**Windows Git Bash path gotchas:**
+- `adb push/pull` paths: use `//data/` prefix (double-slash) to prevent `/data/` → `C:/Program Files/Git/data/` translation
+- `firebase database:get /path`: prefix with `MSYS_NO_PATHCONV=1`
+- `adb shell "..."` commands run on-device and are unaffected by Git Bash translation
+
+## Firebase RTDB Data Model
+
+Firebase project: `cardea-1c8fc`. CLI: `MSYS_NO_PATHCONV=1 firebase database:get /path --project cardea-1c8fc --pretty`
+- `/users/{uid}` — `displayName`, `emblemId`, `fcmToken`, `partners: {partnerUid: true}`, `activity: {lastRunDate, lastRunDurationMin, lastRunPhase, weeklyRunCount, currentStreak}`
+- `/invites/{code}` — invite codes with `userId`, `displayName`, `createdAt`, `expiresAt`
+- Partner connections are bidirectional: both users must have the other's UID in their `partners` map
+
 ## MCP Servers
 
 Two MCP servers are registered in `.mcp.json`. All are manual (not plugin-managed).
