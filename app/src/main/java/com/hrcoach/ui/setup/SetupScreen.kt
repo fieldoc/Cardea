@@ -271,6 +271,16 @@ fun SetupScreen(
                     isExpanded = expandedSection == "mode",
                     onToggle = { expandedSection = if (expandedSection == "mode") null else "mode" }
                 )
+                AnimatedVisibility(visible = expandedSection == "mode") {
+                    ModeOptionsCard(
+                        selectedMode = state.mode,
+                        onModeSelected = { mode ->
+                            viewModel.setMode(mode)
+                            expandedSection = null
+                        }
+                    )
+                }
+
                 HorizontalDivider(color = CardeaTheme.colors.glassBorder)
                 ConfigSectionHeader(
                     title = "HR Monitor",
@@ -279,6 +289,16 @@ fun SetupScreen(
                     isExpanded = expandedSection == "hr",
                     onToggle = { expandedSection = if (expandedSection == "hr") null else "hr" }
                 )
+                AnimatedVisibility(visible = expandedSection == "hr") {
+                    HrMonitorCard(
+                        state = state,
+                        hrPulseScale = hrPulseScale,
+                        onStartScan = viewModel::startScan,
+                        onConnectDevice = viewModel::connectToDevice,
+                        onDisconnect = viewModel::disconnectDevice
+                    )
+                }
+
                 if (state.mode != WorkoutMode.FREE_RUN) {
                     val targetSummary = when {
                         state.selectedPresetId != null && state.selectedPresetId != "custom" ->
@@ -293,7 +313,20 @@ fun SetupScreen(
                         isExpanded = expandedSection == "target",
                         onToggle = { expandedSection = if (expandedSection == "target") null else "target" }
                     )
+                    AnimatedVisibility(visible = expandedSection == "target") {
+                        TargetCard(
+                            state = state,
+                            onSteadyStateHrChange = viewModel::setSteadyStateHr,
+                            onSelectPreset = { viewModel.selectPreset(it.id) },
+                            onSelectCustom = { viewModel.selectPreset("custom") },
+                            onAddSegment = viewModel::addSegment,
+                            onUpdateSegmentDistance = viewModel::updateSegmentDistance,
+                            onUpdateSegmentTarget = viewModel::updateSegmentTarget,
+                            onRemoveSegment = viewModel::removeSegment
+                        )
+                    }
                 }
+
                 HorizontalDivider(color = CardeaTheme.colors.glassBorder)
                 ConfigSectionHeader(
                     title = "Alerts",
@@ -301,55 +334,23 @@ fun SetupScreen(
                     isExpanded = expandedSection == "alerts",
                     onToggle = { expandedSection = if (expandedSection == "alerts") null else "alerts" }
                 )
-            }
-
-            // Expanded content — appears below the accordion group
-            AnimatedVisibility(visible = expandedSection == "mode") {
-                ModeOptionsCard(
-                    selectedMode = state.mode,
-                    onModeSelected = { mode ->
-                        viewModel.setMode(mode)
-                        expandedSection = null
-                    }
-                )
-            }
-            AnimatedVisibility(visible = expandedSection == "hr") {
-                HrMonitorCard(
-                    state = state,
-                    hrPulseScale = hrPulseScale,
-                    onStartScan = viewModel::startScan,
-                    onConnectDevice = viewModel::connectToDevice,
-                    onDisconnect = viewModel::disconnectDevice
-                )
-            }
-            AnimatedVisibility(visible = expandedSection == "target") {
-                TargetCard(
-                    state = state,
-                    onSteadyStateHrChange = viewModel::setSteadyStateHr,
-                    onSelectPreset = { viewModel.selectPreset(it.id) },
-                    onSelectCustom = { viewModel.selectPreset("custom") },
-                    onAddSegment = viewModel::addSegment,
-                    onUpdateSegmentDistance = viewModel::updateSegmentDistance,
-                    onUpdateSegmentTarget = viewModel::updateSegmentTarget,
-                    onRemoveSegment = viewModel::removeSegment
-                )
-            }
-            AnimatedVisibility(visible = expandedSection == "alerts") {
-                AlertBehaviorCard(
-                    state = state,
-                    onToggle = viewModel::toggleAdvancedSettings,
-                    onBufferChange = viewModel::setBufferBpm,
-                    onAlertDelayChange = viewModel::setAlertDelaySec,
-                    onCooldownChange = viewModel::setAlertCooldownSec,
-                    onVolumeChange = { viewModel.setEarconVolume((it / 5f).roundToInt() * 5) },
-                    onVoiceVerbosityChange = viewModel::setVoiceVerbosity,
-                    onVibrationChange = viewModel::setEnableVibration,
-                    onPreview = viewModel::previewEarcon,
-                    onHalfwayChange = viewModel::setEnableHalfwayReminder,
-                    onKmSplitsChange = viewModel::setEnableKmSplits,
-                    onWorkoutCompleteChange = viewModel::setEnableWorkoutComplete,
-                    onInZoneConfirmChange = viewModel::setEnableInZoneConfirm
-                )
+                AnimatedVisibility(visible = expandedSection == "alerts") {
+                    AlertBehaviorCard(
+                        state = state,
+                        onToggle = viewModel::toggleAdvancedSettings,
+                        onBufferChange = viewModel::setBufferBpm,
+                        onAlertDelayChange = viewModel::setAlertDelaySec,
+                        onCooldownChange = viewModel::setAlertCooldownSec,
+                        onVolumeChange = { viewModel.setEarconVolume((it / 5f).roundToInt() * 5) },
+                        onVoiceVerbosityChange = viewModel::setVoiceVerbosity,
+                        onVibrationChange = viewModel::setEnableVibration,
+                        onPreview = viewModel::previewEarcon,
+                        onHalfwayChange = viewModel::setEnableHalfwayReminder,
+                        onKmSplitsChange = viewModel::setEnableKmSplits,
+                        onWorkoutCompleteChange = viewModel::setEnableWorkoutComplete,
+                        onInZoneConfirmChange = viewModel::setEnableInZoneConfirm
+                    )
+                }
             }
 
             state.validation.startBlockedReason?.takeIf { !canStart }?.let { reason ->
@@ -633,7 +634,7 @@ private fun ModeOptionsCard(
     selectedMode: WorkoutMode,
     onModeSelected: (WorkoutMode) -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             WorkoutMode.entries.forEach { mode ->
                 val isSelected = mode == selectedMode
@@ -703,7 +704,7 @@ private fun AlertBehaviorCard(
     onWorkoutCompleteChange: (Boolean) -> Unit,
     onInZoneConfirmChange: (Boolean) -> Unit
 ) {
-    GlassCard {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -907,7 +908,7 @@ private fun TargetCard(
     onUpdateSegmentTarget: (Int, String) -> Unit,
     onRemoveSegment: (Int) -> Unit
 ) {
-    GlassCard {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             text = "Target Zone Plan",
             style = MaterialTheme.typography.titleLarge,
@@ -1179,7 +1180,7 @@ private fun HrMonitorCard(
     onConnectDevice: (BluetoothDevice) -> Unit,
     onDisconnect: () -> Unit
 ) {
-    GlassCard {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(text = "HR Monitor", style = MaterialTheme.typography.titleLarge, color = CardeaTheme.colors.textPrimary)
 
         if (state.isHrConnected) {
