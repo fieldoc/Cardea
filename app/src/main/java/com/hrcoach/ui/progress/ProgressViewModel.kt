@@ -1,6 +1,11 @@
 package com.hrcoach.ui.progress
 
 import androidx.compose.ui.graphics.Color
+import com.hrcoach.ui.theme.ChartZoneEasy
+import com.hrcoach.ui.theme.ChartZoneHard
+import com.hrcoach.ui.theme.ChartZoneModerate
+import com.hrcoach.ui.theme.GradientCyan
+import com.hrcoach.ui.theme.ZoneRed
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.TrackPointEntity
@@ -299,11 +304,11 @@ class ProgressViewModel @Inject constructor(
         val totalPts = zoneCounts.values.sum().toFloat().coerceAtLeast(1f)
         val zoneOrder = listOf("Easy", "Moderate", "Target", "Hard", "Max")
         val zoneColors = listOf(
-            Color(0xFF34D399),   // Easy — green
-            Color(0xFF4F8EF7),   // Moderate — blue
-            Color(0xFF00E5FF),   // Target — cyan (distinct from Easy green)
-            Color(0xFFF59E0B),   // Hard — amber
-            Color(0xFFEF4444)    // Max — red
+            ChartZoneEasy,       // Teal-green
+            ChartZoneModerate,   // Soft blue
+            GradientCyan,        // Target cyan
+            ChartZoneHard,       // Orange-amber
+            ZoneRed              // Max red
         )
         val zoneDistribution = zoneOrder.zip(zoneColors).mapNotNull { (name, color) ->
             val count = zoneCounts.getValue(name)

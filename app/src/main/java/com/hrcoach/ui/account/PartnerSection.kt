@@ -67,17 +67,13 @@ import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.ZoneRed
 import kotlinx.coroutines.launch
 
-private val PartnerGradient = Brush.linearGradient(
-    listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)
+// Private gradients removed — use CardeaTheme.colors.gradient / .ctaGradient instead
+private val DisabledButtonGradient = Brush.linearGradient(
+    listOf(Color(0xFF4B5563), Color(0xFF374151))
 )
-
-private val PartnerCtaGradient = Brush.linearGradient(
-    listOf(GradientRed, GradientPink)
-)
-
-private val PartnerErrorRed = Color(0xFFEF4444)
 
 // ── Partner Section ────────────────────────────────────────────────────────────
 
@@ -129,9 +125,9 @@ fun PartnerSection(
         // Gradient "+ Add" button — disabled at 3/3
         val isFull = partnerCount >= 3
         val addButtonGradient = if (isFull)
-            Brush.linearGradient(listOf(Color(0xFF4B5563), Color(0xFF374151)))
+            DisabledButtonGradient
         else
-            PartnerCtaGradient
+            CardeaTheme.colors.ctaGradient
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(6.dp))
@@ -290,7 +286,8 @@ fun AddPartnerBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color(0xFF111827),
+        containerColor = CardeaTheme.colors.bgSecondary,
+        windowInsets = WindowInsets(0),
         dragHandle = {
             Box(
                 Modifier
@@ -387,7 +384,7 @@ private fun ShareCodeTab(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        Brush.linearGradient(listOf(GradientRed, GradientPink))
+                        CardeaTheme.colors.ctaGradient
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -428,7 +425,7 @@ private fun ShareCodeTab(
                 Text(
                     text = msg,
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = PartnerErrorRed,
+                    color = ZoneRed,
                     textAlign = TextAlign.Center
                 )
             }
@@ -455,7 +452,7 @@ private fun ShareCodeTab(
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 6.sp,
-                        brush = PartnerGradient
+                        brush = CardeaTheme.colors.gradient
                     ),
                     color = Color.Unspecified
                 )
@@ -467,7 +464,7 @@ private fun ShareCodeTab(
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        Brush.linearGradient(listOf(GradientRed, GradientPink))
+                        CardeaTheme.colors.ctaGradient
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -540,14 +537,14 @@ private fun EnterCodeTab(
                     capitalization = KeyboardCapitalization.Characters
                 ),
                 isError = errorMessage != null,
-                supportingText = errorMessage?.let { { Text(it, color = PartnerErrorRed) } },
+                supportingText = errorMessage?.let { { Text(it, color = ZoneRed) } },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GradientPink,
                     unfocusedBorderColor = CardeaTheme.colors.textTertiary,
                     cursorColor = GradientPink,
                     focusedTextColor = CardeaTheme.colors.textPrimary,
                     unfocusedTextColor = CardeaTheme.colors.textPrimary,
-                    errorBorderColor = PartnerErrorRed,
+                    errorBorderColor = ZoneRed,
                 ),
                 textStyle = androidx.compose.material3.MaterialTheme.typography.headlineSmall.copy(
                     fontFamily = FontFamily.Monospace,
@@ -566,9 +563,9 @@ private fun EnterCodeTab(
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         if (canConnect)
-                            Brush.linearGradient(listOf(GradientRed, GradientPink))
+                            CardeaTheme.colors.ctaGradient
                         else
-                            Brush.linearGradient(listOf(Color(0xFF4B5563), Color(0xFF374151)))
+                            DisabledButtonGradient
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -680,7 +677,7 @@ private fun EnterCodeTab(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Brush.linearGradient(listOf(GradientRed, GradientPink)))
+                    .background(CardeaTheme.colors.ctaGradient)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

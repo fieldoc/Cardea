@@ -98,6 +98,8 @@ import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.ZoneGreen
+import com.hrcoach.ui.theme.SessionTintCool
+import com.hrcoach.ui.theme.SessionTintDeep
 
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -1967,8 +1969,8 @@ private object SessionDescription {
 /** Returns ambient tint color for the hero background based on today's session type. */
 private fun sessionAmbientColor(todayState: TodayState): Color = when (todayState) {
     is TodayState.RunUpcoming -> when (todayState.session.type) {
-        SessionType.EASY, SessionType.STRIDES -> Color(0xFF0EA5E9) // Cool sky-teal
-        SessionType.LONG -> Color(0xFF6366F1)                     // Deep indigo
+        SessionType.EASY, SessionType.STRIDES -> SessionTintCool   // Cool sky-teal
+        SessionType.LONG -> SessionTintDeep                       // Deep indigo
         SessionType.TEMPO -> ZoneAmber                             // Warm amber
         SessionType.INTERVAL -> GradientPink                       // Hot pink
         SessionType.RACE_SIM -> GradientRed                        // Aggressive red

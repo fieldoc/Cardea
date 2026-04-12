@@ -342,7 +342,7 @@ private fun BoxScope.MapHeaderOverlay(hasWorkoutTarget: Boolean) {
         modifier = Modifier
             .padding(8.dp)
             .align(Alignment.TopStart)
-            .background(Color(0xCC121212), RoundedCornerShape(8.dp))
+            .background(CardeaTheme.colors.mapOverlayBg, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
@@ -359,7 +359,7 @@ private fun BoxScope.MapLegendOverlay(hasWorkoutTarget: Boolean) {
         modifier = Modifier
             .align(Alignment.BottomEnd)
             .padding(8.dp)
-            .background(Color(0xCC121212), RoundedCornerShape(8.dp))
+            .background(CardeaTheme.colors.mapOverlayBg, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -582,6 +582,7 @@ private fun MoreActionsCard(
                 Text(
                     text = stringResource(R.string.button_view_progress),
                     style = MaterialTheme.typography.labelLarge,
+                    color = CardeaTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

@@ -1,6 +1,7 @@
 package com.hrcoach.ui.account
 
 import androidx.compose.foundation.background
+import com.hrcoach.ui.components.SectionHeader
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -175,7 +176,7 @@ fun AccountScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // ── Training ─────────────────────────────────────────────────────
-            SectionLabel("Training")
+            SectionHeader("Training")
             Spacer(modifier = Modifier.height(6.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
@@ -258,7 +259,7 @@ fun AccountScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // ── Audio & Coaching ─────────────────────────────────────────────
-            SectionLabel("Audio & Coaching")
+            SectionHeader("Audio & Coaching")
             Spacer(modifier = Modifier.height(6.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
@@ -370,7 +371,7 @@ fun AccountScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // ── App ──────────────────────────────────────────────────────────
-            SectionLabel("App")
+            SectionHeader("App")
             Spacer(modifier = Modifier.height(6.dp))
 
             GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
@@ -609,19 +610,7 @@ private fun ProfileEditBottomSheet(
 
 // ── Section label ─────────────────────────────────────────────────────────────
 
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.8.sp,
-            fontSize = 11.sp
-        ),
-        color = CardeaTheme.colors.textSecondary,
-        modifier = Modifier.padding(horizontal = 4.dp)
-    )
-}
+// SectionLabel replaced by shared SectionHeader from ui/components
 
 // ── Setting icon box with semantic tint ──────────────────────────────────────
 

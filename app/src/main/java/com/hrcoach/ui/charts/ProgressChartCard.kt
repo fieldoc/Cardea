@@ -101,24 +101,4 @@ fun ProgressChartCard(
     }
 }
 
-@Composable
-fun SectionHeader(title: String, subtitle: String? = null, modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxWidth()) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp
-            ),
-            color = CardeaTheme.colors.textSecondary
-        )
-        if (subtitle != null) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTheme.colors.textTertiary
-            )
-        }
-    }
-}
+// SectionHeader moved to com.hrcoach.ui.components.SectionHeader

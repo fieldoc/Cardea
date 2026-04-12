@@ -92,6 +92,15 @@ val LightBlackoutBg     = Color(0xFFE8E0E0)
 val LightBlackoutBorder = Color(0xFFD4A0A0)
 val LightBlackoutText   = Color(0xFF8B3A3A)
 
+// ── Chart 5-zone palette (extends the 3-zone Green/Amber/Red) ──
+val ChartZoneEasy     = Color(0xFF34D399) // Teal-green — distinct from ZoneGreen
+val ChartZoneModerate = Color(0xFF4F8EF7) // Soft blue
+val ChartZoneHard     = Color(0xFFF59E0B) // Orange-amber — distinct from ZoneAmber
+
+// ── Session-type ambient tints ──────────────────────────────────
+val SessionTintCool   = Color(0xFF0EA5E9) // Sky-teal (Easy/Strides)
+val SessionTintDeep   = Color(0xFF6366F1) // Deep indigo (Long)
+
 val ChartGridDark  = Color(0x0AFFFFFF)
 val ChartGridLight = Color(0x14000000)
 

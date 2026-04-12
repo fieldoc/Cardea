@@ -2,6 +2,7 @@ package com.hrcoach.ui.bootcamp
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import com.hrcoach.ui.components.SectionHeader
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -902,12 +903,4 @@ private fun SectionPreview(state: BootcampUiState) {
 
 // ─── Shared helpers ─────────────────────────────────────────────────────────
 
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-        color = CardeaTheme.colors.textTertiary,
-        modifier = Modifier.padding(bottom = 2.dp)
-    )
-}
+// SectionHeader replaced by shared version from ui/components

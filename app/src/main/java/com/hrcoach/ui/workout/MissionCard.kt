@@ -62,9 +62,9 @@ fun MissionCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(GlassHighlight)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
             .drawBehind {
                 // Cardea gradient left edge accent (3dp)
                 drawRect(

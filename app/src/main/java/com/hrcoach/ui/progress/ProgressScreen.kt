@@ -49,7 +49,7 @@ import com.hrcoach.ui.charts.CalendarHeatmap
 import com.hrcoach.ui.charts.PieChart
 import com.hrcoach.ui.charts.ProgressChartCard
 import com.hrcoach.ui.charts.ScatterPlot
-import com.hrcoach.ui.charts.SectionHeader
+import com.hrcoach.ui.components.SectionHeader
 import com.hrcoach.ui.charts.TrendInfo
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard

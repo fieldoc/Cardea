@@ -2,6 +2,7 @@ package com.hrcoach.ui.bootcamp
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import com.hrcoach.ui.components.SectionHeader
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -195,7 +196,7 @@ fun BootcampSettingsScreen(
                 }
 
                 // ── TRAINING ──────────────────────────────────────────────────
-                SectionLabel("Training")
+                SectionHeader("Training")
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Goal",
@@ -325,7 +326,7 @@ fun BootcampSettingsScreen(
                 Spacer(Modifier.height(10.dp))
 
                 // ── SCHEDULE ──────────────────────────────────────────────────
-                SectionLabel("Schedule")
+                SectionHeader("Schedule")
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Preferred Days",
@@ -373,7 +374,7 @@ fun BootcampSettingsScreen(
                 Spacer(Modifier.height(10.dp))
 
                 // ── PROFILE ───────────────────────────────────────────────────
-                SectionLabel("Profile")
+                SectionHeader("Profile")
                 GlassCard(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Max Heart Rate",
@@ -465,18 +466,7 @@ fun BootcampSettingsScreen(
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall.copy(
-            fontWeight = FontWeight.Bold,
-            fontSize = 10.sp
-        ),
-        color = CardeaTheme.colors.textTertiary,
-        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
-    )
-}
+// SectionLabel replaced by shared SectionHeader from ui/components
 
 @Composable
 private fun ChangeChip(text: String) {

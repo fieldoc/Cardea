@@ -404,7 +404,7 @@ fun SetupScreen(
                         ) { Text("Confirm", color = CardeaTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold) }
                     },
                     dismissButton = {
-                        TextButton(onClick = { viewModel.dismissHrMaxDialog() }) { Text("Cancel") }
+                        TextButton(onClick = { viewModel.dismissHrMaxDialog() }) { Text("Cancel", color = CardeaTheme.colors.textSecondary) }
                     }
                 )
             }
@@ -500,8 +500,8 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-                    .clip(RoundedCornerShape(11.dp))
-                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(11.dp))
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
             ) {
@@ -553,7 +553,7 @@ private fun QuickLaunchCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
-                .clip(RoundedCornerShape(13.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(
                     if (canStart) CardeaCtaGradient
                     else Brush.linearGradient(listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary))
