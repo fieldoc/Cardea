@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.4.0: Unified TTS voice coaching (replaced 60+ MP3 clips with Android TTS). Marimba 3-2-1-GO countdown. Adaptive training: fitness-signal recovery weeks, EF regression slope, tuningDirection propagation. 10 audio bug fixes from code review."
+                releaseNotes = "v0.5.0: km/mi distance unit toggle in Account settings. All screens, pace formatting, chart labels, and voice coaching splits now respect your unit preference. Mile splits fire every mile (not every km with converted label). Home screen UX polish. E2E audit fixes."
             }
         }
     }
