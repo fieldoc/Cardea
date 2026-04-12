@@ -905,6 +905,7 @@ private fun NoBootcampCard(
     onStartRun: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val heroGradient = CardeaTheme.colors.gradient
     Column(modifier = modifier.padding(horizontal = 20.dp)) {
         // ── Feature showcase hero ──
         Column(
@@ -937,7 +938,13 @@ private fun NoBootcampCard(
             Text(
                 text = "Train smarter, not harder.",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
-                color = CardeaTheme.colors.textPrimary
+                color = CardeaTheme.colors.textPrimary,
+                modifier = Modifier
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
+                    }
             )
             Spacer(Modifier.height(6.dp))
 
@@ -957,7 +964,7 @@ private fun NoBootcampCard(
                 title = "HR zone coaching",
                 description = "Real-time alerts keep you in the right zone"
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(18.dp))
             FeatureItem(
                 icon = Icons.Default.Timer,
                 iconTint = GradientBlue,
@@ -965,7 +972,7 @@ private fun NoBootcampCard(
                 title = "Life-aware scheduling",
                 description = "Adapts to your week \u2014 block days, pick your long run"
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(18.dp))
             FeatureItem(
                 icon = Icons.Default.Mic,
                 iconTint = GradientCyan,
@@ -984,7 +991,7 @@ private fun NoBootcampCard(
         }
 
         // ── Just Run strip ──
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(12.dp))
         JustRunStrip(onClick = onStartRun)
     }
 }
@@ -1005,8 +1012,8 @@ private fun FeatureItem(
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
@@ -1014,7 +1021,7 @@ private fun FeatureItem(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
         Column {
@@ -1057,7 +1064,7 @@ private fun JustRunStrip(onClick: () -> Unit, modifier: Modifier = Modifier) {
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(CardeaTheme.colors.glassBorder),
+                .background(CardeaTheme.colors.glassSurface),
             contentAlignment = Alignment.Center
         ) {
             Icon(
