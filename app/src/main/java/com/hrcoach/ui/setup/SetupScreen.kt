@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -90,6 +91,8 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
+import com.hrcoach.ui.theme.ZoneAmber
+import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.service.simulation.SimulationController
 import kotlin.math.roundToInt
@@ -641,7 +644,7 @@ private fun ModeOptionsCard(
                         .clip(RoundedCornerShape(10.dp))
                         .background(
                             if (isSelected) GradientRed.copy(alpha = 0.10f)
-                            else CardeaTheme.colors.glassHighlight
+                            else Color(0x14FFFFFF)
                         )
                         .border(
                             1.dp,
@@ -656,11 +659,11 @@ private fun ModeOptionsCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
-                            .background(
-                                if (isSelected) GradientRed
-                                else CardeaTheme.colors.glassSurface,
-                                CircleShape
+                            .size(12.dp)
+                            .then(
+                                if (isSelected) Modifier.background(GradientRed, CircleShape)
+                                else Modifier
+                                    .border(1.5.dp, CardeaTheme.colors.glassSurface, CircleShape)
                             )
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -674,7 +677,7 @@ private fun ModeOptionsCard(
                         Text(
                             text = mode.displayDescription(),
                             style = MaterialTheme.typography.bodySmall,
-                            color = CardeaTheme.colors.textTertiary
+                            color = CardeaTheme.colors.textSecondary
                         )
                     }
                 }
@@ -920,7 +923,7 @@ private fun TargetCard(
                         onRemoveSegment = onRemoveSegment
                     )
                 }
-                TextButton(onClick = onSelectCustom, modifier = Modifier.fillMaxWidth()) { Text("Custom") }
+                TextButton(onClick = onSelectCustom, modifier = Modifier.fillMaxWidth()) { Text("Custom", color = CardeaTheme.colors.textSecondary) }
             }
             WorkoutMode.FREE_RUN -> Unit
         }
@@ -1009,9 +1012,9 @@ private fun PresetGrid(
             if (catPresets.isEmpty()) return@forEach
             Text(
                 text = category.displayName(),
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.5.sp),
                 color = CardeaTheme.colors.textSecondary,
-                modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
             )
             catPresets.forEach { preset ->
                 PresetCard(
@@ -1093,7 +1096,7 @@ private fun SegmentTimelineStrip(preset: WorkoutPreset) {
 
         when {
             config.mode == WorkoutMode.STEADY_STATE -> {
-                val color = segmentColors.firstOrNull() ?: Color(0xFF2B8C6E)
+                val color = segmentColors.firstOrNull() ?: ZoneGreen
                 drawRoundRect(color = color, cornerRadius = CornerRadius(3.dp.toPx()))
             }
             config.isTimeBased() -> {
@@ -1101,7 +1104,7 @@ private fun SegmentTimelineStrip(preset: WorkoutPreset) {
                 config.segments.forEachIndexed { i, seg ->
                     val dur = seg.durationSeconds?.toLong() ?: return@forEachIndexed
                     val w = (dur / totalDuration) * size.width - if (i < config.segments.size - 1) gap else 0f
-                    val color = segmentColors.getOrElse(i) { Color(0xFF2B8C6E) }
+                    val color = segmentColors.getOrElse(i) { ZoneGreen }
                     drawRoundRect(
                         color = color,
                         topLeft = Offset(x, 0f),
@@ -1118,7 +1121,7 @@ private fun SegmentTimelineStrip(preset: WorkoutPreset) {
                     val span = endDist - prevDist
                     val w = (span / totalDuration) * size.width - if (i < config.segments.size - 1) gap else 0f
                     val x = (prevDist / totalDuration) * size.width
-                    val color = segmentColors.getOrElse(i) { Color(0xFF2B8C6E) }
+                    val color = segmentColors.getOrElse(i) { ZoneGreen }
                     drawRoundRect(
                         color = color,
                         topLeft = Offset(x, 0f),
@@ -1142,9 +1145,9 @@ private fun buildSegmentColors(config: WorkoutConfig): List<Color> {
 }
 
 private fun hrPercentColor(pct: Float) = when {
-    pct >= 0.85f -> Color(0xFFFF5A5F)
-    pct >= 0.75f -> Color(0xFFE8A838)
-    else         -> Color(0xFF2B8C6E)
+    pct >= 0.85f -> ZoneRed
+    pct >= 0.75f -> ZoneAmber
+    else         -> ZoneGreen
 }
 
 // ── HrMonitorCard ─────────────────────────────────────────────────────────────
@@ -1173,7 +1176,7 @@ private fun HrMonitorCard(
                     )
                     Text(
                         text = if (state.liveHr > 0) state.liveHr.toString() else "--",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = CardeaTheme.colors.textPrimary,
                         modifier = Modifier.scale(hrPulseScale)
                     )
@@ -1183,7 +1186,7 @@ private fun HrMonitorCard(
                         color = CardeaTheme.colors.textSecondary
                     )
                 }
-                TextButton(onClick = onDisconnect) { Text("Disconnect") }
+                TextButton(onClick = onDisconnect) { Text("Disconnect", color = CardeaTheme.colors.textSecondary) }
             }
         } else {
             Box(
@@ -1199,7 +1202,7 @@ private fun HrMonitorCard(
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = CardeaTheme.colors.textPrimary)
+                    Icon(imageVector = Icons.Default.Bluetooth, contentDescription = null, tint = CardeaTheme.colors.textPrimary)
                     Text(
                         text = if (state.isScanning) "Scanning…" else "Scan for Monitors",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
@@ -1233,8 +1236,10 @@ private fun DeviceRow(device: BluetoothDevice, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(CardeaTheme.colors.glassHighlight)
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1243,5 +1248,6 @@ private fun DeviceRow(device: BluetoothDevice, onClick: () -> Unit) {
             Text(text = device.address, style = MaterialTheme.typography.bodySmall, color = CardeaTheme.colors.textSecondary)
         }
         Icon(imageVector = Icons.Default.Bluetooth, contentDescription = null, tint = CardeaTheme.colors.textSecondary)
+        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, tint = CardeaTheme.colors.textTertiary, modifier = Modifier.size(16.dp))
     }
 }
