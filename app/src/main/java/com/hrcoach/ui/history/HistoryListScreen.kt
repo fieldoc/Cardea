@@ -561,8 +561,8 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
         CardeaButton(
             text = "Start a Run",
             onClick = onStartWorkout,
-            modifier = Modifier.height(44.dp),
-            innerPadding = PaddingValues(horizontal = 24.dp)
+            modifier = Modifier.height(48.dp),
+            innerPadding = PaddingValues(horizontal = 28.dp)
         )
     }
 }
