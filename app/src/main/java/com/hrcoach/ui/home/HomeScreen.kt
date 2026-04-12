@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Mic
@@ -66,6 +67,7 @@ import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
+import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.util.metersToUnit
@@ -876,9 +878,46 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
             color = CardeaTheme.colors.textSecondary
         )
         Spacer(Modifier.height(8.dp))
+        // 7a: Celebration ring
+        val checkColor = ZoneGreen
+        val ringTrack = CardeaTheme.colors.glassBorder
+        val animatedSweep by animateFloatAsState(
+            targetValue = 360f,
+            animationSpec = tween(durationMillis = 800),
+            label = "checkRing"
+        )
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(40.dp)) {
+                val strokeW = 3.dp.toPx()
+                val radius = (size.minDimension - strokeW) / 2f
+                drawCircle(
+                    color = ringTrack,
+                    radius = radius,
+                    style = Stroke(width = strokeW)
+                )
+                drawArc(
+                    color = checkColor,
+                    startAngle = -90f,
+                    sweepAngle = animatedSweep,
+                    useCenter = false,
+                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = checkColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+        // 7b: Elevated title (headlineMedium instead of titleLarge)
         Text(
             text = "All done for now",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
+            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.ExtraBold),
             color = CardeaTheme.colors.textPrimary
         )
         Spacer(Modifier.height(6.dp))
@@ -889,10 +928,10 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(16.dp))
+        // 7c: Wrap-content width button (no fillMaxWidth)
         CardeaButton(
             text = "View Training",
-            onClick = onGoToTraining,
-            modifier = Modifier.fillMaxWidth()
+            onClick = onGoToTraining
         )
     }
 }
