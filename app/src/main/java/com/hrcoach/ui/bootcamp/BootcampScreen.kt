@@ -89,7 +89,6 @@ import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
@@ -580,7 +579,7 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
                     Text(
                         text = "!",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = ZoneRed.copy(alpha = 0.7f)
+                        color = ZoneRed
                     )
                 }
             }
@@ -645,9 +644,9 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
                 modifier = Modifier
                     .size(30.dp)
                     .scale(todayPulse)
-                    .clip(RoundedCornerShape(7.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(dotBackground)
-                    .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(7.dp)) else Modifier),
+                    .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(10.dp)) else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 dotContent()
@@ -664,7 +663,7 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
             Text(
                 text = typeLabel,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 7.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.3.sp
                 ),
@@ -693,7 +692,7 @@ private fun PhaseTimelineCard(
 
     val currentIndex = if (isEvergreen) -1 else phases.indexOf(currentPhase)
 
-    val ctaBrush = Brush.linearGradient(listOf(GradientPink, GradientRed))
+    val ctaBrush = CardeaCtaGradient
     val glassBorder = CardeaTheme.colors.glassBorder
     val textTertiary = CardeaTheme.colors.textTertiary
 
@@ -849,7 +848,7 @@ private fun OnboardingWizard(
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .then(
-                            if (index <= step) Modifier.background(CardeaGradient)
+                            if (index <= step) Modifier.background(CardeaCtaGradient)
                             else Modifier.background(CardeaTheme.colors.glassBorder)
                         )
                 )
@@ -954,11 +953,12 @@ private fun OnboardingStep1Goal(
                 .then(
                     if (isSelected) Modifier.border(
                         width = 1.5.dp,
-                        brush = CardeaGradient,
+                        brush = CardeaCtaGradient,
                         shape = RoundedCornerShape(18.dp)
                     ) else Modifier
                 )
-                .clickable { onGoalSelected(goal) }
+                .clickable { onGoalSelected(goal) },
+            borderColor = if (isSelected) Color.Transparent else CardeaTheme.colors.glassBorder
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -993,7 +993,7 @@ private fun OnboardingStep1Goal(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Next",
@@ -1047,7 +1047,7 @@ private fun OnboardingStepFinishingTime(
             colors = SliderDefaults.colors(
                 thumbColor = GradientPink,
                 activeTrackColor = GradientPink,
-                inactiveTrackColor = CardeaTheme.colors.glassHighlight
+                inactiveTrackColor = CardeaTheme.colors.glassBorder
             )
         )
         Row(
@@ -1075,7 +1075,7 @@ private fun OnboardingStepFinishingTime(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Next",
@@ -1125,7 +1125,7 @@ private fun OnboardingStep2Time(
             colors = SliderDefaults.colors(
                 thumbColor = GradientPink,
                 activeTrackColor = GradientPink,
-                inactiveTrackColor = CardeaTheme.colors.glassHighlight
+                inactiveTrackColor = CardeaTheme.colors.glassBorder
             )
         )
         Row(
@@ -1170,7 +1170,7 @@ private fun OnboardingStep2Time(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = if (canProceed) "Next" else "Increase time",
@@ -1214,7 +1214,7 @@ private fun OnboardingStep3Frequency(
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .then(
                             if (isSelected) Modifier.background(CardeaCtaGradient)
                             else Modifier.background(CardeaTheme.colors.glassHighlight)
@@ -1241,7 +1241,7 @@ private fun OnboardingStep3Frequency(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Next",
@@ -1314,7 +1314,7 @@ private fun OnboardingStep4Days(
 
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         TextButton(onClick = onBack, modifier = Modifier.weight(1f)) {
-            Text("Back", color = CardeaTheme.colors.textSecondary)
+            Text("Back", color = CardeaTheme.colors.textTertiary)
         }
         CardeaButton(
             text = "Start Program",
@@ -1464,7 +1464,7 @@ private fun ActiveBootcampDashboard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(top = 10.dp, bottom = 80.dp),
+                .padding(top = 14.dp, bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             WeekStripCard(
@@ -1544,7 +1544,7 @@ private fun MissedSessionCard(
     onDismiss: () -> Unit,
     onReschedule: () -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(end = 32.dp)) {
                 Text(
@@ -1552,7 +1552,7 @@ private fun MissedSessionCard(
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = CardeaTheme.colors.textPrimary
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = if (count == 1)
                         "You have a session that needs your attention."
@@ -1570,7 +1570,7 @@ private fun MissedSessionCard(
             }
             IconButton(
                 onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopEnd).size(32.dp)
+                modifier = Modifier.align(Alignment.TopEnd).size(48.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
@@ -1591,7 +1591,7 @@ private fun PausedCard(onResume: () -> Unit) {
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = CardeaTheme.colors.textPrimary
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "Your schedule is on hold. Resume whenever you're ready.",
             style = MaterialTheme.typography.bodySmall,
@@ -1721,13 +1721,13 @@ private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
 
 @Composable
 private fun GraduationCard(onGraduateGoal: () -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneGreen.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
         Text(
             text = "You finished!",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
             color = CardeaTheme.colors.textPrimary
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "You've completed this goal. Graduate to unlock your next training block.",
             style = MaterialTheme.typography.bodySmall,
@@ -2151,9 +2151,6 @@ private fun TodayHeroSection(
             Spacer(modifier = Modifier.height(10.dp))
             if (uiState.totalWeeks > 0) {
                 val progress = uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
-                val barGradient = Brush.linearGradient(
-                    colors = listOf(GradientPink, GradientBlue)
-                )
                 val trackColor = CardeaTheme.colors.glassBorder
                 Canvas(
                     modifier = Modifier
@@ -2170,7 +2167,7 @@ private fun TodayHeroSection(
                     )
                     // Filled progress
                     drawRoundRect(
-                        brush = barGradient,
+                        brush = CardeaCtaGradient,
                         size = size.copy(width = size.width * progress),
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
                     )
@@ -2489,7 +2486,7 @@ private fun TierPromptCard(
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = CardeaTheme.colors.textPrimary
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = body,
             style = MaterialTheme.typography.bodySmall,
@@ -2515,7 +2512,7 @@ private fun TierPromptCard(
                 text = actionLabel,
                 onClick = { onAccept(direction) },
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(2f)
                     .height(44.dp)
             )
         }
@@ -2527,13 +2524,13 @@ private fun IllnessPromptCard(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
         Text(
             text = "Check in with your body",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = CardeaTheme.colors.textPrimary
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = "Recent signals look atypical. If you're getting sick, keep today's effort easy.",
             style = MaterialTheme.typography.bodySmall,
@@ -2714,8 +2711,9 @@ private fun PreferredDaysBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.padding(bottom = 12.dp)
             ) {
-                DayLegendChip("run", DaySelectionLevel.AVAILABLE)
                 DayLegendChip("open", DaySelectionLevel.NONE)
+                DayLegendChip("run", DaySelectionLevel.AVAILABLE)
+                DayLegendChip("long", DaySelectionLevel.LONG_RUN_BIAS)
                 DayLegendChip("blocked", DaySelectionLevel.BLACKOUT)
             }
             DayChipRow(
@@ -2960,7 +2958,7 @@ private fun GoalDetailSheet(
                             modifier = Modifier
                                 .fillMaxWidth(progressPercentage / 100f)
                                 .fillMaxHeight()
-                                .background(CardeaGradient)
+                                .background(CardeaCtaGradient)
                         )
                     }
                 }
