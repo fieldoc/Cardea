@@ -1,6 +1,8 @@
 package com.hrcoach.domain.bootcamp
 
+import android.util.Log
 import com.hrcoach.data.db.BootcampSessionEntity
+import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.engine.TuningDirection
@@ -9,7 +11,8 @@ import javax.inject.Inject
 
 class BootcampSessionCompleter @Inject constructor(
     private val bootcampRepository: BootcampRepository,
-    private val achievementEvaluator: AchievementEvaluator
+    private val achievementEvaluator: AchievementEvaluator,
+    private val cloudBackupManager: CloudBackupManager
 ) {
 
     data class CompletionResult(
@@ -73,6 +76,7 @@ class BootcampSessionCompleter @Inject constructor(
                 // Race goal completed — graduate the enrollment
                 bootcampRepository.completeSessionOnly(completedSession)
                 bootcampRepository.graduateEnrollment(enrollment.id)
+                backupSessionAndEnrollment(completedSession, enrollment)
                 return CompletionResult(
                     completed = true,
                     weekComplete = true,
@@ -97,6 +101,13 @@ class BootcampSessionCompleter @Inject constructor(
                 updatedEnrollment = updatedEnrollment,
                 newSessions = nextWeekEntities
             )
+            backupSessionAndEnrollment(completedSession, updatedEnrollment)
+            // Backup newly generated sessions
+            val savedNewSessions = bootcampRepository.getSessionsForWeek(enrollment.id, nextEngine.absoluteWeek)
+            for (session in savedNewSessions) {
+                runCatching { cloudBackupManager.syncBootcampSession(session) }
+                    .onFailure { Log.w("SessionCompleter", "Cloud backup failed for new session", it) }
+            }
             val completedWeeks = bootcampRepository.countConsecutiveCompletedWeeks(enrollment.id)
             achievementEvaluator.evaluateWeeklyGoalStreak(completedWeeks, workoutId)
             CompletionResult(
@@ -106,6 +117,7 @@ class BootcampSessionCompleter @Inject constructor(
             )
         } else {
             bootcampRepository.completeSessionOnly(completedSession)
+            backupSessionAndEnrollment(completedSession, enrollment)
             CompletionResult(
                 completed = true,
                 weekComplete = false,
@@ -156,6 +168,16 @@ class BootcampSessionCompleter @Inject constructor(
                 presetId = session.presetId
             )
         }
+    }
+
+    private suspend fun backupSessionAndEnrollment(
+        session: BootcampSessionEntity,
+        enrollment: com.hrcoach.data.db.BootcampEnrollmentEntity
+    ) {
+        runCatching { cloudBackupManager.syncBootcampSession(session) }
+            .onFailure { Log.w("SessionCompleter", "Cloud backup failed for session", it) }
+        runCatching { cloudBackupManager.syncBootcampEnrollment(enrollment) }
+            .onFailure { Log.w("SessionCompleter", "Cloud backup failed for enrollment", it) }
     }
 
     private fun sessionTypePresetKey(rawType: String): String? = when (rawType) {

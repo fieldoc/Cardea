@@ -5,9 +5,11 @@ import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
+import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.model.BootcampGoal
+import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
@@ -19,6 +21,8 @@ import org.junit.Test
 
 class BootcampSessionCompleterTest {
 
+    private val noopCloudBackupManager: CloudBackupManager = mockk(relaxed = true)
+
     private val noopAchievementEvaluator = AchievementEvaluator(object : AchievementDao {
         override suspend fun insert(achievement: AchievementEntity) {}
         override suspend fun hasAchievement(type: String, milestone: String): Boolean = false
@@ -26,10 +30,10 @@ class BootcampSessionCompleterTest {
         override fun getAchievementsByType(type: String): Flow<List<AchievementEntity>> = emptyFlow()
         override suspend fun getUnshownAchievements(): List<AchievementEntity> = emptyList()
         override suspend fun markShown(ids: List<Long>) {}
-    })
+    }, noopCloudBackupManager)
 
     private fun makeCompleter(dao: FakeBootcampDao) =
-        BootcampSessionCompleter(BootcampRepository(dao), noopAchievementEvaluator)
+        BootcampSessionCompleter(BootcampRepository(dao), noopAchievementEvaluator, noopCloudBackupManager)
 
     @Test
     fun completeReturnsFalseWhenNoPendingSessionId() = runTest {

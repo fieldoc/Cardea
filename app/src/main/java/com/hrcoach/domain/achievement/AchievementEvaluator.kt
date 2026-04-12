@@ -1,12 +1,15 @@
 package com.hrcoach.domain.achievement
 
+import android.util.Log
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.AchievementType
+import com.hrcoach.data.firebase.CloudBackupManager
 import javax.inject.Inject
 
 class AchievementEvaluator @Inject constructor(
-    private val achievementDao: AchievementDao
+    private val achievementDao: AchievementDao,
+    private val cloudBackupManager: CloudBackupManager
 ) {
 
     suspend fun evaluateDistance(totalKm: Double, workoutId: Long) {
@@ -14,7 +17,7 @@ class AchievementEvaluator @Inject constructor(
             if (totalKm < threshold) break
             val milestone = "${threshold.toInt()}km"
             if (!achievementDao.hasAchievement(AchievementType.DISTANCE_MILESTONE.name, milestone)) {
-                achievementDao.insert(
+                insertAndBackup(
                     AchievementEntity(
                         type = AchievementType.DISTANCE_MILESTONE.name,
                         milestone = milestone,
@@ -32,7 +35,7 @@ class AchievementEvaluator @Inject constructor(
             if (currentStreak < threshold) break
             val milestone = "${threshold}_sessions"
             if (!achievementDao.hasAchievement(AchievementType.STREAK_MILESTONE.name, milestone)) {
-                achievementDao.insert(
+                insertAndBackup(
                     AchievementEntity(
                         type = AchievementType.STREAK_MILESTONE.name,
                         milestone = milestone,
@@ -50,7 +53,7 @@ class AchievementEvaluator @Inject constructor(
             if (consecutiveWeeks < threshold) break
             val milestone = "${threshold}_weeks"
             if (!achievementDao.hasAchievement(AchievementType.WEEKLY_GOAL_STREAK.name, milestone)) {
-                achievementDao.insert(
+                insertAndBackup(
                     AchievementEntity(
                         type = AchievementType.WEEKLY_GOAL_STREAK.name,
                         milestone = milestone,
@@ -66,7 +69,7 @@ class AchievementEvaluator @Inject constructor(
     suspend fun evaluateTierGraduation(newTierIndex: Int, goal: String) {
         val milestone = "tier_${newTierIndex}_$goal"
         if (!achievementDao.hasAchievement(AchievementType.TIER_GRADUATION.name, milestone)) {
-            achievementDao.insert(
+            insertAndBackup(
                 AchievementEntity(
                     type = AchievementType.TIER_GRADUATION.name,
                     milestone = milestone,
@@ -82,7 +85,7 @@ class AchievementEvaluator @Inject constructor(
     suspend fun evaluateBootcampGraduation(enrollmentId: Long, goal: String, tierIndex: Int) {
         val milestone = "graduated_${enrollmentId}"
         if (!achievementDao.hasAchievement(AchievementType.BOOTCAMP_GRADUATION.name, milestone)) {
-            achievementDao.insert(
+            insertAndBackup(
                 AchievementEntity(
                     type = AchievementType.BOOTCAMP_GRADUATION.name,
                     milestone = milestone,
@@ -93,5 +96,11 @@ class AchievementEvaluator @Inject constructor(
                 )
             )
         }
+    }
+
+    private suspend fun insertAndBackup(entity: AchievementEntity) {
+        achievementDao.insert(entity)
+        runCatching { cloudBackupManager.syncAchievement(entity) }
+            .onFailure { Log.w("AchievementEval", "Cloud backup failed", it) }
     }
 }

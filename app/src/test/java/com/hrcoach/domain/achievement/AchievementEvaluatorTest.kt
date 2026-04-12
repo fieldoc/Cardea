@@ -3,6 +3,8 @@ package com.hrcoach.domain.achievement
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.AchievementType
+import com.hrcoach.data.firebase.CloudBackupManager
+import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -30,7 +32,7 @@ class AchievementEvaluatorTest {
     @Before
     fun setup() {
         dao = FakeAchievementDao()
-        evaluator = AchievementEvaluator(dao)
+        evaluator = AchievementEvaluator(dao, mockk(relaxed = true))
     }
 
     @Test

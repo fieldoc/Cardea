@@ -2,6 +2,7 @@ package com.hrcoach.ui.bootcamp
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
@@ -64,7 +65,8 @@ class BootcampViewModel @Inject constructor(
     private val bootcampSessionCompleter: BootcampSessionCompleter,
     private val achievementEvaluator: AchievementEvaluator,
     private val notificationManager: BootcampNotificationManager,
-    private val bleCoordinator: BleConnectionCoordinator
+    private val bleCoordinator: BleConnectionCoordinator,
+    private val cloudBackupManager: CloudBackupManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -138,12 +140,13 @@ class BootcampViewModel @Inject constructor(
                 targetMinutes = enrollment.targetMinutesPerRun
             ).absoluteWeek
             bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
-            bootcampRepository.updateEnrollment(
-                enrollment.copy(
-                    currentPhaseIndex = gapAction.phaseIndex,
-                    currentWeekInPhase = gapAction.weekInPhase
-                )
+            val gapUpdatedEnrollment = enrollment.copy(
+                currentPhaseIndex = gapAction.phaseIndex,
+                currentWeekInPhase = gapAction.weekInPhase
             )
+            bootcampRepository.updateEnrollment(gapUpdatedEnrollment)
+            runCatching { cloudBackupManager.syncBootcampEnrollment(gapUpdatedEnrollment) }
+                .onFailure { Log.w("BootcampVM", "Cloud backup failed for gap adjustment", it) }
         }
     }
 
@@ -523,6 +526,11 @@ class BootcampViewModel @Inject constructor(
                 startDate = startDate,
                 targetFinishingTimeMinutes = state.onboardingTargetFinishingTime
             )
+            // Cloud backup: sync the newly created enrollment
+            runCatching {
+                val enrollment = bootcampRepository.getActiveEnrollmentOnce()
+                if (enrollment != null) cloudBackupManager.syncBootcampEnrollment(enrollment)
+            }.onFailure { Log.w("BootcampVM", "Cloud backup failed for enrollment", it) }
             // Session seeding is handled by refreshFromEnrollment() which fires
             // automatically when the Flow re-emits after createEnrollment writes.
             _uiState.update { it.copy(showOnboarding = false) }
@@ -670,14 +678,15 @@ class BootcampViewModel @Inject constructor(
                 } else enrollment.targetFinishingTimeMinutes
             } else enrollment.targetFinishingTimeMinutes
 
-            bootcampRepository.updateEnrollment(
-                enrollment.copy(
-                    tierIndex = updatedTierIndex,
-                    targetFinishingTimeMinutes = updatedFinishingTime,
-                    tierPromptDismissCount = 0,
-                    tierPromptSnoozedUntilMs = 0L
-                )
+            val updatedEnrollment = enrollment.copy(
+                tierIndex = updatedTierIndex,
+                targetFinishingTimeMinutes = updatedFinishingTime,
+                tierPromptDismissCount = 0,
+                tierPromptSnoozedUntilMs = 0L
             )
+            bootcampRepository.updateEnrollment(updatedEnrollment)
+            runCatching { cloudBackupManager.syncBootcampEnrollment(updatedEnrollment) }
+                .onFailure { Log.w("BootcampVM", "Cloud backup failed for tier change", it) }
             if (direction == TierPromptDirection.UP) {
                 achievementEvaluator.evaluateTierGraduation(
                     newTierIndex = updatedTierIndex,
@@ -804,6 +813,8 @@ class BootcampViewModel @Inject constructor(
         viewModelScope.launch {
             val enrollment = bootcampRepository.getActiveEnrollmentOnce() ?: return@launch
             bootcampRepository.graduateEnrollment(enrollment.id)
+            runCatching { cloudBackupManager.syncBootcampEnrollment(enrollment.copy(status = BootcampEnrollmentEntity.STATUS_GRADUATED)) }
+                .onFailure { Log.w("BootcampVM", "Cloud backup failed for graduation", it) }
             achievementEvaluator.evaluateBootcampGraduation(
                 enrollmentId = enrollment.id,
                 goal = enrollment.goalType,
@@ -892,6 +903,12 @@ class BootcampViewModel @Inject constructor(
         }
         bootcampRepository.insertSessions(entities)
         val saved = bootcampRepository.getSessionsForWeek(enrollment.id, weekNumber)
+
+        // Cloud backup: sync newly seeded sessions
+        for (session in saved) {
+            runCatching { cloudBackupManager.syncBootcampSession(session) }
+                .onFailure { Log.w("BootcampVM", "Cloud backup failed for session", it) }
+        }
 
         // Schedule day-before notification reminders for the new sessions
         notificationManager.createNotificationChannel()
