@@ -7,58 +7,73 @@
     android:viewportHeight="108">
 
     <!--
-        Cardea app icon — Direction D: gradient-filled parametric heart with white ECG line.
-        Heart uses x=16sin^3(t), y=-(13cos-5cos2t-2cos3t-cos4t), centered at (54,53),
-        scaled to fit adaptive icon safe zone (66dp circle within 108dp canvas).
+        Cardea app icon — Pure Signal.
+        A medical ECG/heartbeat trace passes through the icon, bleeding off both edges.
+        No heart shape is drawn — the heart is implied by the signal itself.
+        Gradient: Red (#FF4D5A) → Pink (#FF2DA6) → Blue (#4D61FF) → Cyan (#00E5FF), left-to-right.
+        QRS spike at x=47, reaching y=19 — nearly the full height of the icon.
     -->
 
-    <!-- Gradient-filled heart — wider, shorter proportions for icon legibility -->
+    <!-- Glow corona: wide, very low opacity -->
     <path
-        android:pathData="
-            M54,83
-            C52,81 49.5,78 47,74.5
-            C41,67 34,58.5 30.5,51.5
-            C28,46.5 26.5,42.5 26.5,39
-            C26.5,34 28.5,30 32,27.5
-            C35.5,25 40,24.5 44,26.5
-            C47,28 50,30.5 54,35
-            C58,30.5 61,28 64,26.5
-            C68,24.5 72.5,25 76,27.5
-            C79.5,30 81.5,34 81.5,39
-            C81.5,42.5 80,46.5 77.5,51.5
-            C74,58.5 67,67 61,74.5
-            C58.5,78 56,81 54,83 Z">
-        <aapt:attr name="android:fillColor">
+        android:pathData="M-7,62 L28,62 L32,65 L36,50 L42,76 L47,19 L53,76 L57,59 L61,65 L70,62 L115,62"
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="16"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeAlpha="0.07">
+        <aapt:attr name="android:strokeColor">
             <gradient
                 android:type="linear"
-                android:startX="26"
-                android:startY="24"
-                android:endX="82"
-                android:endY="83">
-                <item android:offset="0.00" android:color="#FFFF5A5F"/>
+                android:startX="-7"  android:startY="62"
+                android:endX="115"   android:endY="62">
+                <item android:offset="0.00" android:color="#FFFF4D5A"/>
                 <item android:offset="0.35" android:color="#FFFF2DA6"/>
-                <item android:offset="0.65" android:color="#FF5B5BFF"/>
-                <item android:offset="1.00" android:color="#FF00D1FF"/>
+                <item android:offset="0.65" android:color="#FF4D61FF"/>
+                <item android:offset="1.00" android:color="#FF00E5FF"/>
             </gradient>
         </aapt:attr>
     </path>
 
-    <!-- White ECG waveform line through the heart -->
+    <!-- Bloom: medium width, soft -->
     <path
-        android:pathData="
-            M32,54
-            L43,54
-            L45.5,56
-            L48,41
-            L51.5,60
-            L54,50
-            L56,54.5
-            L62,54
-            L76,54"
+        android:pathData="M-7,62 L28,62 L32,65 L36,50 L42,76 L47,19 L53,76 L57,59 L61,65 L70,62 L115,62"
         android:fillColor="@android:color/transparent"
-        android:strokeColor="#EEFFFFFF"
-        android:strokeWidth="2.5"
+        android:strokeWidth="7"
         android:strokeLineCap="round"
-        android:strokeLineJoin="round"/>
+        android:strokeLineJoin="round"
+        android:strokeAlpha="0.18">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="-7"  android:startY="62"
+                android:endX="115"   android:endY="62">
+                <item android:offset="0.00" android:color="#FFFF4D5A"/>
+                <item android:offset="0.35" android:color="#FFFF2DA6"/>
+                <item android:offset="0.65" android:color="#FF4D61FF"/>
+                <item android:offset="1.00" android:color="#FF00E5FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Main stroke: crisp, full opacity -->
+    <path
+        android:pathData="M-7,62 L28,62 L32,65 L36,50 L42,76 L47,19 L53,76 L57,59 L61,65 L70,62 L115,62"
+        android:fillColor="@android:color/transparent"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="-7"  android:startY="62"
+                android:endX="115"   android:endY="62">
+                <item android:offset="0.00" android:color="#FFFF4D5A"/>
+                <item android:offset="0.35" android:color="#FFFF2DA6"/>
+                <item android:offset="0.65" android:color="#FF4D61FF"/>
+                <item android:offset="1.00" android:color="#FF00E5FF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
 
 </vector>
