@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -711,132 +709,7 @@ private fun WeekGoalRingCard(
     }
 }
 
-// ── Tier 2: Bootcamp + Volume ───────────────────────────────────
-
-@Composable
-private fun MidRow(state: HomeUiState, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        BootcampTile(
-            currentWeek = state.currentWeekNumber,
-            totalWeeks = state.bootcampTotalWeeks,
-            percentComplete = state.bootcampPercentComplete,
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-        VolumeTile(
-            distanceKm = metersToUnit(state.totalDistanceThisWeekMeters.toFloat(), state.distanceUnit),
-            distanceTargetKm = state.weeklyDistanceTargetKm,
-            timeMinutes = state.totalTimeThisWeekMinutes,
-            timeTargetMinutes = state.weeklyTimeTargetMinutes,
-            distanceLabel = if (state.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "mi" else "km",
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-    }
-}
-
-@Composable
-private fun BootcampTile(
-    currentWeek: Int,
-    totalWeeks: Int,
-    percentComplete: Float,
-    modifier: Modifier = Modifier
-) {
-    val animatedPercent by animateFloatAsState(
-        targetValue = percentComplete,
-        animationSpec = tween(durationMillis = 1000),
-        label = "bootcampRing"
-    )
-
-    Row(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Compact 44dp progress ring
-        val ringTrackColor = CardeaTheme.colors.glassBorder
-        Box(
-            modifier = Modifier.size(44.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.size(44.dp)) {
-                val strokeW = 4.dp.toPx()
-                val radius = (size.minDimension - strokeW) / 2f
-                drawCircle(
-                    color = ringTrackColor,
-                    radius = radius,
-                    style = Stroke(width = strokeW)
-                )
-                drawArc(
-                    color = Color.White.copy(alpha = 0.55f),
-                    startAngle = -90f,
-                    sweepAngle = 360f * animatedPercent.coerceIn(0f, 1f),
-                    useCenter = false,
-                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
-                )
-            }
-            Text(
-                text = "W$currentWeek",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.sp
-                ),
-                color = CardeaTheme.colors.textSecondary
-            )
-        }
-
-        // Info column with label + percent + bar
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Text(
-                    text = "BOOTCAMP",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp,
-                        fontSize = 10.sp
-                    ),
-                    color = CardeaTheme.colors.textSecondary
-                )
-                Text(
-                    text = "${(percentComplete * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    ),
-                    color = CardeaTheme.colors.textPrimary
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(5.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(CardeaTheme.colors.glassBorder)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedPercent.coerceIn(0.01f, 1f))
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(CardeaTheme.colors.ctaGradient)
-                        .graphicsLayer { this.alpha = 0.8f }
-                )
-            }
-        }
-    }
-}
+// ── Volume Tile ─────────────────────────────────────────────────
 
 @Composable
 private fun VolumeTile(
