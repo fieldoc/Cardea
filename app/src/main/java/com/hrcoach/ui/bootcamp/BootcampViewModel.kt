@@ -47,7 +47,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -325,9 +327,16 @@ class BootcampViewModel @Inject constructor(
             // No completed session — compute days since enrollment start
             return ((now - enrollment.startDate) / TimeUnit.DAYS.toMillis(1)).toInt().coerceAtLeast(0)
         }
-        val lastDate = lastSession.completedAtMs ?: (enrollment.startDate + TimeUnit.DAYS.toMillis(
-            ((lastSession.weekNumber - 1) * 7 + (lastSession.dayOfWeek - 1)).toLong()
-        ))
+        val lastDate = lastSession.completedAtMs ?: run {
+            // Fallback: compute date from enrollment week Monday + ISO dayOfWeek
+            val enrollStart = Instant.ofEpochMilli(enrollment.startDate)
+                .atZone(ZoneId.systemDefault()).toLocalDate()
+            val enrollWeekMonday = enrollStart.with(DayOfWeek.MONDAY)
+            val sessionDate = enrollWeekMonday
+                .plusWeeks((lastSession.weekNumber - 1).toLong())
+                .plusDays((lastSession.dayOfWeek - 1).toLong())
+            sessionDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        }
         return ((now - lastDate) / TimeUnit.DAYS.toMillis(1)).toInt().coerceAtLeast(0)
     }
 
