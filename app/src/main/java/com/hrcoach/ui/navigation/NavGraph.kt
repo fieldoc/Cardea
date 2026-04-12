@@ -270,6 +270,8 @@ fun HrCoachNavGraph(
                 LaunchedEffect(Unit) {
                     val completed = splashVm.onboardingRepository.autoCompleteForExistingUser()
                     destination = if (completed) Routes.HOME else Routes.ONBOARDING
+                    // Fire-and-forget restore check — runs in background while splash plays
+                    splashVm.checkAndRestoreIfNeeded()
                 }
 
                 SplashScreen(
