@@ -6,6 +6,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import com.hrcoach.ui.theme.CardeaTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -34,7 +35,8 @@ fun PieChart(slices: List<PieSlice>, modifier: Modifier = Modifier) {
         validSlices.maxByOrNull { it.fraction }
     }
 
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val textPrimary = CardeaTheme.colors.textPrimary
+    val textSecondary = CardeaTheme.colors.textSecondary
 
     Column(
         modifier = modifier,
@@ -50,11 +52,11 @@ fun PieChart(slices: List<PieSlice>, modifier: Modifier = Modifier) {
                 Text(
                     text = "No data",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = onSurfaceColor
+                    color = textSecondary
                 )
             }
         } else {
-            val onSurfaceArgb = onSurfaceColor.toArgb()
+            val textPrimaryArgb = textPrimary.toArgb()
 
             Canvas(
                 modifier = Modifier
@@ -98,7 +100,7 @@ fun PieChart(slices: List<PieSlice>, modifier: Modifier = Modifier) {
 
                     val paint = Paint().apply {
                         isAntiAlias = true
-                        color = onSurfaceArgb
+                        color = textPrimaryArgb
                         textSize = 28.sp.toPx()
                         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
                         textAlign = Paint.Align.CENTER
@@ -132,7 +134,7 @@ fun PieChart(slices: List<PieSlice>, modifier: Modifier = Modifier) {
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Normal,
                             fontSize = 11.sp,
-                            color = onSurfaceColor
+                            color = textSecondary
                         )
                     }
                 }
