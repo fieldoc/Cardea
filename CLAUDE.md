@@ -123,7 +123,10 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **`WorkoutSnapshot` has no elapsed time** — compute elapsed seconds in the ViewModel via a ticker flow when `isRunning && !isPaused`.
 - **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
 - **`CardeaSlider` uses `GradientPink`** — thumb and active track are pink (matching CTA accent), not blue. Changed from `GradientBlue` (2026-04-11) to distinguish from Material3 defaults. Bootcamp sliders also use `GradientPink` directly.
+- **Segmented button accent is neutral** — `cardeaSegmentedButtonColors()` uses `textPrimary`/`textSecondary` (not `GradientBlue`). Changed 2026-04-12 to eliminate competing blue accent. Active segment stands out via white text + visible border, deferring to the CTA gradient hierarchy.
 - **Home screen gradient hierarchy** — `PulseHero` is the sole Tier 1 gradient element (gradient text headline). `GoalTile` is Tier 2 (glass border, white text). `BootcampTile` progress bar uses `ctaGradient`. `VolumeTile` progress bars use subtle inline gradient. Do not add gradient borders or gradient text to the stat tiles.
+- **Material3 button text color leak** — `OutlinedButton` and `TextButton` default text color to `colorScheme.primary` (= `GradientBlue`). Always pass explicit `color = CardeaTheme.colors.textPrimary` (or `textSecondary` for tertiary actions) to `Text()` inside these buttons. `CardeaButton` is exempt (custom composable).
+- **10sp minimum text size** — Established 2026-04-12. All user-facing text must be ≥ 10sp for WCAG readability on dark background. Known remaining violations: `HomeScreen.kt` (8sp line ~722, 9sp lines ~509/550/666/751), `BootcampSettingsScreen.kt` (9sp ~811), `CalendarHeatmap.kt` (9sp ~90), `MissionCard.kt` (9sp ~135).
 - **Material Icons availability** — `Icons.Default` only includes a subset of Material icons. Before using an icon, verify it compiles by checking existing usage in the codebase (`grep "Icons.Default\."`). Icons confirmed working: `Home`, `Map`, `Favorite`, `FavoriteBorder`, `VolumeUp`, `Mic`, `Settings`, `Notifications`, `Group`, `Timer`, `Person`, `Check`, `Close`, `Add`, `Search`, `Bluetooth`, `ExpandLess`, `ExpandMore`, `ArrowUpward`, `ArrowDownward`, `ChevronRight`.
 
 ## Design Documents
@@ -212,6 +215,8 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
 `BleHrManager.kt` MissingPermission, `WorkoutForegroundService.kt` MissingSuperCall, `NavGraph.kt` NewApi (×2), `build.gradle.kts` WrongGradleMethod — all pre-date this codebase's Claude sessions.
+
+**Pre-existing compile error:** `PartnerSection.kt:294` — `WindowInsets` unresolved reference + `@Composable` scope errors. Blocks `assembleDebug`. Unrelated to UI polish work.
 
 ## Ralph Loop (ralph-loop skill)
 
