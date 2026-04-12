@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -444,28 +442,38 @@ private fun CtaRow(
 
 @Composable
 private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
-    val hasLowerContent = state.hasActiveBootcamp || state.coachingInsight != null
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Tier 1: Goal + Streak tiles — fill available space when peers exist, fixed otherwise
-        PrimaryRow(
-            state = state,
-            modifier = if (hasLowerContent) Modifier.weight(1f)
-                       else Modifier.fillMaxWidth().height(160.dp)
-        )
-
-        // Tier 2: Bootcamp + Volume — fixed height
         if (state.hasActiveBootcamp) {
-            MidRow(state = state)
-        }
-
-        // Tier 3: Coaching strip — fixed height
-        state.coachingInsight?.let { insight ->
-            CoachingStrip(insight = insight)
+            // Bootcamp enrolled: ring goal card + full-width volume tile
+            WeekGoalRingCard(
+                completedRuns = state.workoutsThisWeek,
+                totalRuns = state.weeklyTarget,
+                weekNumber = state.currentWeekNumber
+            )
+            VolumeTile(
+                distanceKm = metersToUnit(state.totalDistanceThisWeekMeters.toFloat(), state.distanceUnit),
+                distanceTargetKm = state.weeklyDistanceTargetKm,
+                timeMinutes = state.totalTimeThisWeekMinutes,
+                timeTargetMinutes = state.weeklyTimeTargetMinutes,
+                distanceLabel = if (state.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "mi" else "km",
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            // No bootcamp: goal + streak tiles, optional coaching strip
+            val hasLowerContent = state.coachingInsight != null
+            PrimaryRow(
+                state = state,
+                modifier = if (hasLowerContent) Modifier.weight(1f)
+                           else Modifier.fillMaxWidth().height(160.dp)
+            )
+            state.coachingInsight?.let { insight ->
+                CoachingStrip(insight = insight)
+            }
         }
     }
 }
@@ -577,132 +585,131 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
     }
 }
 
-// ── Tier 2: Bootcamp + Volume ───────────────────────────────────
+// ── Week Goal Ring Card (bootcamp-enrolled home) ─────────────────
 
 @Composable
-private fun MidRow(state: HomeUiState, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        BootcampTile(
-            currentWeek = state.currentWeekNumber,
-            totalWeeks = state.bootcampTotalWeeks,
-            percentComplete = state.bootcampPercentComplete,
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-        VolumeTile(
-            distanceKm = metersToUnit(state.totalDistanceThisWeekMeters.toFloat(), state.distanceUnit),
-            distanceTargetKm = state.weeklyDistanceTargetKm,
-            timeMinutes = state.totalTimeThisWeekMinutes,
-            timeTargetMinutes = state.weeklyTimeTargetMinutes,
-            distanceLabel = if (state.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "mi" else "km",
-            modifier = Modifier.weight(1f).fillMaxHeight()
-        )
-    }
-}
-
-@Composable
-private fun BootcampTile(
-    currentWeek: Int,
-    totalWeeks: Int,
-    percentComplete: Float,
+private fun WeekGoalRingCard(
+    completedRuns: Int,
+    totalRuns: Int,
+    weekNumber: Int,
     modifier: Modifier = Modifier
 ) {
-    val animatedPercent by animateFloatAsState(
-        targetValue = percentComplete,
-        animationSpec = tween(durationMillis = 1000),
-        label = "bootcampRing"
-    )
+    val gradientBrush = CardeaTheme.colors.gradient  // CardeaGradient 4-stop
+    val trackColor = CardeaTheme.colors.glassBorder
+    val sweepAngle = if (totalRuns > 0) (completedRuns.toFloat() / totalRuns) * 360f else 0f
+    val isWeekIncomplete = completedRuns < totalRuns
 
-    Row(
+    Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Compact 44dp progress ring
-        val ringTrackColor = CardeaTheme.colors.glassBorder
-        Box(
-            modifier = Modifier.size(44.dp),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Canvas(modifier = Modifier.size(44.dp)) {
-                val strokeW = 4.dp.toPx()
-                val radius = (size.minDimension - strokeW) / 2f
-                drawCircle(
-                    color = ringTrackColor,
-                    radius = radius,
-                    style = Stroke(width = strokeW)
-                )
-                drawArc(
-                    color = Color.White.copy(alpha = 0.55f),
-                    startAngle = -90f,
-                    sweepAngle = 360f * animatedPercent.coerceIn(0f, 1f),
-                    useCenter = false,
-                    style = Stroke(width = strokeW, cap = StrokeCap.Round)
-                )
+            // Progress ring — 84dp, 6dp stroke, CardeaGradient arc on glassBorder track
+            Box(
+                modifier = Modifier.size(84.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(84.dp)) {
+                    val strokePx = 6.dp.toPx()
+                    val inset = strokePx / 2f
+                    val arcSize = Size(size.width - strokePx, size.height - strokePx)
+                    // Track arc — always visible, even at 0%
+                    drawArc(
+                        color = trackColor,
+                        startAngle = -90f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        topLeft = Offset(inset, inset),
+                        size = arcSize,
+                        style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                    )
+                    // Progress arc — CardeaGradient, skipped at exactly 0
+                    if (sweepAngle > 0f) {
+                        drawArc(
+                            brush = gradientBrush,
+                            startAngle = -90f,
+                            sweepAngle = sweepAngle,
+                            useCenter = false,
+                            topLeft = Offset(inset, inset),
+                            size = arcSize,
+                            style = Stroke(width = strokePx, cap = StrokeCap.Round)
+                        )
+                    }
+                }
+                // Center label: "N / of M"
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "$completedRuns",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CardeaTheme.colors.textPrimary,
+                        lineHeight = 22.sp
+                    )
+                    Text(
+                        text = "of $totalRuns",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = CardeaTheme.colors.textSecondary,
+                        lineHeight = 14.sp
+                    )
+                }
             }
-            Text(
-                text = "W$currentWeek",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 10.sp
-                ),
-                color = CardeaTheme.colors.textSecondary
-            )
-        }
 
-        // Info column with label + percent + bar
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
+            // Right column
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    text = "BOOTCAMP",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp,
-                        fontSize = 10.sp
-                    ),
-                    color = CardeaTheme.colors.textSecondary
+                    text = "THIS WEEK",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.2.sp,
+                    color = CardeaTheme.colors.textTertiary
                 )
                 Text(
-                    text = "${(percentComplete * 100).toInt()}%",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    ),
+                    text = if (completedRuns == 0)
+                        "$totalRuns ${if (totalRuns == 1) "run" else "runs"} scheduled"
+                    else
+                        "$completedRuns of $totalRuns ${if (totalRuns == 1) "run" else "runs"} done",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = CardeaTheme.colors.textPrimary
                 )
+                if (weekNumber >= 2) {
+                    Text(
+                        text = "Week $weekNumber",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = CardeaTheme.colors.textTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-            Spacer(Modifier.height(6.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(5.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(CardeaTheme.colors.glassBorder)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(animatedPercent.coerceIn(0.01f, 1f))
-                        .height(5.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(CardeaTheme.colors.ctaGradient)
-                        .graphicsLayer { this.alpha = 0.8f }
-                )
-            }
+        }
+
+        // Tagline — shown until the week goal is complete
+        if (isWeekIncomplete) {
+            Text(
+                text = "$totalRuns ${if (totalRuns == 1) "run" else "runs"} this week. You've got this.",
+                fontSize = 13.sp,
+                color = CardeaTheme.colors.textSecondary,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }
+
+// ── Volume Tile ─────────────────────────────────────────────────
 
 @Composable
 private fun VolumeTile(
