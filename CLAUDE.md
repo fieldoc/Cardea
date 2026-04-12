@@ -119,6 +119,10 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **`CardeaLogo`** — Canvas-drawn composable in `ui/components/CardeaLogo.kt`. Heart + ECG line + orbital ring with gradient fill. Two sizes: `LogoSize.LARGE` (splash, 180dp) and `LogoSize.SMALL` (nav badge, 32dp).
 - **Gradient nav icons** — Active nav icons use `CompositingStrategy.Offscreen` + `BlendMode.SrcIn` with `CardeaNavGradient` to produce pixel-perfect gradient fill on any `ImageVector` icon.
 - **Charts are custom Canvas-drawn** — `ui/charts/` (BarChart, PieChart, ScatterPlot) use `DrawScope` directly; no charting library. Styling changes require Canvas API edits.
+- **Chart components are M3-free (purged 2026-04-12)** — All `ui/charts/` files use `CardeaTheme.colors` exclusively. Do NOT use `MaterialTheme.colorScheme` in chart code. `HrCoachThemeTokens.subtleText` is a legacy alias — use `CardeaTheme.colors.textSecondary` instead.
+- **Canvas dp gotcha** — Custom `DrawScope` code must use `X.dp.toPx()` for sizes, not raw float pixels (`5f`). Raw pixels produce different visual sizes across screen densities.
+- **`BarChart.color` is the fill color** — each caller passes a distinct color (`GradientRed`, `GradientBlue`, `GradientPink`). Solid fill with alpha modulation (latest bar = 1.0, others = 0.55). Do not reintroduce a hardcoded gradient.
+- **`SectionHeader` (charts)** — uppercase `labelMedium` + `Bold` + `2.sp` letterSpacing + `textSecondary` color. Subtitle uses `textTertiary`. Subtle chapter break, not a prominent heading.
 - **`FlowRow` requires `@OptIn(ExperimentalLayoutApi::class)`** — used in AccountScreen (voice mode tags) and may be needed elsewhere for wrapping chip layouts.
 - **`WorkoutSnapshot` has no elapsed time** — compute elapsed seconds in the ViewModel via a ticker flow when `isRunning && !isPaused`.
 - **Maps settings** — Moved from a dialog in SetupScreen to `AccountScreen`. `SetupScreen` no longer contains any Maps API key UI.
