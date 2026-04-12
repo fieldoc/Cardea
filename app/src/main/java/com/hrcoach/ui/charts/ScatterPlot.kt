@@ -3,7 +3,6 @@ package com.hrcoach.ui.charts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -37,8 +36,7 @@ data class ScatterPoint(
 
 @Composable
 fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val labelColor = CardeaTheme.colors.textSecondary
 
     if (points.size < 2) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -86,12 +84,12 @@ fun ScatterPlot(points: List<ScatterPoint>, modifier: Modifier = Modifier) {
 
         val gridColor = chartGridColor
         val textPaint = android.graphics.Paint().apply {
-            color = onSurfaceColor.toArgb()
+            color = labelColor.toArgb()
             textSize = axisTextSizePx
             isAntiAlias = true
         }
         val labelPaint = android.graphics.Paint().apply {
-            color = onSurfaceColor.toArgb()
+            color = labelColor.toArgb()
             textSize = axisTextSizePx
             isAntiAlias = true
         }
