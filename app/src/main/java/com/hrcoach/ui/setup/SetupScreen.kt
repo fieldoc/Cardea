@@ -499,16 +499,16 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .height(48.dp)
                     .clip(RoundedCornerShape(11.dp))
-                    .background(CardeaCtaGradient)
+                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(11.dp))
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "Open Bootcamp →",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = CardeaTheme.colors.onGradient
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = CardeaTheme.colors.textSecondary
                 )
             }
         }
