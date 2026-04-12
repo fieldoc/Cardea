@@ -183,6 +183,8 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **Interval variety:** PEAK and EVERGREEN alternate presets based on `absoluteWeek % 2` (norwegian_4x4/hill_repeats for race goals; hill_repeats/hiit_30_30 for EVERGREEN).
 - **Recovery week composition:** Tier 0-1 get all-easy weeks; Tier 2+ get downgraded quality (interval→tempo, tempo→strides). EVERGREEN handles its own recovery on week D.
 - **Tempo presets** (`aerobic_tempo`, `lactate_threshold`) use `DISTANCE_PROFILE` with 10-min warm-up, 20-min main block, 5-min cool-down segments.
+- **`getNextSession()` is date-unaware** — returns earliest SCHEDULED/DEFERRED by weekNumber+dayOfWeek, even if that day already passed. HomeViewModel uses `getScheduledAndDeferredSessions()` + computed-date filtering to match bootcamp screen behavior. Don't regress to `getNextSession()` for UI display.
+- **Manual-run CTA** — contextual inline "Manual run →" in `RestDay` and `RunDone` hero states only. No global catch-all at the bottom of the bootcamp page (removed: caused duplication on rest days).
 
 ## Adaptive Engine Invariants
 
@@ -191,6 +193,10 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **TRIMP formula is non-standard** — uses `duration * avgHR * (avgHR/HRmax)^2`, not Bannister's exponential. Consistent across the codebase; don't "fix" it to match literature values.
 - **Three `bootcampSessionCompleter.complete()` call sites:** (1) PostRunSummaryViewModel (reads lastTuningDirection from AdaptiveProfileRepository), (2) WorkoutForegroundService sim path (reads from saved profile), (3) BootcampViewModel.onWorkoutCompleted (reads from UI state). All three pass tuningDirection.
 - **`efTrend` regression math** — slope is `(n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX)`, then multiplied by `(n-1)` to give total estimated change across the window. Comparable to the old endpoint delta and the existing 0.04 threshold.
+
+## Test Fakes
+
+- **`FakeBootcampDao`** in `BootcampSessionCompleterTest.kt` directly implements `BootcampDao`. Adding/changing DAO methods requires updating this fake or tests won't compile.
 
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
