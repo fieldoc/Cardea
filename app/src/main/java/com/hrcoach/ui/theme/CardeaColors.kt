@@ -44,7 +44,7 @@ data class CardeaColors(
 )
 
 private val DarkGlassFillBrush = Brush.verticalGradient(
-    colors = listOf(Color(0x0FFFFFFF), Color(0x05FFFFFF))
+    colors = listOf(Color(0x14FFFFFF), Color(0x0AFFFFFF))
 )
 
 private val LightGlassFillBrush = Brush.verticalGradient(
