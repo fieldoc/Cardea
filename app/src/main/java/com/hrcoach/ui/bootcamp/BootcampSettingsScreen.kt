@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
+import com.hrcoach.domain.bootcamp.TierInfo
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.BootcampGoal
@@ -493,11 +494,7 @@ private fun goalLabel(goal: BootcampGoal): String = when (goal) {
     BootcampGoal.MARATHON -> "Marathon"
 }
 
-private fun tierLabel(index: Int): String = when (index) {
-    0 -> "Easy"
-    1 -> "Moderate"
-    else -> "Hard"
-}
+private fun tierLabel(index: Int): String = TierInfo.displayName(index)
 
 // ── GoalSelector ──────────────────────────────────────────────────────────────
 
@@ -548,12 +545,7 @@ private fun FinishingTimeInput(
     onFinishingTimeChanged: (Int) -> Unit
 ) {
     val brackets = FinishingTimeTierMapper.bracketsFor(goal) ?: return
-    val tierLabel = when (derivedTierIndex) {
-        0 -> "Easy"
-        1 -> "Moderate"
-        2 -> "Hard"
-        else -> "Moderate"
-    }
+    val tierLabel = TierInfo.displayName(derivedTierIndex)
 
     Column(modifier = Modifier.padding(top = 8.dp)) {
         Row(
@@ -614,27 +606,35 @@ private fun TierSelector(
     tierIndex: Int,
     onTierSelected: (Int) -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        listOf("Easy", "Moderate", "Hard").forEachIndexed { index, label ->
+        (0..2).forEach { index ->
             val isSelected = tierIndex == index
-            Box(
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(42.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .then(if (isSelected) Modifier.background(CardeaCtaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
-                    .clickable { onTierSelected(index) },
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .then(
+                        if (isSelected) Modifier.background(CardeaCtaGradient)
+                        else Modifier.background(CardeaTheme.colors.glassHighlight)
+                    )
+                    .clickable { onTierSelected(index) }
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    text = label,
+                    text = TierInfo.displayName(index),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
+                )
+                Text(
+                    text = TierInfo.tagline(index),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isSelected) CardeaTheme.colors.textPrimary.copy(alpha = 0.7f)
+                        else CardeaTheme.colors.textTertiary
                 )
             }
         }

@@ -80,6 +80,8 @@ import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.SessionType
+import com.hrcoach.domain.bootcamp.TierCtlRanges
+import com.hrcoach.domain.bootcamp.TierInfo
 import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.engine.TierPromptDirection
@@ -213,6 +215,7 @@ fun BootcampScreen(
                     onProgressClick = { showPhaseDetail = true },
                     onSessionClick = viewModel::onSessionClick,
                     onGoalClick = viewModel::showGoalDetail,
+                    onTierClick = viewModel::showTierDetail,
                     onSavePreferredDays = viewModel::savePreferredDays,
                     onSettingsClick = onGoToSettings,
                     onPreferredDaysClick = { showDaysSheet = true },
@@ -298,6 +301,15 @@ fun BootcampScreen(
                 goal = uiState.goal!!,
                 progressPercentage = uiState.goalProgressPercentage,
                 onDismiss = viewModel::dismissGoalDetail
+            )
+        }
+
+        if (uiState.showTierDetail && uiState.goal != null) {
+            TierDetailSheet(
+                tierIndex = uiState.tierIndex,
+                goal = uiState.goal!!,
+                ctl = uiState.ctl,
+                onDismiss = viewModel::dismissTierDetail
             )
         }
 
@@ -1017,12 +1029,7 @@ private fun OnboardingStepFinishingTime(
 ) {
     val brackets = FinishingTimeTierMapper.bracketsFor(goal) ?: return
     val tierIndex = FinishingTimeTierMapper.tierFromFinishingTime(goal, finishingTimeMinutes)
-    val tierLabel = when (tierIndex) {
-        0 -> "Easy"
-        1 -> "Moderate"
-        2 -> "Hard"
-        else -> "Moderate"
-    }
+    val tierLabel = TierInfo.displayName(tierIndex)
 
     Text(
         text = "Target finishing time",
@@ -1434,6 +1441,7 @@ private fun ActiveBootcampDashboard(
     onProgressClick: () -> Unit,
     onSessionClick: (SessionUiItem) -> Unit,
     onGoalClick: () -> Unit,
+    onTierClick: () -> Unit,
     onSavePreferredDays: (List<DayPreference>) -> Unit,
     onSettingsClick: () -> Unit,
     onPreferredDaysClick: () -> Unit,
@@ -1453,6 +1461,7 @@ private fun ActiveBootcampDashboard(
             onPullForward = { sessionId -> onReschedule(sessionId) },
             onGoToManualSetup = onGoToManualSetup,
             onGoalClick = onGoalClick,
+            onTierClick = onTierClick,
             onProgressClick = onProgressClick,
             onPreferredDaysClick = onPreferredDaysClick,
             onSettingsClick = onSettingsClick,
@@ -1498,6 +1507,7 @@ private fun ActiveBootcampDashboard(
             if (uiState.tierPromptDirection != TierPromptDirection.NONE) {
                 TierPromptCard(
                     direction = uiState.tierPromptDirection,
+                    currentTierIndex = uiState.tierIndex,
                     evidence = uiState.tierPromptEvidence,
                     onAccept = onAcceptTierChange,
                     onDismiss = onDismissTierPrompt
@@ -1991,6 +2001,7 @@ private fun TodayHeroSection(
     onPullForward: ((Long) -> Unit)? = null,
     onGoToManualSetup: (() -> Unit)? = null,
     onGoalClick: () -> Unit,
+    onTierClick: () -> Unit,
     onProgressClick: () -> Unit,
     onPreferredDaysClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -2114,6 +2125,21 @@ private fun TodayHeroSection(
                         text = phaseText,
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
                         color = CardeaTheme.colors.textSecondary
+                    )
+                }
+                // Tier pill — tappable to open TierDetailSheet
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(GradientPink.copy(alpha = 0.10f))
+                        .border(1.dp, GradientPink.copy(alpha = 0.22f), RoundedCornerShape(20.dp))
+                        .clickable(onClick = onTierClick)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = TierInfo.displayName(uiState.tierIndex),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = GradientPink
                     )
                 }
                 if (uiState.isRecoveryWeek) {
@@ -2470,36 +2496,90 @@ private fun MetaChip(text: String) {
 @Composable
 private fun TierPromptCard(
     direction: TierPromptDirection,
+    currentTierIndex: Int,
     evidence: String?,
     onAccept: (TierPromptDirection) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val title = if (direction == TierPromptDirection.UP) "Progression available" else "Step-back recommended"
-    val body = if (direction == TierPromptDirection.UP) {
-        "Your recent load has remained high enough to support a tier increase."
-    } else {
-        "Your recent load has stayed below your current tier's target range."
-    }
-    val actionLabel = if (direction == TierPromptDirection.UP) "Increase Tier" else "Lower Tier"
+    val isUp = direction == TierPromptDirection.UP
+    val title = if (isUp) "Progression available" else "Step-back recommended"
+    val proposedTier = if (isUp) (currentTierIndex + 1).coerceAtMost(2)
+        else (currentTierIndex - 1).coerceAtLeast(0)
+    val actionLabel = if (isUp)
+        "Move to ${TierInfo.displayName(proposedTier)}"
+    else
+        "Step back to ${TierInfo.displayName(proposedTier)}"
+    val borderColor = if (isUp) GradientPink.copy(alpha = 0.18f) else ZoneAmber.copy(alpha = 0.15f)
 
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, borderColor, RoundedCornerShape(18.dp)),
+        borderColor = Color.Transparent
+    ) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
             color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(6.dp))
+
+        // Transition visual: "Foundation → Development"
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Current tier pill
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CardeaTheme.colors.glassHighlight)
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = TierInfo.displayName(currentTierIndex),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = CardeaTheme.colors.textSecondary
+                )
+            }
+            Text(
+                text = "\u2192",
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (isUp) GradientPink else ZoneAmber
+            )
+            // Proposed tier pill
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .then(
+                        if (isUp) Modifier.background(CardeaCtaGradient)
+                        else Modifier.background(ZoneAmber.copy(alpha = 0.15f))
+                    )
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = TierInfo.displayName(proposedTier),
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = if (isUp) CardeaTheme.colors.textPrimary else ZoneAmber
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // What changes
         Text(
-            text = body,
+            text = TierInfo.transitionSummary(currentTierIndex, proposedTier),
             style = MaterialTheme.typography.bodySmall,
-            color = CardeaTheme.colors.textSecondary
+            color = CardeaTheme.colors.textSecondary,
+            lineHeight = 18.sp
         )
         if (!evidence.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = evidence,
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTheme.colors.textTertiary
+                color = CardeaTheme.colors.textTertiary,
+                lineHeight = 18.sp
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -2977,6 +3057,228 @@ private fun GoalDetailSheet(
 
             Text(
                 text = "You're training at a tier that balances your historical volume with your current recovery capacity.",
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textTertiary,
+                lineHeight = 18.sp
+            )
+
+            CardeaButton(
+                text = "Back to Training",
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TierDetailSheet(
+    tierIndex: Int,
+    goal: BootcampGoal,
+    ctl: Float,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = CardeaTheme.colors.bgPrimary,
+        dragHandle = { Box(Modifier.padding(vertical = 12.dp).width(32.dp).height(4.dp).clip(CircleShape).background(CardeaTheme.colors.glassBorder)) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header
+            Text(
+                text = "Training Tier",
+                style = MaterialTheme.typography.labelLarge,
+                color = GradientPink
+            )
+            Text(
+                text = TierInfo.displayName(tierIndex),
+                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTheme.colors.textPrimary
+            )
+            Text(
+                text = TierInfo.tagline(tierIndex),
+                style = MaterialTheme.typography.bodyMedium,
+                color = CardeaTheme.colors.textSecondary
+            )
+
+            // CTL position within tier range
+            val range = TierCtlRanges.rangeFor(goal, tierIndex)
+            val progress = TierInfo.ctlProgress(goal, tierIndex, ctl)
+            val positionLabel = TierInfo.ctlPositionLabel(goal, tierIndex, ctl)
+            GlassCard {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Fitness Load",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = CardeaTheme.colors.textSecondary
+                        )
+                        Text(
+                            text = "${ctl.toInt()} CTL",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontFeatureSettings = "tnum"
+                            ),
+                            color = CardeaTheme.colors.textPrimary
+                        )
+                    }
+
+                    // Tier range bar with position indicator
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(CardeaTheme.colors.glassBorder)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(progress)
+                                .fillMaxHeight()
+                                .background(CardeaCtaGradient)
+                        )
+                    }
+
+                    // Range labels
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "${range.first}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CardeaTheme.colors.textTertiary
+                        )
+                        Text(
+                            text = "${range.last}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CardeaTheme.colors.textTertiary
+                        )
+                    }
+
+                    if (positionLabel != null) {
+                        Text(
+                            text = positionLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = GradientPink
+                        )
+                    }
+                }
+            }
+
+            // What this tier includes
+            GlassCard {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Your typical week",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    TierInfo.weekContent(tierIndex).forEach { item ->
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(
+                                text = "\u2022",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = GradientPink
+                            )
+                            Text(
+                                text = item,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = CardeaTheme.colors.textSecondary,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // All three tiers comparison
+            GlassCard {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "All tiers",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                    (0..2).forEach { t ->
+                        val isCurrent = t == tierIndex
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .then(
+                                    if (isCurrent) Modifier.background(GradientPink.copy(alpha = 0.08f))
+                                    else Modifier
+                                )
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Tier number dot
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .then(
+                                        if (isCurrent) Modifier.background(CardeaCtaGradient)
+                                        else Modifier.background(CardeaTheme.colors.glassHighlight)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${t + 1}",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = if (isCurrent) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = TierInfo.displayName(t),
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = if (isCurrent) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
+                                    )
+                                    if (isCurrent) {
+                                        Text(
+                                            text = "current",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = GradientPink
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = TierInfo.tagline(t),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CardeaTheme.colors.textTertiary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = "Tier changes happen automatically when your fitness load consistently moves outside your current range.",
                 style = MaterialTheme.typography.bodySmall,
                 color = CardeaTheme.colors.textTertiary,
                 lineHeight = 18.sp

@@ -343,6 +343,8 @@ class BootcampViewModel @Inject constructor(
             fitnessLevel = fitnessLevel,
             tuningDirection = fitnessSignals.tuningDirection,
             illnessFlag = illnessFlag,
+            tierIndex = enrollment.tierIndex,
+            ctl = profile.ctl,
             tierPromptDirection = tierPromptDirection,
             tierPromptEvidence = tierPromptEvidence,
             missedSessionCount = missedSessionCount,
@@ -640,6 +642,14 @@ class BootcampViewModel @Inject constructor(
 
     fun dismissGoalDetail() {
         _uiState.update { it.copy(showGoalDetail = false) }
+    }
+
+    fun showTierDetail() {
+        _uiState.update { it.copy(showTierDetail = true) }
+    }
+
+    fun dismissTierDetail() {
+        _uiState.update { it.copy(showTierDetail = false) }
     }
 
     fun dismissDeleteConfirmDialog() {

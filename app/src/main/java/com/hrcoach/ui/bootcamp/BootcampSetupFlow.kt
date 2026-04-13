@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
+import com.hrcoach.domain.bootcamp.TierInfo
 import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
@@ -226,16 +227,10 @@ private fun SectionAbility(
     SectionHeader("Current Ability")
 
     if (isRace) {
-        // Race goals: finishing time slider
+        // Race goals: finishing time slider → tier placement explanation
         val brackets = FinishingTimeTierMapper.bracketsFor(goal) ?: return
         val currentMinutes = finishingTimeMinutes ?: brackets.defaultMinutes
         val tierIndex = FinishingTimeTierMapper.tierFromFinishingTime(goal, currentMinutes)
-        val tierLabel = when (tierIndex) {
-            0 -> "Easy"
-            1 -> "Moderate"
-            2 -> "Hard"
-            else -> "Moderate"
-        }
         val goalLabel = when (goal) {
             BootcampGoal.RACE_5K -> "5K"
             BootcampGoal.RACE_10K -> "10K"
@@ -285,20 +280,42 @@ private fun SectionAbility(
                 color = CardeaTheme.colors.divider,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
+            // Tier placement explanation
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(GradientPink.copy(alpha = 0.10f))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = TierInfo.displayName(tierIndex),
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = GradientPink
+                    )
+                }
+                Text(
+                    text = "tier",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textSecondary
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Intensity: $tierLabel",
+                text = TierInfo.tagline(tierIndex),
                 style = MaterialTheme.typography.bodySmall,
-                color = CardeaTheme.colors.textSecondary
+                color = CardeaTheme.colors.textTertiary
             )
         }
     } else {
-        // Cardio Health: 3 tier pills
+        // Cardio Health: 3 tier cards with content descriptions
         GlassCard(modifier = Modifier.fillMaxWidth()) {
-            val tiers = listOf(
-                Triple(0, "Easy", "Just getting started or returning from a break"),
-                Triple(1, "Moderate", "Can jog 20-30 minutes comfortably"),
-                Triple(2, "Hard", "Running regularly, looking to improve")
-            )
+            val tiers = (0..2).map { t ->
+                Triple(t, TierInfo.displayName(t), TierInfo.audience(t))
+            }
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -336,6 +353,13 @@ private fun SectionAbility(
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isSelected) CardeaTheme.colors.onGradient.copy(alpha = 0.8f)
                             else CardeaTheme.colors.textTertiary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = TierInfo.tagline(tier),
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+                            color = if (isSelected) CardeaTheme.colors.onGradient.copy(alpha = 0.65f)
+                            else CardeaTheme.colors.textTertiary.copy(alpha = 0.7f)
                         )
                     }
                 }
