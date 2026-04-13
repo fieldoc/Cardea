@@ -10,6 +10,8 @@ import com.hrcoach.domain.model.ZoneStatus
 class CoachingEventRouter {
     private var wasHrConnected: Boolean = false
     private var previousZoneStatus: ZoneStatus = ZoneStatus.NO_DATA
+    private var hasBeenInZone: Boolean = false
+    private var lastReturnToZoneMs: Long = 0L
     private var lastSegmentIndex: Int = -1
     private var lastPredictiveWarningTime: Long = 0L
 
@@ -20,10 +22,16 @@ class CoachingEventRouter {
     private var lastVoiceCueTimeMs: Long = 0L
     private var workoutStartMs: Long = 0L
 
+    companion object {
+        const val RETURN_TO_ZONE_COOLDOWN_MS = 30_000L
+    }
+
     fun reset(workoutStartMs: Long = 0L) {
         this.workoutStartMs = workoutStartMs
         wasHrConnected = false
         previousZoneStatus = ZoneStatus.NO_DATA
+        hasBeenInZone = false
+        lastReturnToZoneMs = 0L
         lastSegmentIndex = -1
         lastPredictiveWarningTime = 0L
         halfwayFired = false
@@ -52,9 +60,17 @@ class CoachingEventRouter {
             lastVoiceCueTimeMs = nowMs
         }
 
-        if (previousZoneStatus != ZoneStatus.IN_ZONE && zoneStatus == ZoneStatus.IN_ZONE) {
-            emitEvent(CoachingEvent.RETURN_TO_ZONE, guidance)
-            lastVoiceCueTimeMs = nowMs
+        if (zoneStatus == ZoneStatus.IN_ZONE) {
+            // Only fire RETURN_TO_ZONE when: runner was previously in zone, left, and came back.
+            // Suppress on initial zone entry (warming up) and respect a 30s cooldown for HR jitter.
+            if (previousZoneStatus != ZoneStatus.IN_ZONE && hasBeenInZone &&
+                nowMs - lastReturnToZoneMs >= RETURN_TO_ZONE_COOLDOWN_MS
+            ) {
+                emitEvent(CoachingEvent.RETURN_TO_ZONE, null)
+                lastReturnToZoneMs = nowMs
+                lastVoiceCueTimeMs = nowMs
+            }
+            hasBeenInZone = true
         }
 
         if (workoutConfig.mode == WorkoutMode.DISTANCE_PROFILE) {

@@ -7,6 +7,7 @@ import com.hrcoach.domain.model.HrSegment
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,6 +84,100 @@ class CoachingEventRouterTest {
         )
 
         assertTrue(events.contains(CoachingEvent.PREDICTIVE_WARNING))
+    }
+
+    // ── RETURN_TO_ZONE tests ──────────────────────────────────
+
+    private fun steadyConfig() = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+
+    private fun routeTick(
+        router: CoachingEventRouter,
+        zone: ZoneStatus,
+        nowMs: Long,
+        config: WorkoutConfig = steadyConfig(),
+        events: MutableList<Pair<CoachingEvent, String?>> = mutableListOf()
+    ): MutableList<Pair<CoachingEvent, String?>> {
+        router.route(
+            workoutConfig = config,
+            connected = true,
+            distanceMeters = 0f,
+            elapsedSeconds = nowMs / 1000,
+            zoneStatus = zone,
+            adaptiveResult = null,
+            guidance = "some guidance",
+            nowMs = nowMs,
+            emitEvent = { event, text -> events += event to text }
+        )
+        return events
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE does not fire on initial zone entry`() {
+        val router = CoachingEventRouter()
+        // Warm up below zone, then enter zone for the first time
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.BELOW_ZONE, 1_000L, events = events)
+        routeTick(router, ZoneStatus.BELOW_ZONE, 2_000L, events = events)
+        routeTick(router, ZoneStatus.IN_ZONE, 3_000L, events = events)
+
+        assertTrue(events.none { it.first == CoachingEvent.RETURN_TO_ZONE })
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE fires after leaving and re-entering zone`() {
+        val router = CoachingEventRouter()
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        // Enter zone (initial — should not fire)
+        routeTick(router, ZoneStatus.IN_ZONE, 1_000L, events = events)
+        // Leave zone
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 2_000L, events = events)
+        // Re-enter zone — should fire
+        routeTick(router, ZoneStatus.IN_ZONE, 33_000L, events = events)
+
+        val returnEvents = events.filter { it.first == CoachingEvent.RETURN_TO_ZONE }
+        assertEquals(1, returnEvents.size)
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE passes null guidance so VoicePlayer uses default text`() {
+        val router = CoachingEventRouter()
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1_000L, events = events)
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 2_000L, events = events)
+        routeTick(router, ZoneStatus.IN_ZONE, 33_000L, events = events)
+
+        val returnEvent = events.first { it.first == CoachingEvent.RETURN_TO_ZONE }
+        assertEquals(null, returnEvent.second)
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE cooldown prevents rapid re-firing`() {
+        val router = CoachingEventRouter()
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        // Initial zone entry
+        routeTick(router, ZoneStatus.IN_ZONE, 1_000L, events = events)
+        // Leave and re-enter (first RETURN_TO_ZONE)
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 2_000L, events = events)
+        routeTick(router, ZoneStatus.IN_ZONE, 33_000L, events = events)
+        assertEquals(1, events.count { it.first == CoachingEvent.RETURN_TO_ZONE })
+
+        // Quick jitter: leave and re-enter within 30s cooldown — should NOT fire again
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 34_000L, events = events)
+        routeTick(router, ZoneStatus.IN_ZONE, 35_000L, events = events)
+        assertEquals(1, events.count { it.first == CoachingEvent.RETURN_TO_ZONE })
+
+        // After cooldown expires — should fire again
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 64_000L, events = events)
+        routeTick(router, ZoneStatus.IN_ZONE, 65_000L, events = events)
+        assertEquals(2, events.count { it.first == CoachingEvent.RETURN_TO_ZONE })
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE does not fire from NO_DATA to IN_ZONE`() {
+        val router = CoachingEventRouter()
+        // First tick ever: NO_DATA -> IN_ZONE
+        val events = routeTick(router, ZoneStatus.IN_ZONE, 1_000L)
+        assertTrue(events.none { it.first == CoachingEvent.RETURN_TO_ZONE })
     }
 
     @Test
