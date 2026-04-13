@@ -617,10 +617,12 @@ private fun TierSelector(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(14.dp))
                     .then(
                         if (isSelected) Modifier.background(CardeaCtaGradient)
-                        else Modifier.background(CardeaTheme.colors.glassHighlight)
+                        else Modifier
+                            .background(CardeaTheme.colors.glassHighlight)
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
                     )
                     .clickable { onTierSelected(index) }
                     .padding(horizontal = 14.dp, vertical = 10.dp)
@@ -628,12 +630,12 @@ private fun TierSelector(
                 Text(
                     text = TierInfo.displayName(index),
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isSelected) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
+                    color = if (isSelected) CardeaTheme.colors.onGradient else CardeaTheme.colors.textSecondary
                 )
                 Text(
                     text = TierInfo.tagline(index),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) CardeaTheme.colors.textPrimary.copy(alpha = 0.7f)
+                    color = if (isSelected) CardeaTheme.colors.onGradient.copy(alpha = 0.8f)
                         else CardeaTheme.colors.textTertiary
                 )
             }

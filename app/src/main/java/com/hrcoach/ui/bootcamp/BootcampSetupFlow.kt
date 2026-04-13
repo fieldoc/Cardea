@@ -283,52 +283,43 @@ private fun SectionAbility(
             // Tier placement explanation
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                Text(
+                    text = "You'll train at",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textSecondary
+                )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(GradientPink.copy(alpha = 0.10f))
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(GradientPink.copy(alpha = 0.12f))
+                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
                         text = TierInfo.displayName(tierIndex),
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = GradientPink
                     )
                 }
-                Text(
-                    text = "tier",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTheme.colors.textSecondary
-                )
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = TierInfo.tagline(tierIndex),
-                style = MaterialTheme.typography.bodySmall,
-                color = CardeaTheme.colors.textTertiary
-            )
         }
     } else {
-        // Cardio Health: 3 tier cards with content descriptions
+        // Cardio Health: 3 tier cards — three text levels only (primary/secondary/tertiary)
         GlassCard(modifier = Modifier.fillMaxWidth()) {
-            val tiers = (0..2).map { t ->
-                Triple(t, TierInfo.displayName(t), TierInfo.audience(t))
+            val currentTier = finishingTimeMinutes?.let {
+                FinishingTimeTierMapper.tierFromFinishingTime(goal, it)
             }
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                tiers.forEach { (tier, label, description) ->
-                    // Derive current tier from finishing time if available
-                    val currentTier = finishingTimeMinutes?.let {
-                        FinishingTimeTierMapper.tierFromFinishingTime(goal, it)
-                    }
+                (0..2).forEach { tier ->
                     val isSelected = currentTier == tier
                     Column(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
                             .then(
                                 if (isSelected) Modifier.background(CardeaCtaGradient)
@@ -340,28 +331,28 @@ private fun SectionAbility(
                             )
                             .clickable { onTierSelected(tier) }
                             .padding(horizontal = 14.dp, vertical = 10.dp)
-                            .fillMaxWidth()
                     ) {
                         Text(
-                            text = label,
+                            text = TierInfo.displayName(tier),
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                             color = if (isSelected) CardeaTheme.colors.onGradient
                             else CardeaTheme.colors.textPrimary
                         )
                         Text(
-                            text = description,
+                            text = TierInfo.audience(tier),
                             style = MaterialTheme.typography.bodySmall,
                             color = if (isSelected) CardeaTheme.colors.onGradient.copy(alpha = 0.8f)
                             else CardeaTheme.colors.textTertiary
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = TierInfo.tagline(tier),
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
-                            color = if (isSelected) CardeaTheme.colors.onGradient.copy(alpha = 0.65f)
-                            else CardeaTheme.colors.textTertiary.copy(alpha = 0.7f)
-                        )
                     }
+                }
+                // Tagline for selected tier shown below, not inside each pill
+                if (currentTier != null) {
+                    Text(
+                        text = TierInfo.tagline(currentTier),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
                 }
             }
         }

@@ -2131,8 +2131,8 @@ private fun TodayHeroSection(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(GradientPink.copy(alpha = 0.10f))
-                        .border(1.dp, GradientPink.copy(alpha = 0.22f), RoundedCornerShape(20.dp))
+                        .background(GradientPink.copy(alpha = 0.12f))
+                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
                         .clickable(onClick = onTierClick)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
@@ -2527,40 +2527,44 @@ private fun TierPromptCard(
         // Transition visual: "Foundation → Development"
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // Current tier pill
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .background(CardeaTheme.colors.glassHighlight)
+                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = TierInfo.displayName(currentTierIndex),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                     color = CardeaTheme.colors.textSecondary
                 )
             }
-            Text(
-                text = "\u2192",
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (isUp) GradientPink else ZoneAmber
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = if (isUp) GradientPink else ZoneAmber
             )
             // Proposed tier pill
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(20.dp))
                     .then(
-                        if (isUp) Modifier.background(CardeaCtaGradient)
-                        else Modifier.background(ZoneAmber.copy(alpha = 0.15f))
+                        if (isUp) Modifier.background(GradientPink.copy(alpha = 0.12f))
+                            .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                        else Modifier.background(ZoneAmber.copy(alpha = 0.12f))
+                            .border(1.dp, ZoneAmber.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
                     )
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
                     text = TierInfo.displayName(proposedTier),
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = if (isUp) CardeaTheme.colors.textPrimary else ZoneAmber
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = if (isUp) GradientPink else ZoneAmber
                 )
             }
         }
@@ -3090,9 +3094,9 @@ private fun TierDetailSheet(
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding()
                 .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
+            // Header — matches GoalDetailSheet pattern: label + title
             Text(
                 text = "Training Tier",
                 style = MaterialTheme.typography.labelLarge,
@@ -3103,18 +3107,19 @@ private fun TierDetailSheet(
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = CardeaTheme.colors.textPrimary
             )
-            Text(
-                text = TierInfo.tagline(tierIndex),
-                style = MaterialTheme.typography.bodyMedium,
-                color = CardeaTheme.colors.textSecondary
-            )
 
             // CTL position within tier range
             val range = TierCtlRanges.rangeFor(goal, tierIndex)
             val progress = TierInfo.ctlProgress(goal, tierIndex, ctl)
             val positionLabel = TierInfo.ctlPositionLabel(goal, tierIndex, ctl)
             GlassCard {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = TierInfo.tagline(tierIndex),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -3122,8 +3127,8 @@ private fun TierDetailSheet(
                     ) {
                         Text(
                             text = "Fitness Load",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = CardeaTheme.colors.textSecondary
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTheme.colors.textTertiary
                         )
                         Text(
                             text = "${ctl.toInt()} CTL",
@@ -3135,7 +3140,7 @@ private fun TierDetailSheet(
                         )
                     }
 
-                    // Tier range bar with position indicator
+                    // Tier range bar — matches GoalDetailSheet progress bar exactly
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -3151,7 +3156,7 @@ private fun TierDetailSheet(
                         )
                     }
 
-                    // Range labels
+                    // Range boundary labels
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -3178,100 +3183,85 @@ private fun TierDetailSheet(
                 }
             }
 
-            // What this tier includes
+            // What this tier includes — session type rows, not bullet points
             GlassCard {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Your typical week",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTheme.colors.textPrimary
+                        text = "YOUR TYPICAL WEEK",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = CardeaTheme.colors.textTertiary
                     )
+                    Spacer(modifier = Modifier.height(2.dp))
                     TierInfo.weekContent(tierIndex).forEach { item ->
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.Top
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text(
-                                text = "\u2022",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = GradientPink
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(GradientPink.copy(alpha = 0.5f))
                             )
                             Text(
                                 text = item,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = CardeaTheme.colors.textSecondary,
-                                lineHeight = 20.sp
+                                lineHeight = 18.sp
                             )
                         }
                     }
                 }
             }
 
-            // All three tiers comparison
+            // Tier progression — 3-segment bar (like PhaseTimelineCard)
             GlassCard {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "All tiers",
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = CardeaTheme.colors.textPrimary
+                        text = "TIER PROGRESSION",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        ),
+                        color = CardeaTheme.colors.textTertiary
                     )
-                    (0..2).forEach { t ->
-                        val isCurrent = t == tierIndex
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .then(
-                                    if (isCurrent) Modifier.background(GradientPink.copy(alpha = 0.08f))
-                                    else Modifier
-                                )
-                                .padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            // Tier number dot
+                    // Segmented tier bar
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        (0..2).forEach { t ->
+                            val isCurrent = t == tierIndex
                             Box(
                                 modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(CircleShape)
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(3.dp))
                                     .then(
                                         if (isCurrent) Modifier.background(CardeaCtaGradient)
-                                        else Modifier.background(CardeaTheme.colors.glassHighlight)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "${t + 1}",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = if (isCurrent) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textTertiary
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Text(
-                                        text = TierInfo.displayName(t),
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = if (isCurrent) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary
+                                        else if (t < tierIndex) Modifier.background(GradientPink.copy(alpha = 0.25f))
+                                        else Modifier.background(CardeaTheme.colors.glassBorder)
                                     )
-                                    if (isCurrent) {
-                                        Text(
-                                            text = "current",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = GradientPink
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = TierInfo.tagline(t),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CardeaTheme.colors.textTertiary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                            )
+                        }
+                    }
+                    // Tier name labels below the bar
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        (0..2).forEach { t ->
+                            val isCurrent = t == tierIndex
+                            Text(
+                                text = TierInfo.displayName(t),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium
+                                ),
+                                color = if (isCurrent) GradientPink else CardeaTheme.colors.textTertiary
+                            )
                         }
                     }
                 }
