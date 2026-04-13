@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea Bootcamp — How Adaptivity Works</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #08080C;
+    color: #E4E4E7;
+    padding: 48px 24px;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* ── Header ── */
+  .hero {
+    text-align: center;
+    margin-bottom: 56px;
+  }
+  .hero h1 {
+    font-size: 38px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #FF4D5A, #FF2DA6, #4D61FF, #00E5FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  .hero p {
+    color: #8888A0;
+    font-size: 15px;
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.55;
+  }
+
+  /* ── Section ── */
+  .section {
+    margin-bottom: 52px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: #6B6B73;
+    margin-bottom: 10px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #F0F0F5;
+    margin-bottom: 20px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #F0F0F5;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h3 .icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .flow-step {
+    flex: 1;
+    min-width: 130px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px;
+    padding: 18px 14px;
+    text-align: center;
+    position: relative;
+  }
+  .flow-step::after {
+    content: '→';
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4D61FF;
+    font-size: 18px;
+    font-weight: 700;
+    z-index: 1;
+  }
+  .flow-step:last-child::after { display: none; }
+  .flow-step .label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .flow-step .value {
+    font-size: 13px;
+    color: #C0C0CC;
+    line-height: 1.4;
+  }
+
+  /* ── Phase colors ── */
+  .c-base  { color: #22C55E; }
+  .c-build { color: #F59E0B; }
+  .c-peak  { color: #FF4D5A; }
+  .c-taper { color: #8B5CF6; }
+  .c-ever  { color: #00E5FF; }
+  .bg-base  { background: rgba(34,197,94,0.15); }
+  .bg-build { background: rgba(245,158,11,0.15); }
+  .bg-peak  { background: rgba(255,77,90,0.15); }
+  .bg-taper { background: rgba(139,92,246,0.15); }
+  .bg-ever  { background: rgba(0,229,255,0.12); }
+
+  /* ── Grid layouts ── */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 700px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .flow { flex-direction: column; }
+    .flow-step::after { display: none; }
+  }
+
+  /* ── Mini table ── */
+  .mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .mini-table th {
+    text-align: left;
+    font-weight: 600;
+    color: #8888A0;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 10px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .mini-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: #C0C0CC;
+    line-height: 1.4;
+  }
+  .mini-table tr:last-child td { border-bottom: none; }
+  .mini-table .accent { color: #F0F0F5; font-weight: 600; }
+
+  /* ── Tier badges ── */
+  .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .tier-0 { background: rgba(107,107,115,0.25); color: #A0A0AB; }
+  .tier-1 { background: rgba(34,197,94,0.18); color: #4ADE80; }
+  .tier-2 { background: rgba(255,77,90,0.18); color: #FF7A85; }
+
+  /* ── Tag pills ── */
+  .tag {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px 2px;
+  }
+  .tag-easy   { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .tag-tempo  { background: rgba(245,158,11,0.15); color: #FBBF24; }
+  .tag-int    { background: rgba(255,77,90,0.15); color: #FF7A85; }
+  .tag-long   { background: rgba(77,97,255,0.18); color: #818CF8; }
+  .tag-stride { background: rgba(0,229,255,0.15); color: #67E8F9; }
+  .tag-sim    { background: rgba(139,92,246,0.15); color: #A78BFA; }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 40px 0;
+  }
+
+  /* ── Callout ── */
+  .callout {
+    background: rgba(77,97,255,0.08);
+    border-left: 3px solid #4D61FF;
+    border-radius: 0 10px 10px 0;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: #A0A0CC;
+    line-height: 1.5;
+    margin: 16px 0;
+  }
+  .callout strong { color: #C8C8E0; }
+
+  /* ── Compact list ── */
+  .compact-list {
+    list-style: none;
+    padding: 0;
+  }
+  .compact-list li {
+    padding: 6px 0;
+    font-size: 13px;
+    color: #B0B0C0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    line-height: 1.45;
+  }
+  .compact-list li::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #4D61FF;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  .stat-big {
+    font-size: 28px;
+    font-weight: 800;
+    color: #F0F0F5;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #6B6B73;
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  .arrow-down {
+    text-align: center;
+    color: #4D61FF;
+    font-size: 22px;
+    margin: 6px 0;
+    opacity: 0.6;
+  }
+
+  .recovery-bar {
+    display: flex;
+    gap: 4px;
+    margin: 10px 0;
+  }
+  .recovery-bar .week {
+    flex: 1;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .week-normal { background: rgba(34,197,94,0.15); color: #4ADE80; }
+  .week-recovery { background: rgba(245,158,11,0.2); color: #FBBF24; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══ HERO ═══ -->
+  <div class="hero">
+    <h1>How Cardea Adapts Your Training</h1>
+    <p>Every bootcamp session is shaped by your fitness, your phase, and your tier. Here's how the engine decides what you run.</p>
+  </div>
+
+  <!-- ═══ 1 — THE BIG PICTURE ═══ -->
+  <div class="section">
+    <div class="section-label">Overview</div>
+    <div class="section-title">Three knobs the engine turns</div>
+    <div class="grid-3">
+      <div class="card" style="text-align:center;">
+        <div class="stat-big" style="color:#22C55E;">Type</div>
+        <div class="stat-label">What kind of run</div>
+        <p style="font-size:12px;color:#8888A0;margin-top:10px;">Easy, Tempo, Intervals, Strides, Long, or Race Sim</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="stat-big" style="color:#FF4D5A;">HR&nbsp;%</div>
+        <div class="stat-label">How hard to push</div>
+        <p style="font-size:12px;color:#8888A0;margin-top:10px;">Target heart rate as % of your HRmax, with buffer zone</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="stat-big" style="color:#4D61FF;">Min</div>
+        <div class="stat-label">How long to run</div>
+        <p style="font-size:12px;color:#8888A0;margin-top:10px;">Scaled from your base easy-run duration &amp; weekly frequency</p>
+      </div>
+    </div>
+    <div class="callout">
+      These are driven by four inputs: your <strong>training phase</strong>, your <strong>tier</strong>, your <strong>fitness signals</strong> (CTL / TSB / EF trend), and your <strong>user settings</strong> (runs/week, easy-run length, goal).
+    </div>
+  </div>
+
+  <!-- ═══ 2 — TRAINING PHASES ═══ -->
+  <div class="section">
+    <div class="section-label">Macro Cycle</div>
+    <div class="section-title">Training phases</div>
+    <p style="font-size:13px;color:#8888A0;margin-bottom:18px;">Race goals progress BASE → BUILD → PEAK → TAPER → done. Cardio Health loops BASE → BUILD → repeat forever.</p>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="label c-base">Base</div>
+        <div class="value">3–6 weeks<br>Aerobic foundation<br><span class="tag tag-easy">Easy</span> <span class="tag tag-long">Long</span></div>
+      </div>
+      <div class="flow-step">
+        <div class="label c-build">Build</div>
+        <div class="value">4–6 weeks<br>Add quality work<br><span class="tag tag-easy">Easy</span> <span class="tag tag-tempo">Tempo</span> <span class="tag tag-stride">Strides</span> <span class="tag tag-long">Long</span></div>
+      </div>
+      <div class="flow-step">
+        <div class="label c-peak">Peak</div>
+        <div class="value">2–3 weeks<br>Race-specific intensity<br><span class="tag tag-tempo">Tempo</span> <span class="tag tag-int">Intervals</span> <span class="tag tag-sim">Race Sim</span></div>
+      </div>
+      <div class="flow-step">
+        <div class="label c-taper">Taper</div>
+        <div class="value">1–2 weeks<br>Volume −30%<br><span class="tag tag-easy">Easy</span> <span class="tag tag-tempo">Tempo 80%</span></div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>Cardio Health</strong> skips Peak &amp; Taper entirely. After BUILD, it can enter <strong>EVERGREEN</strong> — a perpetual 4-week micro-cycle: A&nbsp;Tempo → B&nbsp;Strides → C&nbsp;Intervals → D&nbsp;Recovery. Wraps forever.
+    </div>
+
+    <!-- Recovery cadence -->
+    <h3 style="font-size:14px;font-weight:600;color:#F0F0F5;margin:20px 0 8px;">Recovery week cadence</h3>
+    <p style="font-size:12px;color:#8888A0;margin-bottom:10px;">Every 3rd week of a phase is recovery (volume × 0.65). Cadence can shift with tuning direction.</p>
+    <div class="recovery-bar">
+      <div class="week week-normal">Wk 1</div>
+      <div class="week week-normal">Wk 2</div>
+      <div class="week week-recovery">Wk 3 ↓</div>
+      <div class="week week-normal">Wk 4</div>
+      <div class="week week-normal">Wk 5</div>
+      <div class="week week-recovery">Wk 6 ↓</div>
+    </div>
+    <p style="font-size:11px;color:#6B6B73;margin-top:4px;">↓ = 65% volume. Tuning: EASE_BACK every 2 wks · HOLD every 3 wks · PUSH_HARDER every 4 wks.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══ 3 — TIERS ═══ -->
+  <div class="section">
+    <div class="section-label">Progression</div>
+    <div class="section-title">Tier system — unlocking harder sessions</div>
+
+    <div class="grid-3">
+      <div class="card">
+        <h3><span class="tier-badge tier-0">T0</span> Beginner</h3>
+        <p style="font-size:12px;color:#8888A0;margin-bottom:10px;">Easy + Long only. No quality sessions in any phase.</p>
+        <div class="tag tag-easy">Easy</div> <div class="tag tag-long">Long</div>
+      </div>
+      <div class="card">
+        <h3><span class="tier-badge tier-1">T1</span> Intermediate</h3>
+        <p style="font-size:12px;color:#8888A0;margin-bottom:10px;">Tempo unlocked in BUILD. 1 quality session per week.</p>
+        <div class="tag tag-easy">Easy</div> <div class="tag tag-tempo">Tempo</div> <div class="tag tag-long">Long</div>
+      </div>
+      <div class="card">
+        <h3><span class="tier-badge tier-2">T2</span> Advanced</h3>
+        <p style="font-size:12px;color:#8888A0;margin-bottom:10px;">Intervals, Strides, Race Sim. Up to 2 quality sessions.</p>
+        <div class="tag tag-easy">Easy</div> <div class="tag tag-tempo">Tempo</div> <div class="tag tag-int">Intervals</div> <div class="tag tag-stride">Strides</div> <div class="tag tag-sim">Race Sim</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;color:#F0F0F5;margin:24px 0 12px;">How you tier up</h3>
+    <div class="card">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Requirement</th><th>Detail</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="accent">CTL exceeds tier ceiling</td>
+            <td>Chronic Training Load rises above the upper bound for your current tier (goal-dependent thresholds)</td>
+          </tr>
+          <tr>
+            <td class="accent">≥ 9 sessions completed</td>
+            <td>Minimum volume of training data before the engine will consider promotion</td>
+          </tr>
+          <tr>
+            <td class="accent">≥ 3 consecutive weeks on track</td>
+            <td>Must show consistency — sporadic runs don't trigger tier-up</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;color:#F0F0F5;margin:24px 0 12px;">CTL tier thresholds by goal</h3>
+    <div class="card">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Goal</th><th style="text-align:center;">T0 range</th><th style="text-align:center;">T1 range</th><th style="text-align:center;">T2 entry</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="accent">Cardio Health</td><td style="text-align:center;">0 – 30</td><td style="text-align:center;">30 – 55</td><td style="text-align:center;">55+</td></tr>
+          <tr><td class="accent">5K / 10K</td><td style="text-align:center;">0 – 35</td><td style="text-align:center;">35 – 65</td><td style="text-align:center;">65+</td></tr>
+          <tr><td class="accent">Half Marathon</td><td style="text-align:center;">0 – 45</td><td style="text-align:center;">45 – 75</td><td style="text-align:center;">75+</td></tr>
+          <tr><td class="accent">Marathon</td><td style="text-align:center;">0 – 55</td><td style="text-align:center;">55 – 90</td><td style="text-align:center;">90+</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══ 4 — SESSION TYPE DETERMINATION ═══ -->
+  <div class="section">
+    <div class="section-label">Session Selection</div>
+    <div class="section-title">What decides each session's type?</div>
+
+    <div class="card">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Phase</th><th>Tier 0</th><th>Tier 1</th><th>Tier 2+</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="c-base" style="font-weight:700;">BASE</span></td>
+            <td>Easy + Long</td>
+            <td>Easy + Long</td>
+            <td>Easy + Long</td>
+          </tr>
+          <tr>
+            <td><span class="c-build" style="font-weight:700;">BUILD</span></td>
+            <td>Easy + Long</td>
+            <td>Easy + <strong style="color:#FBBF24">Tempo</strong> + Long</td>
+            <td>Easy + <strong style="color:#FBBF24">Tempo</strong> + <strong style="color:#67E8F9">Strides</strong>* + Long</td>
+          </tr>
+          <tr>
+            <td><span class="c-peak" style="font-weight:700;">PEAK</span></td>
+            <td>Easy + Long</td>
+            <td>Easy + <strong style="color:#FBBF24">Tempo</strong> + Long</td>
+            <td>Easy + <strong style="color:#FF7A85">Intervals</strong> + <strong style="color:#FBBF24">Tempo</strong> + Long</td>
+          </tr>
+          <tr>
+            <td><span class="c-taper" style="font-weight:700;">TAPER</span></td>
+            <td>Easy only</td>
+            <td>Easy + Tempo (80%)</td>
+            <td>Easy + Tempo (80%)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:#6B6B73;margin-top:10px;">* Strides require ≥ 4 runs/week. Race Sim appears in PEAK for T2+ with a race goal.</p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══ 5 — HR TARGETS ═══ -->
+  <div class="section">
+    <div class="section-label">Intensity</div>
+    <div class="section-title">Heart rate targets per session type</div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3><span class="icon bg-base">🫀</span> Easy / Zone 2</h3>
+        <div style="font-size:28px;font-weight:800;color:#22C55E;">68%</div>
+        <div style="font-size:11px;color:#6B6B73;">of HRmax · ±5 bpm buffer</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon bg-build">🔥</span> Aerobic Tempo</h3>
+        <div style="font-size:28px;font-weight:800;color:#F59E0B;">84%</div>
+        <div style="font-size:11px;color:#6B6B73;">of HRmax · ±4 bpm buffer</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon bg-build">⚡</span> Lactate Threshold</h3>
+        <div style="font-size:28px;font-weight:800;color:#FBBF24;">90%</div>
+        <div style="font-size:11px;color:#6B6B73;">of HRmax · ±3 bpm buffer</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon bg-peak">🚀</span> Intervals (work)</h3>
+        <div style="font-size:28px;font-weight:800;color:#FF4D5A;">92%</div>
+        <div style="font-size:11px;color:#6B6B73;">of HRmax · recovery at 62–65%</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon" style="background:rgba(139,92,246,0.15);">⛰️</span> Hill Repeats</h3>
+        <div style="font-size:28px;font-weight:800;color:#8B5CF6;">87%</div>
+        <div style="font-size:11px;color:#6B6B73;">of HRmax climb · 63% recovery</div>
+      </div>
+      <div class="card">
+        <h3><span class="icon bg-ever">🏁</span> Race Sim (HM)</h3>
+        <div style="font-size:28px;font-weight:800;color:#00E5FF;">72→85%</div>
+        <div style="font-size:11px;color:#6B6B73;">progressive build across distance</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══ 6 — DURATION SCALING ═══ -->
+  <div class="section">
+    <div class="section-label">Duration</div>
+    <div class="section-title">How long is each session?</div>
+    <p style="font-size:13px;color:#8888A0;margin-bottom:16px;">You set a base easy-run length and runs per week. The engine scales everything from there using Daniels' Running Formula percentages.</p>
+
+    <div class="card">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Session type</th><th>% of weekly total</th><th>Clamp range</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="accent">Easy</td><td>Remainder after quality allocation</td><td>—</td></tr>
+          <tr><td class="accent">Long Run</td><td>easy × 1.25–1.5 (by frequency)</td><td>max 150 min</td></tr>
+          <tr><td class="accent">Tempo</td><td>10% of weekly total</td><td>15 – 40 min</td></tr>
+          <tr><td class="accent">Interval</td><td>8% of weekly total</td><td>12 – 35 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;color:#F0F0F5;margin:20px 0 10px;">Example: 3 runs/week × 30 min easy</h3>
+    <div class="flow">
+      <div class="flow-step">
+        <div class="label" style="color:#22C55E;">Easy × 2</div>
+        <div class="value">22 min each</div>
+      </div>
+      <div class="flow-step">
+        <div class="label" style="color:#4D61FF;">Long</div>
+        <div class="value">45 min</div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#6B6B73;margin-top:4px;">Total weekly volume = 89 min. Long run gets 1.5× multiplier at 3 runs/week.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══ 7 — LIVE TUNING ═══ -->
+  <div class="section">
+    <div class="section-label">Real-Time Adaptation</div>
+    <div class="section-title">Fitness signals tune your plan week-to-week</div>
+    <p style="font-size:13px;color:#8888A0;margin-bottom:16px;">After each workout, the engine re-evaluates three metrics to decide whether to adjust volume.</p>
+
+    <div class="grid-3">
+      <div class="card" style="text-align:center;">
+        <div style="font-size:11px;font-weight:700;color:#6B6B73;letter-spacing:1px;margin-bottom:6px;">TSB ≤ −25</div>
+        <div style="font-size:20px;font-weight:800;color:#F59E0B;">Ease Back</div>
+        <div style="font-size:12px;color:#8888A0;margin-top:6px;">Volume × 0.90<br>Recovery every 2 weeks</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:11px;font-weight:700;color:#6B6B73;letter-spacing:1px;margin-bottom:6px;">Normal range</div>
+        <div style="font-size:20px;font-weight:800;color:#22C55E;">Hold</div>
+        <div style="font-size:12px;color:#8888A0;margin-top:6px;">Volume × 1.00<br>Recovery every 3 weeks</div>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div style="font-size:11px;font-weight:700;color:#6B6B73;letter-spacing:1px;margin-bottom:6px;">TSB > 5 &amp; EF ↑</div>
+        <div style="font-size:20px;font-weight:800;color:#FF4D5A;">Push Harder</div>
+        <div style="font-size:12px;color:#8888A0;margin-top:6px;">Volume × 1.05<br>Recovery every 4 weeks</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>TSB</strong> = Training Stress Balance (CTL − ATL). Negative = fatigued, positive = fresh.<br>
+      <strong>EF trend</strong> = Efficiency Factor slope over last 42 days. Rising EF = getting fitter at the same effort.<br>
+      <strong>CTL</strong> decays with τ=42 days. <strong>ATL</strong> decays with τ=7 days.
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══ 8 — GAP RECOVERY ═══ -->
+  <div class="section">
+    <div class="section-label">Missed Sessions</div>
+    <div class="section-title">What happens when you stop running?</div>
+
+    <div class="card">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Days off</th><th>Strategy</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="accent">0 – 7</td><td style="color:#22C55E;">On Track</td><td>Continue normally</td></tr>
+          <tr><td class="accent">8 – 14</td><td style="color:#FBBF24;">Short Break</td><td>Insert easy return session</td></tr>
+          <tr><td class="accent">15 – 28</td><td style="color:#F59E0B;">Meaningful Break</td><td>Rewind 1 week + return session</td></tr>
+          <tr><td class="accent">29 – 60</td><td style="color:#FF7A85;">Extended Break</td><td>Rewind to phase start</td></tr>
+          <tr><td class="accent">61 – 120</td><td style="color:#FF4D5A;">Long Absence</td><td>Reset to BASE phase</td></tr>
+          <tr><td class="accent">120+</td><td style="color:#8B5CF6;">Full Reset</td><td>Back to BASE + Discovery Run</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ FOOTER ═══ -->
+  <div style="text-align:center;margin-top:48px;padding:24px 0;border-top:1px solid rgba(255,255,255,0.05);">
+    <p style="font-size:11px;color:#52525B;">Cardea Bootcamp Engine — adaptive scheduling overview</p>
+  </div>
+
+</div>
+</body>
+</html>

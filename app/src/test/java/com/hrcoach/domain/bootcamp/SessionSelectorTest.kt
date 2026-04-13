@@ -114,6 +114,35 @@ class SessionSelectorTest {
     }
 
     @Test
+    fun `build phase with three runs injects strides for tier two`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 3,
+            targetMinutes = 35,
+            tierIndex = 2
+        )
+        assertTrue("3 runs/week T2 BUILD should include strides",
+            sessions.any { it.type == SessionType.STRIDES })
+        assertEquals("Total sessions should equal runsPerWeek", 3, sessions.size)
+    }
+
+    @Test
+    fun `build phase with four runs still includes strides and easy for tier two`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 35,
+            tierIndex = 2
+        )
+        assertTrue(sessions.any { it.type == SessionType.STRIDES })
+        assertTrue("4 runs/week should still have at least 1 EASY",
+            sessions.any { it.type == SessionType.EASY })
+        assertEquals(4, sessions.size)
+    }
+
+    @Test
     fun `lactate threshold preset uses threshold display label`() {
         assertEquals("Threshold (Z4)", SessionType.displayLabelForPreset("lactate_threshold"))
         assertEquals("Tempo (Z3)", SessionType.displayLabelForPreset("aerobic_tempo"))
@@ -431,6 +460,53 @@ class SessionSelectorTest {
     }
 
     // ── Interval variety tests ──────────────────────────
+
+    // ── Tier transition window tests ──────────────────────────
+
+    @Test
+    fun `BUILD tempo uses intro preset during transition window`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 35,
+            tierIndex = 1,
+            absoluteWeek = 5,
+            lastTierChangeWeek = 5 // same week = in transition
+        )
+        val tempo = sessions.first { it.type == SessionType.TEMPO }
+        assertEquals("aerobic_tempo_intro", tempo.presetId)
+    }
+
+    @Test
+    fun `BUILD tempo uses full preset after transition window ends`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 35,
+            tierIndex = 1,
+            absoluteWeek = 8,
+            lastTierChangeWeek = 5 // 3 weeks ago = outside window
+        )
+        val tempo = sessions.first { it.type == SessionType.TEMPO }
+        assertEquals("aerobic_tempo", tempo.presetId)
+    }
+
+    @Test
+    fun `BUILD tempo uses full preset when no tier change recorded`() {
+        val sessions = SessionSelector.weekSessions(
+            phase = TrainingPhase.BUILD,
+            goal = BootcampGoal.RACE_5K,
+            runsPerWeek = 4,
+            targetMinutes = 35,
+            tierIndex = 1,
+            absoluteWeek = 5,
+            lastTierChangeWeek = null // existing enrollee, no data
+        )
+        val tempo = sessions.first { it.type == SessionType.TEMPO }
+        assertEquals("aerobic_tempo", tempo.presetId)
+    }
 
     @Test
     fun `PEAK interval preset alternates between norwegian and hills for race goals`() {

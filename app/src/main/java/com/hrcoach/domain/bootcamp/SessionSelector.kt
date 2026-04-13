@@ -16,7 +16,8 @@ object SessionSelector {
         tuningDirection: TuningDirection = TuningDirection.HOLD,
         weekInPhase: Int = 0,
         absoluteWeek: Int = 0,
-        isRecoveryWeek: Boolean = false
+        isRecoveryWeek: Boolean = false,
+        lastTierChangeWeek: Int? = null
     ): List<PlannedSession> {
         val tuningFactor = when (tuningDirection) {
             TuningDirection.PUSH_HARDER -> 1.05f
@@ -37,7 +38,7 @@ object SessionSelector {
             isRecoveryWeek && tierIndex <= 1 -> baseAerobicWeek(phase, goal, runsPerWeek, effectiveMinutes, durations)
             isRecoveryWeek && tierIndex >= 2 -> recoveryPeriodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex)
             tierIndex <= 0 -> baseAerobicWeek(phase, goal, runsPerWeek, effectiveMinutes, durations)
-            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex, absoluteWeek)
+            else -> periodizedWeek(phase, goal, runsPerWeek, effectiveMinutes, durations, tierIndex, absoluteWeek, lastTierChangeWeek)
         }
     }
 
@@ -68,10 +69,15 @@ object SessionSelector {
         minutes: Int,
         durations: DurationScaler.WeekDurations,
         tierIndex: Int,
-        absoluteWeek: Int = 0
+        absoluteWeek: Int = 0,
+        lastTierChangeWeek: Int? = null
     ): List<PlannedSession> {
+        // Transition window: within 2 weeks of a tier promotion, use intro tempo preset
+        // to soften the intensity jump (68% → 76% → 84% over 2 weeks instead of 68% → 84%).
+        val inTransitionWindow = lastTierChangeWeek != null &&
+            (absoluteWeek - lastTierChangeWeek) <= 1
         val sessions = mutableListOf<PlannedSession>()
-        val includeStrides = (phase == TrainingPhase.BUILD && tierIndex >= 2 && runsPerWeek >= 4) ||
+        val includeStrides = (phase == TrainingPhase.BUILD && tierIndex >= 2 && runsPerWeek >= 3) ||
             (phase == TrainingPhase.BASE && tierIndex >= 1 && goal != BootcampGoal.CARDIO_HEALTH)
 
         val qualitySessions = when (phase) {
@@ -84,12 +90,15 @@ object SessionSelector {
 
         val hasLong = runsPerWeek >= 3 && phase != TrainingPhase.TAPER
         val longMinutes = durations.longMinutes.coerceAtMost(goal.maxLongRunMinutes)
+        // When strides are included, they provide easy-effort recovery between efforts,
+        // so they can substitute for a dedicated easy run at low run counts (e.g., 3 runs/week).
+        val easyFloor = if (includeStrides) 0 else 1
         val easyCount = (
             runsPerWeek -
                 qualitySessions -
                 (if (hasLong) 1 else 0) -
                 (if (includeStrides) 1 else 0)
-            ).coerceAtLeast(1)
+            ).coerceAtLeast(easyFloor)
 
         // Easy runs
         repeat(easyCount) {
@@ -110,7 +119,8 @@ object SessionSelector {
                 }
             }
             TrainingPhase.BUILD -> {
-                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+                val tempoPreset = if (inTransitionWindow) "aerobic_tempo_intro" else "aerobic_tempo"
+                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, tempoPreset))
                 if (includeStrides) {
                     val stridesPreset = if (tierIndex >= 3) {
                         SessionPresetArray.stridesTier3().presetAt(0)
@@ -162,7 +172,8 @@ object SessionSelector {
                 }
             }
             TrainingPhase.TAPER -> {
-                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, "aerobic_tempo"))
+                val taperPreset = if (inTransitionWindow) "aerobic_tempo_intro" else "aerobic_tempo"
+                sessions.add(PlannedSession(SessionType.TEMPO, durations.tempoMinutes, taperPreset))
             }
             TrainingPhase.EVERGREEN -> {
                 // periodizedWeek is not called for EVERGREEN (handled by evergreenWeek above)

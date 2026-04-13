@@ -59,7 +59,8 @@ data class PhaseEngine(
     fun planCurrentWeek(
         tierIndex: Int = 0,
         tuningDirection: com.hrcoach.domain.engine.TuningDirection = com.hrcoach.domain.engine.TuningDirection.HOLD,
-        currentPresetIndices: Map<String, Int> = emptyMap()
+        currentPresetIndices: Map<String, Int> = emptyMap(),
+        lastTierChangeWeek: Int? = null
     ): List<PlannedSession> {
         val effectiveMinutes = if (isRecoveryWeek(tuningDirection)) {
             (targetMinutes * 0.65f).toInt()
@@ -75,7 +76,8 @@ data class PhaseEngine(
             tuningDirection = tuningDirection,
             weekInPhase = weekInPhase,
             absoluteWeek = absoluteWeek,
-            isRecoveryWeek = isRecoveryWeek(tuningDirection)
+            isRecoveryWeek = isRecoveryWeek(tuningDirection),
+            lastTierChangeWeek = lastTierChangeWeek
         )
     }
 

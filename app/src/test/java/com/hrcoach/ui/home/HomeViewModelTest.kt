@@ -103,7 +103,7 @@ class HomeViewModelTest {
         val nextSession = BootcampSessionEntity(
             id = 10L,
             enrollmentId = 1L,
-            weekNumber = 1,
+            weekNumber = 2,
             dayOfWeek = 2,
             sessionType = "EASY_RUN",
             targetMinutes = 30,

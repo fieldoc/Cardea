@@ -17,6 +17,8 @@ import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.bootcamp.firstPreferredDayAfterMs
 import com.hrcoach.domain.bootcamp.FitnessEvaluator
 import com.hrcoach.domain.bootcamp.GapAdvisor
+import com.hrcoach.domain.bootcamp.GapStrategy
+import com.hrcoach.domain.engine.FitnessLoadCalculator
 import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.CoachingCopyGenerator
@@ -131,18 +133,48 @@ class BootcampViewModel @Inject constructor(
         val daysSinceLastRun = computeDaysSinceLastRun(enrollment, lastSession)
         val gapStrategy = GapAdvisor.assess(daysSinceLastRun)
         val gapAction = GapAdvisor.action(gapStrategy, enrollment.currentPhaseIndex, enrollment.currentWeekInPhase)
-        if (gapAction.phaseIndex != enrollment.currentPhaseIndex || gapAction.weekInPhase != enrollment.currentWeekInPhase) {
-            val targetWeek = PhaseEngine(
-                goal = BootcampGoal.valueOf(enrollment.goalType),
-                phaseIndex = gapAction.phaseIndex,
-                weekInPhase = gapAction.weekInPhase,
-                runsPerWeek = enrollment.runsPerWeek,
-                targetMinutes = enrollment.targetMinutesPerRun
-            ).absoluteWeek
-            bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
+
+        var updatedTierIndex = enrollment.tierIndex
+
+        // CTL-aware tier adjustment for meaningful breaks and worse:
+        // After a significant break, CTL decays and the runner's current tier may
+        // no longer match their fitness. Auto-demote to prevent overly-hard sessions.
+        if (gapStrategy >= GapStrategy.MEANINGFUL_BREAK && enrollment.tierIndex > TierCtlRanges.minTierIndex) {
+            val profile = adaptiveProfileRepository.getProfile()
+            val projectedLoad = FitnessLoadCalculator.updateLoads(
+                currentCtl = profile.ctl,
+                currentAtl = profile.atl,
+                trimpScore = 0f,
+                daysSinceLast = daysSinceLastRun
+            )
+            val goal = BootcampGoal.valueOf(enrollment.goalType)
+            val suggestedTier = TierCtlRanges.suggestedTierForCtl(goal, projectedLoad.ctl)
+            if (suggestedTier < enrollment.tierIndex) {
+                updatedTierIndex = suggestedTier
+                Log.i("BootcampVM", "Gap recovery: CTL decayed to ${projectedLoad.ctl}, " +
+                    "tier adjusted ${enrollment.tierIndex} -> $suggestedTier")
+            }
+        }
+
+        val phaseChanged = gapAction.phaseIndex != enrollment.currentPhaseIndex ||
+            gapAction.weekInPhase != enrollment.currentWeekInPhase
+        val tierChanged = updatedTierIndex != enrollment.tierIndex
+
+        if (phaseChanged || tierChanged) {
+            if (phaseChanged) {
+                val targetWeek = PhaseEngine(
+                    goal = BootcampGoal.valueOf(enrollment.goalType),
+                    phaseIndex = gapAction.phaseIndex,
+                    weekInPhase = gapAction.weekInPhase,
+                    runsPerWeek = enrollment.runsPerWeek,
+                    targetMinutes = enrollment.targetMinutesPerRun
+                ).absoluteWeek
+                bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
+            }
             val gapUpdatedEnrollment = enrollment.copy(
                 currentPhaseIndex = gapAction.phaseIndex,
-                currentWeekInPhase = gapAction.weekInPhase
+                currentWeekInPhase = gapAction.weekInPhase,
+                tierIndex = updatedTierIndex
             )
             bootcampRepository.updateEnrollment(gapUpdatedEnrollment)
             runCatching { cloudBackupManager.syncBootcampEnrollment(gapUpdatedEnrollment) }
@@ -678,11 +710,20 @@ class BootcampViewModel @Inject constructor(
                 } else enrollment.targetFinishingTimeMinutes
             } else enrollment.targetFinishingTimeMinutes
 
+            // Track when the tier changed so SessionSelector can use a transition preset
+            val engine = PhaseEngine(
+                goal = goal,
+                phaseIndex = enrollment.currentPhaseIndex,
+                weekInPhase = enrollment.currentWeekInPhase,
+                runsPerWeek = enrollment.runsPerWeek,
+                targetMinutes = enrollment.targetMinutesPerRun
+            )
             val updatedEnrollment = enrollment.copy(
                 tierIndex = updatedTierIndex,
                 targetFinishingTimeMinutes = updatedFinishingTime,
                 tierPromptDismissCount = 0,
-                tierPromptSnoozedUntilMs = 0L
+                tierPromptSnoozedUntilMs = 0L,
+                lastTierChangeWeek = if (direction == TierPromptDirection.UP) engine.absoluteWeek else enrollment.lastTierChangeWeek
             )
             bootcampRepository.updateEnrollment(updatedEnrollment)
             runCatching { cloudBackupManager.syncBootcampEnrollment(updatedEnrollment) }
@@ -857,7 +898,8 @@ class BootcampViewModel @Inject constructor(
         val plannedSessions = engine.planCurrentWeek(
             tierIndex = enrollment.tierIndex,
             tuningDirection = tuningDirection,
-            currentPresetIndices = currentPresetIndices
+            currentPresetIndices = currentPresetIndices,
+            lastTierChangeWeek = enrollment.lastTierChangeWeek
         )
         if (plannedSessions.isEmpty()) return emptyList()
 

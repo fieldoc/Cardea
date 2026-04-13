@@ -21,7 +21,9 @@ data class BootcampEnrollmentEntity(
     val tierPromptDismissCount: Int = 0,
     val illnessPromptSnoozedUntilMs: Long = 0,
     val pausedAtMs: Long = 0,
-    val targetFinishingTimeMinutes: Int? = null
+    val targetFinishingTimeMinutes: Int? = null,
+    /** Absolute week number when tier last changed (for transition-week logic). Null = no recent change. */
+    val lastTierChangeWeek: Int? = null
 ) {
     companion object {
         const val STATUS_ACTIVE = "ACTIVE"

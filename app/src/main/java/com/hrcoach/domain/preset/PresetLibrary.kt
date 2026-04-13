@@ -12,7 +12,7 @@ internal fun karvonen(maxHr: Int, restHr: Int, pct: Float): Int =
 object PresetLibrary {
 
     val ALL: List<WorkoutPreset> = listOf(
-        zone2Base(), zone2WithStrides(), aeroTempo(), lactateThreshold(),
+        zone2Base(), zone2WithStrides(), aeroTempoIntro(), aeroTempo(), lactateThreshold(),
         norwegian4x4(), hiit3030(), hillRepeats(),
         halfMarathonPrep(), marathonPrep(),
         strides20s(), raceSim5k(), raceSim10k()
@@ -52,6 +52,36 @@ object PresetLibrary {
                 presetId = "zone2_with_strides",
                 sessionLabel = "Easy + Strides",
                 guidanceTag = "strides"
+            )
+        }
+    )
+
+    /**
+     * Transition tempo for runners who just promoted from T0 to T1.
+     * Bridges the gap between easy (68% HR reserve) and full tempo (84%).
+     * 76% HR reserve, shorter 12-min main block (vs 20 for full tempo).
+     */
+    private fun aeroTempoIntro() = WorkoutPreset(
+        id = "aerobic_tempo_intro",
+        name = "Intro Tempo",
+        subtitle = "Gentle threshold introduction",
+        description = "10-min warm-up \u2192 12-min tempo at 76% HR reserve \u2192 5-min cool-down.",
+        category = PresetCategory.THRESHOLD,
+        durationLabel = "~27 min",
+        intensityLabel = "Moderate",
+        buildConfig = { maxHr, restHr ->
+            val tempoHr = karvonen(maxHr, restHr, 0.76f)
+            val warmupHr = karvonen(maxHr, restHr, 0.65f)
+            val cooldownHr = karvonen(maxHr, restHr, 0.60f)
+            WorkoutConfig(
+                mode = WorkoutMode.DISTANCE_PROFILE,
+                segments = listOf(
+                    HrSegment(durationSeconds = 600, targetHr = warmupHr, label = "Warm-up"),
+                    HrSegment(durationSeconds = 720, targetHr = tempoHr, label = "Tempo"),
+                    HrSegment(durationSeconds = 300, targetHr = cooldownHr, label = "Cool-down")
+                ),
+                bufferBpm = 5,
+                presetId = "aerobic_tempo_intro"
             )
         }
     )

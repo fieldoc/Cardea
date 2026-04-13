@@ -41,6 +41,26 @@ object TierCtlRanges {
         return ctl >= range.first && ctl <= range.last
     }
 
+    /**
+     * Returns the highest tier whose lower bound is <= [ctl].
+     * At exact boundaries (e.g., CTL=35 for RACE_5K where T0=0..35, T1=35..65),
+     * returns the HIGHER tier — runners at the boundary keep their tier.
+     */
+    fun suggestedTierForCtl(goal: BootcampGoal, ctl: Float): Int {
+        val ranges = when (goal) {
+            BootcampGoal.CARDIO_HEALTH -> cardioRanges
+            BootcampGoal.RACE_5K -> raceRanges
+            BootcampGoal.RACE_10K -> raceRanges
+            BootcampGoal.HALF_MARATHON -> halfRanges
+            BootcampGoal.MARATHON -> marathonRanges
+        }
+        // Walk from highest tier down; return the first whose lower bound <= ctl
+        for (tier in ranges.indices.reversed()) {
+            if (ctl >= ranges[tier].first) return tier
+        }
+        return minTierIndex
+    }
+
     fun snoozeWeeksForDismissCount(dismissCount: Int): Int {
         return when (dismissCount) {
             1 -> 2

@@ -94,7 +94,8 @@ class BootcampSessionCompleter @Inject constructor(
                 preferredDays = enrollment.preferredDays,
                 tierIndex = enrollment.tierIndex,
                 tuningDirection = tuningDirection,
-                completedWeekSessions = simulatedWeek
+                completedWeekSessions = simulatedWeek,
+                lastTierChangeWeek = enrollment.lastTierChangeWeek
             )
             bootcampRepository.completeSessionAndAdvanceWeek(
                 completedSession = completedSession,
@@ -132,7 +133,8 @@ class BootcampSessionCompleter @Inject constructor(
         preferredDays: List<DayPreference>,
         tierIndex: Int,
         tuningDirection: TuningDirection,
-        completedWeekSessions: List<BootcampSessionEntity> = emptyList()
+        completedWeekSessions: List<BootcampSessionEntity> = emptyList(),
+        lastTierChangeWeek: Int? = null
     ): List<BootcampSessionEntity> {
         val currentPresetIndices = completedWeekSessions
             .filter { it.presetIndex != null }
@@ -145,7 +147,8 @@ class BootcampSessionCompleter @Inject constructor(
         val plannedSessions = nextEngine.planCurrentWeek(
             tierIndex = tierIndex,
             tuningDirection = tuningDirection,
-            currentPresetIndices = currentPresetIndices
+            currentPresetIndices = currentPresetIndices,
+            lastTierChangeWeek = lastTierChangeWeek
         )
         if (plannedSessions.isEmpty()) return emptyList()
 
