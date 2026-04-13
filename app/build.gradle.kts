@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.5.0: km/mi distance unit toggle in Account settings. All screens, pace formatting, chart labels, and voice coaching splits now respect your unit preference. Mile splits fire every mile (not every km with converted label). Home screen UX polish. E2E audit fixes."
+                releaseNotes = "v0.6.0: Cloud Backup & Restore. Link a Google account to back up workouts, bootcamp progress, adaptive model, settings, and achievements to Firebase. Auto-restore on new device sign-in. Google Sign-In step in onboarding. Sign-out and manual restore with confirmation in Account screen. Atomic restore with rollback on failure."
             }
         }
     }
