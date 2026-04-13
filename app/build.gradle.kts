@@ -17,7 +17,7 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
+        versionCode = 7
         versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.6.0: Cloud Backup & Restore. Link a Google account to back up workouts, bootcamp progress, adaptive model, settings, and achievements to Firebase. Auto-restore on new device sign-in. Google Sign-In step in onboarding. Sign-out and manual restore with confirmation in Account screen. Atomic restore with rollback on failure."
+                releaseNotes = "v0.6.0 (patch): Fix home screen — bottom stats tile no longer clipped by nav bar."
             }
         }
     }
