@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.DirectionsWalk
@@ -193,6 +194,10 @@ fun PostRunSummaryScreen(
 
                         if (uiState.isHrrActive) {
                             HrrCooldownCard(endTimeMs = uiState.workoutEndTimeMs)
+                        }
+
+                        uiState.hrMaxDelta?.let { (oldMax, newMax) ->
+                            HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
                         }
 
                         uiState.bootcampProgressLabel
@@ -424,6 +429,45 @@ private fun HrrCooldownCard(endTimeMs: Long) {
                         trackColor = GlassBorder
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HrMaxUpdatedCard(
+    oldMax: Int,
+    newMax: Int
+) {
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.FavoriteBorder,
+                contentDescription = null,
+                tint = CardeaTheme.colors.textSecondary,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Max HR updated",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CardeaTheme.colors.textSecondary
+                )
+                Text(
+                    text = "$oldMax → $newMax bpm",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Cardea measured a new personal ceiling and adjusted your training zones.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textSecondary
+                )
             }
         }
     }

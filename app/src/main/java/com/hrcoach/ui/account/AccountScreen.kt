@@ -85,6 +85,9 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.OutlinedButton
 import com.hrcoach.ui.components.CardeaButton
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -239,6 +242,23 @@ fun AccountScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         GradientSaveButton(onClick = viewModel::saveMaxHr)
+                    }
+                    // Calibration source line — shown only when a value exists
+                    if (state.maxHr != null) {
+                        val calibratedAtMs = state.hrMaxCalibratedAtMs
+                        val calibrationLabel = if (state.hrMaxIsCalibrated && calibratedAtMs != null) {
+                            val dateStr = SimpleDateFormat("MMM d", Locale.getDefault())
+                                .format(Date(calibratedAtMs))
+                            "Auto-calibrated · $dateStr"
+                        } else {
+                            "Set manually"
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = calibrationLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = CardeaTheme.colors.textTertiary
+                        )
                     }
                 }
 

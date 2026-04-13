@@ -663,16 +663,23 @@ class WorkoutForegroundService : LifecycleService() {
 
                     // hrMax: only update if cadence lock was NOT suspected
                     val ageBasedFallback = userProfileRepository.getAge()?.let { 220 - it } ?: 180
+                    val previousHrMax = currentProfile.hrMax ?: ageBasedFallback
                     val newHrMax = HrCalibrator.detectNewHrMax(
-                        currentHrMax = currentProfile.hrMax ?: ageBasedFallback,
+                        currentHrMax = previousHrMax,
                         recentSamples = hrSessionSamples.toList(),
                         cadenceLockSuspected = cadenceLockSuspected
                     )
                     if (newHrMax != null) {
-                        currentProfile = currentProfile.copy(hrMax = newHrMax, hrMaxIsCalibrated = true)
+                        currentProfile = currentProfile.copy(
+                            hrMax = newHrMax,
+                            hrMaxIsCalibrated = true,
+                            hrMaxCalibratedAtMs = now
+                        )
                         if (!SimulationController.isActive) {
                             userProfileRepository.setMaxHr(newHrMax)
                         }
+                        // Surface the change to the post-run summary screen
+                        WorkoutState.update { it.copy(hrMaxUpdatedDelta = Pair(previousHrMax, newHrMax)) }
                     }
 
                     // Load track points once — shared by metrics calculation and hrRest calibration

@@ -55,6 +55,8 @@ data class PostRunSummaryUiState(
     val isHrrActive: Boolean = false,
     val workoutEndTimeMs: Long = 0L,
     val newAchievements: List<AchievementEntity> = emptyList(),
+    // Non-null when HRmax was auto-calibrated during this session: Pair(oldMax, newMax)
+    val hrMaxDelta: Pair<Int, Int>? = null,
 )
 
 @HiltViewModel
@@ -136,7 +138,15 @@ class PostRunSummaryViewModel @Inject constructor(
 
             // --- Side effects below run even if summary display failed ---
             if (fresh) {
-                // 2. Best-effort: complete bootcamp session
+                // 2a. Capture HRmax delta before any state is cleared — the service wrote this
+                //     at workout-end just before navigating here. Read once, then clear.
+                val hrMaxDelta = WorkoutState.snapshot.value.hrMaxUpdatedDelta
+                WorkoutState.clearHrMaxUpdatedDelta()
+                if (hrMaxDelta != null) {
+                    _uiState.value = _uiState.value.copy(hrMaxDelta = hrMaxDelta)
+                }
+
+                // 2b. Best-effort: complete bootcamp session
                 val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
                 if (pendingId != null) {
                     runCatching {

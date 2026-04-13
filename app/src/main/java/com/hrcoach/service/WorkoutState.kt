@@ -26,6 +26,9 @@ data class WorkoutSnapshot(
     val autoPauseEnabled: Boolean = true,
     val countdownSecondsRemaining: Int? = null,
     val elapsedSeconds: Long = 0L,         // service-computed, sim-clock-aware
+    // Populated at workout end if HrCalibrator detected a new max during this session.
+    // Pair(previousMax, newMax). Cleared on next workout start via reset().
+    val hrMaxUpdatedDelta: Pair<Int, Int>? = null,
 )
 
 object WorkoutState {
@@ -61,5 +64,9 @@ object WorkoutState {
 
     fun clearCompletedWorkoutId() {
         _snapshot.update { it.copy(completedWorkoutId = null) }
+    }
+
+    fun clearHrMaxUpdatedDelta() {
+        _snapshot.update { it.copy(hrMaxUpdatedDelta = null) }
     }
 }

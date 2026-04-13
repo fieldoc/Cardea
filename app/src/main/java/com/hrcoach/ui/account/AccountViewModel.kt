@@ -51,6 +51,8 @@ data class AccountUiState(
     val maxHrInput: String = "",
     val maxHrSaved: Boolean = false,
     val maxHrError: String? = null,
+    val hrMaxIsCalibrated: Boolean = false,
+    val hrMaxCalibratedAtMs: Long? = null,
     val autoPauseEnabled: Boolean = true,
     val achievements: List<AchievementEntity> = emptyList(),
     val partners: List<PartnerActivity> = emptyList(),
@@ -95,10 +97,12 @@ class AccountViewModel @Inject constructor(
     private val _workoutComplete   = MutableStateFlow(true)
     private val _inZoneConfirm     = MutableStateFlow(true)
 
-    private val _maxHr      = MutableStateFlow<Int?>(null)
-    private val _maxHrInput = MutableStateFlow("")
-    private val _maxHrSaved = MutableStateFlow(false)
-    private val _maxHrError = MutableStateFlow<String?>(null)
+    private val _maxHr              = MutableStateFlow<Int?>(null)
+    private val _maxHrInput         = MutableStateFlow("")
+    private val _maxHrSaved         = MutableStateFlow(false)
+    private val _maxHrError         = MutableStateFlow<String?>(null)
+    private val _hrMaxIsCalibrated  = MutableStateFlow(false)
+    private val _hrMaxCalibratedAtMs = MutableStateFlow<Long?>(null)
 
     private val _distanceUnit = MutableStateFlow(DistanceUnit.KM)
 
@@ -137,6 +141,9 @@ class AccountViewModel @Inject constructor(
         }
         _maxHr.value = userProfileRepo.getMaxHr()
         _maxHrInput.value = _maxHr.value?.toString() ?: ""
+        val adaptiveProfile = adaptiveProfileRepo.getProfile()
+        _hrMaxIsCalibrated.value = adaptiveProfile.hrMaxIsCalibrated
+        _hrMaxCalibratedAtMs.value = adaptiveProfile.hrMaxCalibratedAtMs
         _partnerNudgesEnabled.value = userProfileRepo.isPartnerNudgesEnabled()
         initFirebase()
         _isGoogleLinked.value = firebaseAuthManager.isGoogleLinked()
@@ -183,6 +190,10 @@ class AccountViewModel @Inject constructor(
             maxHrSaved = parts[2] as Boolean,
             maxHrError = parts[3] as String?
         )
+    }.combine(
+        combine(_hrMaxIsCalibrated, _hrMaxCalibratedAtMs) { calibrated, atMs -> calibrated to atMs }
+    ) { base, (calibrated, atMs) ->
+        base.copy(hrMaxIsCalibrated = calibrated, hrMaxCalibratedAtMs = atMs)
     }.combine(_autoPauseEnabled) { base, autoPause ->
         base.copy(autoPauseEnabled = autoPause)
     }.combine(_distanceUnit) { base, unit ->
