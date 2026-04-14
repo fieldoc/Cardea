@@ -38,6 +38,8 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
 
+**Worktree branch diverged behind main:** If `main` received commits while a worktree was open, `--ff-only` fails with "Diverging branches." Fix: in the worktree, `git rebase main` → then in the main repo, `git merge --ff-only <branch>`. Stash main WIP first if needed.
+
 **`git worktree remove` permission denied:** Fails if shell cwd is inside the worktree being removed. `cd` to the repo root or any outside directory first. Use `git worktree prune` to clean stale registrations (leaves directories on disk but removes git tracking).
 
 **Build requirements:** JDK 17, Android SDK with compileSdk 35. Google Maps API key goes in `local.properties` as `MAPS_API_KEY=...` (falls back to `local.defaults.properties` placeholder).
@@ -144,6 +146,8 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **BootcampEntryCard CTA** — ghost/outlined button (`glassBorder` border, `textSecondary` text, no fill). Demoted from `CardeaCtaGradient` 2026-04-11 so "Start Run" is the sole gradient primary CTA on the Training tab.
 - **Home screen gradient hierarchy** — `PulseHero` is the sole Tier 1 gradient element (gradient text headline). `GoalTile` is Tier 2 (glass border, white text). `BootcampTile` progress bar uses `ctaGradient`. `VolumeTile` progress bars use subtle inline gradient. Do not add gradient borders or gradient text to the stat tiles.
 - **Material3 button text color leak** — `OutlinedButton` and `TextButton` default text color to `colorScheme.primary` (= `GradientBlue`). Always pass explicit `color = CardeaTheme.colors.textPrimary` (or `textSecondary` for tertiary actions) to `Text()` inside these buttons. `CardeaButton` is exempt (custom composable).
+- **`OutlinedTextField` dark mode** — always set `focusedContainerColor`, `unfocusedContainerColor`, `focusedPlaceholderColor`, `unfocusedPlaceholderColor` in `OutlinedTextFieldDefaults.colors()`. Without them, placeholder and field boundary are nearly invisible on `#050505`. Use `Color(0x14FFFFFF)` focused / `Color(0x0AFFFFFF)` unfocused as container fill.
+- **`TabRow` vs `ScrollableTabRow`** — for ≤3 fixed tabs always use `TabRow` (equal distribution). `ScrollableTabRow` left-aligns. Custom indicator: `Box(Modifier.tabIndicatorOffset(tabPositions[selected]).height(2.dp).background(GradientPink))` — import `androidx.compose.material3.tabIndicatorOffset`.
 - **10sp minimum text size** — Established 2026-04-12. All user-facing text must be ≥ 10sp for WCAG readability on dark background. Known remaining violations: `HomeScreen.kt` (8sp line ~722, 9sp lines ~509/550/666/751), `BootcampSettingsScreen.kt` (9sp ~811), `CalendarHeatmap.kt` (9sp ~90), `MissionCard.kt` (9sp ~135).
 - **`CardeaButton` default `innerPadding` is `0.dp`** — when using wrap-content width (no `fillMaxWidth`), always pass `innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)` or similar to ensure ≥ 44dp touch target height.
 - **PulseHero gradient title is conditional** — gradient text via `SrcIn` only when `isToday = true`. Future sessions: title uses `textSecondary` (no gradient) for upcoming sessions, ECG alpha drops from 0.45f to 0.20f. Three dimming mechanisms: background alpha, text color switch, ECG alpha.
@@ -229,6 +233,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 
 - **Audit plan:** `docs/superpowers/plans/2026-04-11-error-handling-audit.md` — health scorecard + deferred items
 - **stopWorkout() essential/best-effort split** — essential ops (save workout, stop GPS/BLE) wrapped in individual `runCatching`; best-effort ops (metrics, achievements) grouped separately. Both log on failure.
+- **Firebase typed exceptions** — don't return `null` for multiple distinct failure conditions (e.g. expired invite vs not found). Throw specific subclasses (`ExpiredInviteException`, `PartnerLimitException`); catch individually in UI. Returning null collapses all failures into one ambiguous error message.
 - **All `collectAsState()` calls are now lifecycle-aware** — `collectAsStateWithLifecycle()` used everywhere.
 - **Deferred (not yet fixed):** Per-operation BLE permission checks (8 `@SuppressLint`), mid-session permission revocation, Room migration tests, full state restoration (`START_REDELIVER_INTENT`).
 
