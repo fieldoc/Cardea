@@ -103,7 +103,8 @@ data class PhaseEngine(
     fun lookaheadWeeks(
         count: Int,
         tierIndex: Int = 1,
-        tuningDirection: TuningDirection? = null
+        tuningDirection: TuningDirection? = null,
+        lastTierChangeWeek: Int? = null
     ): List<WeekLookahead> {
         if (count <= 0) return emptyList()
         val result = mutableListOf<WeekLookahead>()
@@ -120,7 +121,8 @@ data class PhaseEngine(
                     isRecovery = cursor.isRecoveryWeek(tuningDirection),
                     sessions = cursor.planCurrentWeek(
                         tierIndex = tierIndex,
-                        tuningDirection = tuningDirection ?: TuningDirection.HOLD
+                        tuningDirection = tuningDirection ?: TuningDirection.HOLD,
+                        lastTierChangeWeek = lastTierChangeWeek
                     )
                 )
             )

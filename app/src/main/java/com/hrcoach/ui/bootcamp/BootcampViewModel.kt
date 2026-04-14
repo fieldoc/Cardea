@@ -308,7 +308,8 @@ class BootcampViewModel @Inject constructor(
         val upcomingWeeks = engine.lookaheadWeeks(
             count = 2,
             tierIndex = enrollment.tierIndex,
-            tuningDirection = fitnessSignals.tuningDirection
+            tuningDirection = fitnessSignals.tuningDirection,
+            lastTierChangeWeek = enrollment.lastTierChangeWeek
         ).map { lookahead ->
             UpcomingWeekItem(
                 weekNumber = lookahead.weekNumber,

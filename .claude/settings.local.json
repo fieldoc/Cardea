@@ -23,7 +23,8 @@
       "Bash(wmic process:*)",
       "Bash(./gradlew.bat help:*)",
       "Bash(xargs cat:*)",
-      "Bash(powershell.exe:*)"
+      "Bash(powershell.exe:*)",
+      "Read(//tmp/**)"
     ]
   },
   "hooks": {

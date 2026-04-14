@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea Bootcamp — Adaptivity Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg:       #07070B;
+  --surf:     rgba(255,255,255,0.04);
+  --border:   rgba(255,255,255,0.08);
+  --text:     #E4E4F0;
+  --muted:    #7A7A8A;
+  --dim:      #44444E;
+  --base:     #22C55E;
+  --build:    #F59E0B;
+  --peak:     #FF4D5A;
+  --taper:    #8B5CF6;
+  --ever:     #00E5FF;
+  --blue:     #4D61FF;
+}
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 44px 24px 56px;
+}
+
+.page { max-width: 940px; margin: 0 auto; }
+
+/* ── HERO ── */
+.hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.hero-title {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  background: linear-gradient(120deg, #FF4D5A 0%, #FF2DA6 35%, #4D61FF 68%, #00E5FF 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 10px;
+}
+.hero-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.knobs {
+  display: inline-flex;
+  gap: 10px;
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 10px 18px;
+  align-items: center;
+}
+.knob-sep { color: var(--dim); font-size: 18px; font-weight: 300; }
+.knob-item { display: flex; align-items: center; gap: 8px; }
+.knob-stat {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+}
+.knob-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+  text-align: left;
+}
+
+/* ── UTILITY ── */
+.card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.sec-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 14px;
+}
+.tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t-easy   { background: rgba(34,197,94,0.15);  color: #4ADE80; }
+.t-tempo  { background: rgba(245,158,11,0.15); color: #FBBF24; }
+.t-int    { background: rgba(255,77,90,0.15);  color: #FF7A85; }
+.t-long   { background: rgba(77,97,255,0.18);  color: #818CF8; }
+.t-stride { background: rgba(0,229,255,0.15);  color: #67E8F9; }
+.t-sim    { background: rgba(139,92,246,0.15); color: #A78BFA; }
+
+/* ── PHASE PIPELINE ── */
+.phases-card { margin-bottom: 16px; }
+.pipeline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+  margin-bottom: 16px;
+}
+.phase-node {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  padding: 0 4px;
+}
+.phase-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin: 0 auto 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1.5px solid;
+  position: relative;
+  z-index: 2;
+}
+/* Connecting line between dots */
+.phase-node::after {
+  content: '';
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  right: -50%;
+  height: 1.5px;
+  background: rgba(255,255,255,0.1);
+  z-index: 1;
+}
+.phase-node.evergreen::after {
+  background: rgba(0,229,255,0.25);
+  border-top: 1.5px dashed rgba(0,229,255,0.35);
+  background: none;
+}
+.phase-node:last-child::after { display: none; }
+.phase-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 3px;
+}
+.phase-dur {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.phase-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
+
+/* Recovery cadence */
+.rec-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.rec-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  margin-right: 2px;
+}
+.rec-wk {
+  flex: 1;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+}
+.rw-n { background: rgba(34,197,94,0.1);  color: #4ADE80; }
+.rw-r { background: rgba(245,158,11,0.18); color: #FBBF24; }
+.rec-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+
+/* ── MIDDLE GRID ── */
+.mid-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.55fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* Tier ladder */
+.tier-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.tier-row:last-of-type { border-bottom: none; }
+.tier-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 90px;
+}
+.tb-0 { background: rgba(107,107,115,0.22); color: #9A9AAB; }
+.tb-1 { background: rgba(34,197,94,0.16);   color: #4ADE80; }
+.tb-2 { background: rgba(255,77,90,0.16);   color: #FF7A85; }
+.tier-tags { display: flex; flex-wrap: wrap; gap: 3px; }
+
+.tier-reqs {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.req-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #B0B0C0;
+  padding: 3px 0;
+}
+.req-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--blue);
+  flex-shrink: 0;
+}
+
+/* Session matrix */
+.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.matrix th {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 5px 8px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  font-weight: 500;
+}
+.matrix th:first-child { text-align: left; }
+.matrix td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  text-align: center;
+  vertical-align: middle;
+}
+.matrix td:first-child { text-align: left; font-weight: 700; font-size: 12px; }
+.matrix tr:last-child td { border-bottom: none; }
+.matrix-tags { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; }
+.matrix-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  margin-top: 10px;
+}
+
+/* ── BOTTOM GRID ── */
+.btm-grid {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 16px;
+}
+
+/* HR bar chart */
+.hr-rows { display: flex; flex-direction: column; gap: 7px; }
+.hr-row { display: flex; align-items: center; gap: 10px; }
+.hr-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  width: 108px;
+  flex-shrink: 0;
+}
+.hr-track {
+  flex: 1;
+  height: 17px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.hr-fill {
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+.hr-pct {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+.hr-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+  margin-top: 10px;
+}
+
+/* Right stack */
+.right-stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* Tuning states */
+.tuning-row { display: flex; gap: 7px; margin-bottom: 10px; }
+.tuning-state {
+  flex: 1;
+  text-align: center;
+  padding: 9px 5px;
+  border-radius: 9px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.tuning-trigger {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.tuning-name { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+.tuning-fx {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.tuning-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--dim);
+}
+
+/* Gap recovery bars */
+.gap-rows { display: flex; flex-direction: column; gap: 5px; }
+.gap-row { display: flex; align-items: center; gap: 8px; }
+.gap-days {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  width: 44px;
+  flex-shrink: 0;
+  text-align: right;
+}
+.gap-track {
+  flex: 1;
+  height: 18px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.gap-fill {
+  height: 100%;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+}
+.gap-label {
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center;
+  margin-top: 36px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--dim);
+}
+
+@media (max-width: 720px) {
+  .mid-grid, .btm-grid { grid-template-columns: 1fr; }
+  .pipeline { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .phase-node::after { display: none; }
+  .knobs { flex-direction: column; border-radius: 14px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══ HERO ═══ -->
+  <div class="hero">
+    <div class="eyebrow">Cardea · Bootcamp Engine</div>
+    <div class="hero-title">How Adaptivity Works</div>
+    <div class="hero-sub">Phase + Tier + Fitness signals → session type, intensity &amp; duration</div>
+    <div class="knobs">
+      <div class="knob-item">
+        <span class="knob-stat" style="color:#22C55E;">Type</span>
+        <span class="knob-desc">What kind<br>of run</span>
+      </div>
+      <span class="knob-sep">·</span>
+      <div class="knob-item">
+        <span class="knob-stat" style="color:#FF4D5A;">HR %</span>
+        <span class="knob-desc">How hard<br>to push</span>
+      </div>
+      <span class="knob-sep">·</span>
+      <div class="knob-item">
+        <span class="knob-stat" style="color:#4D61FF;">Min</span>
+        <span class="knob-desc">How long<br>to run</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PHASE PIPELINE ═══ -->
+  <div class="card phases-card">
+    <div class="sec-label">Macro Cycle — Training Phases</div>
+
+    <div class="pipeline">
+      <div class="phase-node">
+        <div class="phase-dot" style="background:rgba(34,197,94,0.15); color:#22C55E; border-color:rgba(34,197,94,0.45);">B</div>
+        <div class="phase-name" style="color:#22C55E;">BASE</div>
+        <div class="phase-dur">3–6 wks</div>
+        <div class="phase-tags">
+          <span class="tag t-easy">Easy</span>
+          <span class="tag t-long">Long</span>
+        </div>
+      </div>
+
+      <div class="phase-node">
+        <div class="phase-dot" style="background:rgba(245,158,11,0.15); color:#F59E0B; border-color:rgba(245,158,11,0.45);">B</div>
+        <div class="phase-name" style="color:#F59E0B;">BUILD</div>
+        <div class="phase-dur">4–6 wks</div>
+        <div class="phase-tags">
+          <span class="tag t-easy">Easy</span>
+          <span class="tag t-tempo">Tempo</span>
+          <span class="tag t-stride">Strides</span>
+          <span class="tag t-long">Long</span>
+        </div>
+      </div>
+
+      <div class="phase-node">
+        <div class="phase-dot" style="background:rgba(255,77,90,0.15); color:#FF4D5A; border-color:rgba(255,77,90,0.45);">P</div>
+        <div class="phase-name" style="color:#FF4D5A;">PEAK</div>
+        <div class="phase-dur">2–3 wks</div>
+        <div class="phase-tags">
+          <span class="tag t-tempo">Tempo</span>
+          <span class="tag t-int">Intervals</span>
+          <span class="tag t-sim">Race Sim</span>
+        </div>
+      </div>
+
+      <div class="phase-node">
+        <div class="phase-dot" style="background:rgba(139,92,246,0.15); color:#8B5CF6; border-color:rgba(139,92,246,0.45);">T</div>
+        <div class="phase-name" style="color:#8B5CF6;">TAPER</div>
+        <div class="phase-dur">1–2 wks</div>
+        <div class="phase-tags">
+          <span class="tag t-easy">Easy</span>
+          <span class="tag t-tempo">Tempo 80%</span>
+        </div>
+      </div>
+
+      <div class="phase-node evergreen">
+        <div class="phase-dot" style="background:rgba(0,229,255,0.1); color:#00E5FF; border-color:rgba(0,229,255,0.4); border-style:dashed;">∞</div>
+        <div class="phase-name" style="color:#00E5FF;">EVERGREEN</div>
+        <div class="phase-dur" style="color:#00E5FF; opacity:0.6;">Cardio Health</div>
+        <div class="phase-tags">
+          <span class="tag t-tempo">Tempo</span>
+          <span class="tag t-stride">Strides</span>
+          <span class="tag t-int">Intervals</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rec-row">
+      <span class="rec-label">Recovery cadence</span>
+      <div class="rec-wk rw-n">Wk 1</div>
+      <div class="rec-wk rw-n">Wk 2</div>
+      <div class="rec-wk rw-r">Wk 3 ↓</div>
+      <div class="rec-wk rw-n">Wk 4</div>
+      <div class="rec-wk rw-n">Wk 5</div>
+      <div class="rec-wk rw-r">Wk 6 ↓</div>
+      <span class="rec-note">65% vol · EASE_BACK=2w · HOLD=3w · PUSH_HARDER=4w</span>
+    </div>
+  </div>
+
+  <!-- ═══ MIDDLE: Tiers + Matrix ═══ -->
+  <div class="mid-grid">
+
+    <!-- Tier Ladder -->
+    <div class="card">
+      <div class="sec-label">Tier System</div>
+
+      <div class="tier-row">
+        <span class="tier-badge tb-2">T2  Advanced</span>
+        <div class="tier-tags">
+          <span class="tag t-easy">Easy</span>
+          <span class="tag t-tempo">Tempo</span>
+          <span class="tag t-int">Intervals</span>
+          <span class="tag t-stride">Strides</span>
+          <span class="tag t-sim">Race Sim</span>
+        </div>
+      </div>
+      <div class="tier-row">
+        <span class="tier-badge tb-1">T1  Intermediate</span>
+        <div class="tier-tags">
+          <span class="tag t-easy">Easy</span>
+          <span class="tag t-tempo">Tempo</span>
+          <span class="tag t-long">Long</span>
+        </div>
+      </div>
+      <div class="tier-row">
+        <span class="tier-badge tb-0">T0  Beginner</span>
+        <div class="tier-tags">
+          <span class="tag t-easy">Easy</span>
+          <span class="tag t-long">Long</span>
+        </div>
+      </div>
+
+      <div class="tier-reqs">
+        <div style="font-size:10px; color:var(--muted); margin-bottom:7px; font-family:'IBM Plex Mono',monospace;">Tier-up requires all 3:</div>
+        <div class="req-item"><span class="req-dot"></span>CTL exceeds tier ceiling</div>
+        <div class="req-item"><span class="req-dot"></span>≥ 9 sessions completed</div>
+        <div class="req-item"><span class="req-dot"></span>≥ 3 consecutive weeks on track</div>
+      </div>
+    </div>
+
+    <!-- Phase × Tier Matrix -->
+    <div class="card">
+      <div class="sec-label">Session Selection — Phase × Tier</div>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>Tier 0</th>
+            <th>Tier 1</th>
+            <th>Tier 2+</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#22C55E;">BASE</td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-long">Long</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-long">Long</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-long">Long</span></div></td>
+          </tr>
+          <tr>
+            <td style="color:#F59E0B;">BUILD</td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-long">Long</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-tempo">Tempo</span><span class="tag t-long">Long</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-tempo">Tempo</span><span class="tag t-stride">Strides</span><span class="tag t-long">Long</span></div></td>
+          </tr>
+          <tr>
+            <td style="color:#FF4D5A;">PEAK</td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-long">Long</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-tempo">Tempo</span><span class="tag t-long">Long</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-tempo">Tempo</span><span class="tag t-int">Intervals</span><span class="tag t-sim">Race Sim</span></div></td>
+          </tr>
+          <tr>
+            <td style="color:#8B5CF6;">TAPER</td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-tempo">Tempo</span></div></td>
+            <td><div class="matrix-tags"><span class="tag t-easy">Easy</span><span class="tag t-tempo">Tempo</span></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="matrix-note">Strides need ≥4 runs/wk · Race Sim: PEAK + T2+ + race goal</div>
+    </div>
+  </div>
+
+  <!-- ═══ BOTTOM: HR bars + Tuning + Gap ═══ -->
+  <div class="btm-grid">
+
+    <!-- HR Targets bar chart -->
+    <div class="card">
+      <div class="sec-label">HR Targets (% of HRmax)</div>
+      <div class="hr-rows">
+        <div class="hr-row">
+          <span class="hr-name">Easy / Zone 2</span>
+          <div class="hr-track">
+            <div class="hr-fill" style="width:68%; background:rgba(34,197,94,0.5);">
+              <span class="hr-pct">68% ±5 bpm</span>
+            </div>
+          </div>
+        </div>
+        <div class="hr-row">
+          <span class="hr-name">Aerobic Tempo</span>
+          <div class="hr-track">
+            <div class="hr-fill" style="width:84%; background:rgba(245,158,11,0.5);">
+              <span class="hr-pct">84% ±4 bpm</span>
+            </div>
+          </div>
+        </div>
+        <div class="hr-row">
+          <span class="hr-name">Lactate Threshold</span>
+          <div class="hr-track">
+            <div class="hr-fill" style="width:90%; background:rgba(251,191,36,0.5);">
+              <span class="hr-pct">90% ±3 bpm</span>
+            </div>
+          </div>
+        </div>
+        <div class="hr-row">
+          <span class="hr-name">Hill Repeats</span>
+          <div class="hr-track">
+            <div class="hr-fill" style="width:87%; background:rgba(139,92,246,0.5);">
+              <span class="hr-pct">87% / 63% rec</span>
+            </div>
+          </div>
+        </div>
+        <div class="hr-row">
+          <span class="hr-name">Intervals (work)</span>
+          <div class="hr-track">
+            <div class="hr-fill" style="width:92%; background:rgba(255,77,90,0.55);">
+              <span class="hr-pct">92% / 62–65% rec</span>
+            </div>
+          </div>
+        </div>
+        <div class="hr-row">
+          <span class="hr-name">Race Sim (HM)</span>
+          <div class="hr-track">
+            <div class="hr-fill" style="width:85%; background:linear-gradient(to right, rgba(0,229,255,0.3), rgba(0,229,255,0.55));">
+              <span class="hr-pct">72 → 85%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hr-note">Track at 100% = HRmax · bars not to absolute scale</div>
+    </div>
+
+    <!-- Right: Tuning + Gap -->
+    <div class="right-stack">
+
+      <!-- Live Tuning -->
+      <div class="card">
+        <div class="sec-label">Fitness-Based Weekly Tuning</div>
+        <div class="tuning-row">
+          <div class="tuning-state" style="background:rgba(245,158,11,0.06); border-color:rgba(245,158,11,0.2);">
+            <div class="tuning-trigger">TSB ≤ −25</div>
+            <div class="tuning-name" style="color:#F59E0B;">Ease Back</div>
+            <div class="tuning-fx">vol ×0.90<br>recovery / 2 wk</div>
+          </div>
+          <div class="tuning-state" style="background:rgba(34,197,94,0.06); border-color:rgba(34,197,94,0.2);">
+            <div class="tuning-trigger">Normal</div>
+            <div class="tuning-name" style="color:#22C55E;">Hold</div>
+            <div class="tuning-fx">vol ×1.00<br>recovery / 3 wk</div>
+          </div>
+          <div class="tuning-state" style="background:rgba(255,77,90,0.06); border-color:rgba(255,77,90,0.2);">
+            <div class="tuning-trigger">TSB &gt;5 + EF↑</div>
+            <div class="tuning-name" style="color:#FF4D5A;">Push Harder</div>
+            <div class="tuning-fx">vol ×1.05<br>recovery / 4 wk</div>
+          </div>
+        </div>
+        <div class="tuning-note">TSB = CTL(τ 42d) − ATL(τ 7d) · EF = efficiency slope / 42d</div>
+      </div>
+
+      <!-- Gap Recovery -->
+      <div class="card" style="flex:1;">
+        <div class="sec-label">Missed Session Recovery</div>
+        <div class="gap-rows">
+          <div class="gap-row">
+            <span class="gap-days">0 – 7 d</span>
+            <div class="gap-track">
+              <div class="gap-fill" style="width:18%; background:rgba(34,197,94,0.2);">
+                <span class="gap-label" style="color:#4ADE80;">On Track</span>
+              </div>
+            </div>
+          </div>
+          <div class="gap-row">
+            <span class="gap-days">8 – 14 d</span>
+            <div class="gap-track">
+              <div class="gap-fill" style="width:32%; background:rgba(163,230,53,0.18);">
+                <span class="gap-label" style="color:#A3E635;">Easy return</span>
+              </div>
+            </div>
+          </div>
+          <div class="gap-row">
+            <span class="gap-days">15 – 28 d</span>
+            <div class="gap-track">
+              <div class="gap-fill" style="width:50%; background:rgba(245,158,11,0.2);">
+                <span class="gap-label" style="color:#FBBF24;">Rewind 1 week</span>
+              </div>
+            </div>
+          </div>
+          <div class="gap-row">
+            <span class="gap-days">29 – 60 d</span>
+            <div class="gap-track">
+              <div class="gap-fill" style="width:68%; background:rgba(255,100,80,0.2);">
+                <span class="gap-label" style="color:#FF7A85;">Phase start</span>
+              </div>
+            </div>
+          </div>
+          <div class="gap-row">
+            <span class="gap-days">61 – 120 d</span>
+            <div class="gap-track">
+              <div class="gap-fill" style="width:84%; background:rgba(255,77,90,0.22);">
+                <span class="gap-label" style="color:#FF4D5A;">Reset to BASE</span>
+              </div>
+            </div>
+          </div>
+          <div class="gap-row">
+            <span class="gap-days">120+ d</span>
+            <div class="gap-track">
+              <div class="gap-fill" style="width:100%; background:rgba(139,92,246,0.22);">
+                <span class="gap-label" style="color:#A78BFA;">Full reset + Discovery</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">Cardea Bootcamp Engine — adaptive scheduling overview</div>
+
+</div>
+</body>
+</html>
