@@ -76,6 +76,7 @@ class BootcampViewModel @Inject constructor(
 
     private var welcomeBackDismissed = false
     private var illnessPromptSnoozedUntilMs = 0L
+    @Volatile private var _pendingTierDemotedMessage: String? = null
     private var loadJob: Job? = null
     private var bleCollectJob: Job? = null
     private var scanTimeoutJob: Job? = null
@@ -139,8 +140,10 @@ class BootcampViewModel @Inject constructor(
         // CTL-aware tier adjustment for meaningful breaks and worse:
         // After a significant break, CTL decays and the runner's current tier may
         // no longer match their fitness. Auto-demote to prevent overly-hard sessions.
-        if (gapStrategy >= GapStrategy.MEANINGFUL_BREAK && enrollment.tierIndex > TierCtlRanges.minTierIndex) {
-            val profile = adaptiveProfileRepository.getProfile()
+        val profile = adaptiveProfileRepository.getProfile()
+        if (gapStrategy >= GapStrategy.MEANINGFUL_BREAK
+            && enrollment.tierIndex > TierCtlRanges.minTierIndex
+            && profile.ctl > 0f) {  // only demote if runner has actual fitness data (C2: guard against new-user false demotion)
             val projectedLoad = FitnessLoadCalculator.updateLoads(
                 currentCtl = profile.ctl,
                 currentAtl = profile.atl,
@@ -160,21 +163,29 @@ class BootcampViewModel @Inject constructor(
             gapAction.weekInPhase != enrollment.currentWeekInPhase
         val tierChanged = updatedTierIndex != enrollment.tierIndex
 
+        if (tierChanged) {
+            // I2: notify runner that their intensity was eased due to CTL decay
+            _pendingTierDemotedMessage = "Welcome back! We've eased your intensity to match your current fitness."
+        }
+
         if (phaseChanged || tierChanged) {
-            if (phaseChanged) {
-                val targetWeek = PhaseEngine(
-                    goal = BootcampGoal.valueOf(enrollment.goalType),
-                    phaseIndex = gapAction.phaseIndex,
-                    weekInPhase = gapAction.weekInPhase,
-                    runsPerWeek = enrollment.runsPerWeek,
-                    targetMinutes = enrollment.targetMinutesPerRun
-                ).absoluteWeek
-                bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
-            }
+            // C3: Delete stale sessions whether phase or tier changed.
+            // When only tier changes, gapAction.phaseIndex/weekInPhase equal the current position,
+            // so targetWeek == current week and deleteSessionsAfterWeek(id, currentWeek - 1)
+            // removes current-week sessions, forcing regeneration at the new tier.
+            val targetWeek = PhaseEngine(
+                goal = BootcampGoal.valueOf(enrollment.goalType),
+                phaseIndex = gapAction.phaseIndex,
+                weekInPhase = gapAction.weekInPhase,
+                runsPerWeek = enrollment.runsPerWeek,
+                targetMinutes = enrollment.targetMinutesPerRun
+            ).absoluteWeek
+            bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
             val gapUpdatedEnrollment = enrollment.copy(
                 currentPhaseIndex = gapAction.phaseIndex,
                 currentWeekInPhase = gapAction.weekInPhase,
-                tierIndex = updatedTierIndex
+                tierIndex = updatedTierIndex,
+                lastTierChangeWeek = if (tierChanged) null else enrollment.lastTierChangeWeek  // I3: reset on demotion
             )
             bootcampRepository.updateEnrollment(gapUpdatedEnrollment)
             runCatching { cloudBackupManager.syncBootcampEnrollment(gapUpdatedEnrollment) }
@@ -338,7 +349,8 @@ class BootcampViewModel @Inject constructor(
             todayState = todayState,
             activePreferredDays = activePreferredDays,
             upcomingWeeks = upcomingWeeks,
-            welcomeBackMessage = if (welcomeBackDismissed) null else gapAction.welcomeMessage,
+            welcomeBackMessage = if (welcomeBackDismissed) null
+                else _pendingTierDemotedMessage ?: gapAction.welcomeMessage,
             needsCalibration = gapAction.requiresCalibration,
             fitnessLevel = fitnessLevel,
             tuningDirection = fitnessSignals.tuningDirection,
@@ -353,6 +365,7 @@ class BootcampViewModel @Inject constructor(
             goalProgressPercentage = progressPercentage,
             maxHr = userProfileRepository.getMaxHr()
         )
+        _pendingTierDemotedMessage = null  // I2: consumed; clear so it doesn't persist across refreshes
     }
 
     private fun computeDaysSinceLastRun(
