@@ -1,6 +1,9 @@
 package com.hrcoach.ui.account
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
+import com.hrcoach.service.WorkoutForegroundService
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import com.hrcoach.data.db.AchievementDao

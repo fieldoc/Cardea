@@ -155,5 +155,35 @@ fun DebugSimulationScreen(
                 fontWeight = FontWeight.Bold
             )
         }
+
+        Spacer(Modifier.height(32.dp))
+
+        Text("ADAPTIVE ENGINE", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Reset long-term HR trim bias. Use this after a heat block, illness, or overtraining " +
+                "has biased the adaptive profile and you've recovered. Does not touch pace buckets.",
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 12.sp
+        )
+        Spacer(Modifier.height(12.dp))
+        Button(
+            onClick = { viewModel.resetLongTermHrTrim() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF))
+        ) {
+            Text("Reset adaptive bias", color = Color.White, fontWeight = FontWeight.Medium)
+        }
+        state.longTermTrimResetToast?.let { toast ->
+            Spacer(Modifier.height(8.dp))
+            Text(toast, color = Color(0xFF22C55E), fontSize = 12.sp)
+            androidx.compose.runtime.LaunchedEffect(toast) {
+                kotlinx.coroutines.delay(3000)
+                viewModel.consumeToast()
+            }
+        }
     }
 }

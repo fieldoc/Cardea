@@ -326,13 +326,31 @@ class PostRunSummaryViewModel @Inject constructor(
     }
 
     internal companion object {
+        /**
+         * Counts the number of most-recent consecutive calendar days on which the
+         * user ran at least once. Same-day runs do not advance the streak; a
+         * skipped calendar day breaks it. Uses the local-system timezone because
+         * "consecutive days" is a human-wall-clock concept, not a UTC one.
+         *
+         * Raw hour-delta is insufficient: a Mon 11pm → Wed 1am run (26h gap)
+         * would incorrectly count as a continuous streak even though Tuesday
+         * was skipped.
+         */
         fun computeWorkoutStreak(workouts: List<WorkoutEntity>): Int {
-            val sorted = workouts.sortedByDescending { it.startTime }
-            if (sorted.isEmpty()) return 0
+            if (workouts.isEmpty()) return 0
+            val zone = java.time.ZoneId.systemDefault()
+            val uniqueDays = workouts
+                .map {
+                    java.time.Instant.ofEpochMilli(it.startTime).atZone(zone).toLocalDate()
+                }
+                .toSortedSet()
+                .toList()
+                .reversed() // newest day first
             var streak = 1
-            for (i in 0 until sorted.lastIndex) {
-                val gapDays = (sorted[i].startTime - sorted[i + 1].startTime) / 86_400_000L
-                if (gapDays > 1) break
+            for (i in 0 until uniqueDays.lastIndex) {
+                val gapDays = java.time.temporal.ChronoUnit.DAYS
+                    .between(uniqueDays[i + 1], uniqueDays[i])
+                if (gapDays != 1L) break
                 streak++
             }
             return streak

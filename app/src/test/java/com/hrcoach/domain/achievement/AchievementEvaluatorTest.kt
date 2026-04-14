@@ -142,7 +142,7 @@ class AchievementEvaluatorTest {
     fun `cloud backup receives entity with assigned id not zero`() = runTest {
         val syncedSlot = slot<AchievementEntity>()
         val cloudBackup = mockk<CloudBackupManager>(relaxed = true)
-        coEvery { cloudBackup.syncAchievement(capture(syncedSlot)) } returns Unit
+        coEvery { cloudBackup.syncAchievement(capture(syncedSlot)) } returns true
 
         val evaluatorWithCapture = AchievementEvaluator(dao, cloudBackup)
         evaluatorWithCapture.evaluateBootcampGraduation(enrollmentId = 7L, goal = "MARATHON", tierIndex = 2)

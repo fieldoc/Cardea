@@ -7,6 +7,7 @@ import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.hrcoach.data.repository.UserProfileRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -85,21 +86,22 @@ class FirebaseAuthManager @Inject constructor(
         } catch (e: CancellationException) {
             if (e !is TimeoutCancellationException) throw e
             throw Exception("Timed out linking Google account. Please try again.")
-        } catch (e: Exception) {
-            if (e.message?.contains("CREDENTIAL_ALREADY_IN_USE") == true ||
-                e.message?.contains("account-exists-with-different-credential") == true) {
-                // Google account already linked to an existing Cardea profile —
-                // sign into that profile so the user gets their history back.
-                val signInResult = withTimeout(15_000) {
-                    auth.signInWithCredential(credential).await()
-                }
-                val uid = signInResult.user?.uid
-                    ?: throw IllegalStateException("signInWithCredential returned null user")
-                userProfileRepository.setUserId(uid)
-                LinkResult.ExistingAccount
-            } else {
-                throw Exception("Failed to link Google account: ${e.message}")
+        } catch (e: FirebaseAuthUserCollisionException) {
+            // Google account already linked to an existing Cardea profile —
+            // sign into that profile so the user gets their history back.
+            //
+            // Matching by exception type (not e.message substring) so the path
+            // fires correctly on non-English locales, where the error message
+            // is localized and won't contain the literal "CREDENTIAL_ALREADY_IN_USE".
+            val signInResult = withTimeout(15_000) {
+                auth.signInWithCredential(credential).await()
             }
+            val uid = signInResult.user?.uid
+                ?: throw IllegalStateException("signInWithCredential returned null user")
+            userProfileRepository.setUserId(uid)
+            LinkResult.ExistingAccount
+        } catch (e: Exception) {
+            throw Exception("Failed to link Google account: ${e.message}")
         }
     }
 

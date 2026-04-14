@@ -25,6 +25,19 @@ data class AdaptiveTuningConfig(
     val paceBiasFromTargetFactor: Float = 0.2f,
     val paceBiasMinBpm: Float = -6f,
     val paceBiasMaxBpm: Float = 6f,
+    // Clamped to ±50 BPM/min (raised from ±30 in the 2026-04-13 engine audit).
+    //
+    // The 3 s min-deltaMin gate in updateHrSlope is a rate-limiter, NOT a
+    // glitch filter — a single bad BLE sample still propagates through with
+    // instSlope ≈ glitch_magnitude / 0.05 min, so this clamp is the last line
+    // of defense. The ±30 cap was chosen on that basis, but observation of
+    // interval-workout ramps showed it was silently truncating legitimate
+    // sprint-onset rises that exceed 30 BPM/min instantaneous. At ±50 a
+    // pathological glitch still contributes at most 0.40 × 50 = 20 BPM/min
+    // to the EMA, which decays out over 2–3 subsequent samples, while real
+    // interval ramps now pass through unclipped.
+    //
+    // Do NOT revert to ±30 without re-verifying against real interval data.
     val slopeSampleClampBpmPerMin: Float = 50f
 )
 
@@ -102,10 +115,11 @@ class AdaptivePaceController(
         actualZone: ZoneStatus
     ): TickResult {
         val pace = updatePace(nowMs, distanceMeters, hr, targetHr)
-        updateHrSlope(nowMs, hr)
 
-        // FREE_RUN: no zone target — collect data and return HR trend text
+        // FREE_RUN: no zone target — collect data and return HR trend text.
+        // Slope is still maintained (via updateHrSlope below) when HR is valid.
         if (targetHr == null) {
+            if (connected && hr > 0) updateHrSlope(nowMs, hr)
             return TickResult(
                 zoneStatus = ZoneStatus.NO_DATA,
                 projectedZoneStatus = ZoneStatus.NO_DATA,
@@ -117,6 +131,9 @@ class AdaptivePaceController(
         }
 
         if (!connected || hr <= 0 || targetHr <= 0 || actualZone == ZoneStatus.NO_DATA) {
+            // Intentionally do NOT call updateHrSlope here. Disconnected or
+            // sentinel-zero ticks would otherwise pollute the slope EMA with
+            // huge artificial instSlope values on the reconnect transition.
             trackSettling(nowMs, ZoneStatus.NO_DATA)
             shortTermTrimBpm *= 0.9f
             lastBaseProjectedHr = null
@@ -130,6 +147,10 @@ class AdaptivePaceController(
                 hasProjectionConfidence = false
             )
         }
+
+        // Slope is updated here (after the disconnect/invalid guards) so we never
+        // blend stale or zero HR values into the EMA.
+        updateHrSlope(nowMs, hr)
 
         // Measure error against base projection (excluding shortTermTrim) so the two trim
         // terms learn from independent error signals rather than compounding the same bias.

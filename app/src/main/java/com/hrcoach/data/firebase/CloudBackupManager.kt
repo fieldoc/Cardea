@@ -54,11 +54,16 @@ class CloudBackupManager @Inject constructor(
 
     // ── Profile ─────────────────────────────────────────────────────────
 
-    suspend fun syncProfile() {
-        if (!isBackupEnabled()) return
-        try {
+    /**
+     * Returns true on success, false on any non-cancellation failure. External
+     * callers can safely ignore the return value; [performFullBackup] uses it
+     * to decide whether to stamp the backup as complete.
+     */
+    suspend fun syncProfile(): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val data = mapOf(
                     "maxHr"               to userProfileRepo.getMaxHr(),
                     "age"                 to userProfileRepo.getAge(),
@@ -68,21 +73,23 @@ class CloudBackupManager @Inject constructor(
                     "partnerNudgesEnabled" to userProfileRepo.isPartnerNudgesEnabled(),
                 )
                 ref.child("profile").setValue(data).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncProfile failed", e)
+            false
         }
     }
 
     // ── Settings ────────────────────────────────────────────────────────
 
-    suspend fun syncSettings() {
-        if (!isBackupEnabled()) return
-        try {
+    suspend fun syncSettings(): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val audio = audioSettingsRepo.getAudioSettings()
                 val data = mapOf(
                     "earconVolume"          to audio.earconVolume,
@@ -97,21 +104,23 @@ class CloudBackupManager @Inject constructor(
                     "themeMode"             to themePrefsRepo.getThemeMode().name,
                 )
                 ref.child("settings").setValue(data).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncSettings failed", e)
+            false
         }
     }
 
     // ── Adaptive Profile ────────────────────────────────────────────────
 
-    suspend fun syncAdaptiveProfile() {
-        if (!isBackupEnabled()) return
-        try {
+    suspend fun syncAdaptiveProfile(): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val profile = adaptiveProfileRepo.getProfile()
                 // Convert Map<Int, PaceHrBucket> keys to strings for Firebase
                 val bucketsMap = profile.paceHrBuckets.map { (k, v) ->
@@ -131,11 +140,13 @@ class CloudBackupManager @Inject constructor(
                     "lastTuningDirection"  to profile.lastTuningDirection?.name,
                 )
                 ref.child("adaptive").setValue(data).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncAdaptiveProfile failed", e)
+            false
         }
     }
 
@@ -145,11 +156,11 @@ class CloudBackupManager @Inject constructor(
         workout: WorkoutEntity,
         trackPoints: List<TrackPointEntity>,
         metrics: WorkoutMetricsEntity?,
-    ) {
-        if (!isBackupEnabled()) return
-        try {
+    ): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val id = workout.id.toString()
 
                 val updates = mutableMapOf<String, Any?>()
@@ -203,21 +214,23 @@ class CloudBackupManager @Inject constructor(
                 }
 
                 ref.updateChildren(updates).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncWorkout failed for id=${workout.id}", e)
+            false
         }
     }
 
     // ── Bootcamp ────────────────────────────────────────────────────────
 
-    suspend fun syncBootcampEnrollment(enrollment: BootcampEnrollmentEntity) {
-        if (!isBackupEnabled()) return
-        try {
+    suspend fun syncBootcampEnrollment(enrollment: BootcampEnrollmentEntity): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val data = mapOf(
                     "id"                          to enrollment.id,
                     "goalType"                    to enrollment.goalType,
@@ -237,19 +250,21 @@ class CloudBackupManager @Inject constructor(
                     "lastTierChangeWeek"          to enrollment.lastTierChangeWeek,
                 )
                 ref.child("bootcamp/enrollment").setValue(data).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncBootcampEnrollment failed", e)
+            false
         }
     }
 
-    suspend fun syncBootcampSession(session: BootcampSessionEntity) {
-        if (!isBackupEnabled()) return
-        try {
+    suspend fun syncBootcampSession(session: BootcampSessionEntity): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val id = session.id.toString()
                 val data = mapOf(
                     "id"                to session.id,
@@ -265,21 +280,23 @@ class CloudBackupManager @Inject constructor(
                     "completedAtMs"     to session.completedAtMs,
                 )
                 ref.child("bootcamp/sessions/$id").setValue(data).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncBootcampSession failed for id=${session.id}", e)
+            false
         }
     }
 
     // ── Achievement ─────────────────────────────────────────────────────
 
-    suspend fun syncAchievement(achievement: AchievementEntity) {
-        if (!isBackupEnabled()) return
-        try {
+    suspend fun syncAchievement(achievement: AchievementEntity): Boolean {
+        if (!isBackupEnabled()) return false
+        return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout
+                val ref = backupRef() ?: return@withTimeout false
                 val id = achievement.id.toString()
                 val data = mapOf(
                     "id"               to achievement.id,
@@ -293,11 +310,13 @@ class CloudBackupManager @Inject constructor(
                     "shown"            to achievement.shown,
                 )
                 ref.child("achievements/$id").setValue(data).await()
+                true
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "syncAchievement failed for id=${achievement.id}", e)
+            false
         }
     }
 
@@ -317,32 +336,41 @@ class CloudBackupManager @Inject constructor(
     ) {
         if (!isBackupEnabled()) return
 
+        var failureCount = 0
         try {
             withTimeout(FULL_BACKUP_TIMEOUT_MS) {
-                syncProfile()
-                syncSettings()
-                syncAdaptiveProfile()
+                if (!syncProfile()) failureCount++
+                if (!syncSettings()) failureCount++
+                if (!syncAdaptiveProfile()) failureCount++
 
                 val metricsById = metrics.associateBy { it.workoutId }
                 for (workout in workouts) {
                     val points = trackPointsByWorkout[workout.id] ?: emptyList()
-                    syncWorkout(workout, points, metricsById[workout.id])
+                    if (!syncWorkout(workout, points, metricsById[workout.id])) failureCount++
                 }
 
                 if (enrollment != null) {
-                    syncBootcampEnrollment(enrollment)
+                    if (!syncBootcampEnrollment(enrollment)) failureCount++
                     for (session in sessions) {
-                        syncBootcampSession(session)
+                        if (!syncBootcampSession(session)) failureCount++
                     }
                 }
 
                 for (achievement in achievements) {
-                    syncAchievement(achievement)
+                    if (!syncAchievement(achievement)) failureCount++
                 }
 
-                // Write the completion stamp last. hasCloudBackup() checks for this node,
-                // so a partial backup that didn't reach this line will NOT be restored.
-                stampComplete()
+                // Only stamp the backup as complete if EVERY individual sync succeeded.
+                // Per-entity sync functions swallow their own exceptions (by design, so
+                // incremental callers aren't disrupted), so the outer catch below only
+                // covers the overall timeout and unexpected errors. We rely on the
+                // failureCount guard here to stop a partial backup from advertising as
+                // complete via hasCloudBackup() → backupComplete=true.
+                if (failureCount == 0) {
+                    stampComplete()
+                } else {
+                    Log.w(TAG, "performFullBackup: $failureCount sub-sync(s) failed; NOT stamping backupComplete")
+                }
             }
         } catch (e: CancellationException) {
             throw e
@@ -350,7 +378,7 @@ class CloudBackupManager @Inject constructor(
             Log.w(TAG, "performFullBackup failed", e)
         }
 
-        Log.d(TAG, "Full backup complete: ${workouts.size} workouts, ${sessions.size} sessions, ${achievements.size} achievements")
+        Log.d(TAG, "Full backup done: ${workouts.size} workouts, ${sessions.size} sessions, ${achievements.size} achievements, $failureCount failures")
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@ package com.hrcoach.ui.debug
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.domain.simulation.SimulationScenario
 import com.hrcoach.service.simulation.SimulationController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,11 +17,14 @@ data class DebugSimUiState(
     val isSimActive: Boolean = false,
     val selectedScenarioIndex: Int = 0,
     val speedMultiplier: Float = 1f,
-    val scenarios: List<SimulationScenario> = SimulationScenario.ALL_PRESETS
+    val scenarios: List<SimulationScenario> = SimulationScenario.ALL_PRESETS,
+    val longTermTrimResetToast: String? = null
 )
 
 @HiltViewModel
-class DebugSimulationViewModel @Inject constructor() : ViewModel() {
+class DebugSimulationViewModel @Inject constructor(
+    private val adaptiveProfileRepository: AdaptiveProfileRepository
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DebugSimUiState(isSimActive = SimulationController.isActive))
     val uiState: StateFlow<DebugSimUiState> = _uiState.asStateFlow()
@@ -54,5 +58,24 @@ class DebugSimulationViewModel @Inject constructor() : ViewModel() {
             SimulationController.activate(scenario, state.speedMultiplier)
             _uiState.update { it.copy(isSimActive = true) }
         }
+    }
+
+    /**
+     * Wipes the accumulated `longTermHrTrimBpm` on the adaptive profile. Used to
+     * recover from heat-/illness-/overtraining-induced bias that would otherwise
+     * persist across sessions.
+     */
+    fun resetLongTermHrTrim() {
+        viewModelScope.launch {
+            val before = adaptiveProfileRepository.getProfile().longTermHrTrimBpm
+            adaptiveProfileRepository.resetLongTermTrim()
+            _uiState.update {
+                it.copy(longTermTrimResetToast = "Adaptive bias reset (was ${"%.1f".format(before)} bpm)")
+            }
+        }
+    }
+
+    fun consumeToast() {
+        _uiState.update { it.copy(longTermTrimResetToast = null) }
     }
 }

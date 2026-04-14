@@ -222,10 +222,6 @@ fun PostRunSummaryScreen(
                             HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
                         }
 
-                        if (uiState.newAchievements.isNotEmpty()) {
-                            NewAchievementsSection(achievements = uiState.newAchievements)
-                        }
-
                         uiState.bootcampProgressLabel
                             ?.takeIf { it.isNotBlank() }
                             ?.let { progressLabel ->

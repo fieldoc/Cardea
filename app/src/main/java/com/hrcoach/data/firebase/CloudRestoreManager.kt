@@ -72,11 +72,10 @@ class CloudRestoreManager @Inject constructor(
                     .child("users/$uid/backup")
                     .get()
                     .await()
-                // New backups write "backupComplete" at the end of performFullBackup.
-                // Old backups (pre-fix) only have "version" — accept those too for
-                // backward compatibility, but they may be partial.
+                // Require the explicit "backupComplete" stamp. A bare "version" node
+                // is not sufficient — it can be left behind by a partial or aborted
+                // backup and would cause a fresh install to restore a truncated snapshot.
                 snap.child("backupComplete").getValue(Boolean::class.java) == true
-                    || snap.child("version").exists()
             }
         }.getOrElse { false }
     }

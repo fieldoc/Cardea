@@ -310,6 +310,39 @@ class PostRunSummaryViewModelTest {
     }
 
     @Test
+    fun `streak breaks when a calendar day is skipped even if raw delta is under 48 hours`() {
+        // Use explicit local-date anchors so the test is timezone-independent.
+        val zone = java.time.ZoneId.systemDefault()
+        val wed1am = java.time.LocalDate.of(2026, 4, 8).atTime(1, 0).atZone(zone).toInstant().toEpochMilli()
+        val mon11pm = java.time.LocalDate.of(2026, 4, 6).atTime(23, 0).atZone(zone).toInstant().toEpochMilli()
+        // Raw hour-delta between Mon 11pm and Wed 1am = 26h → old algorithm
+        // would count gapDays = 1 and keep the streak. Tuesday was skipped,
+        // so the correct behaviour is to break.
+        val workouts = listOf(
+            WorkoutEntity(id = 1L, startTime = wed1am, endTime = wed1am + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = ""),
+            WorkoutEntity(id = 2L, startTime = mon11pm, endTime = mon11pm + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = "")
+        )
+        assertEquals(1, PostRunSummaryViewModel.computeWorkoutStreak(workouts))
+    }
+
+    @Test
+    fun `multiple runs on the same day count as one streak day`() {
+        val zone = java.time.ZoneId.systemDefault()
+        val today8am = java.time.LocalDate.now(zone).atTime(8, 0).atZone(zone).toInstant().toEpochMilli()
+        val today6pm = java.time.LocalDate.now(zone).atTime(18, 0).atZone(zone).toInstant().toEpochMilli()
+        val workouts = listOf(
+            WorkoutEntity(id = 1L, startTime = today6pm, endTime = today6pm + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = ""),
+            WorkoutEntity(id = 2L, startTime = today8am, endTime = today8am + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = "")
+        )
+        // Same calendar day → 1-day streak, not 2.
+        assertEquals(1, PostRunSummaryViewModel.computeWorkoutStreak(workouts))
+    }
+
+    @Test
     fun `hrMaxDelta stays in WorkoutState when summary load fails`() = runTest {
         stubDefaults()
         coEvery { workoutRepository.getWorkoutById(1L) } returns null
