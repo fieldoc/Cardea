@@ -1,5 +1,6 @@
 package com.hrcoach.domain.bootcamp
 
+import android.util.Log
 import kotlin.math.abs
 
 object SessionDayAssigner {
@@ -60,17 +61,18 @@ object SessionDayAssigner {
                 usedDays.add(bestDay)
             } else {
                 // No valid day satisfies the 2-day gap — demote to EASY
+                Log.i("SessionDayAssigner", "Demoted ${hard.type}(${hard.minutes}min) to EASY — no day with ${MIN_HARD_DAY_GAP}-day gap from ${result.filter { it.first.type in HARD_TYPES }.map { it.second }}")
                 demotedSessions.add(
                     PlannedSession(SessionType.EASY, hard.minutes, "zone2_base")
                 )
             }
         }
 
-        // 3. Easy sessions (original + demoted) fill remaining days
+        // 3. Easy sessions (original + demoted) fill remaining days — one session per day
         val allEasy = easySessions + demotedSessions
         val remainingDays = sortedDays.filter { it !in usedDays }.toMutableList()
         for (easy in allEasy) {
-            val day = remainingDays.removeFirstOrNull() ?: sortedDays.first()
+            val day = remainingDays.removeFirstOrNull() ?: break  // no remaining days — drop excess
             result.add(easy to day)
         }
 
