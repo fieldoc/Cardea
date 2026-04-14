@@ -691,12 +691,12 @@ class BootcampViewModel @Inject constructor(
             val nextDismissCount = enrollment.tierPromptDismissCount + 1
             val snoozeWeeks = TierCtlRanges.snoozeWeeksForDismissCount(nextDismissCount)
             val snoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(snoozeWeeks.toLong() * 7L)
-            bootcampRepository.updateEnrollment(
-                enrollment.copy(
-                    tierPromptDismissCount = nextDismissCount,
-                    tierPromptSnoozedUntilMs = snoozedUntilMs
-                )
+            val updated = enrollment.copy(
+                tierPromptDismissCount = nextDismissCount,
+                tierPromptSnoozedUntilMs = snoozedUntilMs
             )
+            bootcampRepository.updateEnrollment(updated)
+            runCatching { cloudBackupManager.syncBootcampEnrollment(updated) }
             _uiState.update {
                 it.copy(
                     tierPromptDirection = TierPromptDirection.NONE,

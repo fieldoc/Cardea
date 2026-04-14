@@ -64,26 +64,47 @@ class FirebaseAuthManager @Inject constructor(
 
     /**
      * Link a Google account to the current anonymous user.
-     * The UID stays the same — all existing data remains accessible.
-     * Returns the (unchanged) UID.
+     *
+     * If the Google account is already associated with an existing Cardea profile
+     * (CREDENTIAL_ALREADY_IN_USE), this method transparently signs into that profile
+     * and returns [LinkResult.ExistingAccount]. The caller should then restore from
+     * the cloud backup rather than backing up the current (empty) device.
+     *
+     * Returns [LinkResult.FreshLink] when a new link was created.
      */
-    suspend fun linkGoogleAccount(): String {
+    suspend fun linkGoogleAccount(): LinkResult {
         val user = auth.currentUser
             ?: throw IllegalStateException("Must be signed in before linking")
 
         val idToken = getGoogleIdToken()
         val credential = GoogleAuthProvider.getCredential(idToken, null)
 
-        val result = runCatching {
+        return try {
             withTimeout(15_000) { user.linkWithCredential(credential).await() }
-        }.getOrElse { e ->
-            if (e is CancellationException && e !is TimeoutCancellationException) throw e
-            throw Exception("Failed to link Google account: ${e.message}")
+            LinkResult.FreshLink
+        } catch (e: CancellationException) {
+            if (e !is TimeoutCancellationException) throw e
+            throw Exception("Timed out linking Google account. Please try again.")
+        } catch (e: Exception) {
+            if (e.message?.contains("CREDENTIAL_ALREADY_IN_USE") == true ||
+                e.message?.contains("account-exists-with-different-credential") == true) {
+                // Google account already linked to an existing Cardea profile —
+                // sign into that profile so the user gets their history back.
+                val signInResult = withTimeout(15_000) {
+                    auth.signInWithCredential(credential).await()
+                }
+                val uid = signInResult.user?.uid
+                    ?: throw IllegalStateException("signInWithCredential returned null user")
+                userProfileRepository.setUserId(uid)
+                LinkResult.ExistingAccount
+            } else {
+                throw Exception("Failed to link Google account: ${e.message}")
+            }
         }
-
-        return result.user?.uid
-            ?: throw IllegalStateException("linkWithCredential returned null user")
     }
+
+    /** Indicates what happened when [linkGoogleAccount] completes. */
+    enum class LinkResult { FreshLink, ExistingAccount }
 
     /**
      * Sign in with Google on a new device (restore flow).

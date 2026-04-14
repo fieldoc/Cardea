@@ -310,6 +310,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 
 Firebase project: `cardea-1c8fc`. CLI: `MSYS_NO_PATHCONV=1 firebase database:get /path --project cardea-1c8fc --pretty`
 - `/users/{uid}` — `displayName`, `emblemId`, `fcmToken`, `partners: {partnerUid: true}`, `activity: {lastRunDate, lastRunDurationMin, lastRunPhase, weeklyRunCount, currentStreak}`
+- `/users/{uid}/backup` — cloud backup root. `backupComplete: true` written last (absence = partial or pre-fix backup). Subtrees: `profile/`, `settings/`, `adaptive/` (key `paceHrBuckets`, not `buckets`), `workouts/`, `trackPoints/`, `metrics/`, `bootcamp/enrollment`, `bootcamp/sessions/`, `achievements/`. Track point keys are abbreviated: `id`, `ts`, `lat`, `lng`, `hr`, `dist`, `alt`. See `CloudBackupManager.TpKeys`.
 - `/invites/{code}` — invite codes with `userId`, `displayName`, `createdAt`, `expiresAt`
 - Partner connections are bidirectional: both users must have the other's UID in their `partners` map
 

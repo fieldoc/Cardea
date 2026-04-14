@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.BootcampDao
@@ -363,17 +364,34 @@ class AccountViewModel @Inject constructor(
         viewModelScope.launch {
             _isLinking.value = true
             _linkError.value = null
-            runCatching {
-                firebaseAuthManager.linkGoogleAccount()
-                _isGoogleLinked.value = true
-                _linkedEmail.value = firebaseAuthManager.getLinkedEmail()
-                performFullBackup()
-            }.onFailure { e ->
-                _linkError.value = when {
-                    e.message?.contains("CREDENTIAL_ALREADY_IN_USE") == true ->
-                        "This Google account is already linked to another profile."
-                    else -> "Failed to link: ${e.message}"
+            try {
+                when (firebaseAuthManager.linkGoogleAccount()) {
+                    FirebaseAuthManager.LinkResult.FreshLink -> {
+                        _isGoogleLinked.value = true
+                        _linkedEmail.value = firebaseAuthManager.getLinkedEmail()
+                        performFullBackup()
+                    }
+                    FirebaseAuthManager.LinkResult.ExistingAccount -> {
+                        // User's Google account was already linked to a Cardea profile
+                        // (e.g. from another device). Sign-in succeeded — restore data.
+                        _isGoogleLinked.value = true
+                        _linkedEmail.value = firebaseAuthManager.getLinkedEmail()
+                        _isLinking.value = false
+                        _isRestoring.value = true
+                        runCatching {
+                            val result = cloudRestoreManager.restore()
+                            _restoreResult.value = result
+                        }.onFailure { e ->
+                            _linkError.value = "Signed in, but restore failed: ${e.message}"
+                        }
+                        _isRestoring.value = false
+                        return@launch
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _linkError.value = "Failed to link: ${e.message}"
             }
             _isLinking.value = false
         }

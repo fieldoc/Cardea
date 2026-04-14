@@ -2,7 +2,6 @@ package com.hrcoach.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.firebase.FirebaseAuthManager
 import com.hrcoach.data.repository.AdaptiveProfileRepository
 import com.hrcoach.data.repository.OnboardingRepository
@@ -39,7 +38,6 @@ class OnboardingViewModel @Inject constructor(
     private val userProfileRepository: UserProfileRepository,
     private val adaptiveProfileRepository: AdaptiveProfileRepository,
     private val firebaseAuthManager: FirebaseAuthManager,
-    private val cloudBackupManager: CloudBackupManager,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OnboardingUiState())
