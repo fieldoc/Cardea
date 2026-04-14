@@ -4,7 +4,10 @@ import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.AchievementType
 import com.hrcoach.data.firebase.CloudBackupManager
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -15,8 +18,13 @@ import org.junit.Test
 
 class FakeAchievementDao : AchievementDao {
     val inserted = mutableListOf<AchievementEntity>()
+    private var nextId = 1L
 
-    override suspend fun insert(achievement: AchievementEntity) { inserted.add(achievement) }
+    override suspend fun insert(achievement: AchievementEntity): Long {
+        val id = nextId++
+        inserted.add(achievement.copy(id = id))
+        return id
+    }
     override suspend fun upsert(achievement: AchievementEntity) {
         inserted.removeAll { it.id == achievement.id }
         inserted.add(achievement)
@@ -128,5 +136,19 @@ class AchievementEvaluatorTest {
     fun `evaluateWeeklyGoalStreak does nothing when weeks is 0`() = runTest {
         evaluator.evaluateWeeklyGoalStreak(consecutiveWeeks = 0, workoutId = 42L)
         assertTrue(dao.inserted.isEmpty())
+    }
+
+    @Test
+    fun `cloud backup receives entity with assigned id not zero`() = runTest {
+        val syncedSlot = slot<AchievementEntity>()
+        val cloudBackup = mockk<CloudBackupManager>(relaxed = true)
+        coEvery { cloudBackup.syncAchievement(capture(syncedSlot)) } returns Unit
+
+        val evaluatorWithCapture = AchievementEvaluator(dao, cloudBackup)
+        evaluatorWithCapture.evaluateBootcampGraduation(enrollmentId = 7L, goal = "MARATHON", tierIndex = 2)
+
+        coVerify { cloudBackup.syncAchievement(any()) }
+        assertTrue("synced id must not be 0", syncedSlot.captured.id != 0L)
+        assertEquals(dao.inserted.first().id, syncedSlot.captured.id)
     }
 }

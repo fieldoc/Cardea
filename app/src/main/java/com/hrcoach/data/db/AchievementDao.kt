@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 interface AchievementDao {
 
     @Insert
-    suspend fun insert(achievement: AchievementEntity)
+    suspend fun insert(achievement: AchievementEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(achievement: AchievementEntity)

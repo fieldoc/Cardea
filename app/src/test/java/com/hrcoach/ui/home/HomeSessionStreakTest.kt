@@ -5,12 +5,14 @@ import com.hrcoach.domain.achievement.StreakCalculator.computeSessionStreak
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate
+import java.time.ZoneId
 
 class HomeSessionStreakTest {
 
     // enrollment starts 2026-01-05 (Monday of week 1)
+    private val zone = ZoneId.of("UTC")
     private val startMs = java.time.LocalDate.of(2026, 1, 5)
-        .atStartOfDay(java.time.ZoneId.of("UTC")).toInstant().toEpochMilli()
+        .atStartOfDay(zone).toInstant().toEpochMilli()
 
     private val today = LocalDate.of(2026, 1, 26) // Monday of week 4
 
@@ -24,7 +26,7 @@ class HomeSessionStreakTest {
     )
 
     @Test fun `empty list returns 0`() {
-        assertEquals(0, computeSessionStreak(emptyList(), startMs, today))
+        assertEquals(0, computeSessionStreak(emptyList(), startMs, today, zone))
     }
 
     @Test fun `all completed returns count`() {
@@ -33,7 +35,7 @@ class HomeSessionStreakTest {
             session(1, 3, BootcampSessionEntity.STATUS_COMPLETED),
             session(2, 1, BootcampSessionEntity.STATUS_COMPLETED),
         )
-        assertEquals(3, computeSessionStreak(sessions, startMs, today))
+        assertEquals(3, computeSessionStreak(sessions, startMs, today, zone))
     }
 
     @Test fun `skipped session stops streak`() {
@@ -44,7 +46,7 @@ class HomeSessionStreakTest {
             session(2, 3, BootcampSessionEntity.STATUS_COMPLETED),
         )
         // walk backward: W2D3=COMPLETED(1), W2D1=COMPLETED(2), W1D3=SKIPPED → stop → 2
-        assertEquals(2, computeSessionStreak(sessions, startMs, today))
+        assertEquals(2, computeSessionStreak(sessions, startMs, today, zone))
     }
 
     @Test fun `past scheduled session counts as missed`() {
@@ -55,7 +57,7 @@ class HomeSessionStreakTest {
             session(2, 3, BootcampSessionEntity.STATUS_COMPLETED),
         )
         // walk backward: W2D3=COMPLETED(1), W2D1=COMPLETED(2), W1D1=SCHEDULED+past → stop → 2
-        assertEquals(2, computeSessionStreak(sessions, startMs, today))
+        assertEquals(2, computeSessionStreak(sessions, startMs, today, zone))
     }
 
     @Test fun `future scheduled session is skipped`() {
@@ -65,7 +67,7 @@ class HomeSessionStreakTest {
             session(3, 5, BootcampSessionEntity.STATUS_COMPLETED),
             session(3, 3, BootcampSessionEntity.STATUS_COMPLETED),
         )
-        assertEquals(2, computeSessionStreak(sessions, startMs, today))
+        assertEquals(2, computeSessionStreak(sessions, startMs, today, zone))
     }
 
     @Test fun `deferred session does not break streak`() {
@@ -76,14 +78,14 @@ class HomeSessionStreakTest {
             session(2, 1, BootcampSessionEntity.STATUS_COMPLETED),
         )
         // W3D1=COMPLETED(1), W2D5=DEFERRED(skip), W2D3=COMPLETED(2), W2D1=COMPLETED(3)
-        assertEquals(3, computeSessionStreak(sessions, startMs, today))
+        assertEquals(3, computeSessionStreak(sessions, startMs, today, zone))
     }
 
     @Test fun `no runs returns 0 streak`() {
         val sessions = listOf(
             session(1, 1, BootcampSessionEntity.STATUS_SCHEDULED), // past — effectively missed
         )
-        assertEquals(0, computeSessionStreak(sessions, startMs, today))
+        assertEquals(0, computeSessionStreak(sessions, startMs, today, zone))
     }
 
     @Test fun `skipped most recent session returns 0`() {
@@ -92,6 +94,6 @@ class HomeSessionStreakTest {
             session(2, 3, BootcampSessionEntity.STATUS_COMPLETED),
             session(2, 1, BootcampSessionEntity.STATUS_COMPLETED),
         )
-        assertEquals(0, computeSessionStreak(sessions, startMs, today))
+        assertEquals(0, computeSessionStreak(sessions, startMs, today, zone))
     }
 }

@@ -24,7 +24,7 @@ class BootcampSessionCompleterTest {
     private val noopCloudBackupManager: CloudBackupManager = mockk(relaxed = true)
 
     private val noopAchievementEvaluator = AchievementEvaluator(object : AchievementDao {
-        override suspend fun insert(achievement: AchievementEntity) {}
+        override suspend fun insert(achievement: AchievementEntity): Long = 0L
         override suspend fun upsert(achievement: AchievementEntity) {}
         override suspend fun hasAchievement(type: String, milestone: String): Boolean = false
         override fun getAllAchievements(): Flow<List<AchievementEntity>> = emptyFlow()

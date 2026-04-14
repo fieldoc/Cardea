@@ -1,21 +1,18 @@
 package com.hrcoach.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.data.db.AchievementType
 import com.hrcoach.ui.theme.AchievementGold
@@ -30,44 +27,44 @@ fun AchievementCard(
     modifier: Modifier = Modifier
 ) {
     val (accentColor, borderColor, bgColor) = prestigeColors(achievement.prestigeLevel)
-    val shape = RoundedCornerShape(if (compact) 12.dp else 16.dp)
+    val padding = if (compact) PaddingValues(12.dp) else PaddingValues(20.dp)
 
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(bgColor, bgColor.copy(alpha = bgColor.alpha * 0.25f))
-                )
-            )
-            .border(1.dp, borderColor, shape)
-            .padding(if (compact) 12.dp else 20.dp),
-        contentAlignment = Alignment.Center
+    GlassCard(
+        modifier = modifier,
+        contentPadding = padding,
+        borderColor = borderColor,
+        containerColor = bgColor
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 text = achievementIcon(achievement),
-                fontSize = if (compact) 24.sp else 32.sp
+                style = if (compact) MaterialTheme.typography.titleLarge
+                        else MaterialTheme.typography.headlineSmall
             )
             Spacer(Modifier.height(if (compact) 4.dp else 8.dp))
             Text(
                 text = achievementTitle(achievement),
+                style = if (compact) MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                        else MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
                 color = CardeaTheme.colors.textPrimary,
-                fontSize = if (compact) 13.sp else 16.sp,
-                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center
             )
             if (achievement.goal != null) {
                 Text(
                     text = goalDisplayName(achievement.goal),
-                    color = CardeaTheme.colors.textTertiary,
-                    fontSize = if (compact) 11.sp else 13.sp
+                    style = if (compact) MaterialTheme.typography.labelSmall
+                            else MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textTertiary
                 )
             } else {
                 Text(
                     text = categoryLabel(achievement.type),
-                    color = CardeaTheme.colors.textTertiary,
-                    fontSize = if (compact) 11.sp else 13.sp
+                    style = if (compact) MaterialTheme.typography.labelSmall
+                            else MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textTertiary
                 )
             }
             Spacer(Modifier.height(if (compact) 6.dp else 10.dp))

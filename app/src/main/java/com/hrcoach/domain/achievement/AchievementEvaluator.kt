@@ -99,8 +99,8 @@ class AchievementEvaluator @Inject constructor(
     }
 
     private suspend fun insertAndBackup(entity: AchievementEntity) {
-        achievementDao.insert(entity)
-        runCatching { cloudBackupManager.syncAchievement(entity) }
+        val insertedId = achievementDao.insert(entity)
+        runCatching { cloudBackupManager.syncAchievement(entity.copy(id = insertedId)) }
             .onFailure { Log.w("AchievementEval", "Cloud backup failed", it) }
     }
 }

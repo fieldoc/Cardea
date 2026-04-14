@@ -7,12 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.ui.components.AchievementCard
 import com.hrcoach.ui.theme.CardeaTheme
@@ -31,14 +30,13 @@ fun AchievementGallery(
         ) {
             Text(
                 text = "Achievements",
-                color = CardeaTheme.colors.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleSmall,
+                color = CardeaTheme.colors.textPrimary
             )
             Text(
                 text = "${achievements.size} earned",
-                color = CardeaTheme.colors.textSecondary,
-                fontSize = 13.sp
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textSecondary
             )
         }
         Spacer(Modifier.height(12.dp))

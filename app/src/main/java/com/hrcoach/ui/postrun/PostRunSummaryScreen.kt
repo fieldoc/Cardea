@@ -60,8 +60,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hrcoach.data.db.AchievementEntity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
+import com.hrcoach.ui.components.AchievementCard
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
@@ -190,6 +192,10 @@ fun PostRunSummaryScreen(
                                 style = MaterialTheme.typography.headlineMedium,
                                 color = GradientPink
                             )
+                        }
+
+                        if (uiState.newAchievements.isNotEmpty()) {
+                            NewAchievementsSection(achievements = uiState.newAchievements)
                         }
 
                         if (uiState.isHrrActive) {
@@ -341,6 +347,32 @@ fun PostRunSummaryScreen(
         }
     }
     } // end Box
+}
+
+@Composable
+private fun NewAchievementsSection(achievements: List<AchievementEntity>) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = if (achievements.size == 1) "Achievement Unlocked" else "${achievements.size} Achievements Unlocked",
+            style = MaterialTheme.typography.titleSmall,
+            color = GradientPink
+        )
+        achievements.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                rowItems.forEach { achievement ->
+                    AchievementCard(
+                        achievement = achievement,
+                        compact = true,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
 }
 
 @Composable

@@ -1,6 +1,7 @@
 package com.hrcoach.domain.achievement
 
 import com.hrcoach.data.db.BootcampSessionEntity
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -19,7 +20,8 @@ object StreakCalculator {
         today: LocalDate = LocalDate.now(),
         zone: ZoneId = ZoneId.systemDefault()
     ): Int {
-        val startDate = Instant.ofEpochMilli(enrollmentStartMs).atZone(zone).toLocalDate()
+        val weekMonday = Instant.ofEpochMilli(enrollmentStartMs).atZone(zone).toLocalDate()
+            .with(DayOfWeek.MONDAY)
 
         val sorted = sessions.sortedWith(
             compareByDescending<BootcampSessionEntity> { it.weekNumber }
@@ -32,9 +34,9 @@ object StreakCalculator {
                 BootcampSessionEntity.STATUS_COMPLETED -> streak++
                 BootcampSessionEntity.STATUS_SKIPPED -> return streak
                 BootcampSessionEntity.STATUS_SCHEDULED -> {
-                    val sessionDate = startDate.plusDays(
-                        ((session.weekNumber - 1L) * 7L) + (session.dayOfWeek - 1L)
-                    )
+                    val sessionDate = weekMonday
+                        .plusWeeks((session.weekNumber - 1L))
+                        .plusDays((session.dayOfWeek - 1L))
                     if (sessionDate.isBefore(today)) return streak // effectively missed
                     // future session — ignore and continue
                 }

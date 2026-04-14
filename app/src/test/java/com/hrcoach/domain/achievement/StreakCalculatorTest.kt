@@ -97,6 +97,29 @@ class StreakCalculatorTest {
     }
 
     @Test
+    fun `scheduled session on past day breaks streak when enrollment starts mid-week`() {
+        // Enrollment starts Thursday Jan 1, 2026.
+        // Session(week=1, day=5) = Friday of that ISO week = Dec 29 + 4 days = Jan 2.
+        // Today is Saturday Jan 3 — Friday was yesterday and was never completed.
+        // Old (buggy) formula: Jan 1 + 4 = Jan 5 (appears future) → doesn't break → returns 2.
+        // New (correct) formula: Dec 29 + 4 = Jan 2 (past) → breaks streak → returns 0.
+        val sessions = listOf(
+            session(1, 1),
+            session(1, 3),
+            session(1, 5, BootcampSessionEntity.STATUS_SCHEDULED)
+        )
+        assertEquals(
+            0,
+            StreakCalculator.computeSessionStreak(
+                sessions,
+                enrollmentStartMs,
+                today = LocalDate.of(2026, 1, 3),
+                zone = zone
+            )
+        )
+    }
+
+    @Test
     fun `deferred sessions do not count toward weekly goal`() {
         val sessions = listOf(
             session(1, 1), session(1, 3), session(1, 5, BootcampSessionEntity.STATUS_DEFERRED)
