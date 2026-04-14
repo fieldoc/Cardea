@@ -248,7 +248,8 @@ class BootcampSettingsViewModel @Inject constructor(
                     adaptiveProfileRepository.saveProfile(
                         profile.copy(
                             hrMax = parsedHrMax,
-                            hrMaxIsCalibrated = true
+                            hrMaxIsCalibrated = true,
+                            hrMaxCalibratedAtMs = System.currentTimeMillis()
                         )
                     )
                 }
