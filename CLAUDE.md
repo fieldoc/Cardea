@@ -28,7 +28,7 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 ./gradlew lint
 ```
 
-**Worktree builds:** `local.properties` is gitignored and won't exist in worktrees. Copy from the main repo: `cp ../../local.properties .` (or from project root).
+**Worktree builds:** `local.properties` is gitignored and won't exist in worktrees. Copy from the main repo: `cp ../../../local.properties .` (worktrees live at `.claude/worktrees/<name>/`, so three levels up).
 
 **Safe APK reinstall:** Use `adb install -r <apk-path>` — preserves Room DB and DataStore. Do NOT use `mobile_install_app` (unknown whether it does a replace or full uninstall).
 
@@ -263,6 +263,9 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 ## Test Fakes
 
 - **`FakeBootcampDao`** in `BootcampSessionCompleterTest.kt` directly implements `BootcampDao`. Adding/changing DAO methods requires updating this fake or tests won't compile.
+- **`AchievementDao`** has TWO fakes: `FakeAchievementDao` class in `AchievementEvaluatorTest.kt` and an inline anonymous object in `BootcampSessionCompleterTest.kt:27`. Changing `AchievementDao` requires updating both.
+- **Room `@Insert` returns row ID** — declare `suspend fun insert(...): Long` (not `Unit`) when you need the auto-generated ID immediately after insert (e.g. to pass to cloud sync). The entity object in memory retains `id=0` after the call; use the returned `Long`.
+- **Test timezone safety** — tests that build epoch-millis via `LocalDate.atStartOfDay(ZoneId.of("UTC"))` must pass that zone explicitly to any function under test. Relying on `ZoneId.systemDefault()` causes failures on machines west of UTC.
 
 ## Known Pre-existing Lint Errors (do not treat as regressions)
 
