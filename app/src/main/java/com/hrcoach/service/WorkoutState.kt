@@ -27,7 +27,9 @@ data class WorkoutSnapshot(
     val countdownSecondsRemaining: Int? = null,
     val elapsedSeconds: Long = 0L,         // service-computed, sim-clock-aware
     // Populated at workout end if HrCalibrator detected a new max during this session.
-    // Pair(previousMax, newMax). Cleared on next workout start via reset().
+    // Pair(previousMax, newMax). Preserved through reset() so PostRunSummaryViewModel
+    // can display the calibration banner; explicitly cleared via clearHrMaxUpdatedDelta()
+    // once the ViewModel has consumed it.
     val hrMaxUpdatedDelta: Pair<Int, Int>? = null,
 )
 
@@ -57,7 +59,8 @@ object WorkoutState {
         _snapshot.update { current ->
             WorkoutSnapshot(
                 completedWorkoutId = current.completedWorkoutId,
-                pendingBootcampSessionId = current.pendingBootcampSessionId
+                pendingBootcampSessionId = current.pendingBootcampSessionId,
+                hrMaxUpdatedDelta = current.hrMaxUpdatedDelta
             )
         }
     }
