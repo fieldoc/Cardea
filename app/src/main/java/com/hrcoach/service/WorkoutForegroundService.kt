@@ -659,6 +659,9 @@ class WorkoutForegroundService : LifecycleService() {
                     val session = adaptiveController?.finishSession(workoutId = workoutId, endedAtMs = now)
 
                     // --- Calibration pass ---
+                    // session.updatedProfile preserves all fields from the workout's initialProfile
+                    // (hrMax, ctl, atl, hrRest, etc.) — the blocks below patch in fresh values
+                    // computed from this session's data.
                     var currentProfile = session?.updatedProfile ?: adaptiveProfileRepository.getProfile()
 
                     // hrMax: only update if cadence lock was NOT suspected

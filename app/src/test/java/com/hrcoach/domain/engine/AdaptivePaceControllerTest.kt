@@ -210,9 +210,9 @@ class AdaptivePaceControllerTest {
         )
     }
 
-    // ── BUG 3: settle-lag averaging ignores sample counts ─────────────────────
+    // ── Settle-lag: direction-equal averaging ────────────────────────────────
     @Test
-    fun `finishSession weights settle samples by count not by direction`() {
+    fun `finishSession averages settle direction means equally so slow build-ups are not drowned out`() {
         val controller = AdaptivePaceController(
             config = steadyConfig(target = 145, buffer = 5),
             initialProfile = AdaptiveProfile(responseLagSec = 25f)
@@ -234,13 +234,14 @@ class AdaptivePaceControllerTest {
 
         val result = controller.finishSession(workoutId = 1L, endedAtMs = t)
 
-        // Sample-weighted average: (3×10 + 1×90) / 4 = 30 s
-        // → blended: 25×0.85 + 30×0.15 = 25.75
-        // Direction-averaged (bug): (10 + 90) / 2 = 50 s
-        // → blended: 25×0.85 + 50×0.15 = 28.75
+        // Direction-equal average: down avg = 10s, up avg = 90s → blend = (10+90)/2 = 50s
+        // → EMA: 25×0.85 + 50×0.15 = 28.75s
+        // The slow build-up (90s) gets a full vote rather than being diluted by 3 quick
+        // corrections — this gives the projection engine a more conservative horizon
+        // that catches slow HR climbs before they overshoot.
         assertTrue(
-            "responseLagSec should be ≈25.75 (sample-weighted), got ${result.updatedProfile.responseLagSec}",
-            result.updatedProfile.responseLagSec < 27f
+            "responseLagSec should be ≈28.75 (direction-equal), got ${result.updatedProfile.responseLagSec}",
+            result.updatedProfile.responseLagSec in 27f..31f
         )
     }
 
