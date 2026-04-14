@@ -758,18 +758,21 @@ class WorkoutForegroundService : LifecycleService() {
                     val reliableMetrics = metricsToSave?.copy(trimpReliable = !cadenceLockSuspected)
 
                     // --- TRIMP score ---
-                    // Match elapsedSeconds: subtract pause time so a workout with 20 min of
-                    // pausing doesn't get TRIMP computed on full wall-clock duration.
+                    // Formula is owned by MetricsCalculator.trimpFrom(); this is the authoritative
+                    // invocation because only WFS has access to active-run-time duration (pauses
+                    // and auto-pauses subtracted). MetricsCalculator.deriveFromPaceSamples()
+                    // cannot compute TRIMP itself because its pace-sample inputs don't carry
+                    // pause-boundary information.
                     val durationMin = ((now - workoutStartMs - totalPausedMs - totalAutoPausedMs)
                         .coerceAtLeast(0L)) / 60_000f
                     val sessionAvgHr = reliableMetrics?.avgHr
                         ?: if (finalHrSampleCount > 0) (finalHrSampleSum.toFloat() / finalHrSampleCount) else null
                     val hrMaxEst = currentProfile.hrMax?.toFloat() ?: ageBasedFallback.toFloat()
-                    val trimpScore = reliableMetrics?.trimpScore
-                        ?: if (sessionAvgHr != null && durationMin > 0f) {
-                            val intensity = sessionAvgHr / hrMaxEst
-                            durationMin * sessionAvgHr * intensity * intensity
-                        } else null
+                    val trimpScore = MetricsCalculator.trimpFrom(
+                        durationMin = durationMin,
+                        avgHr = sessionAvgHr,
+                        hrMax = hrMaxEst
+                    )
 
                     // --- Environment flag — compares session pace to recent baseline at similar HR ---
                     val recentMetricsForEnv = workoutMetricsRepository.getRecentMetrics(42)

@@ -24,7 +24,15 @@ data class AdaptiveProfile(
 
 /**
  * Age-based resting HR default when no measurement exists yet.
- * Conservative population estimate; errs slightly high (-> higher Karvonen targets).
+ *
+ * Population mean resting HR for healthy adults is ~72 bpm in young adults and
+ * declines ~0.2 bpm per year of age across a broad population (source:
+ * Framingham/MESA cohort data). Clamped to [55, 75] to avoid extreme values from
+ * out-of-range ages, and fallback to 65 when age is unknown.
+ *
+ * Intentionally conservative — errs slightly high, which produces higher Karvonen
+ * target HRs (safer for new users whose true resting HR we don't yet know). Once
+ * the real resting HR is measured, this default is replaced.
  */
 fun defaultRestHr(age: Int?): Int =
     if (age != null) (72 - 0.2 * age).roundToInt().coerceIn(55, 75) else 65

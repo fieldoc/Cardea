@@ -9,7 +9,11 @@ data class WorkoutAdaptiveMetrics(
     val settleDownSec: Float? = null,
     val settleUpSec: Float? = null,
     val longTermHrTrimBpm: Float = 0f,
-    val responseLagSec: Float = 25f,
+    // Default matches AdaptiveProfile.responseLagSec (38f). Previously 25f, which
+    // makes the adaptive horizon (lag × 0.4f) hit the 10s minimum clamp, rendering
+    // the predictive engine inert. Production callers always supply an explicit
+    // value — this default is a safety net for future callers.
+    val responseLagSec: Float = 38f,
     val efficiencyFactor: Float? = null,
     val aerobicDecoupling: Float? = null,
     val efFirstHalf: Float? = null,

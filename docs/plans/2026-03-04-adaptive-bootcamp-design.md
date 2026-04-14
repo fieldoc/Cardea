@@ -195,6 +195,14 @@ Each tier within each goal has an expected CTL range. These are approximate and 
 | Half Marathon | 20–45 | 45–75 | 75–120 |
 | Marathon | 25–55 | 55–90 | 90–140 |
 
+**Edge cases (as implemented in `TierCtlRanges.kt`):**
+
+- **Below the Tier 1 floor:** A user with CTL below the table's T1 floor (e.g., a brand-new Cardio runner at CTL = 5) is placed in **Tier 1** regardless. The spec table describes "expected" ranges, not hard gates — there's no sub-Tier-1 program to assign, so new users start in Tier 1 and no auto-promotion fires until they reach the T1→T2 boundary.
+
+- **Above the Tier 3 ceiling:** The Tier 3 upper bound is a "typical" range, not a ceiling. A user with CTL above the T3 upper bound (e.g., a Cardio runner at CTL = 150) stays in **Tier 3** — it's the terminal tier, there is no Tier 4 to promote them to. No "above tier" prompt fires.
+
+The code uses tier indices 0–2 internally (mapping to `TierInfo` names **Foundation** / **Development** / **Performance**) — these correspond directly to the spec's T1/T2/T3. Same concept, different labels.
+
 ### Prompt Triggers
 
 **Prompt up** when all three are true for 3+ consecutive weeks within the recency window:

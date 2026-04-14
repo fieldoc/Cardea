@@ -42,7 +42,10 @@ object MetricsCalculator {
         settleDownSec: Float? = null,
         settleUpSec: Float? = null,
         longTermHrTrimBpm: Float = 0f,
-        responseLagSec: Float = 25f,
+        // Default matches AdaptiveProfile.responseLagSec (38f) to avoid the
+        // inert-horizon value (25f) if a caller ever omits this parameter. See
+        // CLAUDE.md "Adaptive Engine Invariants" for the 38f rationale.
+        responseLagSec: Float = 38f,
         targetHr: Float? = null
     ): WorkoutAdaptiveMetrics {
         val totalWeight = paceSamples.sumOf { it.weightSec.toDouble() }.toFloat()
@@ -209,6 +212,33 @@ object MetricsCalculator {
 
     private fun calculateHeartbeatsPerKm(avgHr: Float, avgPaceMinPerKm: Float): Float =
         avgHr * avgPaceMinPerKm
+
+    /**
+     * Cardea's per-session training load score.
+     *
+     * Formula: `durationMin × avgHr × (avgHr / hrMax)²`
+     *
+     * Intentionally non-standard — Cardea uses a quadratic intensity weight rather
+     * than Bannister's exponential (`duration × ΔHRratio × e^(b × ΔHRratio)`).
+     * Reviewed and accepted 2026-04-14 as good-enough for recreational use. See
+     * CLAUDE.md "Adaptive Engine Invariants" and the Science Constants Register.
+     *
+     * **Caller responsibility: `durationMin` must be active run time, not wall-
+     * clock.** Pass `(elapsedMs − pausedMs − autoPausedMs) / 60000f`.
+     * WorkoutForegroundService is the authoritative caller and handles this.
+     *
+     * Returns null if any input is null or non-positive.
+     */
+    fun trimpFrom(
+        durationMin: Float?,
+        avgHr: Float?,
+        hrMax: Float?
+    ): Float? {
+        if (durationMin == null || avgHr == null || hrMax == null) return null
+        if (durationMin <= 0f || avgHr <= 0f || hrMax <= 0f) return null
+        val intensity = avgHr / hrMax
+        return durationMin * avgHr * intensity * intensity
+    }
 
     private fun calculatePaceAtHr(samples: List<PaceHrSample>, targetHr: Float): Float? {
         if (samples.isEmpty()) return null

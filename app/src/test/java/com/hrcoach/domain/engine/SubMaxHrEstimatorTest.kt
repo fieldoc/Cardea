@@ -21,61 +21,63 @@ class SubMaxHrEstimatorTest {
     }
 
     @Test
-    fun `returns null when sustained peak too low`() {
-        // Peak at 130 = 68% of 191 -> below 70% threshold -> skip
+    fun `returns null when sustained peak is well below current max`() {
+        // Peak 130, current max 191. 130 < 191+2 → no evidence.
         val hrSamples = (1..240).map { HrSample(it * 5_000L, 130) }
         val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 191, age = 29, isCalibrated = false)
         assertNull(result)
     }
 
     @Test
-    fun `returns null when estimate is below current max`() {
-        // Peak at 140 = 73% of 191 -> effort 0.75 -> estimate 140/0.75 = 187 -> 187 < 191 -> null
-        val hrSamples = (1..240).map { HrSample(it * 5_000L, 140) }
-        val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 191, age = 29, isCalibrated = false)
+    fun `returns null when moderate effort - the pre-2026-04-14 mushing case`() {
+        // Peak 170, current max 180. 170 < 180+2 → no evidence, no revision.
+        // (Old bucket algorithm returned 185 here, biasing HRmax upward on moderate runs.)
+        val hrSamples = (1..240).map { HrSample(it * 5_000L, 170) }
+        val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 180, age = 40, isCalibrated = false)
         assertNull(result)
     }
 
     @Test
-    fun `estimates higher max from moderate effort`() {
-        // Sustained peak 170, current max 180 (from 220-40)
-        // 170/180 = 0.94 -> effort 0.92 -> estimate = 170/0.92 = 185
-        // 185 > 180 -> update. ceiling = 220-40+20 = 200. 185 < 200 -> OK
-        val hrSamples = (1..240).map { HrSample(it * 5_000L, 170) }
+    fun `returns null when peak is just below margin`() {
+        // Peak = current + 1 (below 2-bpm margin)
+        val hrSamples = (1..240).map { HrSample(it * 5_000L, 181) }
         val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 180, age = 40, isCalibrated = false)
-        assertEquals(185, result)
+        assertNull(result)
+    }
+
+    @Test
+    fun `updates when peak is exactly at margin`() {
+        // Peak = current + 2 → proposed = peak + 1 = current + 3
+        val hrSamples = (1..240).map { HrSample(it * 5_000L, 182) }
+        val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 180, age = 40, isCalibrated = false)
+        assertEquals(183, result)
+    }
+
+    @Test
+    fun `updates conservatively when peak exceeds current max`() {
+        // Peak 185, current 180, age 40 → proposed = 185 + 1 = 186, ceiling = 200
+        val hrSamples = (1..240).map { HrSample(it * 5_000L, 185) }
+        val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 180, age = 40, isCalibrated = false)
+        assertEquals(186, result)
     }
 
     @Test
     fun `caps estimate at 220-age+20`() {
-        // Sustained peak 190, current max 180, age 40
-        // 190/180 = 1.06 -> effort 0.92 -> estimate = 190/0.92 = 207
-        // ceiling = 220-40+20 = 200 -> capped to 200
-        val hrSamples = (1..240).map { HrSample(it * 5_000L, 190) }
+        // Peak 210, current 180, age 40 → proposed = 211, ceiling = 200 → cap to 200
+        val hrSamples = (1..240).map { HrSample(it * 5_000L, 210) }
         val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 180, age = 40, isCalibrated = false)
         assertEquals(200, result)
     }
 
     @Test
-    fun `never estimates below 220-age`() {
-        // Sustained peak 145, current max 150, age 29
-        // 145/150 = 0.97 -> effort 0.92 -> estimate = 145/0.92 = 158
-        // floor = 220-29 = 191 -> capped to 191. 191 > 150 -> update to 191
-        val hrSamples = (1..240).map { HrSample(it * 5_000L, 145) }
-        val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 150, age = 29, isCalibrated = false)
-        assertEquals(191, result)
-    }
-
-    @Test
     fun `uses 2-minute rolling average not spike`() {
-        // 10 min of data at 140 BPM with a single spike to 200
+        // 10 min of data at 140 bpm with a single spike to 200.
+        // 2-min rolling avg won't be pushed much by a single spike.
         val hrSamples = (1..120).map { i ->
             val hr = if (i == 60) 200 else 140
             HrSample(i * 5_000L, hr)
         }
-        // 2-min rolling avg won't be pushed much by a single spike
-        // Sustained peak should be ~141, not 200
-        // 141/191 = 0.74 -> effort 0.75 -> estimate = 141/0.75 = 188 -> 188 < 191 -> null
+        // Sustained peak ~141, current 191 → 141 < 193 → no revision.
         val result = SubMaxHrEstimator.estimate(hrSamples, currentHrMax = 191, age = 29, isCalibrated = false)
         assertNull(result)
     }
