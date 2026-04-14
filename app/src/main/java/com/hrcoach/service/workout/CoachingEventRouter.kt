@@ -34,6 +34,11 @@ class CoachingEventRouter {
         lastVoiceCueTimeMs = nowMs
     }
 
+    /** Called when a reactive alert fires so the predictive cooldown resets, preventing back-to-back cues. */
+    fun resetPredictiveWarningTimer() {
+        lastPredictiveWarningTime = 0L
+    }
+
     fun reset(workoutStartMs: Long = 0L) {
         this.workoutStartMs = workoutStartMs
         wasHrConnected = false
@@ -98,9 +103,13 @@ class CoachingEventRouter {
 
         val projectedDrift = adaptiveResult?.projectedZoneStatus in
             setOf(ZoneStatus.ABOVE_ZONE, ZoneStatus.BELOW_ZONE)
+        // Suppress predictive coaching during cardiovascular warmup (first 90s) — the slope EMA
+        // reflects the expected HR rise from rest, not a real drift, and would fire false warnings.
+        val warmupComplete = elapsedSeconds >= 90L
         if (zoneStatus == ZoneStatus.IN_ZONE &&
             adaptiveResult?.hasProjectionConfidence == true &&
             projectedDrift &&
+            warmupComplete &&
             nowMs - lastPredictiveWarningTime >= 60_000L
         ) {
             emitEvent(CoachingEvent.PREDICTIVE_WARNING, guidance)
@@ -151,12 +160,16 @@ class CoachingEventRouter {
 
         // IN_ZONE_CONFIRM (every 3+ minutes of voice silence while in zone)
         // Use workoutStartMs as initial baseline so the first confirm fires ~3 min into the workout.
-        if (zoneStatus == ZoneStatus.IN_ZONE) {
+        // Suppressed when the projection shows imminent drift — audio would contradict visual guidance.
+        val projectedStable = adaptiveResult?.projectedZoneStatus?.let {
+            it != ZoneStatus.ABOVE_ZONE && it != ZoneStatus.BELOW_ZONE
+        } ?: true
+        if (zoneStatus == ZoneStatus.IN_ZONE && projectedStable) {
             val baseline = if (lastVoiceCueTimeMs > 0L) lastVoiceCueTimeMs
                            else if (workoutStartMs > 0L) workoutStartMs
                            else nowMs
             if (nowMs - baseline >= 180_000L) {
-                emitEvent(CoachingEvent.IN_ZONE_CONFIRM, null)
+                emitEvent(CoachingEvent.IN_ZONE_CONFIRM, guidance)
                 lastVoiceCueTimeMs = nowMs
             }
         }

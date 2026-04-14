@@ -479,13 +479,12 @@ class WorkoutForegroundService : LifecycleService() {
 
         val guidance = when {
             isAutoPaused -> "STOPPED \u2022 ALERTS PAUSED"
-            adaptiveResult?.guidance != null -> adaptiveResult.guidance
-            // Strides guidance after 20 minutes
+            // Preset-specific overrides take priority over adaptive guidance
             workoutConfig.guidanceTag == "strides" && elapsedSeconds >= 1200 && zoneStatus == ZoneStatus.IN_ZONE ->
                 "Time for strides! 4\u20136 \u00d7 20s fast & smooth, jog easy 60\u201390s between"
-            // Zone 2 conversational pace nudge
             zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides") ->
                 "Easy pace builds your aerobic engine. Hold a conversation."
+            adaptiveResult != null -> adaptiveResult.guidance
             else -> when (zoneStatus) {
                 ZoneStatus.ABOVE_ZONE -> "SLOW DOWN NOW"
                 ZoneStatus.BELOW_ZONE -> "SPEED UP NOW"
@@ -535,6 +534,8 @@ class WorkoutForegroundService : LifecycleService() {
                 guidanceText = guidance,
                 onResetEscalation = { coachingAudioManager?.resetEscalation() },
                 onAlert = { event, eventGuidance ->
+                    // Reset predictive cooldown so the two alert systems don't fire back-to-back.
+                    coachingEventRouter.resetPredictiveWarningTimer()
                     val pace = adaptiveResult?.currentPaceMinPerKm
                     coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
                     coachingEventRouter.noteExternalAlert(nowMs)

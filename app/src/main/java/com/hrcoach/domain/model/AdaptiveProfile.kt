@@ -10,7 +10,7 @@ data class PaceHrBucket(
 
 data class AdaptiveProfile(
     val longTermHrTrimBpm: Float = 0f,
-    val responseLagSec: Float = 25f,
+    val responseLagSec: Float = 38f,
     val paceHrBuckets: Map<Int, PaceHrBucket> = emptyMap(),
     val totalSessions: Int = 0,
     val ctl: Float = 0f,
