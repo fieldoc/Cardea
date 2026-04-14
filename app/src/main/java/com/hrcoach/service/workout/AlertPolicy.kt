@@ -33,7 +33,8 @@ class AlertPolicy {
         if (status != lastOutOfZoneStatus) {
             lastOutOfZoneStatus = status
             outOfZoneSince = nowMs
-            lastAlertTime = 0L  // reset cooldown so direction-flip doesn't suppress next alert
+            // Keep lastAlertTime: the cooldown from the previous alert still applies after
+            // a direction flip, preventing rapid alert spam when HR oscillates at the threshold.
             return
         }
 

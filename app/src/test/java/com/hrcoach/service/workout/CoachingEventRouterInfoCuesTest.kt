@@ -174,6 +174,27 @@ class CoachingEventRouterInfoCuesTest {
         assertEquals(1, emitted.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
     }
 
+    // ── noteExternalAlert() ─────────────────────────────────────
+
+    @Test
+    fun `IN_ZONE_CONFIRM is suppressed within 3 min of an external alert notification`() {
+        val t0 = 1_000_000L
+        router.reset(t0)
+
+        route(zoneStatus = ZoneStatus.IN_ZONE, nowMs = t0)
+
+        // External zone alert fires at 2.5 min (e.g. from AlertPolicy)
+        router.noteExternalAlert(t0 + 150_000L)
+
+        // At 3 min from start (only 30s after external alert): still suppressed
+        route(zoneStatus = ZoneStatus.IN_ZONE, nowMs = t0 + 180_000L)
+        assertTrue(emitted.none { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+
+        // At 3 min after the external alert (t0 + 330s): fires
+        route(zoneStatus = ZoneStatus.IN_ZONE, nowMs = t0 + 330_000L)
+        assertEquals(1, emitted.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+    }
+
     // ── reset() ─────────────────────────────────────────────────
 
     @Test

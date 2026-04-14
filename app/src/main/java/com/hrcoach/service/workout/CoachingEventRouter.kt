@@ -26,6 +26,14 @@ class CoachingEventRouter {
         const val RETURN_TO_ZONE_COOLDOWN_MS = 30_000L
     }
 
+    /**
+     * Records that an external audio cue was played (e.g. a zone alert from AlertPolicy)
+     * so that IN_ZONE_CONFIRM's 3-minute silence window is correctly reset.
+     */
+    fun noteExternalAlert(nowMs: Long) {
+        lastVoiceCueTimeMs = nowMs
+    }
+
     fun reset(workoutStartMs: Long = 0L) {
         this.workoutStartMs = workoutStartMs
         wasHrConnected = false

@@ -1,5 +1,7 @@
 package com.hrcoach.ui.account
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.db.AchievementDao
@@ -23,7 +25,9 @@ import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.PartnerActivity
 import com.hrcoach.domain.model.VoiceVerbosity
+import com.hrcoach.service.WorkoutForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -69,6 +73,7 @@ data class AccountUiState(
 
 @HiltViewModel
 class AccountViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val audioRepo: AudioSettingsRepository,
     private val mapsRepo: MapsSettingsRepository,
     private val workoutRepo: WorkoutRepository,
@@ -272,6 +277,15 @@ class AccountViewModel @Inject constructor(
                     enableInZoneConfirm = _inZoneConfirm.value,
                 )
             )
+            // Notify the running workout service so settings take effect immediately.
+            // startService is a no-op when the service isn't running.
+            runCatching {
+                context.startService(
+                    Intent(context, WorkoutForegroundService::class.java).apply {
+                        action = WorkoutForegroundService.ACTION_RELOAD_AUDIO_SETTINGS
+                    }
+                )
+            }
             cloudBackupManager.syncSettings()
         }
     }

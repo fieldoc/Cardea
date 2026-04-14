@@ -69,6 +69,7 @@ class WorkoutForegroundService : LifecycleService() {
         const val ACTION_RESUME = "com.hrcoach.ACTION_RESUME"
         const val ACTION_RESCAN_BLE = "com.hrcoach.ACTION_RESCAN_BLE"
         const val ACTION_TOGGLE_AUTO_PAUSE = "com.hrcoach.ACTION_TOGGLE_AUTO_PAUSE"
+        const val ACTION_RELOAD_AUDIO_SETTINGS = "com.hrcoach.ACTION_RELOAD_AUDIO_SETTINGS"
         const val EXTRA_CONFIG_JSON = "config_json"
         const val EXTRA_DEVICE_ADDRESS = "device_address"
 
@@ -204,6 +205,11 @@ class WorkoutForegroundService : LifecycleService() {
 
             ACTION_RESCAN_BLE -> {
                 bleCoordinator.startScan()
+                return START_NOT_STICKY
+            }
+
+            ACTION_RELOAD_AUDIO_SETTINGS -> {
+                coachingAudioManager?.applySettings(audioSettingsRepository.getAudioSettings())
                 return START_NOT_STICKY
             }
 
@@ -531,6 +537,7 @@ class WorkoutForegroundService : LifecycleService() {
                 onAlert = { event, eventGuidance ->
                     val pace = adaptiveResult?.currentPaceMinPerKm
                     coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
+                    coachingEventRouter.noteExternalAlert(nowMs)
                 }
             )
         }

@@ -1,7 +1,7 @@
 package com.hrcoach.service.audio
 
 import android.content.Context
-import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.ToneGenerator
 import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.CoachingEvent
@@ -11,10 +11,12 @@ import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CoachingAudioManager(
     context: Context,
@@ -79,9 +81,14 @@ class CoachingAudioManager(
                     escalationLevel == EscalationLevel.EARCON_VOICE ||
                     escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION
                 ) {
+                    // NonCancellable: a voice alert that has already started must complete even if
+                    // destroy() cancels the scope mid-flight, so the runner isn't left with an
+                    // earcon beep but no spoken cue.
                     scope.launch {
                         delay(300L)
-                        voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
+                        withContext(NonCancellable) {
+                            voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
+                        }
                     }
                 }
                 if (escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION) {
@@ -90,7 +97,8 @@ class CoachingAudioManager(
             }
 
             CoachingEvent.RETURN_TO_ZONE -> {
-                escalationTracker.reset()
+                // Escalation reset is already handled by AlertPolicy.onResetEscalation callback
+                // (which fires when IN_ZONE is first detected, before this event is emitted).
                 if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
                 voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
             }
@@ -114,8 +122,10 @@ class CoachingAudioManager(
     fun playPauseFeedback(paused: Boolean) {
         val volume = currentSettings.earconVolume.coerceIn(0, 100)
         scope.launch {
+            // ToneGenerator takes an AudioManager.STREAM_* constant, not an AudioAttributes.USAGE_*
+            // constant. STREAM_MUSIC routes through the media volume the runner controls during a run.
             val toneGenerator = try {
-                ToneGenerator(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE, volume)
+                ToneGenerator(AudioManager.STREAM_MUSIC, volume)
             } catch (_: RuntimeException) {
                 return@launch
             }
