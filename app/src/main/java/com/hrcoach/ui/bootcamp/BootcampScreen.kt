@@ -624,19 +624,17 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
         // Today's pill gets an organic breathing pulse
         val isToday = day.isToday
         val isCompleted = session?.isCompleted == true
-        val todayPulse = if (isToday && !isCompleted) {
-            val pulseTransition = rememberInfiniteTransition(label = "todayPulse")
-            val pulseScale by pulseTransition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.09f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(2000, easing = FastOutSlowInEasing),
-                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-                ),
-                label = "todayScale"
-            )
-            pulseScale
-        } else 1f
+        val pulseTransition = rememberInfiniteTransition(label = "todayPulse")
+        val pulseScale by pulseTransition.animateFloat(
+            initialValue = 1f,
+            targetValue = 1.09f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = FastOutSlowInEasing),
+                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+            ),
+            label = "todayScale"
+        )
+        val todayPulse = if (isToday && !isCompleted) pulseScale else 1f
 
         Box(contentAlignment = Alignment.Center) {
             // Tight glow halo behind completed pills
@@ -2010,6 +2008,18 @@ private fun TodayHeroSection(
     onEndProgram: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    // Hoisted unconditionally to satisfy Compose rules-of-hooks (used inside RunUpcoming branch)
+    var oneLinerExpanded by remember { mutableStateOf(false) }
+    val ctaBreathe = rememberInfiniteTransition(label = "ctaBreathe")
+    val ctaScale by ctaBreathe.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.015f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "ctaScale"
+    )
 
     // Ambient color based on today's session type
     val ambientColor = sessionAmbientColor(uiState.todayState)
@@ -2262,31 +2272,20 @@ private fun TodayHeroSection(
                             ZoneEducationProvider.forSessionType(
                                 today.session.type.name, ContentDensity.ONE_LINER
                             )?.let { oneLiner ->
-                                var expanded by remember { mutableStateOf(false) }
                                 Text(
                                     text = oneLiner,
                                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                                     color = CardeaTheme.colors.textTertiary,
-                                    maxLines = if (expanded) Int.MAX_VALUE else 2,
+                                    maxLines = if (oneLinerExpanded) Int.MAX_VALUE else 2,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { expanded = !expanded }
+                                        .clickable { oneLinerExpanded = !oneLinerExpanded }
                                 )
                             }
                         }
                         Spacer(modifier = Modifier.height(10.dp))
-                        // Breathing scale CTA — subtle "ready to tap" pulse
-                        val ctaBreathe = rememberInfiniteTransition(label = "ctaBreathe")
-                        val ctaScale by ctaBreathe.animateFloat(
-                            initialValue = 1f,
-                            targetValue = 1.015f,
-                            animationSpec = infiniteRepeatable(
-                                animation = tween(3000, easing = FastOutSlowInEasing),
-                                repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-                            ),
-                            label = "ctaScale"
-                        )
+                        // ctaBreathe / ctaScale hoisted to TodayHeroSection top (rules of hooks)
                         androidx.compose.material3.Button(
                             onClick = {
                                 onRequestSession(today.session)
