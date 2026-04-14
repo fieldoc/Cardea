@@ -86,21 +86,19 @@ class AdaptiveProfileRebuilder @Inject constructor() {
                     workoutId = workout.id,
                     endedAtMs = workout.endTime
                 )
-                // finishSession resets ctl/atl/hrMax to defaults — preserve accumulated values
-                val prevCtl = profile.ctl
-                val prevAtl = profile.atl
-                val prevHrMax = profile.hrMax
+                // finishSession now preserves all fields from the previous profile that it
+                // doesn't manage (ctl, atl, hrMax, hrRest, etc.) — no manual workaround needed.
                 profile = session.updatedProfile
 
-                // Apply CTL/ATL from stored TRIMP score
+                // Apply CTL/ATL from stored TRIMP score (overwrites the preserved carry-over)
                 val daysSinceLast = if (lastProcessedStartTime != null) {
                     ((workout.startTime - lastProcessedStartTime!!) / 86_400_000L)
                         .toInt().coerceAtLeast(1)
                 } else 1
                 val trimp = metricsByWorkout[workout.id]?.trimpScore
                 val loadResult = FitnessLoadCalculator.updateLoads(
-                    currentCtl = prevCtl,
-                    currentAtl = prevAtl,
+                    currentCtl = profile.ctl,
+                    currentAtl = profile.atl,
                     trimpScore = if (trimp != null && trimp > 0f) trimp else 0f,
                     daysSinceLast = daysSinceLast
                 )
@@ -108,7 +106,7 @@ class AdaptiveProfileRebuilder @Inject constructor() {
 
                 // hrMax: track highest reliably observed HR across sessions
                 val sessionMax = points.maxOfOrNull { it.heartRate } ?: 0
-                val currentMax = prevHrMax ?: 0
+                val currentMax = profile.hrMax ?: 0
                 if (sessionMax > currentMax) {
                     profile = profile.copy(hrMax = sessionMax, hrMaxIsCalibrated = false)
                 } else if (currentMax > 0) {

@@ -51,6 +51,9 @@ class AdaptivePaceController(
         val metrics: WorkoutAdaptiveMetrics
     )
 
+    // Stored so finishSession can propagate fields it doesn't manage (hrMax, ctl, atl, etc.)
+    private val savedInitialProfile = initialProfile
+
     private var shortTermTrimBpm = 0f
     private var longTermTrimBpm = initialProfile.longTermHrTrimBpm
     private var responseLagSec = initialProfile.responseLagSec.coerceIn(8f, 90f)
@@ -61,10 +64,12 @@ class AdaptivePaceController(
 
     private var lastHr = 0
     private var lastHrTimeMs = 0L
+    private var slopeTrackerInitialized = false
     private var hrSlopeBpmPerMin = 0f
 
     private var lastPaceDistanceMeters = 0f
     private var lastPaceTimeMs = 0L
+    private var paceTrackerInitialized = false
     private var smoothedPaceMinPerKm = 0f
 
     private var weightedDurationSec = 0f
@@ -85,8 +90,6 @@ class AdaptivePaceController(
         MEDIUM,
         HIGH
     }
-
-    fun currentLagSec(): Float = responseLagSec
 
     fun evaluateTick(
         nowMs: Long,
@@ -179,9 +182,19 @@ class AdaptivePaceController(
                 ).coerceIn(-20f, 20f)
         }
 
-        val allSettleSamplesMs = settleDownSamplesMs + settleUpSamplesMs
-        if (allSettleSamplesMs.isNotEmpty()) {
-            val observedLagSec = allSettleSamplesMs.average().toFloat() / 1000f
+        // Average settle-down and settle-up times separately, then blend equally between directions.
+        // Down (HR returning from above zone) and up (HR returning from below zone) have different
+        // physiological timescales — a count-weighted mix lets many quick corrections drown out
+        // one slow build-up, which would under-estimate the runner's real response lag.
+        val downAvgMs = settleDownSamplesMs.takeIf { it.isNotEmpty() }?.average()?.toFloat()
+        val upAvgMs = settleUpSamplesMs.takeIf { it.isNotEmpty() }?.average()?.toFloat()
+        val observedLagSec = when {
+            downAvgMs != null && upAvgMs != null -> ((downAvgMs + upAvgMs) / 2f) / 1000f
+            downAvgMs != null -> downAvgMs / 1000f
+            upAvgMs != null -> upAvgMs / 1000f
+            else -> null
+        }
+        if (observedLagSec != null) {
             responseLagSec = (
                 (responseLagSec * tuning.lagBlendCurrentWeight) +
                     (observedLagSec * tuning.lagBlendObservedWeight)
@@ -189,7 +202,12 @@ class AdaptivePaceController(
         }
 
         val mergedBuckets = mergePaceBuckets(baselineBuckets, sessionBuckets)
-        val updatedProfile = AdaptiveProfile(
+
+        // Carry over all fields that AdaptivePaceController doesn't manage (hrMax, ctl, atl,
+        // hrRest, lastTuningDirection, etc.) so callers never see them silently zeroed.
+        // Callers that compute fresh values for these fields (WorkoutForegroundService,
+        // AdaptiveProfileRebuilder) patch them on top after this call.
+        val updatedProfile = savedInitialProfile.copy(
             longTermHrTrimBpm = longTermTrimBpm,
             responseLagSec = responseLagSec,
             paceHrBuckets = mergedBuckets,
@@ -199,8 +217,8 @@ class AdaptivePaceController(
         val metrics = MetricsCalculator.deriveFromPaceSamples(
             workoutId = workoutId,
             recordedAtMs = endedAtMs,
-            settleDownSec = settleDownSamplesMs.takeIf { it.isNotEmpty() }?.average()?.toFloat()?.div(1000f),
-            settleUpSec = settleUpSamplesMs.takeIf { it.isNotEmpty() }?.average()?.toFloat()?.div(1000f),
+            settleDownSec = downAvgMs?.div(1000f),
+            settleUpSec = upAvgMs?.div(1000f),
             longTermHrTrimBpm = longTermTrimBpm,
             responseLagSec = responseLagSec,
             paceSamples = paceSamples
@@ -214,7 +232,10 @@ class AdaptivePaceController(
         hr: Int,
         targetHr: Int?
     ): Float? {
-        if (lastPaceTimeMs == 0L) {
+        // Use a boolean flag instead of checking lastPaceTimeMs == 0L so that a workout
+        // starting at epoch zero (nowMs = 0) doesn't break the second tick's delta computation.
+        if (!paceTrackerInitialized) {
+            paceTrackerInitialized = true
             lastPaceTimeMs = nowMs
             lastPaceDistanceMeters = distanceMeters
             return null
@@ -269,7 +290,10 @@ class AdaptivePaceController(
 
     private fun updateHrSlope(nowMs: Long, hr: Int) {
         if (hr <= 0) return
-        if (lastHrTimeMs == 0L) {
+
+        // Use a boolean flag so epoch-zero timestamps don't re-trigger initialisation on tick 2.
+        if (!slopeTrackerInitialized) {
+            slopeTrackerInitialized = true
             lastHrTimeMs = nowMs
             lastHr = hr
             return
@@ -280,6 +304,11 @@ class AdaptivePaceController(
             val instSlope = ((hr - lastHr) / deltaMin).coerceIn(-30f, 30f)
             hrSlopeBpmPerMin = (hrSlopeBpmPerMin * tuning.slopeSmoothingPreviousWeight) +
                 (instSlope * tuning.slopeSmoothingInstantWeight)
+        } else if (deltaMin > 1.5f) {
+            // Long gap (walk break, GPS-only mode, power saving) — decay the stored slope
+            // toward zero rather than freezing it. A stale +20 BPM/min climb from before a
+            // 3-minute walk would otherwise keep telling the runner to ease off indefinitely.
+            hrSlopeBpmPerMin *= 0.5f
         }
         lastHr = hr
         lastHrTimeMs = nowMs
@@ -420,7 +449,12 @@ class AdaptivePaceController(
             .filter { it.sampleCount > 0 }
 
         if (neighbors.isEmpty()) return 0f
-        val avgBucketHr = neighbors.sumOf { it.avgHr.toDouble() }.toFloat() / neighbors.size
+
+        // Weight each neighbor bucket by its sample count so that one anomalous
+        // single-session bucket can't dominate a bucket backed by hundreds of runs.
+        val totalSamples = neighbors.sumOf { it.sampleCount }
+        val avgBucketHr = neighbors.sumOf { (it.avgHr * it.sampleCount).toDouble() }.toFloat() / totalSamples
+
         val deltaFromTarget = avgBucketHr - targetHr
         return (deltaFromTarget * tuning.paceBiasFromTargetFactor)
             .coerceIn(tuning.paceBiasMinBpm, tuning.paceBiasMaxBpm)
@@ -441,11 +475,12 @@ class AdaptivePaceController(
                     sampleCount = running.sampleCount
                 )
             } else {
-                val count = (current.sampleCount + running.sampleCount).coerceAtMost(10_000)
+                val uncappedCount = current.sampleCount + running.sampleCount
+                val count = uncappedCount.coerceAtMost(10_000)
                 val avg = (
                     (current.avgHr * current.sampleCount) +
                         (sessionAvg * running.sampleCount)
-                    ) / (current.sampleCount + running.sampleCount)
+                    ) / uncappedCount
                 merged[bucket] = PaceHrBucket(avgHr = avg, sampleCount = count)
             }
         }
