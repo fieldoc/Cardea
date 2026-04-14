@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
@@ -48,7 +47,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,10 +60,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.hrcoach.data.db.AchievementEntity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.ui.components.AchievementCard
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaBgSecondary
@@ -74,8 +72,6 @@ import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
-import com.hrcoach.data.db.AchievementEntity
-import com.hrcoach.ui.components.CardeaButton
 import kotlinx.coroutines.delay
 
 private enum class PostRunContentState {
@@ -223,10 +219,6 @@ fun PostRunSummaryScreen(
 
                         uiState.hrMaxDelta?.let { (oldMax, newMax) ->
                             HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
-                        }
-
-                        uiState.newAchievements.forEach { achievement ->
-                            AchievementCard(achievement = achievement)
                         }
 
                         uiState.bootcampProgressLabel
@@ -522,36 +514,6 @@ private fun HrMaxUpdatedCard(
                     text = "Cardea measured a new personal ceiling and adjusted your training zones.",
                     style = MaterialTheme.typography.bodySmall,
                     color = CardeaTheme.colors.textSecondary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AchievementCard(achievement: AchievementEntity) {
-    GlassCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Check,
-                contentDescription = null,
-                tint = ZoneGreen,
-                modifier = Modifier.size(20.dp)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Achievement Unlocked",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CardeaTheme.colors.textSecondary
-                )
-                Text(
-                    text = achievement.milestone,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = CardeaTheme.colors.textPrimary
                 )
             }
         }
