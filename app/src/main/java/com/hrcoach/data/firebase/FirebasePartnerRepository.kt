@@ -20,6 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 class PartnerLimitException(message: String) : Exception(message)
+class ExpiredInviteException(message: String) : Exception(message)
 
 private const val MAX_PARTNERS = 3
 
@@ -84,7 +85,7 @@ class FirebasePartnerRepository @Inject constructor(
         if (!snapshot.exists()) return@withTimeout null
 
         val expiresAt = snapshot.child("expiresAt").getValue(Long::class.java) ?: return@withTimeout null
-        if (System.currentTimeMillis() > expiresAt) return@withTimeout null
+        if (System.currentTimeMillis() > expiresAt) throw ExpiredInviteException("This invite code has expired. Ask your partner to generate a new one.")
 
         val partnerId = snapshot.child("userId").getValue(String::class.java) ?: return@withTimeout null
         val partnerName = snapshot.child("displayName").getValue(String::class.java) ?: "Runner"

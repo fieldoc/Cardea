@@ -29,7 +29,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.tabIndicatorOffset
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -57,24 +58,17 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.data.firebase.ExpiredInviteException
 import com.hrcoach.data.firebase.PartnerLimitException
 import com.hrcoach.domain.emblem.Emblem
 import com.hrcoach.domain.model.PartnerActivity
 import com.hrcoach.ui.components.EmblemIconWithRing
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaTheme
-import com.hrcoach.ui.theme.GradientBlue
-import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
-import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
 import kotlinx.coroutines.launch
-
-// Private gradients removed — use CardeaTheme.colors.gradient / .ctaGradient instead
-private val DisabledButtonGradient = Brush.linearGradient(
-    listOf(Color(0xFF4B5563), Color(0xFF374151))
-)
 
 // ── Partner Section ────────────────────────────────────────────────────────────
 
@@ -126,7 +120,10 @@ fun PartnerSection(
         // Gradient "+ Add" button — disabled at 3/3
         val isFull = partnerCount >= 3
         val addButtonGradient = if (isFull)
-            DisabledButtonGradient
+            Brush.linearGradient(listOf(
+                CardeaTheme.colors.textTertiary.copy(alpha = 0.25f),
+                CardeaTheme.colors.textTertiary.copy(alpha = 0.18f),
+            ))
         else
             CardeaTheme.colors.ctaGradient
         Box(
@@ -311,18 +308,32 @@ fun AddPartnerBottomSheet(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = "One of you creates a code; the other enters it to connect.",
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textTertiary,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Tabs
-            ScrollableTabRow(
+            TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.Transparent,
                 contentColor = CardeaTheme.colors.textPrimary,
-                edgePadding = 16.dp,
-                divider = {}
+                divider = {},
+                indicator = { tabPositions ->
+                    Box(
+                        Modifier
+                            .tabIndicatorOffset(tabPositions[selectedTab])
+                            .height(2.dp)
+                            .background(GradientPink)
+                    )
+                }
             ) {
-                listOf("Share my code", "Enter a code").forEachIndexed { index, title ->
+                listOf("Invite someone", "I have a code").forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
@@ -457,8 +468,15 @@ private fun ShareCodeTab(
                     color = Color.Unspecified
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Valid for 24 hours",
+                style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textTertiary,
+                textAlign = TextAlign.Center
+            )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Box(
                 modifier = Modifier
@@ -540,11 +558,16 @@ private fun EnterCodeTab(
                 supportingText = errorMessage?.let { { Text(it, color = ZoneRed) } },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = GradientPink,
-                    unfocusedBorderColor = CardeaTheme.colors.textTertiary,
+                    unfocusedBorderColor = CardeaTheme.colors.textSecondary,
                     cursorColor = GradientPink,
                     focusedTextColor = CardeaTheme.colors.textPrimary,
                     unfocusedTextColor = CardeaTheme.colors.textPrimary,
                     errorBorderColor = ZoneRed,
+                    focusedContainerColor = Color(0x14FFFFFF),
+                    unfocusedContainerColor = Color(0x0AFFFFFF),
+                    errorContainerColor = Color(0x0AFFFFFF),
+                    focusedPlaceholderColor = CardeaTheme.colors.textSecondary,
+                    unfocusedPlaceholderColor = CardeaTheme.colors.textTertiary,
                 ),
                 textStyle = androidx.compose.material3.MaterialTheme.typography.headlineSmall.copy(
                     fontFamily = FontFamily.Monospace,
@@ -565,7 +588,10 @@ private fun EnterCodeTab(
                         if (canConnect)
                             CardeaTheme.colors.ctaGradient
                         else
-                            DisabledButtonGradient
+                            Brush.linearGradient(listOf(
+                                CardeaTheme.colors.textTertiary.copy(alpha = 0.25f),
+                                CardeaTheme.colors.textTertiary.copy(alpha = 0.18f),
+                            ))
                     )
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -583,6 +609,8 @@ private fun EnterCodeTab(
                                             errorMessage = "Code not found or already used."
                                         }
                                     } catch (ex: PartnerLimitException) {
+                                        errorMessage = ex.message
+                                    } catch (ex: ExpiredInviteException) {
                                         errorMessage = ex.message
                                     } catch (ex: Exception) {
                                         errorMessage = if (ex is IllegalStateException || ex.message.isNullOrBlank())
