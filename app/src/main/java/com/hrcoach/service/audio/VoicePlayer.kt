@@ -304,7 +304,7 @@ class VoicePlayer(context: Context) {
                 CoachingEvent.PREDICTIVE_WARNING -> guidanceText ?: "Watch your pace"
                 CoachingEvent.HALFWAY -> "Halfway"
                 CoachingEvent.WORKOUT_COMPLETE -> "Workout complete"
-                CoachingEvent.IN_ZONE_CONFIRM -> "Pace looks good"
+                CoachingEvent.IN_ZONE_CONFIRM -> guidanceText ?: "Pace looks good"
                 CoachingEvent.SIGNAL_LOST -> "Signal lost"
                 CoachingEvent.SIGNAL_REGAINED -> "Signal regained"
                 CoachingEvent.SEGMENT_CHANGE -> "Next segment"

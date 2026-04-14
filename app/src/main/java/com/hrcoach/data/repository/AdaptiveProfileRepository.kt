@@ -32,4 +32,14 @@ class AdaptiveProfileRepository @Inject constructor(
     fun saveProfile(profile: AdaptiveProfile) {
         prefs.edit().putString(PREF_PROFILE_JSON, JsonCodec.gson.toJson(profile)).apply()
     }
+
+    /**
+     * Resets the long-term HR trim to zero. Use when environmental factors (heat block,
+     * illness, overtraining) have biased the trim and the runner has recovered.
+     * Does not affect pace buckets or session count.
+     */
+    @Synchronized
+    fun resetLongTermTrim() {
+        saveProfile(getProfile().copy(longTermHrTrimBpm = 0f))
+    }
 }

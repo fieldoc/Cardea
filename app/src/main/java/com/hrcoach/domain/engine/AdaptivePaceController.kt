@@ -17,14 +17,15 @@ data class AdaptiveTuningConfig(
     val lagBlendObservedWeight: Float = 0.15f,
     val paceSmoothingPreviousWeight: Float = 0.72f,
     val paceSmoothingInstantWeight: Float = 0.28f,
-    val slopeSmoothingPreviousWeight: Float = 0.75f,
-    val slopeSmoothingInstantWeight: Float = 0.25f,
+    val slopeSmoothingPreviousWeight: Float = 0.60f,
+    val slopeSmoothingInstantWeight: Float = 0.40f,
     val projectionHorizonLagFactor: Float = 0.4f,
     val projectionHorizonMinSec: Float = 10f,
     val projectionHorizonMaxSec: Float = 15f,
     val paceBiasFromTargetFactor: Float = 0.2f,
     val paceBiasMinBpm: Float = -6f,
-    val paceBiasMaxBpm: Float = 6f
+    val paceBiasMaxBpm: Float = 6f,
+    val slopeSampleClampBpmPerMin: Float = 50f
 )
 
 class AdaptivePaceController(
@@ -79,14 +80,13 @@ class AdaptivePaceController(
     private val settleDownSamplesMs = mutableListOf<Long>()
     private val settleUpSamplesMs = mutableListOf<Long>()
     private var lastProjectedHr: Float? = null
+    private var lastBaseProjectedHr: Float? = null
 
     private enum class ProjectionConfidence {
         LOW,
         MEDIUM,
         HIGH
     }
-
-    fun currentLagSec(): Float = responseLagSec
 
     fun evaluateTick(
         nowMs: Long,
@@ -114,6 +114,7 @@ class AdaptivePaceController(
         if (!connected || hr <= 0 || targetHr <= 0 || actualZone == ZoneStatus.NO_DATA) {
             trackSettling(nowMs, ZoneStatus.NO_DATA)
             shortTermTrimBpm *= 0.9f
+            lastBaseProjectedHr = null
             lastProjectedHr = null
             return TickResult(
                 zoneStatus = ZoneStatus.NO_DATA,
@@ -125,17 +126,20 @@ class AdaptivePaceController(
             )
         }
 
-        val predictionError = lastProjectedHr?.let { previous -> hr - previous } ?: 0f
+        // Measure error against base projection (excluding shortTermTrim) so the two trim
+        // terms learn from independent error signals rather than compounding the same bias.
+        val predictionError = lastBaseProjectedHr?.let { previous -> hr - previous } ?: 0f
         shortTermTrimBpm = (
             (shortTermTrimBpm * tuning.shortTermTrimDecay) +
                 (predictionError * tuning.shortTermTrimErrorWeight)
             ).coerceIn(-20f, 20f)
         val paceTrendBias = pace?.let { lookupPaceBias(it, targetHr) } ?: 0f
-        val projectedHr = hr +
+        val baseProjectedHr = hr +
             (hrSlopeBpmPerMin * (projectionHorizonSec() / 60f)) +
-            (shortTermTrimBpm * tuning.shortTermTrimProjectionWeight) +
             longTermTrimBpm +
             paceTrendBias
+        val projectedHr = baseProjectedHr + (shortTermTrimBpm * tuning.shortTermTrimProjectionWeight)
+        lastBaseProjectedHr = baseProjectedHr
         lastProjectedHr = projectedHr
 
         val low = targetHr - config.bufferBpm
@@ -277,7 +281,7 @@ class AdaptivePaceController(
 
         val deltaMin = (nowMs - lastHrTimeMs) / 60_000f
         if (deltaMin in 0.05f..1.5f) {
-            val instSlope = ((hr - lastHr) / deltaMin).coerceIn(-30f, 30f)
+            val instSlope = ((hr - lastHr) / deltaMin).coerceIn(-tuning.slopeSampleClampBpmPerMin, tuning.slopeSampleClampBpmPerMin)
             hrSlopeBpmPerMin = (hrSlopeBpmPerMin * tuning.slopeSmoothingPreviousWeight) +
                 (instSlope * tuning.slopeSmoothingInstantWeight)
         }
@@ -393,7 +397,7 @@ class AdaptivePaceController(
                 val direction = transitionDirection
                 if (direction != null && transitionStartMs > 0L) {
                     val elapsed = nowMs - transitionStartMs
-                    if (elapsed in 2_000L..300_000L) {
+                    if (elapsed in 2_000L..600_000L) {
                         if (direction == ZoneStatus.ABOVE_ZONE) {
                             settleDownSamplesMs += elapsed
                         } else if (direction == ZoneStatus.BELOW_ZONE) {
@@ -420,7 +424,12 @@ class AdaptivePaceController(
             .filter { it.sampleCount > 0 }
 
         if (neighbors.isEmpty()) return 0f
-        val avgBucketHr = neighbors.sumOf { it.avgHr.toDouble() }.toFloat() / neighbors.size
+        val totalWeight = neighbors.sumOf { it.sampleCount.toDouble() }.toFloat()
+        val avgBucketHr = if (totalWeight > 0f) {
+            neighbors.sumOf { (it.avgHr * it.sampleCount).toDouble() }.toFloat() / totalWeight
+        } else {
+            neighbors.sumOf { it.avgHr.toDouble() }.toFloat() / neighbors.size
+        }
         val deltaFromTarget = avgBucketHr - targetHr
         return (deltaFromTarget * tuning.paceBiasFromTargetFactor)
             .coerceIn(tuning.paceBiasMinBpm, tuning.paceBiasMaxBpm)

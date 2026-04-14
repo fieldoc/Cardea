@@ -8,6 +8,7 @@ import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -53,29 +54,25 @@ class CoachingEventRouterTest {
     }
 
     @Test
-    fun `emits predictive warning when projected drift is confident`() {
+    fun `emits predictive warning when projected drift is confident after warmup`() {
         val router = CoachingEventRouter()
         val events = mutableListOf<CoachingEvent>()
         val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
-        val adaptiveResult = AdaptivePaceController(
-            config = config,
-            initialProfile = AdaptiveProfile()
-        ).run {
-            AdaptivePaceController.TickResult(
-                zoneStatus = ZoneStatus.IN_ZONE,
-                projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
-                predictedHr = 150,
-                currentPaceMinPerKm = 6f,
-                guidance = "ease off",
-                hasProjectionConfidence = true
-            )
-        }
+        val adaptiveResult = AdaptivePaceController.TickResult(
+            zoneStatus = ZoneStatus.IN_ZONE,
+            projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
+            predictedHr = 150,
+            currentPaceMinPerKm = 6f,
+            guidance = "ease off",
+            hasProjectionConfidence = true
+        )
 
+        // After 90s warmup gate — warning should fire
         router.route(
             workoutConfig = config,
             connected = true,
             distanceMeters = 100f,
-            elapsedSeconds = 0L,
+            elapsedSeconds = 120L,
             zoneStatus = ZoneStatus.IN_ZONE,
             adaptiveResult = adaptiveResult,
             guidance = "ease off",
@@ -84,6 +81,36 @@ class CoachingEventRouterTest {
         )
 
         assertTrue(events.contains(CoachingEvent.PREDICTIVE_WARNING))
+    }
+
+    @Test
+    fun `suppresses predictive warning during warmup period`() {
+        val router = CoachingEventRouter()
+        val events = mutableListOf<CoachingEvent>()
+        val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+        val adaptiveResult = AdaptivePaceController.TickResult(
+            zoneStatus = ZoneStatus.IN_ZONE,
+            projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
+            predictedHr = 150,
+            currentPaceMinPerKm = 6f,
+            guidance = "ease off",
+            hasProjectionConfidence = true
+        )
+
+        // First 90s warmup gate — warning must NOT fire even with drift projection
+        router.route(
+            workoutConfig = config,
+            connected = true,
+            distanceMeters = 100f,
+            elapsedSeconds = 30L,
+            zoneStatus = ZoneStatus.IN_ZONE,
+            adaptiveResult = adaptiveResult,
+            guidance = "ease off",
+            nowMs = 100_000L,
+            emitEvent = { event, _ -> events += event }
+        )
+
+        assertFalse(events.contains(CoachingEvent.PREDICTIVE_WARNING))
     }
 
     // ── RETURN_TO_ZONE tests ──────────────────────────────────

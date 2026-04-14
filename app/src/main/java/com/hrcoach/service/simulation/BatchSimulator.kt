@@ -15,7 +15,8 @@ data class SingleRunResult(
     val durationSeconds: Int,
     val updatedProfile: AdaptiveProfile,
     val avgHr: Int,
-    val finalDistance: Float
+    val finalDistance: Float,
+    val predictiveWarningCount: Int = 0
 )
 
 data class BatchResult(
@@ -47,6 +48,7 @@ class BatchSimulator @Inject constructor(
             var tickCount = 0
             var hrSum = 0L
             var hrCount = 0
+            var predictiveWarningCount = 0
 
             val totalTicks = (scenario.durationSeconds * 1000L) / TICK_INTERVAL_MS
 
@@ -71,7 +73,7 @@ class BatchSimulator @Inject constructor(
                     zoneEngine.evaluate(hr, target)
                 }
 
-                adaptive.evaluateTick(
+                val tickResult = adaptive.evaluateTick(
                     nowMs = clock.now(),
                     hr = hr,
                     connected = connected,
@@ -79,6 +81,12 @@ class BatchSimulator @Inject constructor(
                     distanceMeters = locSource.distanceMeters.value,
                     actualZone = zoneStatus
                 )
+                if (tickResult.hasProjectionConfidence &&
+                    tickResult.zoneStatus == ZoneStatus.IN_ZONE &&
+                    tickResult.projectedZoneStatus in setOf(ZoneStatus.ABOVE_ZONE, ZoneStatus.BELOW_ZONE)
+                ) {
+                    predictiveWarningCount++
+                }
 
                 if (connected && hr > 0) {
                     hrSum += hr
@@ -95,7 +103,8 @@ class BatchSimulator @Inject constructor(
                 durationSeconds = scenario.durationSeconds,
                 updatedProfile = session?.updatedProfile ?: initialProfile,
                 avgHr = if (hrCount > 0) (hrSum / hrCount).toInt() else 0,
-                finalDistance = locSource.distanceMeters.value
+                finalDistance = locSource.distanceMeters.value,
+                predictiveWarningCount = predictiveWarningCount
             )
         }
     }
