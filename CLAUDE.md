@@ -50,7 +50,7 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 Compose UI (screens + ViewModels)
     ↕ StateFlow
 WorkoutForegroundService (orchestrator)
-    BleHrManager | GpsDistanceTracker | ZoneEngine | AlertManager | AdaptivePaceController
+    BleHrManager | GpsDistanceTracker | ZoneEngine | AlertPolicy | CoachingEventRouter | AdaptivePaceController
     ↓
 Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `AdaptiveProfileRepository`)
 ```
@@ -61,7 +61,7 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - **WorkoutForegroundService** is the central orchestrator. It combines BLE HR and GPS flows, evaluates zones, triggers alerts, saves track points every 5s, and persists completed workouts to Room.
 - **Three workout modes:** `STEADY_STATE` (single target HR ± buffer), `DISTANCE_PROFILE` (ordered distance segments each with a target HR), and `FREE_RUN` (no target, data collection only).
 - **Adaptive learning** (`AdaptivePaceController`) tracks HR slope, pace-HR buckets, response lag, and trim offsets across sessions. Profile persists via `AdaptiveProfileRepository`.
-- **Audio stream** — All audio components use `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` to layer over music without requesting audio focus. Do NOT change to `NOTIFICATION_EVENT` — it would be ducked by music. `ToneGenerator` is only used for pause/resume feedback tones.
+- **Audio stream** — All audio components use `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE` to layer over music without requesting audio focus. Do NOT change to `NOTIFICATION_EVENT` — it would be ducked by music. **Exception: `ToneGenerator` takes an `AudioManager.STREAM_*` constant** (not a `USAGE_*` constant) — use `AudioManager.STREAM_MUSIC`. The two constant spaces look similar but are completely different; passing a `USAGE_*` value as a stream type silently routes to the wrong channel.
 
 ## Key Packages
 
@@ -69,7 +69,8 @@ Room Database + repositories (`WorkoutRepository`, `WorkoutMetricsRepository`, `
 - `data/repository/` — `WorkoutRepository`, `WorkoutMetricsRepository`, `AdaptiveProfileRepository`, `AudioSettingsRepository`, `MapsSettingsRepository`, `BootcampRepository`, `AutoPauseSettingsRepository`, `OnboardingRepository`, `ThemePreferencesRepository`, `UserProfileRepository`
 - `domain/model/` — Domain models: `WorkoutConfig`, `WorkoutMode`, `AdaptiveProfile`, `ZoneStatus`
 - `domain/engine/` — `ZoneEngine` (static zone eval), `AdaptivePaceController` (predictive HR-pace modeling)
-- `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `AlertManager`, `WorkoutState`
+- `service/` — `WorkoutForegroundService`, `BleHrManager`, `GpsDistanceTracker`, `WorkoutState`
+- `service/workout/` — `AlertPolicy` (zone alert timing/cooldown), `CoachingEventRouter` (informational cues: splits, halfway, segment changes, predictive warnings), `WorkoutNotificationHelper`, `TrackPointRecorder`
 - `service/audio/` — `CoachingAudioManager`, `EarconPlayer`, `VoicePlayer`, `StartupSequencer`, `VoiceEventPriority`, `VibrationManager`, `EscalationTracker`
 - `ui/account/` — Account & settings screen + ViewModel; includes Maps API key + audio settings
 - `ui/bootcamp/` — Bootcamp dashboard, setup flow, settings, day-state logic
@@ -163,6 +164,15 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - Legacy: `docs/plans/2026-02-25-hr-coaching-app-design.md` — superseded; data model and alert behavior sections still valid, UI/UX sections replaced by the 2026-03-02 spec.
 - **E2E happy path audit:** `docs/2026-04-11-e2e-happy-path-audit.md` — device-tested findings: bugs, design violations, UX observations, test coverage matrix.
 
+## Alert & Coaching Event Architecture
+
+Two separate systems feed into `CoachingAudioManager` per tick — they do not share state:
+
+- **`AlertPolicy`** (`service/workout/`) — owns zone alert timing: fires `SPEED_UP`/`SLOW_DOWN` after `alertDelaySec` of continuous out-of-zone, then respects `alertCooldownSec` between repeats. Escalation resets when zone returns via `onResetEscalation` callback → `CoachingAudioManager.resetEscalation()`. Cooldown persists across direction flips (ABOVE→BELOW) intentionally — prevents rapid alert spam when HR oscillates at the threshold.
+- **`CoachingEventRouter`** (`service/workout/`) — owns informational cues: splits, halfway, segment changes, RETURN_TO_ZONE, IN_ZONE_CONFIRM, predictive warnings. Tracks `lastVoiceCueTimeMs` to gate the 3-minute IN_ZONE_CONFIRM silence window.
+- **Critical bridging contract:** `AlertPolicy.onAlert` fires through `CoachingAudioManager` directly — the router never sees these events. After any `alertPolicy.onAlert` fires, call `coachingEventRouter.noteExternalAlert(nowMs)` to update `lastVoiceCueTimeMs`. Without this, IN_ZONE_CONFIRM can fire within 3 minutes of a zone alert.
+- **Live audio settings:** Mid-workout settings changes (volume, verbosity, vibration) are applied by sending `WorkoutForegroundService.ACTION_RELOAD_AUDIO_SETTINGS` via `startService`. `AccountViewModel.saveAudioSettings()` does this automatically. `CoachingAudioManager.applySettings()` is the receiver — do not call it directly from outside the service.
+
 ## Audio Pipeline
 
 Three-component layered audio system in `service/audio/`:
@@ -191,6 +201,16 @@ Three-component layered audio system in `service/audio/`:
 ## WorkoutState / Same-Tick Race Pattern
 
 Never read `WorkoutState.snapshot.value` in the same function that called `WorkoutState.update{}` and expect the new value — `MutableStateFlow.update` may not have propagated yet. Use a local variable for same-tick decisions. Fixed in `onHrTick()` for autopause (2026-04-10).
+
+Also: in `pauseWorkout()`, `pauseStartMs = clock.now()` is captured **before** `WorkoutState.update { isPaused = true }` fires. If captured after, the IO-thread `processTick()` can observe `isPaused=true` while `pauseStartMs` is still 0 — resume then skips accumulation and writes a stale timestamp on the next pause cycle.
+
+## Dual Pause Overlap (WorkoutForegroundService)
+
+Manual pause and auto-pause can be active simultaneously. Three guards keep `elapsedSeconds` correct — removing any one causes double-subtraction:
+
+1. **`pauseWorkout()`** — if `isAutoPaused` is already true, latches `totalAutoPausedMs += nowMs - autoPauseStartMs` and zeroes `autoPauseStartMs` so the overlapping period isn't re-counted when auto-pause resolves.
+2. **`resumeWorkout()`** — if `isAutoPaused` is still true on manual resume, restarts `autoPauseStartMs = nowMs` so only the post-resume period is counted.
+3. **`AutoPauseEvent.RESUMED` handler** — guards `if (autoPauseStartMs > 0L)` before accumulating, because `pauseWorkout()` may have already zeroed it.
 
 ## DataStore / Slider Pattern
 

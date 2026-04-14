@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
@@ -47,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -72,6 +74,7 @@ import com.hrcoach.ui.theme.GlassBorder
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.data.db.AchievementEntity
 import com.hrcoach.ui.components.CardeaButton
 import kotlinx.coroutines.delay
 
@@ -93,6 +96,22 @@ fun PostRunSummaryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCelebration by remember { mutableStateOf(false) }
+
+    // Dynamic HRR gate: shows the card if within 3 minutes of workout end, then auto-hides.
+    // Computed here (not in VM) so it re-evaluates if the user navigates away and returns
+    // while the ViewModel is still alive.
+    val hrrWindowMs = 180_000L
+    var isHrrActive by remember { mutableStateOf(false) }
+    LaunchedEffect(uiState.workoutEndTimeMs) {
+        val endMs = uiState.workoutEndTimeMs
+        if (endMs <= 0L) return@LaunchedEffect
+        val remaining = hrrWindowMs - (System.currentTimeMillis() - endMs)
+        if (remaining > 0L) {
+            isHrrActive = true
+            delay(remaining)
+            isHrrActive = false
+        }
+    }
 
     LaunchedEffect(uiState.isLoading) {
         if (!uiState.isLoading) {
@@ -198,12 +217,16 @@ fun PostRunSummaryScreen(
                             NewAchievementsSection(achievements = uiState.newAchievements)
                         }
 
-                        if (uiState.isHrrActive) {
+                        if (isHrrActive) {
                             HrrCooldownCard(endTimeMs = uiState.workoutEndTimeMs)
                         }
 
                         uiState.hrMaxDelta?.let { (oldMax, newMax) ->
                             HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
+                        }
+
+                        uiState.newAchievements.forEach { achievement ->
+                            AchievementCard(achievement = achievement)
                         }
 
                         uiState.bootcampProgressLabel
@@ -499,6 +522,36 @@ private fun HrMaxUpdatedCard(
                     text = "Cardea measured a new personal ceiling and adjusted your training zones.",
                     style = MaterialTheme.typography.bodySmall,
                     color = CardeaTheme.colors.textSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AchievementCard(achievement: AchievementEntity) {
+    GlassCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = ZoneGreen,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Achievement Unlocked",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = CardeaTheme.colors.textSecondary
+                )
+                Text(
+                    text = achievement.milestone,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = CardeaTheme.colors.textPrimary
                 )
             }
         }

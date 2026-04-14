@@ -27,6 +27,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import android.util.Log
 import javax.inject.Inject
@@ -52,7 +53,7 @@ data class PostRunSummaryUiState(
     val bootcampProgressLabel: String? = null,
     val bootcampWeekComplete: Boolean = false,
     val isBootcampRun: Boolean = false,
-    val isHrrActive: Boolean = false,
+    // workoutEndTimeMs > 0 on fresh runs; Screen derives HRR visibility dynamically from this
     val workoutEndTimeMs: Long = 0L,
     val newAchievements: List<AchievementEntity> = emptyList(),
     // Non-null when HRmax was auto-calibrated during this session: Pair(oldMax, newMax)
@@ -83,24 +84,25 @@ class PostRunSummaryViewModel @Inject constructor(
     private fun load() {
         val id = workoutId
         if (id == null) {
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                errorMessage = "Workout summary unavailable."
-            )
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Workout summary unavailable.") }
             return
         }
 
         val fresh = savedStateHandle.get<Boolean>("fresh") ?: false
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             // --- 1. Essential: load workout summary (must succeed for screen to display) ---
+            // Fetch all workouts once here and pass down — avoids a second full-table scan
+            // in the achievement block (fix for double-query audit finding).
+            val allWorkouts = workoutRepository.getAllWorkoutsOnce()
+
             val summaryLoaded = runCatching {
                 val workout = workoutRepository.getWorkoutById(id)
                     ?: error("Workout not found.")
                 val currentMetrics = getOrDeriveMetrics(workout)
-                val similar = loadSimilarWorkouts(workout)
+                val similar = loadSimilarWorkouts(workout, allWorkouts)
                 val comparisons = buildComparisons(
                     currentMetrics = currentMetrics,
                     similarMetrics = similar.mapNotNull { it.second }
@@ -110,8 +112,6 @@ class PostRunSummaryViewModel @Inject constructor(
                     .takeIf { it.isNotEmpty() }
                     ?.average()
                     ?.toFloat()
-
-                val isHrrActive = System.currentTimeMillis() - workout.endTime < 180_000L
 
                 _uiState.value = PostRunSummaryUiState(
                     isLoading = false,
@@ -125,25 +125,26 @@ class PostRunSummaryViewModel @Inject constructor(
                     avgHrText = avgHr?.let { "${it.toInt()} bpm" } ?: "--",
                     similarRunCount = similar.size,
                     comparisons = comparisons,
-                    isHrrActive = isHrrActive,
                     workoutEndTimeMs = workout.endTime,
                 )
             }.onFailure {
                 Log.e("PostRunSummaryVM", "Failed to load workout summary", it)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    errorMessage = it.message ?: "Unable to load post-run summary."
-                )
+                _uiState.update { s ->
+                    s.copy(isLoading = false, errorMessage = it.message ?: "Unable to load post-run summary.")
+                }
             }.isSuccess
 
             // --- Side effects below run even if summary display failed ---
             if (fresh) {
-                // 2a. Capture HRmax delta before any state is cleared — the service wrote this
-                //     at workout-end just before navigating here. Read once, then clear.
-                val hrMaxDelta = WorkoutState.snapshot.value.hrMaxUpdatedDelta
-                WorkoutState.clearHrMaxUpdatedDelta()
-                if (hrMaxDelta != null) {
-                    _uiState.value = _uiState.value.copy(hrMaxDelta = hrMaxDelta)
+                // 2a. HRmax delta — only consume when the summary loaded successfully so the
+                //     card is actually visible. On failure, leave the delta in WorkoutState
+                //     rather than silently discarding it.
+                if (summaryLoaded) {
+                    val hrMaxDelta = WorkoutState.snapshot.value.hrMaxUpdatedDelta
+                    WorkoutState.clearHrMaxUpdatedDelta()
+                    if (hrMaxDelta != null) {
+                        _uiState.update { it.copy(hrMaxDelta = hrMaxDelta) }
+                    }
                 }
 
                 // 2b. Best-effort: complete bootcamp session
@@ -158,24 +159,24 @@ class PostRunSummaryViewModel @Inject constructor(
                             tuningDirection = tuningDirection
                         )
                         if (result.completed) {
-                            _uiState.value = _uiState.value.copy(
+                            _uiState.update { it.copy(
                                 isBootcampRun = true,
                                 bootcampProgressLabel = result.progressLabel,
                                 bootcampWeekComplete = result.weekComplete
-                            )
+                            ) }
                         }
                     }.onFailure {
                         Log.e("PostRunSummaryVM", "Bootcamp session completion failed", it)
                     }
                     // Always clear pending ID — the session either completed or is
-                    // unrecoverable; leaving it set causes stale-state bugs on next run.
+                    // unrecoverable (WorkoutState is in-memory; it won't survive an app restart
+                    // regardless). Leaving it set causes stale-state bugs on the next run.
                     WorkoutState.setPendingBootcampSessionId(null)
                 }
 
-                // 3. Best-effort: evaluate achievements
+                // 3. Best-effort: evaluate achievements (reuses allWorkouts fetched above)
                 if (summaryLoaded) {
                     runCatching {
-                        val allWorkouts = workoutRepository.getAllWorkoutsOnce()
                         val totalKm = allWorkouts.sumOf { it.totalDistanceMeters.toDouble() } / 1000.0
                         achievementEvaluator.evaluateDistance(totalKm, id)
 
@@ -185,9 +186,7 @@ class PostRunSummaryViewModel @Inject constructor(
                         val newAchievements = achievementDao.getUnshownAchievements()
                         if (newAchievements.isNotEmpty()) {
                             achievementDao.markShown(newAchievements.map { it.id })
-                            _uiState.value = _uiState.value.copy(
-                                newAchievements = newAchievements
-                            )
+                            _uiState.update { it.copy(newAchievements = newAchievements) }
                         }
                     }.onFailure {
                         Log.e("PostRunSummaryVM", "Achievement evaluation failed", it)
@@ -195,7 +194,7 @@ class PostRunSummaryViewModel @Inject constructor(
                 }
 
                 // 4. Always: clear stale completedWorkoutId so the next workout start
-                // triggers a clean LaunchedEffect transition in NavGraph.
+                //    triggers a clean LaunchedEffect transition in NavGraph.
                 WorkoutState.clearCompletedWorkoutId()
             }
         }
@@ -217,10 +216,12 @@ class PostRunSummaryViewModel @Inject constructor(
         return derived
     }
 
-    private suspend fun loadSimilarWorkouts(workout: WorkoutEntity): List<Pair<WorkoutEntity, WorkoutAdaptiveMetrics?>> {
+    private suspend fun loadSimilarWorkouts(
+        workout: WorkoutEntity,
+        allWorkouts: List<WorkoutEntity>
+    ): List<Pair<WorkoutEntity, WorkoutAdaptiveMetrics?>> {
         if (workout.totalDistanceMeters <= 0f) return emptyList()
-        val all = workoutRepository.getAllWorkoutsOnce()
-        val similar = all.filter { candidate ->
+        val similar = allWorkouts.filter { candidate ->
             candidate.id != workout.id &&
                 candidate.mode == workout.mode &&
                 candidate.totalDistanceMeters > 0f &&
@@ -331,7 +332,7 @@ class PostRunSummaryViewModel @Inject constructor(
             var streak = 1
             for (i in 0 until sorted.lastIndex) {
                 val gapDays = (sorted[i].startTime - sorted[i + 1].startTime) / 86_400_000L
-                if (gapDays > 10) break
+                if (gapDays > 1) break
                 streak++
             }
             return streak

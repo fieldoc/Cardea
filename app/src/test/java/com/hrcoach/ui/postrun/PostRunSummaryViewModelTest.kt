@@ -289,4 +289,46 @@ class PostRunSummaryViewModelTest {
         // Even when summary fails, completedWorkoutId must be cleared
         assertNull(WorkoutState.snapshot.value.completedWorkoutId)
     }
+
+    // --- Regression tests for audit findings ---
+
+    @Test
+    fun `streak breaks after more than 1 day gap between runs`() {
+        val now = System.currentTimeMillis()
+        val dayMs = 86_400_000L
+        // Runs: today, yesterday, 4 days ago. Gap between yesterday and 4-days-ago = 3 days.
+        val workouts = listOf(
+            WorkoutEntity(id = 1L, startTime = now, endTime = now + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = ""),
+            WorkoutEntity(id = 2L, startTime = now - dayMs, endTime = now - dayMs + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = ""),
+            WorkoutEntity(id = 3L, startTime = now - 4 * dayMs, endTime = now - 4 * dayMs + 1_800_000L,
+                totalDistanceMeters = 5000f, mode = "STEADY_STATE", targetConfig = "")
+        )
+        // The 3-day gap between run 2 and run 3 should break the streak → expect 2, not 3
+        assertEquals(2, PostRunSummaryViewModel.computeWorkoutStreak(workouts))
+    }
+
+    @Test
+    fun `hrMaxDelta stays in WorkoutState when summary load fails`() = runTest {
+        stubDefaults()
+        coEvery { workoutRepository.getWorkoutById(1L) } returns null
+        WorkoutState.set(WorkoutSnapshot(hrMaxUpdatedDelta = Pair(175, 182)))
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        // Delta must NOT be consumed when we can't show it (error screen has no card)
+        assertNotNull(WorkoutState.snapshot.value.hrMaxUpdatedDelta)
+    }
+
+    @Test
+    fun `getAllWorkoutsOnce called exactly once per fresh load`() = runTest {
+        stubDefaults()
+
+        buildVm(fresh = true)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { workoutRepository.getAllWorkoutsOnce() }
+    }
 }
