@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.6.0"
+        versionCode = 8
+        versionName = "0.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.6.0 (patch): Fix home screen — bottom stats tile no longer clipped by nav bar."
+                releaseNotes = "v0.7.0: Smarter HRmax auto-calibration — the engine no longer drifts your HRmax upward on moderate-effort runs (old algorithm was silently pushing you at the wrong heart rates on subsequent workouts). New post-workout banner surfaces HRmax updates when they happen. Bootcamp dashboard now shows your current tier, CTL progress within the tier, and auto-promotion prompts when you're ready to level up. 50+ audit fixes across the adaptive engine, coaching events, achievements, cloud backup, partner flow, and post-run summary. New internal Science Constants Register documents every physiological constant's source to prevent future drift."
             }
         }
     }
