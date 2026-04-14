@@ -30,7 +30,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.TabRow
-import androidx.compose.material3.tabIndicatorOffset
+import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -325,12 +325,14 @@ fun AddPartnerBottomSheet(
                 contentColor = CardeaTheme.colors.textPrimary,
                 divider = {},
                 indicator = { tabPositions ->
-                    Box(
-                        Modifier
-                            .tabIndicatorOffset(tabPositions[selectedTab])
-                            .height(2.dp)
-                            .background(GradientPink)
-                    )
+                    with(TabRowDefaults) {
+                        Box(
+                            Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTab])
+                                .height(2.dp)
+                                .background(GradientPink)
+                        )
+                    }
                 }
             ) {
                 listOf("Invite someone", "I have a code").forEachIndexed { index, title ->
