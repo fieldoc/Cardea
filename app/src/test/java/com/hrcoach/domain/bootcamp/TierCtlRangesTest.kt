@@ -1,5 +1,6 @@
 package com.hrcoach.domain.bootcamp
 
+import com.hrcoach.domain.engine.FitnessLoadCalculator
 import com.hrcoach.domain.model.BootcampGoal
 import org.junit.Assert.*
 import org.junit.Test
@@ -59,5 +60,52 @@ class TierCtlRangesTest {
     fun `suggestedTier just below T1 boundary returns T0`() {
         // CTL=34.9 is below T1 lower bound (35) for RACE_5K
         assertEquals(0, TierCtlRanges.suggestedTierForCtl(BootcampGoal.RACE_5K, 34.9f))
+    }
+
+    // ── CTL decay + tier demotion (applyGapAdjustmentIfNeeded math) ──────
+
+    @Test
+    fun `21-day break decays T1 CTL below T1 floor causing demotion to T0`() {
+        // RACE_5K T1 range is 35..65. A runner with CTL=38 (just inside T1) who takes
+        // a 21-day break (MEANINGFUL_BREAK threshold) loses fitness:
+        //   decay = exp(-21 / 42) = exp(-0.5) ≈ 0.6065
+        //   projectedCtl = 38 * 0.6065 ≈ 23.05 — below T1 floor of 35
+        val result = FitnessLoadCalculator.updateLoads(
+            currentCtl = 38f,
+            currentAtl = 0f,
+            trimpScore = 0f,
+            daysSinceLast = 21
+        )
+        // Verify CTL decayed below the T1 lower bound
+        assertTrue(
+            "Expected projected CTL (${result.ctl}) to be below T1 floor (35)",
+            result.ctl < 35f
+        )
+        // Verify tier suggestion demotes to T0
+        val suggestedTier = TierCtlRanges.suggestedTierForCtl(BootcampGoal.RACE_5K, result.ctl)
+        assertEquals(
+            "T1 runner with decayed CTL ${result.ctl} should be demoted to T0",
+            0,
+            suggestedTier
+        )
+    }
+
+    @Test
+    fun `short break of 7 days does not decay T1 CTL below T1 floor`() {
+        // A 7-day break (MINOR_SLIP, < MEANINGFUL_BREAK threshold):
+        //   decay = exp(-7 / 42) = exp(-1/6) ≈ 0.846
+        //   projectedCtl = 50 * 0.846 ≈ 42.3 — still above T1 floor of 35
+        val result = FitnessLoadCalculator.updateLoads(
+            currentCtl = 50f,
+            currentAtl = 0f,
+            trimpScore = 0f,
+            daysSinceLast = 7
+        )
+        val suggestedTier = TierCtlRanges.suggestedTierForCtl(BootcampGoal.RACE_5K, result.ctl)
+        assertEquals(
+            "T1 runner after minor slip should remain T1 (projected CTL ${result.ctl})",
+            1,
+            suggestedTier
+        )
     }
 }
