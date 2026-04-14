@@ -243,14 +243,22 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **`getNextSession()` is date-unaware** — returns earliest SCHEDULED/DEFERRED by weekNumber+dayOfWeek, even if that day already passed. HomeViewModel uses `getScheduledAndDeferredSessions()` + computed-date filtering to match bootcamp screen behavior. Don't regress to `getNextSession()` for UI display.
 - **Session date computation** — `session.dayOfWeek` is ISO (1=Mon, 7=Sun), NOT a positional offset from enrollment start. To compute the calendar date: `enrollStartDate.with(DayOfWeek.MONDAY).plusWeeks(weekNumber-1).plusDays(dayOfWeek-1)`. The old formula `enrollStartDate + ((weekNumber-1)*7 + (dayOfWeek-1))` was wrong when enrollment didn't start on Monday — it mapped to the wrong calendar day. Fixed 2026-04-12.
 - **Manual-run CTA** — contextual inline "Manual run →" in `RestDay` and `RunDone` hero states only. No global catch-all at the bottom of the bootcamp page (removed: caused duplication on rest days).
+- **Sim workout bootcamp cleanup** — for sim workouts, call `WorkoutState.setPendingBootcampSessionId(null)` immediately after `bootcampSessionCompleter.complete()`, before `WorkoutState.reset()`. `reset()` preserves `pendingBootcampSessionId`; skipping the explicit clear causes the bootcamp screen to re-trigger session completion on next load.
 
 ## Adaptive Engine Invariants
 
 - **`AdaptivePaceController` is per-workout, not a singleton** — new instance created each workout; state (`sessionBuckets`, settle lists, `lastProjectedHr`) resets.
 - **`hrSlopeBpmPerMin` clamp** — `instSlope` is clamped to `±30 BPM/min` before EMA blend. Do not widen; BLE at 1 Hz with 3 s minimum window can produce 800 BPM/min from a single glitch.
+- **`hrSlopeBpmPerMin` decay on long gaps** — multiplied by `0.5` when `deltaMin > 1.5` (> 90 s gap: walk breaks, GPS-only mode, power saving). Intentional — prevents a stale climb slope persisting through a long walk. Do not remove.
+- **`finishSession` uses `savedInitialProfile.copy()`** — carries all `AdaptiveProfile` fields the controller doesn't own (hrMax, ctl, atl, hrRest, hrMaxIsCalibrated, hrMaxCalibratedAtMs, lastTuningDirection). Callers patch freshly-computed values on top. Do NOT construct a bare `AdaptiveProfile(longTermHrTrimBpm=..., ...)` inside finishSession — silently zeroes un-named fields including calibrated hrMax and fitness load.
+- **Settle-time averaging is direction-equal** — `responseLagSec` updated from `(settleDownAvg + settleUpAvg) / 2`. Each physiological direction gets equal weight regardless of event count. Do not switch to count-weighted — 8 quick corrections would drown out 1 slow build-up, under-estimating upward response lag.
+- **`lookupPaceBias` uses sampleCount-weighted neighbour average** — not a simple mean over up to 3 neighbours. A 1-sample anomalous bucket must not get equal vote to a 500-sample baseline.
 - **TRIMP formula is non-standard** — uses `duration * avgHR * (avgHR/HRmax)^2`, not Bannister's exponential. Consistent across the codebase; don't "fix" it to match literature values.
 - **Three `bootcampSessionCompleter.complete()` call sites:** (1) PostRunSummaryViewModel (reads lastTuningDirection from AdaptiveProfileRepository), (2) WorkoutForegroundService sim path (reads from saved profile), (3) BootcampViewModel.onWorkoutCompleted (reads from UI state). All three pass tuningDirection.
 - **`efTrend` regression math** — slope is `(n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX)`, then multiplied by `(n-1)` to give total estimated change across the window. Comparable to the old endpoint delta and the existing 0.04 threshold.
+- **TRIMP fallback `durationMin` uses active run time** — `(now - workoutStartMs - totalPausedMs - totalAutoPausedMs).coerceAtLeast(0) / 60_000f`. Do NOT revert to wall-clock `now - workoutStartMs` — it overstates training load in proportion to pause fraction.
+- **Cadence lock check uses explicit counter** — `hrSamplesSinceLastArtifactCheck`, NOT `hrSampleBuffer.size % 10`. The buffer cap is 120 (= 12×10), so `size % 10 == 0` is permanently true at steady state and fires on every tick. The counter fires every 10 samples as intended.
+- **`hrSampleSum`/`hrSampleCount` reset in `startWorkout()`** — not only in `stopWorkout()`. `stopWorkout()` zeroes them before `observationJob` is cancelled; a race can add a sample to the freshly-zeroed sum and carry that stale value into the next session.
 
 ## Test Fakes
 
