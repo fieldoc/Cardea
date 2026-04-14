@@ -107,6 +107,7 @@ class CloudBackupManager @Inject constructor(
                     "atl" to profile.atl,
                     "hrMax" to profile.hrMax,
                     "hrMaxIsCalibrated" to profile.hrMaxIsCalibrated,
+                    "hrMaxCalibratedAtMs" to profile.hrMaxCalibratedAtMs,
                     "hrRest" to profile.hrRest,
                     "lastTuningDirection" to profile.lastTuningDirection?.name,
                 )
@@ -210,6 +211,7 @@ class CloudBackupManager @Inject constructor(
                     "illnessPromptSnoozedUntilMs" to enrollment.illnessPromptSnoozedUntilMs,
                     "pausedAtMs" to enrollment.pausedAtMs,
                     "targetFinishingTimeMinutes" to enrollment.targetFinishingTimeMinutes,
+                    "lastTierChangeWeek" to enrollment.lastTierChangeWeek,
                 )
                 ref.child("bootcamp/enrollment").setValue(data).await()
                 stampSync()

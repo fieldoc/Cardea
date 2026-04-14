@@ -219,6 +219,7 @@ class CloudRestoreManager @Inject constructor(
                 atl = snap.child("atl").getValue(Float::class.java) ?: 0f,
                 hrMax = snap.child("hrMax").getValue(Int::class.java),
                 hrMaxIsCalibrated = snap.child("hrMaxIsCalibrated").getValue(Boolean::class.java) ?: false,
+                hrMaxCalibratedAtMs = snap.child("hrMaxCalibratedAtMs").getValue(Long::class.java),
                 hrRest = snap.child("hrRest").getValue(Float::class.java),
                 lastTuningDirection = tuning,
             )
@@ -332,6 +333,7 @@ class CloudRestoreManager @Inject constructor(
                     illnessPromptSnoozedUntilMs = enrollmentSnap.child("illnessPromptSnoozedUntilMs").getValue(Long::class.java) ?: 0,
                     pausedAtMs = enrollmentSnap.child("pausedAtMs").getValue(Long::class.java) ?: 0,
                     targetFinishingTimeMinutes = enrollmentSnap.child("targetFinishingTimeMinutes").getValue(Int::class.java),
+                    lastTierChangeWeek = (enrollmentSnap.child("lastTierChangeWeek").getValue(Long::class.java))?.toInt(),
                 )
                 bootcampDao.upsertEnrollment(enrollment)
             }.onFailure { Log.w(TAG, "restoreBootcamp: enrollment failed", it) }
