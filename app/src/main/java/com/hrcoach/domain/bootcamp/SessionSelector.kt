@@ -72,8 +72,8 @@ object SessionSelector {
         absoluteWeek: Int = 0,
         lastTierChangeWeek: Int? = null
     ): List<PlannedSession> {
-        // Transition window: within 2 weeks of a tier promotion, use intro tempo preset
-        // to soften the intensity jump (68% → 76% → 84% over 2 weeks instead of 68% → 84%).
+        // Transition window: the promotion week itself and the following week (2-week window),
+        // use the intro tempo preset to soften the 68%→84% HR jump.
         val inTransitionWindow = lastTierChangeWeek != null &&
             (absoluteWeek - lastTierChangeWeek) <= 1
         val sessions = mutableListOf<PlannedSession>()

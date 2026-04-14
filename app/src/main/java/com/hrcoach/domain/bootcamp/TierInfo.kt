@@ -58,13 +58,6 @@ object TierInfo {
     }
 
     /**
-     * Compact label for the tier change prompt —
-     * e.g. "Foundation → Development" or "Performance → Development".
-     */
-    fun transitionLabel(fromTier: Int, toTier: Int): String =
-        "${displayName(fromTier)} → ${displayName(toTier)}"
-
-    /**
      * What changes when moving to [toTier] from [fromTier].
      * Used in the tier prompt card to explain impact.
      */
