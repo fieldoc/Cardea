@@ -154,6 +154,7 @@ class WorkoutForegroundService : LifecycleService() {
     private val hrSampleBuffer = ArrayDeque<Int>()      // rolling 120-sample window for artifact detection
     private val hrSessionSamples = mutableListOf<Int>() // full session for hrMax detection
     private var cadenceLockSuspected: Boolean = false
+    private var hrSamplesSinceLastArtifactCheck: Int = 0 // counts samples to fire check every 10
 
     override fun onCreate() {
         super.onCreate()
@@ -243,6 +244,9 @@ class WorkoutForegroundService : LifecycleService() {
         trackPointRecorder.reset()
         hrSampleBuffer.clear()
         hrSessionSamples.clear()
+        hrSampleSum = 0L
+        hrSampleCount = 0
+        hrSamplesSinceLastArtifactCheck = 0
         cadenceLockSuspected = false
         lastNotificationText = ""
 
@@ -393,7 +397,11 @@ class WorkoutForegroundService : LifecycleService() {
                 }
                 AutoPauseEvent.RESUMED -> {
                     isAutoPaused = false  // use local var immediately
-                    totalAutoPausedMs += nowMs - autoPauseStartMs
+                    // Guard: autoPauseStartMs may have been zeroed by pauseWorkout() if manual
+                    // pause overlapped auto-pause — only accumulate if we still own the timer.
+                    if (autoPauseStartMs > 0L) {
+                        totalAutoPausedMs += nowMs - autoPauseStartMs
+                    }
                     autoPauseStartMs = 0L
                     locationSource?.setMoving(true)
                     WorkoutState.update { it.copy(isAutoPaused = false) }
@@ -424,7 +432,7 @@ class WorkoutForegroundService : LifecycleService() {
                     guidanceText = "Workout paused",
                     projectionReady = false,
                     predictedHr = 0,
-                    avgHr = WorkoutState.snapshot.value.avgHr
+                    avgHr = current.avgHr
                 )
             }
             notificationHelper.update("Workout paused")
@@ -443,8 +451,12 @@ class WorkoutForegroundService : LifecycleService() {
             hrSampleBuffer.addLast(tick.hr)
             if (hrSampleBuffer.size > 120) hrSampleBuffer.removeFirst()
             hrSessionSamples.add(tick.hr)
-            // Check for cadence lock every 10 new samples once buffer is 30+
-            if (hrSampleBuffer.size >= 30 && hrSampleBuffer.size % 10 == 0) {
+            hrSamplesSinceLastArtifactCheck++
+            // Check for cadence lock every 10 new samples once buffer has 30+.
+            // Using an explicit counter rather than size % 10 because size stays permanently
+            // at 120 (the cap) once full, making size % 10 == 0 fire on every single tick.
+            if (hrSampleBuffer.size >= 30 && hrSamplesSinceLastArtifactCheck >= 10) {
+                hrSamplesSinceLastArtifactCheck = 0
                 cadenceLockSuspected = HrArtifactDetector.isArtifactSuspected(hrSampleBuffer.toList())
             }
         }
@@ -549,6 +561,9 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun pauseWorkout() {
+        // Capture the timestamp before emitting state so processTick() can never observe
+        // isPaused=true while pauseStartMs is still 0.
+        val nowMs = clock.now()
         var didPause = false
         WorkoutState.update { current ->
             if (!current.isRunning || current.isPaused) current else {
@@ -557,7 +572,13 @@ class WorkoutForegroundService : LifecycleService() {
             }
         }
         if (didPause) {
-            pauseStartMs = clock.now()
+            pauseStartMs = nowMs
+            // If auto-pause is also active, latch its accumulated time now so the overlapping
+            // period isn't double-subtracted from elapsedSeconds when auto-pause resolves.
+            if (WorkoutState.snapshot.value.isAutoPaused && autoPauseStartMs > 0L) {
+                totalAutoPausedMs += nowMs - autoPauseStartMs
+                autoPauseStartMs = 0L
+            }
             coachingAudioManager?.playPauseFeedback(paused = true)
         }
         notificationHelper.update("Workout paused")
@@ -575,6 +596,11 @@ class WorkoutForegroundService : LifecycleService() {
         if (didResume && pauseStartMs > 0L) {
             totalPausedMs += nowMs - pauseStartMs
             pauseStartMs = 0L
+            // If auto-pause is still active, restart its timer from now so the period
+            // already counted by pauseWorkout() is not re-counted when auto-pause resolves.
+            if (WorkoutState.snapshot.value.isAutoPaused) {
+                autoPauseStartMs = nowMs
+            }
             coachingAudioManager?.playPauseFeedback(paused = false)
         }
         notificationHelper.update("Workout resumed")
@@ -601,7 +627,9 @@ class WorkoutForegroundService : LifecycleService() {
             observationJob = null
 
             val finalTick = latestTick
-            if (finalTick != null) {
+            // workoutId may be 0 if handleStartFailure already deleted the row (e.g. startup
+            // failed after the DB row was created); skip the save in that case.
+            if (workoutId > 0L && finalTick != null) {
                 trackPointRecorder.saveIfNeeded(
                     workoutId = workoutId,
                     timestampMs = clock.now(),
@@ -719,7 +747,10 @@ class WorkoutForegroundService : LifecycleService() {
                     val reliableMetrics = metricsToSave?.copy(trimpReliable = !cadenceLockSuspected)
 
                     // --- TRIMP score ---
-                    val durationMin = (now - workoutStartMs) / 60_000f
+                    // Match elapsedSeconds: subtract pause time so a workout with 20 min of
+                    // pausing doesn't get TRIMP computed on full wall-clock duration.
+                    val durationMin = ((now - workoutStartMs - totalPausedMs - totalAutoPausedMs)
+                        .coerceAtLeast(0L)) / 60_000f
                     val sessionAvgHr = reliableMetrics?.avgHr
                         ?: if (finalHrSampleCount > 0) (finalHrSampleSum.toFloat() / finalHrSampleCount) else null
                     val hrMaxEst = currentProfile.hrMax?.toFloat() ?: ageBasedFallback.toFloat()
@@ -840,6 +871,9 @@ class WorkoutForegroundService : LifecycleService() {
                         }.onFailure { e ->
                             Log.w("WorkoutService", "Sim bootcamp session completion failed", e)
                         }
+                        // Clear immediately after completion so reset() doesn't preserve the ID
+                        // and cause the bootcamp screen to re-trigger completion on next load.
+                        WorkoutState.setPendingBootcampSessionId(null)
                     }
                     runCatching { repository.deleteWorkout(workoutId) }
                         .onFailure { e ->
