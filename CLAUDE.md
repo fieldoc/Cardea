@@ -36,9 +36,13 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **Worktree build path-length issue (Windows):** KSP/AAPT can fail in worktrees due to Windows path-length limits on deeply-nested build directories (`.claude/worktrees/<name>/app/build/...`). Workaround: run tests from the main repo after copying changed files. **Do NOT use `subst` to map a drive letter** — the compiler writes back through the mapped path and silently reverts edits made via the original path. Prefer the copy-to-main-repo approach.
 
+**KSP "Internal compiler error" masking:** When `kspDebugKotlin` or `compileDebugKotlin` fails with "Internal compiler error: Storage for file-to-id.tab already registered", this is a red herring. Run with `./gradlew assembleDebug --stacktrace` to surface the real `e:` compile errors underneath (e.g. unresolved references).
+
 **Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
 
-**Worktree branch diverged behind main:** If `main` received commits while a worktree was open, `--ff-only` fails with "Diverging branches." Fix: in the worktree, `git rebase main` → then in the main repo, `git merge --ff-only <branch>`. Stash main WIP first if needed.
+**Worktree branch diverged behind main:** If `main` received commits while a worktree was open, `--ff-only` fails with "Diverging branches." Fix: in the worktree, `git rebase main` → then in the main repo, `git merge --ff-only <branch>`. Stash main WIP first if needed. Do both steps back-to-back — if main gets another commit between the rebase and the merge, `--ff-only` fails again and a second rebase is needed.
+
+**`git rebase --continue --no-edit` is invalid:** `--no-edit` is not a recognised flag for `git rebase --continue` and causes a hard error. Omit it; the commit message from the original commit is preserved automatically.
 
 **`git worktree remove` permission denied:** Fails if shell cwd is inside the worktree being removed. `cd` to the repo root or any outside directory first. Use `git worktree prune` to clean stale registrations (leaves directories on disk but removes git tracking).
 
@@ -147,7 +151,7 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp, depending on enro
 - **Home screen gradient hierarchy** — `PulseHero` is the sole Tier 1 gradient element (gradient text headline). `GoalTile` is Tier 2 (glass border, white text). `BootcampTile` progress bar uses `ctaGradient`. `VolumeTile` progress bars use subtle inline gradient. Do not add gradient borders or gradient text to the stat tiles.
 - **Material3 button text color leak** — `OutlinedButton` and `TextButton` default text color to `colorScheme.primary` (= `GradientBlue`). Always pass explicit `color = CardeaTheme.colors.textPrimary` (or `textSecondary` for tertiary actions) to `Text()` inside these buttons. `CardeaButton` is exempt (custom composable).
 - **`OutlinedTextField` dark mode** — always set `focusedContainerColor`, `unfocusedContainerColor`, `focusedPlaceholderColor`, `unfocusedPlaceholderColor` in `OutlinedTextFieldDefaults.colors()`. Without them, placeholder and field boundary are nearly invisible on `#050505`. Use `Color(0x14FFFFFF)` focused / `Color(0x0AFFFFFF)` unfocused as container fill.
-- **`TabRow` vs `ScrollableTabRow`** — for ≤3 fixed tabs always use `TabRow` (equal distribution). `ScrollableTabRow` left-aligns. Custom indicator: `Box(Modifier.tabIndicatorOffset(tabPositions[selected]).height(2.dp).background(GradientPink))` — import `androidx.compose.material3.tabIndicatorOffset`.
+- **`TabRow` vs `ScrollableTabRow`** — for ≤3 fixed tabs always use `TabRow` (equal distribution). `ScrollableTabRow` left-aligns. Custom indicator: `Box(Modifier.tabIndicatorOffset(tabPositions[selected]).height(2.dp).background(GradientPink))` — in M3 BOM ≥ 2024.12.01 `tabIndicatorOffset` is a member extension of `TabRowDefaults`, not a top-level import. Use `import androidx.compose.material3.TabRowDefaults` and wrap with `with(TabRowDefaults) { … }`.
 - **10sp minimum text size** — Established 2026-04-12. All user-facing text must be ≥ 10sp for WCAG readability on dark background. Known remaining violations: `HomeScreen.kt` (8sp line ~722, 9sp lines ~509/550/666/751), `BootcampSettingsScreen.kt` (9sp ~811), `CalendarHeatmap.kt` (9sp ~90), `MissionCard.kt` (9sp ~135).
 - **`CardeaButton` default `innerPadding` is `0.dp`** — when using wrap-content width (no `fillMaxWidth`), always pass `innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)` or similar to ensure ≥ 44dp touch target height.
 - **PulseHero gradient title is conditional** — gradient text via `SrcIn` only when `isToday = true`. Future sessions: title uses `textSecondary` (no gradient) for upcoming sessions, ECG alpha drops from 0.45f to 0.20f. Three dimming mechanisms: background alpha, text color switch, ECG alpha.
@@ -205,6 +209,8 @@ Three-component layered audio system in `service/audio/`:
 ## WorkoutState / Same-Tick Race Pattern
 
 Never read `WorkoutState.snapshot.value` in the same function that called `WorkoutState.update{}` and expect the new value — `MutableStateFlow.update` may not have propagated yet. Use a local variable for same-tick decisions. Fixed in `onHrTick()` for autopause (2026-04-10).
+
+**`MutableStateFlow.update` requires explicit import:** `import kotlinx.coroutines.flow.update` is NOT pulled in by the usual `kotlinx.coroutines.flow.*` star import in some Kotlin versions. Add it explicitly when using `_uiState.update { it.copy(…) }` in ViewModels.
 
 Also: in `pauseWorkout()`, `pauseStartMs = clock.now()` is captured **before** `WorkoutState.update { isPaused = true }` fires. If captured after, the IO-thread `processTick()` can observe `isPaused=true` while `pauseStartMs` is still 0 — resume then skips accumulation and writes a stale timestamp on the next pause cycle.
 
