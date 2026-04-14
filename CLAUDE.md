@@ -44,6 +44,10 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **`git rebase --continue --no-edit` is invalid:** `--no-edit` is not a recognised flag for `git rebase --continue` and causes a hard error. Omit it; the commit message from the original commit is preserved automatically.
 
+**`GIT_EDITOR=true git rebase --continue`** — `--no-edit` is NOT a valid flag for `git rebase --continue` and hard-errors. Use `GIT_EDITOR=true git rebase --continue` to accept the auto-generated message non-interactively.
+
+**Untracked files block `git merge`:** If the incoming branch creates a file already present as untracked in the working tree, git refuses to merge. `rm` the untracked copy first, then merge.
+
 **`git worktree remove` permission denied:** Fails if shell cwd is inside the worktree being removed. `cd` to the repo root or any outside directory first. Use `git worktree prune` to clean stale registrations (leaves directories on disk but removes git tracking).
 
 **Build requirements:** JDK 17, Android SDK with compileSdk 35. Google Maps API key goes in `local.properties` as `MAPS_API_KEY=...` (falls back to `local.defaults.properties` placeholder).
@@ -240,6 +244,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **Audit plan:** `docs/superpowers/plans/2026-04-11-error-handling-audit.md` — health scorecard + deferred items
 - **stopWorkout() essential/best-effort split** — essential ops (save workout, stop GPS/BLE) wrapped in individual `runCatching`; best-effort ops (metrics, achievements) grouped separately. Both log on failure.
 - **Firebase typed exceptions** — don't return `null` for multiple distinct failure conditions (e.g. expired invite vs not found). Throw specific subclasses (`ExpiredInviteException`, `PartnerLimitException`); catch individually in UI. Returning null collapses all failures into one ambiguous error message.
+- **`runCatching { withTimeout {} }` is unsafe** — `TimeoutCancellationException` extends `CancellationException`; `runCatching` catches it silently, turning the timeout into a no-op. Use `try/catch` and rethrow cancellations: `} catch (e: CancellationException) { throw e }`.
 - **All `collectAsState()` calls are now lifecycle-aware** — `collectAsStateWithLifecycle()` used everywhere.
 - **Deferred (not yet fixed):** Per-operation BLE permission checks (8 `@SuppressLint`), mid-session permission revocation, Room migration tests, full state restoration (`START_REDELIVER_INTENT`).
 
@@ -259,8 +264,16 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 ## Adaptive Engine Invariants
 
 - **`AdaptivePaceController` is per-workout, not a singleton** — new instance created each workout; state (`sessionBuckets`, settle lists, `lastProjectedHr`) resets.
-- **`hrSlopeBpmPerMin` clamp** — `instSlope` is clamped to `±30 BPM/min` before EMA blend. Do not widen; BLE at 1 Hz with 3 s minimum window can produce 800 BPM/min from a single glitch.
+- **`hrSlopeBpmPerMin` clamp** — `instSlope` is clamped to `±50 BPM/min` (`slopeSampleClampBpmPerMin` in `AdaptiveTuningConfig`; raised from ±30 on 2026-04-13 — sprint-onset slopes legitimately hit 47 BPM/min, and the 3s minimum window already rejects BLE glitches). Do not lower below 40.
 - **`hrSlopeBpmPerMin` decay on long gaps** — multiplied by `0.5` when `deltaMin > 1.5` (> 90 s gap: walk breaks, GPS-only mode, power saving). Intentional — prevents a stale climb slope persisting through a long walk. Do not remove.
+- **Slope EMA weights are 0.60/0.40** — (`slopeSmoothingPreviousWeight`/`slopeSmoothingInstantWeight` in `AdaptiveTuningConfig`). Do NOT revert to 0.75/0.25 — that caused guidance to lag ~24s behind direction changes, giving wrong advice during zone corrections.
+- **Predictive coaching warmup gate is 90 s** — `PREDICTIVE_WARNING` suppressed for `elapsedSeconds < 90` in `CoachingEventRouter`. The slope EMA accumulates the cardiovascular warmup rise as a positive trend; without this gate, returning runners (≥2 sessions) hear "ease off" within 30s every run. Do not shorten.
+- **`shortTermTrimBpm` error source is `lastBaseProjectedHr`** — NOT `lastProjectedHr`. `lastBaseProjectedHr` = slope + longTermTrim + paceBias only (no shortTermTrim contribution). Merging both into one stored variable causes both trims to compound the same bias direction.
+- **`responseLagSec` default is 38f** — at 25f the formula `lag × 0.4f` = 10.0f exactly (the minimum clamp), making the adaptive horizon inert for all new users.
+- **Settle cap is 10 min** — `trackSettling()` window `2_000L..600_000L` ms. Do not lower to 5 min — structured interval excursions commonly run 6-10 min and their settle data was silently dropped, preventing `responseLagSec` from ever calibrating for interval runners.
+- **`AdaptiveProfileRepository.resetLongTermTrim()`** — zeroes `longTermHrTrimBpm` only; other profile fields unchanged. Not yet wired to any UI. Use after heat-block or overtraining recovery when trim has drifted to an environmental baseline.
+- **`CoachingEventRouter` has two alert-reset methods** — `noteExternalAlert(nowMs)` resets IN_ZONE_CONFIRM silence window; `resetPredictiveWarningTimer()` resets predictive cooldown. Both are called from `AlertPolicy.onAlert` in WFS. Do NOT conflate them.
+- **`TickResult.guidance` is non-nullable `String`** — a `when` guard `adaptiveResult?.guidance != null` is always true when `adaptiveResult` is non-null. Preset overrides (strides, zone2) MUST appear before `adaptiveResult != null` in the WFS guidance `when` block or they are permanently dead code.
 - **`finishSession` uses `savedInitialProfile.copy()`** — carries all `AdaptiveProfile` fields the controller doesn't own (hrMax, ctl, atl, hrRest, hrMaxIsCalibrated, hrMaxCalibratedAtMs, lastTuningDirection). Callers patch freshly-computed values on top. Do NOT construct a bare `AdaptiveProfile(longTermHrTrimBpm=..., ...)` inside finishSession — silently zeroes un-named fields including calibrated hrMax and fitness load.
 - **Settle-time averaging is direction-equal** — `responseLagSec` updated from `(settleDownAvg + settleUpAvg) / 2`. Each physiological direction gets equal weight regardless of event count. Do not switch to count-weighted — 8 quick corrections would drown out 1 slow build-up, under-estimating upward response lag.
 - **`lookupPaceBias` uses sampleCount-weighted neighbour average** — not a simple mean over up to 3 neighbours. A 1-sample anomalous bucket must not get equal vote to a 500-sample baseline.

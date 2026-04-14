@@ -1,7 +1,5 @@
 package com.hrcoach.ui.account
 
-import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -26,7 +24,6 @@ import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.PartnerActivity
 import com.hrcoach.domain.model.VoiceVerbosity
-import com.hrcoach.service.WorkoutForegroundService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
