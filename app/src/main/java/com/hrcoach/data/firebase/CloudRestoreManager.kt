@@ -127,6 +127,7 @@ class CloudRestoreManager @Inject constructor(
         restoreProfile(snapshot.child("profile"))
         restoreSettings(snapshot.child("settings"))
         restoreAdaptiveProfile(snapshot.child("adaptive"))
+        restorePartnerLinks(snapshot.child("profile"))
 
         // Room inserts — atomic transaction so partial failure rolls back cleanly
         data class Counts(val workouts: Int, val sessions: Int, val achievements: Int)
@@ -148,6 +149,30 @@ class CloudRestoreManager @Inject constructor(
     }
 
     // ── Profile ─────────────────────────────────────────────────────────
+
+    /**
+     * Re-establishes bidirectional partner links after a UID change (e.g. fresh install
+     * wiped Firebase auth state). Reads partner UIDs backed up in [syncProfile] and
+     * writes mutual links via [FirebaseDatabase.updateChildren].
+     *
+     * Firebase security rules allow this because `auth.uid === $partnerId` is satisfied
+     * when the current user writes to another user's `partners/<currentUid>` node.
+     * No-op when the profile snapshot has no partnerUids node.
+     */
+    private suspend fun restorePartnerLinks(profileSnap: DataSnapshot) {
+        if (!profileSnap.exists()) return
+        val uid = authManager.getCurrentUid() ?: return
+        runCatching {
+            val partnerUids = profileSnap.child("partnerUids").children.mapNotNull { it.key }
+            if (partnerUids.isEmpty()) return@runCatching
+            val updates = mutableMapOf<String, Any?>()
+            for (partnerUid in partnerUids) {
+                updates["users/$uid/partners/$partnerUid"] = true
+                updates["users/$partnerUid/partners/$uid"] = true
+            }
+            withTimeout(10_000) { db.reference.updateChildren(updates).await() }
+        }.onFailure { Log.w(TAG, "restorePartnerLinks failed", it) }
+    }
 
     private fun restoreProfile(snap: DataSnapshot) {
         if (!snap.exists()) return

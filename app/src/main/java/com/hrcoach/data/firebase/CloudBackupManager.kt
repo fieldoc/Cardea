@@ -64,6 +64,18 @@ class CloudBackupManager @Inject constructor(
         return try {
             withTimeout(TIMEOUT_MS) {
                 val ref = backupRef() ?: return@withTimeout false
+                val uid = authManager.getCurrentUid() ?: return@withTimeout false
+
+                // Snapshot live partner UIDs so they can be re-established after a
+                // UID change (e.g. fresh install wipes Firebase auth state).
+                val partnerUids = try {
+                    db.reference.child("users/$uid/partners").get().await()
+                        .children.mapNotNull { it.key }
+                        .associateWith { true }
+                } catch (e: Exception) {
+                    emptyMap<String, Boolean>()
+                }
+
                 val data = mapOf(
                     "maxHr"               to userProfileRepo.getMaxHr(),
                     "age"                 to userProfileRepo.getAge(),
@@ -71,6 +83,7 @@ class CloudBackupManager @Inject constructor(
                     "weightUnit"          to userProfileRepo.getWeightUnit(),
                     "distanceUnit"        to userProfileRepo.getDistanceUnit(),
                     "partnerNudgesEnabled" to userProfileRepo.isPartnerNudgesEnabled(),
+                    "partnerUids"         to partnerUids,
                 )
                 ref.child("profile").setValue(data).await()
                 true
