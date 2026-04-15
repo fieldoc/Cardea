@@ -158,7 +158,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     private var hrSampleSum: Long = 0L
     private var hrSampleCount: Int = 0
-    private var lastNotificationText: String = ""
+
+    @Volatile
+    private var sessionReleased = false
 
     private val hrSampleBuffer = ArrayDeque<Int>()      // rolling 120-sample window for artifact detection
     private val hrSessionSamples = mutableListOf<Int>() // full session for hrMax detection
@@ -266,7 +268,6 @@ class WorkoutForegroundService : LifecycleService() {
         hrSampleCount = 0
         hrSamplesSinceLastArtifactCheck = 0
         cadenceLockSuspected = false
-        lastNotificationText = ""
 
         activeWorkoutConfig = workoutConfig
         workoutTotalSeconds = computeTotalSeconds(workoutConfig)
@@ -452,6 +453,7 @@ class WorkoutForegroundService : LifecycleService() {
         val isPaused = WorkoutState.snapshot.value.isPaused
 
         if (isPaused) {
+            var pausedSnapshot: WorkoutSnapshot? = null
             WorkoutState.update { current ->
                 current.copy(
                     currentHr = if (tick.connected) tick.hr else 0,
@@ -461,12 +463,13 @@ class WorkoutForegroundService : LifecycleService() {
                     projectionReady = false,
                     predictedHr = 0,
                     avgHr = current.avgHr
-                )
+                ).also { pausedSnapshot = it }
             }
             // Build rich payload so the lockscreen shows "· Paused" title, dimmed badge,
             // Resume action button, and the MediaSession reports STATE_PAUSED.
+            // Use the captured snapshot directly to avoid the same-tick StateFlow propagation race.
             val pausedPayload = NotifContentFormatter.format(
-                snapshot = WorkoutState.snapshot.value,
+                snapshot = pausedSnapshot!!,
                 config = workoutConfig,
                 totalSeconds = workoutTotalSeconds,
             )
@@ -523,6 +526,7 @@ class WorkoutForegroundService : LifecycleService() {
             }
         }
 
+        var nextSnapshot: WorkoutSnapshot? = null
         WorkoutState.update { current ->
             current.copy(
                 currentHr = if (tick.connected) tick.hr else 0,
@@ -537,7 +541,7 @@ class WorkoutForegroundService : LifecycleService() {
                 isFreeRun = workoutConfig.mode == WorkoutMode.FREE_RUN,
                 avgHr = sessionAvgHr,
                 elapsedSeconds = elapsedSeconds,
-            )
+            ).also { nextSnapshot = it }
         }
 
         if (!isAutoPaused) {
@@ -586,8 +590,10 @@ class WorkoutForegroundService : LifecycleService() {
             )
         }
 
+        // Use the atomically-captured snapshot instead of re-reading the StateFlow to avoid
+        // the same-tick race where MutableStateFlow.update may not have propagated yet.
         val payload = NotifContentFormatter.format(
-            snapshot = WorkoutState.snapshot.value,
+            snapshot = nextSnapshot!!,
             config = workoutConfig,
             totalSeconds = workoutTotalSeconds,
         )
@@ -600,10 +606,12 @@ class WorkoutForegroundService : LifecycleService() {
         // isPaused=true while pauseStartMs is still 0.
         val nowMs = clock.now()
         var didPause = false
+        var pausedSnapshot: WorkoutSnapshot? = null
         WorkoutState.update { current ->
             if (!current.isRunning || current.isPaused) current else {
                 didPause = true
                 current.copy(isPaused = true, guidanceText = "Workout paused")
+                    .also { pausedSnapshot = it }
             }
         }
         if (didPause) {
@@ -615,17 +623,30 @@ class WorkoutForegroundService : LifecycleService() {
                 autoPauseStartMs = 0L
             }
             coachingAudioManager?.playPauseFeedback(paused = true)
+            val config = activeWorkoutConfig
+            if (config != null) {
+                val payload = NotifContentFormatter.format(
+                    snapshot = pausedSnapshot!!,
+                    config = config,
+                    totalSeconds = workoutTotalSeconds,
+                )
+                notificationHelper.update(payload)
+                updateMediaSessionState(payload)
+            } else {
+                notificationHelper.update("Workout paused")
+            }
         }
-        notificationHelper.update("Workout paused")
     }
 
     private fun resumeWorkout() {
         val nowMs = clock.now()
         var didResume = false
+        var resumedSnapshot: WorkoutSnapshot? = null
         WorkoutState.update { current ->
             if (!current.isRunning || !current.isPaused) current else {
                 didResume = true
                 current.copy(isPaused = false)
+                    .also { resumedSnapshot = it }
             }
         }
         if (didResume && pauseStartMs > 0L) {
@@ -637,8 +658,19 @@ class WorkoutForegroundService : LifecycleService() {
                 autoPauseStartMs = nowMs
             }
             coachingAudioManager?.playPauseFeedback(paused = false)
+            val config = activeWorkoutConfig
+            if (config != null) {
+                val payload = NotifContentFormatter.format(
+                    snapshot = resumedSnapshot!!,
+                    config = config,
+                    totalSeconds = workoutTotalSeconds,
+                )
+                notificationHelper.update(payload)
+                updateMediaSessionState(payload)
+            } else {
+                notificationHelper.update("Workout resumed")
+            }
         }
-        notificationHelper.update("Workout resumed")
     }
 
     private fun stopWorkout() {
@@ -983,11 +1015,13 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
-        if (::mediaSession.isInitialized) {
-            mediaSession.isActive = false
-            mediaSession.release()
-        }
         super.onDestroy()
+        // Cancel coroutines FIRST so processTick/updateMediaSessionState cannot fire
+        // against a released MediaSession and throw IllegalStateException.
+        startupJob?.cancel()
+        simTickJob?.cancel()
+        observationJob?.cancel()
+        stopJob?.cancel()
         // If a workout was active but stopWorkout never ran, persist what we can
         if (workoutId > 0L && !isStopping) {
             Log.w("WorkoutService", "onDestroy called without stopWorkout — saving partial data")
@@ -1014,12 +1048,15 @@ class WorkoutForegroundService : LifecycleService() {
                 }
             }.onFailure { Log.e("WorkoutService", "Failed to save partial workout in onDestroy", it) }
         }
-        startupJob?.cancel()
-        simTickJob?.cancel()
-        observationJob?.cancel()
-        stopJob?.cancel()
         cleanupManagers()
         WorkoutState.reset()
+        // Release MediaSession last — after all coroutines are cancelled and cleanup is done —
+        // so updateMediaSessionState() cannot be called post-release.
+        sessionReleased = true
+        if (::mediaSession.isInitialized) {
+            mediaSession.isActive = false
+            mediaSession.release()
+        }
     }
 
     private fun computeTotalSeconds(config: WorkoutConfig): Long {
@@ -1033,6 +1070,7 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun updateMediaSessionState(payload: NotifPayload) {
+        if (sessionReleased || !::mediaSession.isInitialized) return
         val state = PlaybackStateCompat.Builder()
             .setState(
                 if (payload.isPaused) PlaybackStateCompat.STATE_PAUSED

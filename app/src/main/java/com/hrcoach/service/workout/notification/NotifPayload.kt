@@ -6,8 +6,9 @@ import com.hrcoach.domain.model.ZoneStatus
  * All data needed to render one frame of the workout notification.
  *
  * Built once per processTick by WorkoutForegroundService and passed to
- * WorkoutNotificationHelper.update(payload). Immutable so the helper can
- * compare against the previous payload to avoid redundant renders.
+ * WorkoutNotificationHelper.update(payload). Data class equality is used
+ * by the helper to skip redundant notification posts when the payload
+ * has not changed since the last tick.
  */
 data class NotifPayload(
     /** e.g. "Aerobic Tempo · Target 145", or "Free Run", or "Get HR signal…" */

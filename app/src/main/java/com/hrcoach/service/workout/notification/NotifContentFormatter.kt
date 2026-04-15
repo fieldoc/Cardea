@@ -3,6 +3,7 @@ package com.hrcoach.service.workout.notification
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.ZoneStatus
 import com.hrcoach.service.WorkoutSnapshot
+import java.util.Locale
 import kotlin.math.abs
 
 /**
@@ -74,6 +75,6 @@ object NotifContentFormatter {
         val s = totalSeconds.coerceAtLeast(0L)
         val mm = s / 60
         val ss = s % 60
-        return "%02d:%02d".format(mm, ss)
+        return String.format(Locale.getDefault(), "%02d:%02d", mm, ss)
     }
 }

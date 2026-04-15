@@ -27,6 +27,9 @@ class WorkoutNotificationHelper(
     @Volatile
     private var stopped = false
 
+    @Volatile
+    private var lastPayload: NotifPayload? = null
+
     /** Supplied by the service in onCreate. Required for MediaStyle. */
     private var mediaSessionToken: MediaSessionCompat.Token? = null
 
@@ -56,6 +59,8 @@ class WorkoutNotificationHelper(
     /** Steady-state tick — rich MediaStyle notification. */
     fun update(payload: NotifPayload) {
         if (stopped) return
+        if (payload == lastPayload) return  // dedup — NotifPayload is a data class
+        lastPayload = payload
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(notificationId, buildRichNotification(payload))
     }
@@ -63,6 +68,7 @@ class WorkoutNotificationHelper(
     fun stop() {
         stopped = true
         bitmapCache.clear()
+        lastPayload = null
     }
 
     /**
@@ -137,6 +143,8 @@ class WorkoutNotificationHelper(
             .setContentIntent(pendingIntent)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
+            .setShowWhen(true)
+            .setUsesChronometer(false)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // show on lockscreen in full
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
@@ -149,12 +157,12 @@ class WorkoutNotificationHelper(
         val requestCode: Int
         if (isPaused) {
             action = WorkoutForegroundService.ACTION_RESUME
-            title = "Resume"
+            title = context.getString(R.string.button_resume)
             iconRes = android.R.drawable.ic_media_play
             requestCode = REQUEST_RESUME
         } else {
             action = WorkoutForegroundService.ACTION_PAUSE
-            title = "Pause"
+            title = context.getString(R.string.button_pause)
             iconRes = android.R.drawable.ic_media_pause
             requestCode = REQUEST_PAUSE
         }
