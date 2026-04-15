@@ -47,6 +47,7 @@ import com.hrcoach.service.workout.AlertPolicy
 import com.hrcoach.service.workout.CoachingEventRouter
 import com.hrcoach.service.workout.TrackPointRecorder
 import com.hrcoach.service.workout.WorkoutNotificationHelper
+import com.hrcoach.service.workout.notification.NotifContentFormatter
 import com.hrcoach.util.JsonCodec
 import com.hrcoach.util.PermissionGate
 import dagger.hilt.android.AndroidEntryPoint
@@ -117,6 +118,9 @@ class WorkoutForegroundService : LifecycleService() {
 
     private val gson = JsonCodec.gson
     private lateinit var notificationHelper: WorkoutNotificationHelper
+    private lateinit var mediaSession: android.support.v4.media.session.MediaSessionCompat
+    private var activeWorkoutConfig: WorkoutConfig? = null
+    private var workoutTotalSeconds: Long = 0L
 
     private var locationSource: LocationDataSource? = null
     private var hrSource: HrDataSource? = null
@@ -160,6 +164,10 @@ class WorkoutForegroundService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         notificationHelper = WorkoutNotificationHelper(this, CHANNEL_ID, NOTIFICATION_ID)
+        mediaSession = android.support.v4.media.session.MediaSessionCompat(this, "CardeaWorkout").apply {
+            isActive = true
+        }
+        notificationHelper.attachMediaSession(mediaSession.sessionToken)
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -256,6 +264,8 @@ class WorkoutForegroundService : LifecycleService() {
         cadenceLockSuspected = false
         lastNotificationText = ""
 
+        activeWorkoutConfig = workoutConfig
+        workoutTotalSeconds = computeTotalSeconds(workoutConfig)
         notificationHelper.startForeground(this, "Starting workout...")
 
         // Choose data source factory based on simulation mode — single atomic snapshot
@@ -564,16 +574,13 @@ class WorkoutForegroundService : LifecycleService() {
             )
         }
 
-        val notificationText = when {
-            !tick.connected -> "HR monitor disconnected"
-            tick.hr <= 0 -> "Connected. Waiting for heart rate..."
-            target != null && target > 0 -> "$guidance - HR ${tick.hr} / $target"
-            else -> "HR ${tick.hr} bpm"
-        }
-        if (notificationText != lastNotificationText) {
-            lastNotificationText = notificationText
-            notificationHelper.update(notificationText)
-        }
+        val payload = NotifContentFormatter.format(
+            snapshot = WorkoutState.snapshot.value,
+            config = workoutConfig,
+            totalSeconds = workoutTotalSeconds,
+        )
+        notificationHelper.update(payload)
+        updateMediaSessionState(payload)
     }
 
     private fun pauseWorkout() {
@@ -964,6 +971,10 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        if (::mediaSession.isInitialized) {
+            mediaSession.isActive = false
+            mediaSession.release()
+        }
         super.onDestroy()
         // If a workout was active but stopWorkout never ran, persist what we can
         if (workoutId > 0L && !isStopping) {
@@ -997,6 +1008,48 @@ class WorkoutForegroundService : LifecycleService() {
         stopJob?.cancel()
         cleanupManagers()
         WorkoutState.reset()
+    }
+
+    private fun computeTotalSeconds(config: WorkoutConfig): Long {
+        // 1. Explicit planned duration
+        config.plannedDurationMinutes?.let { return it.toLong() * 60L }
+        // 2. Sum of time-based segment durations
+        val segSum = config.segments.sumOf { (it.durationSeconds ?: 0).toLong() }
+        if (segSum > 0L) return segSum
+        // 3. Unknown — treated as free run / indeterminate progress
+        return 0L
+    }
+
+    private fun updateMediaSessionState(payload: com.hrcoach.service.workout.notification.NotifPayload) {
+        val state = android.support.v4.media.session.PlaybackStateCompat.Builder()
+            .setState(
+                if (payload.isPaused) android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
+                else android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING,
+                payload.elapsedSeconds * 1000L,
+                if (payload.isPaused) 0f else 1f,
+            )
+            .setActions(
+                android.support.v4.media.session.PlaybackStateCompat.ACTION_PAUSE or
+                        android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY,
+            )
+            .build()
+        mediaSession.setPlaybackState(state)
+
+        val metadata = android.support.v4.media.MediaMetadataCompat.Builder()
+            .putString(
+                android.support.v4.media.MediaMetadataCompat.METADATA_KEY_TITLE,
+                payload.titleText,
+            )
+            .putString(
+                android.support.v4.media.MediaMetadataCompat.METADATA_KEY_ARTIST,
+                payload.subtitleText,
+            )
+            .putLong(
+                android.support.v4.media.MediaMetadataCompat.METADATA_KEY_DURATION,
+                if (payload.isIndeterminate) 0L else payload.totalSeconds * 1000L,
+            )
+            .build()
+        mediaSession.setMetadata(metadata)
     }
 
     private data class WorkoutTick(
