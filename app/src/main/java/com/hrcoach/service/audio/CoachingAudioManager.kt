@@ -149,6 +149,14 @@ class CoachingAudioManager(
         }
     }
 
+    /**
+     * Speaks an auto-pause/resume announcement via TTS. Only for auto-pause events —
+     * not called for manual pause. Respects voice verbosity (OFF = silent).
+     */
+    fun speakAnnouncement(text: String) {
+        voicePlayer.speakAnnouncement(text)
+    }
+
     fun destroy() {
         scope.cancel()
         earconPlayer.destroy()

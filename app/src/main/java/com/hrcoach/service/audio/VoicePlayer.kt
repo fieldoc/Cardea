@@ -98,6 +98,9 @@ class VoicePlayer(context: Context) {
                 utteranceDeferred?.complete(Unit)
                 utteranceDeferred = null
             }
+            utteranceId?.startsWith("announcement_") == true -> {
+                // Fire-and-forget — no deferred to complete. currentPriority already nulled above.
+            }
             else -> {
                 utteranceDeferred?.complete(Unit)
                 utteranceDeferred = null
@@ -205,6 +208,17 @@ class VoicePlayer(context: Context) {
     }
 
     fun isSpeaking(): Boolean = tts?.isSpeaking == true
+
+    /**
+     * Speaks arbitrary text via TTS, queued after current speech.
+     * Respects verbosity: skipped when OFF or TTS not ready.
+     */
+    fun speakAnnouncement(text: String) {
+        if (verbosity == VoiceVerbosity.OFF) return
+        if (!ttsReady) return
+        currentPriority = VoiceEventPriority.INFORMATIONAL
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, speechParams(), "announcement_${System.nanoTime()}")
+    }
 
     suspend fun awaitCompletion() {
         // Check existing deferred first — avoids race where onDone fires

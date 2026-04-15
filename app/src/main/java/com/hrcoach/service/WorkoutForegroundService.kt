@@ -400,6 +400,7 @@ class WorkoutForegroundService : LifecycleService() {
                     locationSource?.setMoving(false)
                     WorkoutState.update { it.copy(isAutoPaused = true) }
                     coachingAudioManager?.playPauseFeedback(paused = true)
+                    coachingAudioManager?.speakAnnouncement("Run autopaused")
                 }
                 AutoPauseEvent.RESUMED -> {
                     isAutoPaused = false  // use local var immediately
@@ -412,6 +413,7 @@ class WorkoutForegroundService : LifecycleService() {
                     locationSource?.setMoving(true)
                     WorkoutState.update { it.copy(isAutoPaused = false) }
                     coachingAudioManager?.playPauseFeedback(paused = false)
+                    coachingAudioManager?.speakAnnouncement("Run resumed")
                 }
                 else -> Unit
             }
