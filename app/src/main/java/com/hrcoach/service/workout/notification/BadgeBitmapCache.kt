@@ -26,13 +26,17 @@ class BadgeBitmapCache<T>(
 
     fun get(currentHr: Int, zoneStatus: ZoneStatus, paused: Boolean): T {
         val key = Key(currentHr, zoneStatus, paused)
-        entries[key]?.let { return it }
-        val created = factory(currentHr, zoneStatus, paused)
-        entries[key] = created
-        return created
+        synchronized(entries) {
+            entries[key]?.let { return it }
+            val created = factory(currentHr, zoneStatus, paused)
+            entries[key] = created
+            return created
+        }
     }
 
     fun clear() {
-        entries.clear()
+        synchronized(entries) {
+            entries.clear()
+        }
     }
 }

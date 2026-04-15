@@ -47,7 +47,11 @@ import com.hrcoach.service.workout.AlertPolicy
 import com.hrcoach.service.workout.CoachingEventRouter
 import com.hrcoach.service.workout.TrackPointRecorder
 import com.hrcoach.service.workout.WorkoutNotificationHelper
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import com.hrcoach.service.workout.notification.NotifContentFormatter
+import com.hrcoach.service.workout.notification.NotifPayload
 import com.hrcoach.util.JsonCodec
 import com.hrcoach.util.PermissionGate
 import dagger.hilt.android.AndroidEntryPoint
@@ -118,7 +122,7 @@ class WorkoutForegroundService : LifecycleService() {
 
     private val gson = JsonCodec.gson
     private lateinit var notificationHelper: WorkoutNotificationHelper
-    private lateinit var mediaSession: android.support.v4.media.session.MediaSessionCompat
+    private lateinit var mediaSession: MediaSessionCompat
     private var activeWorkoutConfig: WorkoutConfig? = null
     private var workoutTotalSeconds: Long = 0L
 
@@ -164,7 +168,7 @@ class WorkoutForegroundService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         notificationHelper = WorkoutNotificationHelper(this, CHANNEL_ID, NOTIFICATION_ID)
-        mediaSession = android.support.v4.media.session.MediaSessionCompat(this, "CardeaWorkout").apply {
+        mediaSession = MediaSessionCompat(this, "CardeaWorkout").apply {
             isActive = true
         }
         notificationHelper.attachMediaSession(mediaSession.sessionToken)
@@ -459,7 +463,15 @@ class WorkoutForegroundService : LifecycleService() {
                     avgHr = current.avgHr
                 )
             }
-            notificationHelper.update("Workout paused")
+            // Build rich payload so the lockscreen shows "· Paused" title, dimmed badge,
+            // Resume action button, and the MediaSession reports STATE_PAUSED.
+            val pausedPayload = NotifContentFormatter.format(
+                snapshot = WorkoutState.snapshot.value,
+                config = workoutConfig,
+                totalSeconds = workoutTotalSeconds,
+            )
+            notificationHelper.update(pausedPayload)
+            updateMediaSessionState(pausedPayload)
             return
         }
 
@@ -1020,33 +1032,38 @@ class WorkoutForegroundService : LifecycleService() {
         return 0L
     }
 
-    private fun updateMediaSessionState(payload: com.hrcoach.service.workout.notification.NotifPayload) {
-        val state = android.support.v4.media.session.PlaybackStateCompat.Builder()
+    private fun updateMediaSessionState(payload: NotifPayload) {
+        val state = PlaybackStateCompat.Builder()
             .setState(
-                if (payload.isPaused) android.support.v4.media.session.PlaybackStateCompat.STATE_PAUSED
-                else android.support.v4.media.session.PlaybackStateCompat.STATE_PLAYING,
+                if (payload.isPaused) PlaybackStateCompat.STATE_PAUSED
+                else PlaybackStateCompat.STATE_PLAYING,
                 payload.elapsedSeconds * 1000L,
                 if (payload.isPaused) 0f else 1f,
             )
             .setActions(
-                android.support.v4.media.session.PlaybackStateCompat.ACTION_PAUSE or
-                        android.support.v4.media.session.PlaybackStateCompat.ACTION_PLAY,
+                PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_PLAY,
             )
             .build()
         mediaSession.setPlaybackState(state)
 
-        val metadata = android.support.v4.media.MediaMetadataCompat.Builder()
+        val albumArt = notificationHelper.badgeFor(payload)
+        val metadata = MediaMetadataCompat.Builder()
             .putString(
-                android.support.v4.media.MediaMetadataCompat.METADATA_KEY_TITLE,
+                MediaMetadataCompat.METADATA_KEY_TITLE,
                 payload.titleText,
             )
             .putString(
-                android.support.v4.media.MediaMetadataCompat.METADATA_KEY_ARTIST,
+                MediaMetadataCompat.METADATA_KEY_ARTIST,
                 payload.subtitleText,
             )
             .putLong(
-                android.support.v4.media.MediaMetadataCompat.METADATA_KEY_DURATION,
+                MediaMetadataCompat.METADATA_KEY_DURATION,
                 if (payload.isIndeterminate) 0L else payload.totalSeconds * 1000L,
+            )
+            .putBitmap(
+                MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
+                albumArt,
             )
             .build()
         mediaSession.setMetadata(metadata)

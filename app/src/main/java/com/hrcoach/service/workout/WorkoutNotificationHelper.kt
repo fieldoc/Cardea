@@ -65,6 +65,19 @@ class WorkoutNotificationHelper(
         bitmapCache.clear()
     }
 
+    /**
+     * Returns the (cached) badge bitmap that would be shown for the given payload.
+     * Used by the service to populate MediaSession METADATA_KEY_ALBUM_ART so the
+     * lockscreen media controller picks up the same artwork as the notification.
+     */
+    fun badgeFor(payload: NotifPayload): Bitmap {
+        return bitmapCache.get(
+            currentHr = payload.currentHr,
+            zoneStatus = payload.zoneStatus,
+            paused = payload.isPaused,
+        )
+    }
+
     // ------------------------------------------------------------------
     // Notification builders
     // ------------------------------------------------------------------
