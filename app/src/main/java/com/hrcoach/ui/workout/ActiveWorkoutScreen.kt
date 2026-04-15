@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
 import com.hrcoach.domain.model.WorkoutMode
@@ -140,6 +141,25 @@ fun ActiveWorkoutScreen(
     ) {
         if (SimulationController.isActive) {
             SimulationOverlay(modifier = Modifier.align(Alignment.TopCenter).zIndex(10f))
+        }
+
+        // Countdown overlay: shows 3/2/1/GO during startup so users know the run registered
+        val countdownSeconds = state.countdownSecondsRemaining
+        if (countdownSeconds != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .zIndex(8f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (countdownSeconds > 0) countdownSeconds.toString() else "GO",
+                    fontSize = 112.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (countdownSeconds == 0) ZoneGreen else Color.White
+                )
+            }
         }
 
         Column(

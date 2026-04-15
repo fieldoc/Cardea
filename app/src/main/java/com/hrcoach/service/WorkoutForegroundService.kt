@@ -296,6 +296,15 @@ class WorkoutForegroundService : LifecycleService() {
                     }
                 }
 
+                // Navigate to workout screen immediately so user sees the countdown overlay
+                WorkoutState.update { current ->
+                    WorkoutSnapshot(
+                        isRunning = true,
+                        isPaused = false,
+                        pendingBootcampSessionId = current.pendingBootcampSessionId,
+                    )
+                }
+
                 // Play 3-2-1-GO countdown (suspends ~4 seconds)
                 coachingAudioManager?.playStartSequence(workoutConfig)
 
@@ -318,13 +327,10 @@ class WorkoutForegroundService : LifecycleService() {
                 autoPauseGraceUntilMs = clock.now() + AUTO_PAUSE_GRACE_MS
 
                 WorkoutState.update { current ->
-                    WorkoutSnapshot(
-                        isRunning = true,
-                        isPaused = false,
+                    current.copy(
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
                         guidanceText = if (SimulationController.isActive) "SIM STARTING" else "GET HR SIGNAL",
                         autoPauseEnabled = sessionAutoPauseEnabled,
-                        pendingBootcampSessionId = current.pendingBootcampSessionId,
                     )
                 }
                 observeWorkoutTicks(workoutConfig)
