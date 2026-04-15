@@ -38,7 +38,7 @@ Cardea — an Android app (Kotlin, Jetpack Compose) for real-time heart rate zon
 
 **KSP "Internal compiler error" masking:** When `kspDebugKotlin` or `compileDebugKotlin` fails with "Internal compiler error: Storage for file-to-id.tab already registered", this is a red herring. Run with `./gradlew assembleDebug --stacktrace` to surface the real `e:` compile errors underneath (e.g. unresolved references).
 
-**Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, use `git stash push -m "..."` → `git merge --ff-only` → `git stash pop`. Auto-merge usually resolves cleanly when touching the same line.
+**Worktree merge with dirty main:** If `main` has unstaged changes when merging a worktree branch, run these as THREE separate commands: `git stash push -m "..."` → `git merge --ff-only <branch>` → `git stash pop`. Do NOT chain with `&&` — if `stash pop` has conflicts (exit code 1), the merge never runs and you're left in a broken state. Auto-merge usually resolves cleanly when touching the same line.
 
 **Worktree merge with rewritten-file stash conflicts:** the `stash push → ff-merge → stash pop` procedure fails badly when (a) the popped WIP touches a file the incoming branch *rewrote* (not just tweaked), or (b) the popped WIP references untracked files not yet committed. Attempting to merge both versions produces a file that won't build on a fresh clone (references to untracked symbols). Recovery: `git checkout HEAD -- <conflicted-file>` to restore the merged version, `git reset HEAD` to unstage the popped index, `git stash drop` to discard the orphan stash entry. The WIP from the other session then remains as unstaged working-tree changes exactly as it was pre-merge, minus the orphan refactor tweak.
 
