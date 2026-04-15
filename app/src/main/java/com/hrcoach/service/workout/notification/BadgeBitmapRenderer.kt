@@ -1,6 +1,7 @@
 package com.hrcoach.service.workout.notification
 
 import android.graphics.Bitmap
+import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -28,11 +29,21 @@ class BadgeBitmapRenderer {
     /** Square bitmap dimension in pixels. 144px matches MediaStyle large-icon sweet spot. */
     private val size = 144
 
-    // Cardea palette
-    private val cardeaRed = Color.parseColor("#FF4D5A")
-    private val cardeaPink = Color.parseColor("#FF2DA6")
-    private val cardeaBlue = Color.parseColor("#4D61FF")
-    private val cardeaCyan = Color.parseColor("#00E5FF")
+    private val cardeaRed = CARDEA_RED
+    private val cardeaPink = CARDEA_PINK
+    private val cardeaBlue = CARDEA_BLUE
+    private val cardeaCyan = CARDEA_CYAN
+
+    companion object {
+        // Canonical source: ui/theme/Color.kt (GradientRed, GradientPink, GradientBlue, GradientCyan).
+        // These are duplicated here as raw ints because BadgeBitmapRenderer is service-side
+        // (non-Compose) and cannot import androidx.compose.ui.graphics.Color.
+        // Keep these in sync with Color.kt — if the UI palette changes, update both places.
+        private const val CARDEA_RED = 0xFFFF4D5A.toInt()
+        private const val CARDEA_PINK = 0xFFFF2DA6.toInt()
+        private const val CARDEA_BLUE = 0xFF4D61FF.toInt()
+        private const val CARDEA_CYAN = 0xFF00E5FF.toInt()
+    }
 
     fun render(
         currentHr: Int,
@@ -166,26 +177,50 @@ class BadgeBitmapRenderer {
     private fun drawHrText(canvas: Canvas, rect: RectF, currentHr: Int, zone: ZoneStatus) {
         val displayNum = if (currentHr <= 0 || zone == ZoneStatus.NO_DATA) "—" else currentHr.toString()
 
+        val numberSize = rect.height() * 0.38f
+        val cy = rect.centerY() + (numberSize / 3f) - rect.height() * 0.04f
+
+        // Drop-shadow pass for the HR number: draw a soft black offset behind the text.
+        // BlurMaskFilter works on software canvases (unlike setShadowLayer).
+        val numberShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            color = 0x66000000
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            textSize = numberSize
+            maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
+        }
+        canvas.drawText(displayNum, rect.centerX(), cy + 1f, numberShadow)
+
         val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = Color.WHITE
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = rect.height() * 0.38f
-            setShadowLayer(2f, 0f, 1f, 0x59000000)
+            textSize = numberSize
         }
-        val cy = rect.centerY() + (numberPaint.textSize / 3f) - rect.height() * 0.04f
         canvas.drawText(displayNum, rect.centerX(), cy, numberPaint)
 
-        // "BPM" label below
+        // "BPM" label below — same shadow treatment
+        val labelSize = rect.height() * 0.095f
+        val labelYOffset = rect.height() * 0.16f
+
+        val labelShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            color = 0x66000000
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            textSize = labelSize
+            letterSpacing = 0.22f
+            maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
+        }
+        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset + 1f, labelShadow)
+
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = 0xEBFFFFFF.toInt() // ~92% white
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            textSize = rect.height() * 0.095f
+            textSize = labelSize
             letterSpacing = 0.22f
-            setShadowLayer(2f, 0f, 1f, 0x59000000)
         }
-        canvas.drawText("BPM", rect.centerX(), cy + rect.height() * 0.16f, labelPaint)
+        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset, labelPaint)
     }
 
     // ---------------------------------------------------------------------
@@ -242,17 +277,36 @@ class BadgeBitmapRenderer {
         if (zone != ZoneStatus.ABOVE_ZONE && zone != ZoneStatus.BELOW_ZONE) return
 
         val rimColor = if (zone == ZoneStatus.ABOVE_ZONE) cardeaPink else cardeaCyan
-
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = rimColor
-            strokeWidth = rect.height() * 0.022f // ~3px on 144
-            strokeCap = Paint.Cap.ROUND
-            setShadowLayer(rect.height() * 0.07f, 0f, 0f, rimColor)
-        }
-
         val inset = rect.width() * 0.14f
-        val y = if (zone == ZoneStatus.ABOVE_ZONE) rect.top + paint.strokeWidth else rect.bottom - paint.strokeWidth
-        canvas.drawLine(rect.left + inset, y, rect.right - inset, y, paint)
+        val strokeWidth = rect.height() * 0.022f // ~3px on 144
+        val blurRadius = rect.height() * 0.07f   // ~10px glow falloff per spec
+        val y = if (zone == ZoneStatus.ABOVE_ZONE) {
+            rect.top + strokeWidth
+        } else {
+            rect.bottom - strokeWidth
+        }
+        val x0 = rect.left + inset
+        val x1 = rect.right - inset
+
+        // Pass 1 — blurred glow underlay using BlurMaskFilter on the framework paint.
+        // BlurMaskFilter works on software canvases (unlike setShadowLayer).
+        val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = rimColor
+            style = Paint.Style.STROKE
+            this.strokeWidth = strokeWidth * 1.8f  // wider so the blur has material to spread
+            strokeCap = Paint.Cap.ROUND
+            maskFilter = BlurMaskFilter(blurRadius, BlurMaskFilter.Blur.NORMAL)
+        }
+        canvas.drawLine(x0, y, x1, y, glowPaint)
+
+        // Pass 2 — crisp line on top.
+        val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = rimColor
+            style = Paint.Style.STROKE
+            this.strokeWidth = strokeWidth
+            strokeCap = Paint.Cap.ROUND
+        }
+        canvas.drawLine(x0, y, x1, y, linePaint)
     }
 
     // ---------------------------------------------------------------------
