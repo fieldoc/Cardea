@@ -76,12 +76,21 @@ class CoachingEventRouter {
         if (zoneStatus == ZoneStatus.IN_ZONE) {
             // Only fire RETURN_TO_ZONE when: runner was previously in zone, left, and came back.
             // Suppress on initial zone entry (warming up) and respect a 30s cooldown for HR jitter.
-            if (previousZoneStatus != ZoneStatus.IN_ZONE && hasBeenInZone &&
-                nowMs - lastReturnToZoneMs >= RETURN_TO_ZONE_COOLDOWN_MS
-            ) {
-                emitEvent(CoachingEvent.RETURN_TO_ZONE, null)
-                lastReturnToZoneMs = nowMs
+            if (previousZoneStatus != ZoneStatus.IN_ZONE && hasBeenInZone) {
+                // Always reset voice cue state on zone re-entry:
+                // 1. lastVoiceCueTimeMs — prevents IN_ZONE_CONFIRM from firing immediately if the
+                //    baseline went stale while RETURN_TO_ZONE cooldown suppressed prior events.
+                // 2. lastPredictiveWarningTime — prevents PREDICTIVE_WARNING from firing on the same
+                //    tick as RETURN_TO_ZONE. Without this, the adaptive engine projects drift (since
+                //    the runner keeps overshooting) and fires the guidance description text ("Pace
+                //    looks good", "Hold a conversation", etc.) the moment they step back in zone —
+                //    heard as a description cue on every return. Mirrors the 90s warmup gate logic.
                 lastVoiceCueTimeMs = nowMs
+                lastPredictiveWarningTime = nowMs
+                if (nowMs - lastReturnToZoneMs >= RETURN_TO_ZONE_COOLDOWN_MS) {
+                    emitEvent(CoachingEvent.RETURN_TO_ZONE, null)
+                    lastReturnToZoneMs = nowMs
+                }
             }
             hasBeenInZone = true
         }

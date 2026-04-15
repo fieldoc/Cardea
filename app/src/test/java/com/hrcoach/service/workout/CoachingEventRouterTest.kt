@@ -113,6 +113,56 @@ class CoachingEventRouterTest {
         assertFalse(events.contains(CoachingEvent.PREDICTIVE_WARNING))
     }
 
+    @Test
+    fun `PREDICTIVE_WARNING does not fire on zone re-entry even when projection shows drift`() {
+        // Regression: the adaptive engine projects drift immediately on re-entry (the runner keeps
+        // overshooting). Without the fix, PREDICTIVE_WARNING fires simultaneously with RETURN_TO_ZONE
+        // on the same tick — the user hears the guidance description every time they step back in zone.
+        // Fix: lastPredictiveWarningTime is reset to nowMs on zone re-entry, imposing a 60s grace.
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 0L)
+        val events = mutableListOf<CoachingEvent>()
+        val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+        val driftResult = AdaptivePaceController.TickResult(
+            zoneStatus = ZoneStatus.IN_ZONE,
+            projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
+            predictedHr = 150,
+            currentPaceMinPerKm = 6f,
+            guidance = "ease off slightly",
+            hasProjectionConfidence = true
+        )
+        fun tick(zone: ZoneStatus, elapsedSec: Long, nowMs: Long,
+                 adaptive: AdaptivePaceController.TickResult? = null) {
+            router.route(config, connected = true, distanceMeters = 0f,
+                elapsedSeconds = elapsedSec, zoneStatus = zone, adaptiveResult = adaptive,
+                guidance = "ease off slightly", nowMs = nowMs,
+                emitEvent = { e, _ -> events += e })
+        }
+
+        // Initial zone entry (warmup not done) — no warning expected.
+        tick(ZoneStatus.IN_ZONE, 0L, 0L)
+
+        // Step 1: fire a PREDICTIVE_WARNING while stably in zone (past warmup + 60s cooldown).
+        // lastPredictiveWarningTime = 100_000.
+        tick(ZoneStatus.IN_ZONE, 120L, 100_000L, driftResult)
+        assertTrue("setup: PREDICTIVE_WARNING must fire while stably in zone",
+            events.contains(CoachingEvent.PREDICTIVE_WARNING))
+
+        // Step 2: leave zone. Then return 63s later (cooldown of 60s has elapsed).
+        // On re-entry, the fix resets lastPredictiveWarningTime = nowMs, so PREDICTIVE_WARNING
+        // must NOT fire this tick even though the 60s cooldown has expired.
+        tick(ZoneStatus.ABOVE_ZONE, 180L, 101_000L)
+        val countBeforeReturn = events.count { it == CoachingEvent.PREDICTIVE_WARNING }
+
+        tick(ZoneStatus.IN_ZONE, 200L, 163_000L, driftResult)  // 63s after last warning
+
+        assertEquals(
+            "PREDICTIVE_WARNING must not fire on the zone re-entry tick — 60s grace applies",
+            countBeforeReturn,
+            events.count { it == CoachingEvent.PREDICTIVE_WARNING }
+        )
+    }
+
     // ── RETURN_TO_ZONE tests ──────────────────────────────────
 
     private fun steadyConfig() = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
@@ -205,6 +255,41 @@ class CoachingEventRouterTest {
         // First tick ever: NO_DATA -> IN_ZONE
         val events = routeTick(router, ZoneStatus.IN_ZONE, 1_000L)
         assertTrue(events.none { it.first == CoachingEvent.RETURN_TO_ZONE })
+    }
+
+    @Test
+    fun `IN_ZONE_CONFIRM does not fire on zone re-entry during rapid oscillations`() {
+        // Regression: when RETURN_TO_ZONE was suppressed by its 30s cooldown, lastVoiceCueTimeMs
+        // stayed stale. After 3+ minutes of quick out-in oscillation (< 30s each), the baseline
+        // would be >3 min old and IN_ZONE_CONFIRM would fire the moment the runner stepped back
+        // into zone — heard as a guidance description ("Pace looks good") on every zone return.
+        // Fix: always reset lastVoiceCueTimeMs on any zone re-entry, regardless of cooldown.
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 0L)
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+
+        // Establish hasBeenInZone and fire RETURN_TO_ZONE at T=33s.
+        // lastReturnToZoneMs=33_000, lastVoiceCueTimeMs=33_000.
+        routeTick(router, ZoneStatus.IN_ZONE, nowMs = 1_000L, events = events)
+        routeTick(router, ZoneStatus.ABOVE_ZONE, nowMs = 2_000L, events = events)
+        routeTick(router, ZoneStatus.IN_ZONE, nowMs = 33_000L, events = events)
+        assertEquals(1, events.count { it.first == CoachingEvent.RETURN_TO_ZONE })
+
+        // Oscillate with 14s out-in cycles (< 30s RETURN_TO_ZONE cooldown) for 3+ minutes.
+        // Without fix: lastVoiceCueTimeMs stays at 33_000 throughout; IN_ZONE_CONFIRM fires
+        // after 180s of stale baseline on the next re-entry even though runner just arrived.
+        // With fix: every re-entry resets lastVoiceCueTimeMs so the 3-min window never expires.
+        var t = 34_000L
+        while (t < 33_000L + 200_000L) {
+            routeTick(router, ZoneStatus.ABOVE_ZONE, nowMs = t, events = events)
+            routeTick(router, ZoneStatus.IN_ZONE, nowMs = t + 14_000L, events = events)
+            t += 15_000L
+        }
+
+        assertEquals(
+            "IN_ZONE_CONFIRM must not fire during rapid zone oscillations",
+            0, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM }
+        )
     }
 
     @Test
