@@ -67,16 +67,29 @@ class CoachingEventRouterTest {
             hasProjectionConfidence = true
         )
 
-        // After 90s warmup gate — warning should fire
+        // First tick establishes zone entry; the entry reset absorbs the 60s predictive cooldown.
         router.route(
             workoutConfig = config,
             connected = true,
             distanceMeters = 100f,
             elapsedSeconds = 120L,
             zoneStatus = ZoneStatus.IN_ZONE,
-            adaptiveResult = adaptiveResult,
+            adaptiveResult = null,
             guidance = "ease off",
             nowMs = 100_000L,
+            emitEvent = { event, _ -> events += event }
+        )
+
+        // After 60s in zone with drift projection — warning should fire.
+        router.route(
+            workoutConfig = config,
+            connected = true,
+            distanceMeters = 100f,
+            elapsedSeconds = 180L,
+            zoneStatus = ZoneStatus.IN_ZONE,
+            adaptiveResult = adaptiveResult,
+            guidance = "ease off",
+            nowMs = 160_001L,
             emitEvent = { event, _ -> events += event }
         )
 
@@ -114,14 +127,51 @@ class CoachingEventRouterTest {
     }
 
     @Test
+    fun `PREDICTIVE_WARNING does not fire on first zone entry for returning runners`() {
+        // Regression: returning runners have adaptive projection confidence from prior sessions.
+        // Without the fix, PREDICTIVE_WARNING fires on the very first IN_ZONE tick (lastPredictiveWarningTime
+        // starts at 0L, so the 60s cooldown is immediately satisfied). The entry reset now absorbs the
+        // cooldown on any zone entry where it was already expired — including first entry.
+        val router = CoachingEventRouter()
+        val events = mutableListOf<CoachingEvent>()
+        val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+        val driftResult = AdaptivePaceController.TickResult(
+            zoneStatus = ZoneStatus.IN_ZONE,
+            projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
+            predictedHr = 152,
+            currentPaceMinPerKm = 5.8f,
+            guidance = "ease off",
+            hasProjectionConfidence = true
+        )
+
+        // Runner warms up below zone for 2 minutes (past warmup gate), then enters zone for
+        // the first time with drift projection confidence from prior session data.
+        router.route(workoutConfig = config, connected = true, distanceMeters = 0f,
+            elapsedSeconds = 120L, zoneStatus = ZoneStatus.BELOW_ZONE,
+            adaptiveResult = null, guidance = "speed up", nowMs = 120_000L,
+            emitEvent = { e, _ -> events += e })
+
+        router.route(workoutConfig = config, connected = true, distanceMeters = 200f,
+            elapsedSeconds = 150L, zoneStatus = ZoneStatus.IN_ZONE,
+            adaptiveResult = driftResult, guidance = "ease off", nowMs = 150_000L,
+            emitEvent = { e, _ -> events += e })
+
+        assertFalse(
+            "PREDICTIVE_WARNING must not fire on the first-ever zone entry tick",
+            events.contains(CoachingEvent.PREDICTIVE_WARNING)
+        )
+    }
+
+    @Test
     fun `PREDICTIVE_WARNING does not fire on zone re-entry even when projection shows drift`() {
         // Regression: the adaptive engine projects drift immediately on re-entry (the runner keeps
         // overshooting). Without the fix, PREDICTIVE_WARNING fires simultaneously with RETURN_TO_ZONE
         // on the same tick — the user hears the guidance description every time they step back in zone.
-        // Fix: lastPredictiveWarningTime is reset to nowMs on zone re-entry, imposing a 60s grace.
+        // Fix: when the 60s cooldown was already expired on re-entry, lastPredictiveWarningTime is
+        // reset to nowMs, imposing a fresh 60s grace before the next warning can fire.
         val router = CoachingEventRouter()
         router.reset(workoutStartMs = 0L)
-        val events = mutableListOf<CoachingEvent>()
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
         val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
         val driftResult = AdaptivePaceController.TickResult(
             zoneStatus = ZoneStatus.IN_ZONE,
@@ -131,35 +181,71 @@ class CoachingEventRouterTest {
             guidance = "ease off slightly",
             hasProjectionConfidence = true
         )
-        fun tick(zone: ZoneStatus, elapsedSec: Long, nowMs: Long,
-                 adaptive: AdaptivePaceController.TickResult? = null) {
-            router.route(config, connected = true, distanceMeters = 0f,
-                elapsedSeconds = elapsedSec, zoneStatus = zone, adaptiveResult = adaptive,
-                guidance = "ease off slightly", nowMs = nowMs,
-                emitEvent = { e, _ -> events += e })
-        }
 
-        // Initial zone entry (warmup not done) — no warning expected.
-        tick(ZoneStatus.IN_ZONE, 0L, 0L)
+        // Initial zone entry at T=0 (warmup not done, cooldown not expired) — no warning.
+        routeTick(router, ZoneStatus.IN_ZONE, 0L, config, events,
+            elapsedSeconds = 0L)
 
         // Step 1: fire a PREDICTIVE_WARNING while stably in zone (past warmup + 60s cooldown).
         // lastPredictiveWarningTime = 100_000.
-        tick(ZoneStatus.IN_ZONE, 120L, 100_000L, driftResult)
+        routeTick(router, ZoneStatus.IN_ZONE, 100_000L, config, events,
+            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 120L)
         assertTrue("setup: PREDICTIVE_WARNING must fire while stably in zone",
-            events.contains(CoachingEvent.PREDICTIVE_WARNING))
+            events.any { it.first == CoachingEvent.PREDICTIVE_WARNING })
 
         // Step 2: leave zone. Then return 63s later (cooldown of 60s has elapsed).
-        // On re-entry, the fix resets lastPredictiveWarningTime = nowMs, so PREDICTIVE_WARNING
+        // On re-entry the fix resets lastPredictiveWarningTime = nowMs, so PREDICTIVE_WARNING
         // must NOT fire this tick even though the 60s cooldown has expired.
-        tick(ZoneStatus.ABOVE_ZONE, 180L, 101_000L)
-        val countBeforeReturn = events.count { it == CoachingEvent.PREDICTIVE_WARNING }
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 101_000L, config, events, elapsedSeconds = 180L)
+        val countBeforeReturn = events.count { it.first == CoachingEvent.PREDICTIVE_WARNING }
 
-        tick(ZoneStatus.IN_ZONE, 200L, 163_000L, driftResult)  // 63s after last warning
+        routeTick(router, ZoneStatus.IN_ZONE, 163_000L, config, events,  // 63s after last warning
+            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 200L)
 
         assertEquals(
             "PREDICTIVE_WARNING must not fire on the zone re-entry tick — 60s grace applies",
             countBeforeReturn,
-            events.count { it == CoachingEvent.PREDICTIVE_WARNING }
+            events.count { it.first == CoachingEvent.PREDICTIVE_WARNING }
+        )
+    }
+
+    @Test
+    fun `PREDICTIVE_WARNING still fires for rapid oscillators after 60s elapses in zone`() {
+        // The entry reset only fires when the 60s cooldown is already expired. For rapid
+        // oscillators (< 60s cycles), the cooldown hasn't expired on re-entry, so the reset
+        // is skipped and the timer continues running. Once the runner has been in zone for
+        // 60s without the cooldown being reset, the warning fires normally.
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 0L)
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+        val driftResult = AdaptivePaceController.TickResult(
+            zoneStatus = ZoneStatus.IN_ZONE,
+            projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
+            predictedHr = 150,
+            currentPaceMinPerKm = 6f,
+            guidance = "ease off slightly",
+            hasProjectionConfidence = true
+        )
+
+        // First zone entry at T=0; cooldown starts from 0L (no reset since cooldown not expired).
+        routeTick(router, ZoneStatus.IN_ZONE, 0L, config, events, elapsedSeconds = 0L)
+
+        // Rapid oscillations every 20s (< 60s cooldown). Each re-entry skips the reset because
+        // the cooldown hasn't expired. The timer stays at 0L throughout.
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 10_000L, config, events, elapsedSeconds = 10L)
+        routeTick(router, ZoneStatus.IN_ZONE,    30_000L, config, events, elapsedSeconds = 30L)
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 40_000L, config, events, elapsedSeconds = 40L)
+        routeTick(router, ZoneStatus.IN_ZONE,    50_000L, config, events, elapsedSeconds = 50L)
+
+        // After warmup (90s) with drift projection — warning fires because 60s has elapsed
+        // since lastPredictiveWarningTime = 0L (no re-entry reset occurred during rapid cycles).
+        routeTick(router, ZoneStatus.IN_ZONE, 95_000L, config, events,
+            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 95L)
+
+        assertTrue(
+            "PREDICTIVE_WARNING must still fire for rapid oscillators once 60s elapses",
+            events.any { it.first == CoachingEvent.PREDICTIVE_WARNING }
         )
     }
 
@@ -172,16 +258,19 @@ class CoachingEventRouterTest {
         zone: ZoneStatus,
         nowMs: Long,
         config: WorkoutConfig = steadyConfig(),
-        events: MutableList<Pair<CoachingEvent, String?>> = mutableListOf()
+        events: MutableList<Pair<CoachingEvent, String?>> = mutableListOf(),
+        adaptiveResult: AdaptivePaceController.TickResult? = null,
+        guidance: String = "some guidance",
+        elapsedSeconds: Long = nowMs / 1000L
     ): MutableList<Pair<CoachingEvent, String?>> {
         router.route(
             workoutConfig = config,
             connected = true,
             distanceMeters = 0f,
-            elapsedSeconds = nowMs / 1000,
+            elapsedSeconds = elapsedSeconds,
             zoneStatus = zone,
-            adaptiveResult = null,
-            guidance = "some guidance",
+            adaptiveResult = adaptiveResult,
+            guidance = guidance,
             nowMs = nowMs,
             emitEvent = { event, text -> events += event to text }
         )

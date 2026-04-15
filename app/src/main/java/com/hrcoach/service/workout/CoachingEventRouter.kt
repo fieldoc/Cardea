@@ -34,7 +34,15 @@ class CoachingEventRouter {
         lastVoiceCueTimeMs = nowMs
     }
 
-    /** Called when a reactive alert fires so the predictive cooldown resets, preventing back-to-back cues. */
+    /**
+     * Called when a reactive alert (SPEED_UP / SLOW_DOWN) fires from AlertPolicy.
+     * Sets [lastPredictiveWarningTime] to 0L, which would normally open the predictive gate
+     * immediately. In practice this value is overridden by the conditional re-entry reset in
+     * [route]: when the runner returns to zone and the 60s cooldown was already expired (which
+     * covers all realistic post-alert scenarios), [lastPredictiveWarningTime] is refreshed to
+     * nowMs. Retained for call-site clarity and to restore its open-gate role if re-entry
+     * logic ever changes.
+     */
     fun resetPredictiveWarningTimer() {
         lastPredictiveWarningTime = 0L
     }
@@ -74,20 +82,28 @@ class CoachingEventRouter {
         }
 
         if (zoneStatus == ZoneStatus.IN_ZONE) {
-            // Only fire RETURN_TO_ZONE when: runner was previously in zone, left, and came back.
-            // Suppress on initial zone entry (warming up) and respect a 30s cooldown for HR jitter.
-            if (previousZoneStatus != ZoneStatus.IN_ZONE && hasBeenInZone) {
-                // Always reset voice cue state on zone re-entry:
-                // 1. lastVoiceCueTimeMs — prevents IN_ZONE_CONFIRM from firing immediately if the
-                //    baseline went stale while RETURN_TO_ZONE cooldown suppressed prior events.
-                // 2. lastPredictiveWarningTime — prevents PREDICTIVE_WARNING from firing on the same
-                //    tick as RETURN_TO_ZONE. Without this, the adaptive engine projects drift (since
-                //    the runner keeps overshooting) and fires the guidance description text ("Pace
-                //    looks good", "Hold a conversation", etc.) the moment they step back in zone —
-                //    heard as a description cue on every return. Mirrors the 90s warmup gate logic.
+            if (previousZoneStatus != ZoneStatus.IN_ZONE) {
+                // Reset voice-cue baselines on any zone entry (first or re-entry).
+                //
+                // lastVoiceCueTimeMs — always reset. Prevents IN_ZONE_CONFIRM from firing
+                // immediately after a long absence where the baseline went stale (e.g. when
+                // rapid out/in oscillations kept the RETURN_TO_ZONE cooldown busy).
                 lastVoiceCueTimeMs = nowMs
-                lastPredictiveWarningTime = nowMs
-                if (nowMs - lastReturnToZoneMs >= RETURN_TO_ZONE_COOLDOWN_MS) {
+
+                // lastPredictiveWarningTime — conditionally reset (only when the 60s cooldown
+                // was already expired). This suppresses PREDICTIVE_WARNING on the entry tick
+                // itself (simultaneous cues sound confusing), while preserving the running
+                // cooldown for rapid oscillators whose 60s hasn't elapsed yet — they continue
+                // to receive warnings once they've been in zone for 60s. Also guards first zone
+                // entry: returning runners have adaptive projection confidence from prior sessions
+                // and would otherwise hear a predictive cue the very first tick they reach zone.
+                if (nowMs - lastPredictiveWarningTime >= 60_000L) {
+                    lastPredictiveWarningTime = nowMs
+                }
+
+                // RETURN_TO_ZONE only fires on re-entry (not first entry), with a 30s cooldown
+                // to absorb HR jitter near the zone boundary.
+                if (hasBeenInZone && nowMs - lastReturnToZoneMs >= RETURN_TO_ZONE_COOLDOWN_MS) {
                     emitEvent(CoachingEvent.RETURN_TO_ZONE, null)
                     lastReturnToZoneMs = nowMs
                 }
