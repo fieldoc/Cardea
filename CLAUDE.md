@@ -246,7 +246,7 @@ Never call DataStore `edit {}` inside a slider's `onValueChange` — it fires on
 - **Audit plan:** `docs/superpowers/plans/2026-04-11-error-handling-audit.md` — health scorecard + deferred items
 - **stopWorkout() essential/best-effort split** — essential ops (save workout, stop GPS/BLE) wrapped in individual `runCatching`; best-effort ops (metrics, achievements) grouped separately. Both log on failure.
 - **Firebase typed exceptions** — don't return `null` for multiple distinct failure conditions (e.g. expired invite vs not found). Throw specific subclasses (`ExpiredInviteException`, `PartnerLimitException`); catch individually in UI. Returning null collapses all failures into one ambiguous error message.
-- **`runCatching { withTimeout {} }` is unsafe** — `TimeoutCancellationException` extends `CancellationException`; `runCatching` catches it silently, turning the timeout into a no-op. Use `try/catch` and rethrow cancellations: `} catch (e: CancellationException) { throw e }`.
+- **`runCatching { withTimeout {} }` is unsafe** — `TimeoutCancellationException` extends `CancellationException`; `runCatching` catches it silently, turning the timeout into a no-op. Use `try/catch` and rethrow cancellations: `} catch (e: CancellationException) { throw e }`. **Inner `catch (e: Exception)` has the same trap**: a nested `try { someAwait() } catch (e: Exception) { fallback }` inside a `withTimeout` lambda also swallows the timeout cancellation before it can propagate. Add `catch (e: CancellationException) { throw e }` before every `catch (e: Exception)` in Firebase coroutine code.
 - **All `collectAsState()` calls are now lifecycle-aware** — `collectAsStateWithLifecycle()` used everywhere.
 - **Deferred (not yet fixed):** Per-operation BLE permission checks (8 `@SuppressLint`), mid-session permission revocation, Room migration tests, full state restoration (`START_REDELIVER_INTENT`).
 
@@ -341,7 +341,7 @@ Every physiological constant, coefficient, threshold, or formula in the adaptive
 
 ## Firebase RTDB Data Model
 
-Firebase project: `cardea-1c8fc`. CLI: `MSYS_NO_PATHCONV=1 firebase database:get /path --project cardea-1c8fc --pretty`
+Firebase project: `cardea-1c8fc`. CLI: `MSYS_NO_PATHCONV=1 firebase database:get /path --project cardea-1c8fc --pretty`. Add `--shallow` to get child keys as `true` without downloading all data (useful for surveying large nodes). Write/delete: `firebase database:set -d "value" -f /path` and `firebase database:remove -f /path` — use `-f` (force), not `--confirm` (doesn't exist).
 - `/users/{uid}` — `displayName`, `emblemId`, `fcmToken`, `partners: {partnerUid: true}`, `activity: {lastRunDate, lastRunDurationMin, lastRunPhase, weeklyRunCount, currentStreak}`
 - `/users/{uid}/backup` — cloud backup root. `backupComplete: true` written last (absence = partial or pre-fix backup). Subtrees: `profile/`, `settings/`, `adaptive/` (key `paceHrBuckets`, not `buckets`), `workouts/`, `trackPoints/`, `metrics/`, `bootcamp/enrollment`, `bootcamp/sessions/`, `achievements/`. Track point keys are abbreviated: `id`, `ts`, `lat`, `lng`, `hr`, `dist`, `alt`. See `CloudBackupManager.TpKeys`.
 - `/invites/{code}` — invite codes with `userId`, `displayName`, `createdAt`, `expiresAt`
