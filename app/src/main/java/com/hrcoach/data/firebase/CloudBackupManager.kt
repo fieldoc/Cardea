@@ -63,8 +63,9 @@ class CloudBackupManager @Inject constructor(
         if (!isBackupEnabled()) return false
         return try {
             withTimeout(TIMEOUT_MS) {
-                val ref = backupRef() ?: return@withTimeout false
+                // Get UID once; construct ref directly so both use the same UID.
                 val uid = authManager.getCurrentUid() ?: return@withTimeout false
+                val ref = db.reference.child("users/$uid/backup")
 
                 // Snapshot live partner UIDs so they can be re-established after a
                 // UID change (e.g. fresh install wipes Firebase auth state).
@@ -72,6 +73,8 @@ class CloudBackupManager @Inject constructor(
                     db.reference.child("users/$uid/partners").get().await()
                         .children.mapNotNull { it.key }
                         .associateWith { true }
+                } catch (e: CancellationException) {
+                    throw e  // propagate; don't silently write an empty partner list
                 } catch (e: Exception) {
                     emptyMap<String, Boolean>()
                 }

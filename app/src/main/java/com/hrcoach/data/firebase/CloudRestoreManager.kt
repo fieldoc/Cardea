@@ -3,6 +3,7 @@ package com.hrcoach.data.firebase
 import android.util.Log
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.FirebaseDatabase
+import kotlinx.coroutines.CancellationException
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.AchievementEntity
 import androidx.room.withTransaction
@@ -162,16 +163,20 @@ class CloudRestoreManager @Inject constructor(
     private suspend fun restorePartnerLinks(profileSnap: DataSnapshot) {
         if (!profileSnap.exists()) return
         val uid = authManager.getCurrentUid() ?: return
-        runCatching {
+        try {
             val partnerUids = profileSnap.child("partnerUids").children.mapNotNull { it.key }
-            if (partnerUids.isEmpty()) return@runCatching
+            if (partnerUids.isEmpty()) return
             val updates = mutableMapOf<String, Any?>()
             for (partnerUid in partnerUids) {
                 updates["users/$uid/partners/$partnerUid"] = true
                 updates["users/$partnerUid/partners/$uid"] = true
             }
             withTimeout(10_000) { db.reference.updateChildren(updates).await() }
-        }.onFailure { Log.w(TAG, "restorePartnerLinks failed", it) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "restorePartnerLinks failed", e)
+        }
     }
 
     private fun restoreProfile(snap: DataSnapshot) {
