@@ -8,6 +8,7 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
+import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -84,6 +85,46 @@ class BadgeBitmapRenderer {
         canvas.restore()
 
         // 7. If paused, apply a global dark overlay on top
+        if (paused) applyPausedOverlay(canvas, rect, cornerRadius)
+
+        return bmp
+    }
+
+    /**
+     * Full-size artwork for the MediaSession lockscreen player — 512×512 px.
+     *
+     * Larger than the 144px notification badge so Android's lockscreen media
+     * controller fills its card at native resolution and palette extraction is
+     * accurate. Design: same zone-driven gradient as the badge, but HR number
+     * at 50 % of height (vs 38 % on the badge) and a small zone-label pill at
+     * the bottom edge.
+     */
+    fun renderLockscreenArt(
+        currentHr: Int,
+        zoneStatus: ZoneStatus,
+        paused: Boolean,
+    ): Bitmap {
+        val artSize = 512
+        val bmp = Bitmap.createBitmap(artSize, artSize, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        val rect = RectF(0f, 0f, artSize.toFloat(), artSize.toFloat())
+        val cornerRadius = artSize * 0.12f  // 62px — slightly more rounded than the badge
+
+        val clipPath = Path().apply {
+            addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
+        }
+        canvas.save()
+        canvas.clipPath(clipPath)
+
+        drawGradient(canvas, rect, zoneStatus)
+        drawTopSheen(canvas, rect)
+        drawBottomShadow(canvas, rect)
+        drawHeartGlyph(canvas, rect, paused)
+        drawHrTextLarge(canvas, rect, currentHr, zoneStatus)
+        drawZoneLabel(canvas, rect, zoneStatus, paused)
+        if (!paused) drawRimAccent(canvas, rect, zoneStatus)
+
+        canvas.restore()
         if (paused) applyPausedOverlay(canvas, rect, cornerRadius)
 
         return bmp
@@ -307,6 +348,97 @@ class BadgeBitmapRenderer {
             strokeCap = Paint.Cap.ROUND
         }
         canvas.drawLine(x0, y, x1, y, linePaint)
+    }
+
+    // ---------------------------------------------------------------------
+    // Lockscreen art — HR text (larger scale) + zone label pill
+    // ---------------------------------------------------------------------
+
+    /** Like drawHrText but sized for the 512px lockscreen art (50 % vs 38 % of height). */
+    private fun drawHrTextLarge(canvas: Canvas, rect: RectF, currentHr: Int, zone: ZoneStatus) {
+        val displayNum = if (currentHr <= 0 || zone == ZoneStatus.NO_DATA) "—" else currentHr.toString()
+
+        val numberSize = rect.height() * 0.50f
+        val cy = rect.centerY() + (numberSize / 3f) - rect.height() * 0.04f
+
+        val numberShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            color = 0x66000000
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            textSize = numberSize
+            maskFilter = BlurMaskFilter(4f, BlurMaskFilter.Blur.NORMAL)
+        }
+        canvas.drawText(displayNum, rect.centerX(), cy + 2f, numberShadow)
+
+        val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            color = Color.WHITE
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            textSize = numberSize
+        }
+        canvas.drawText(displayNum, rect.centerX(), cy, numberPaint)
+
+        val labelSize = rect.height() * 0.095f
+        val labelYOffset = rect.height() * 0.18f
+
+        val labelShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            color = 0x66000000
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            textSize = labelSize
+            letterSpacing = 0.22f
+            maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
+        }
+        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset + 1f, labelShadow)
+
+        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            color = 0xEBFFFFFF.toInt()
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            textSize = labelSize
+            letterSpacing = 0.22f
+        }
+        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset, labelPaint)
+    }
+
+    /** Small pill label at the bottom edge of the lockscreen art showing zone / paused state. */
+    private fun drawZoneLabel(canvas: Canvas, rect: RectF, zone: ZoneStatus, paused: Boolean) {
+        val text = when {
+            paused -> "PAUSED"
+            zone == ZoneStatus.NO_DATA -> "ACQUIRING SIGNAL"
+            zone == ZoneStatus.IN_ZONE -> "ON TARGET"
+            zone == ZoneStatus.ABOVE_ZONE -> "ABOVE ZONE"
+            zone == ZoneStatus.BELOW_ZONE -> "BELOW ZONE"
+            else -> return
+        }
+
+        val textSize = rect.height() * 0.062f
+        val textY = rect.bottom - rect.height() * 0.085f
+
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
+            this.textSize = textSize
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            letterSpacing = 0.10f
+            textAlign = Paint.Align.CENTER
+        }
+        val bounds = Rect()
+        textPaint.getTextBounds(text, 0, text.length, bounds)
+
+        val pillPadH = textSize * 0.55f
+        val pillPadV = textSize * 0.30f
+        val pillRect = RectF(
+            rect.centerX() - bounds.width() / 2f - pillPadH,
+            textY - bounds.height() - pillPadV,
+            rect.centerX() + bounds.width() / 2f + pillPadH,
+            textY + pillPadV,
+        )
+        val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = 0x40000000  // subtle dark backing
+        }
+        canvas.drawRoundRect(pillRect, textSize * 0.35f, textSize * 0.35f, pillPaint)
+
+        textPaint.color = 0xCCFFFFFF.toInt()  // 80 % white
+        canvas.drawText(text, rect.centerX(), textY, textPaint)
     }
 
     // ---------------------------------------------------------------------

@@ -1085,7 +1085,9 @@ class WorkoutForegroundService : LifecycleService() {
             .build()
         mediaSession.setPlaybackState(state)
 
-        val albumArt = notificationHelper.badgeFor(payload)
+        // Use the 512px lockscreen artwork (not the 144px badge) so the lockscreen
+        // media player card fills at native resolution and palette extraction is accurate.
+        val lockscreenArt = notificationHelper.lockscreenArtFor(payload)
         val metadata = MediaMetadataCompat.Builder()
             .putString(
                 MediaMetadataCompat.METADATA_KEY_TITLE,
@@ -1101,7 +1103,7 @@ class WorkoutForegroundService : LifecycleService() {
             )
             .putBitmap(
                 MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                albumArt,
+                lockscreenArt,
             )
             .build()
         mediaSession.setMetadata(metadata)

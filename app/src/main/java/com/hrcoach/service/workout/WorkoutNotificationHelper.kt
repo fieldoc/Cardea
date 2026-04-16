@@ -34,8 +34,15 @@ class WorkoutNotificationHelper(
     private var mediaSessionToken: MediaSessionCompat.Token? = null
 
     private val renderer = BadgeBitmapRenderer()
+
+    /** 144px badge for the notification large-icon slot. */
     private val bitmapCache = BadgeBitmapCache<Bitmap>(maxEntries = 16) { hr, zone, paused ->
         renderer.render(currentHr = hr, zoneStatus = zone, paused = paused)
+    }
+
+    /** 512px full-quality artwork for the MediaSession lockscreen player. */
+    private val lockscreenArtCache = BadgeBitmapCache<Bitmap>(maxEntries = 8) { hr, zone, paused ->
+        renderer.renderLockscreenArt(currentHr = hr, zoneStatus = zone, paused = paused)
     }
 
     fun attachMediaSession(token: MediaSessionCompat.Token) {
@@ -68,16 +75,29 @@ class WorkoutNotificationHelper(
     fun stop() {
         stopped = true
         bitmapCache.clear()
+        lockscreenArtCache.clear()
         lastPayload = null
     }
 
     /**
-     * Returns the (cached) badge bitmap that would be shown for the given payload.
-     * Used by the service to populate MediaSession METADATA_KEY_ALBUM_ART so the
-     * lockscreen media controller picks up the same artwork as the notification.
+     * Returns the (cached) 144px badge bitmap used as the notification large-icon.
      */
     fun badgeFor(payload: NotifPayload): Bitmap {
         return bitmapCache.get(
+            currentHr = payload.currentHr,
+            zoneStatus = payload.zoneStatus,
+            paused = payload.isPaused,
+        )
+    }
+
+    /**
+     * Returns the (cached) 512px artwork for the MediaSession METADATA_KEY_ALBUM_ART.
+     * This drives the full-width lockscreen media player card — same zone gradient as
+     * the badge but rendered at 4× the resolution so the lockscreen player fills its
+     * card at native quality instead of upscaling a 144px thumbnail.
+     */
+    fun lockscreenArtFor(payload: NotifPayload): Bitmap {
+        return lockscreenArtCache.get(
             currentHr = payload.currentHr,
             zoneStatus = payload.zoneStatus,
             paused = payload.isPaused,
@@ -106,7 +126,8 @@ class WorkoutNotificationHelper(
             .setContentTitle(payload.titleText)
             .setContentText(payload.subtitleText)
             .setLargeIcon(badge)
-            .addAction(buildPauseResumeAction(payload.isPaused))
+            .addAction(buildStopAction())                        // index 0
+            .addAction(buildPauseResumeAction(payload.isPaused)) // index 1
 
         // Progress bar — indeterminate for free run / unknown total
         val maxProgress = if (payload.isIndeterminate) 0 else payload.totalSeconds.toInt().coerceAtLeast(0)
@@ -122,7 +143,7 @@ class WorkoutNotificationHelper(
         if (token != null) {
             val style = MediaStyle()
                 .setMediaSession(token)
-                .setShowActionsInCompactView(0) // only the pause/resume action
+                .setShowActionsInCompactView(0, 1) // Stop + Pause/Resume visible in compact
             builder.setStyle(style)
         }
 
@@ -148,6 +169,23 @@ class WorkoutNotificationHelper(
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // show on lockscreen in full
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+    }
+
+    private fun buildStopAction(): NotificationCompat.Action {
+        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+            this.action = WorkoutForegroundService.ACTION_STOP
+        }
+        val pi = PendingIntent.getService(
+            context,
+            REQUEST_STOP,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        return NotificationCompat.Action.Builder(
+            R.drawable.ic_notif_stop,
+            context.getString(R.string.button_stop),
+            pi,
+        ).build()
     }
 
     private fun buildPauseResumeAction(isPaused: Boolean): NotificationCompat.Action {
@@ -193,6 +231,7 @@ class WorkoutNotificationHelper(
 
     companion object {
         private const val REQUEST_OPEN = 1001
+        private const val REQUEST_STOP = 1000
         private const val REQUEST_PAUSE = 1002
         private const val REQUEST_RESUME = 1003
     }
