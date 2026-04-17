@@ -41,7 +41,7 @@ class WorkoutNotificationHelper(
     }
 
     /** 512px full-quality artwork for the MediaSession lockscreen player. */
-    private val lockscreenArtCache = BadgeBitmapCache<Bitmap>(maxEntries = 8) { hr, zone, paused ->
+    private val lockscreenArtCache = BadgeBitmapCache<Bitmap>(maxEntries = 16) { hr, zone, paused ->
         renderer.renderLockscreenArt(currentHr = hr, zoneStatus = zone, paused = paused)
     }
 
@@ -97,6 +97,7 @@ class WorkoutNotificationHelper(
      * card at native quality instead of upscaling a 144px thumbnail.
      */
     fun lockscreenArtFor(payload: NotifPayload): Bitmap {
+        if (stopped) return badgeFor(payload)  // fallback to cheap badge on stop race
         return lockscreenArtCache.get(
             currentHr = payload.currentHr,
             zoneStatus = payload.zoneStatus,
@@ -116,18 +117,13 @@ class WorkoutNotificationHelper(
     }
 
     private fun buildRichNotification(payload: NotifPayload): Notification {
-        val badge = bitmapCache.get(
-            currentHr = payload.currentHr,
-            zoneStatus = payload.zoneStatus,
-            paused = payload.isPaused,
-        )
+        val badge = badgeFor(payload)
 
         val builder = baseBuilder()
             .setContentTitle(payload.titleText)
             .setContentText(payload.subtitleText)
             .setLargeIcon(badge)
-            .addAction(buildStopAction())                        // index 0
-            .addAction(buildPauseResumeAction(payload.isPaused)) // index 1
+            .addAction(buildPauseResumeAction(payload.isPaused))
 
         // Progress bar — indeterminate for free run / unknown total
         val maxProgress = if (payload.isIndeterminate) 0 else payload.totalSeconds.toInt().coerceAtLeast(0)
@@ -143,7 +139,7 @@ class WorkoutNotificationHelper(
         if (token != null) {
             val style = MediaStyle()
                 .setMediaSession(token)
-                .setShowActionsInCompactView(0, 1) // Stop + Pause/Resume visible in compact
+                .setShowActionsInCompactView(0) // Pause/Resume visible in compact
             builder.setStyle(style)
         }
 
@@ -169,23 +165,6 @@ class WorkoutNotificationHelper(
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC) // show on lockscreen in full
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-    }
-
-    private fun buildStopAction(): NotificationCompat.Action {
-        val intent = Intent(context, WorkoutForegroundService::class.java).apply {
-            this.action = WorkoutForegroundService.ACTION_STOP
-        }
-        val pi = PendingIntent.getService(
-            context,
-            REQUEST_STOP,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        return NotificationCompat.Action.Builder(
-            R.drawable.ic_notif_stop,
-            context.getString(R.string.button_stop),
-            pi,
-        ).build()
     }
 
     private fun buildPauseResumeAction(isPaused: Boolean): NotificationCompat.Action {
@@ -231,7 +210,6 @@ class WorkoutNotificationHelper(
 
     companion object {
         private const val REQUEST_OPEN = 1001
-        private const val REQUEST_STOP = 1000
         private const val REQUEST_PAUSE = 1002
         private const val REQUEST_RESUME = 1003
     }
