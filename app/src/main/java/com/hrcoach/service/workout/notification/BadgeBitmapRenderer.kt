@@ -285,7 +285,7 @@ class BadgeBitmapRenderer {
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             textSize = labelSize
             letterSpacing = 0.22f
-            maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
+            maskFilter = BlurMaskFilter(shadowBlurPx, BlurMaskFilter.Blur.NORMAL)
         }
         canvas.drawText("BPM", rect.centerX(), cy + labelYOffset + labelShadowDy, labelShadow)
 
