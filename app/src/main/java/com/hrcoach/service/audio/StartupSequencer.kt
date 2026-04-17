@@ -60,26 +60,31 @@ class StartupSequencer(private val context: Context) {
             true
         }
 
+        // Show "3" on screen before audio starts so the overlay is already rendered
+        // when the first beat plays. Without this, the launch{} scheduling delay
+        // (~50-150ms) plus one Compose frame (~16ms) means users hear "3" before
+        // they see it.
+        WorkoutState.update { it.copy(countdownSecondsRemaining = 3) }
+        delay(200L)  // ~12 frames at 60fps — enough for Compose to render the overlay
+
         player.start()
 
         // coroutineScope ensures both the countdown UI updates and the audio
         // completion run concurrently as sibling coroutines.
         coroutineScope {
-            // Launch countdown UI updates as a child — runs concurrently with audio
+            // Launch countdown UI updates as a child — runs concurrently with audio.
+            // "3" is already showing; drive subsequent transitions from audio start.
             launch {
-                // 3...
-                WorkoutState.update { it.copy(countdownSecondsRemaining = 3) }
-                delay(1000L)
-
                 // 2...
-                WorkoutState.update { it.copy(countdownSecondsRemaining = 2) }
                 delay(1000L)
+                WorkoutState.update { it.copy(countdownSecondsRemaining = 2) }
 
                 // 1...
-                WorkoutState.update { it.copy(countdownSecondsRemaining = 1) }
                 delay(1000L)
+                WorkoutState.update { it.copy(countdownSecondsRemaining = 1) }
 
                 // GO!
+                delay(1000L)
                 WorkoutState.update { it.copy(countdownSecondsRemaining = 0) }
             }
 
