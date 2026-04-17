@@ -1085,8 +1085,8 @@ class WorkoutForegroundService : LifecycleService() {
             .build()
         mediaSession.setPlaybackState(state)
 
-        // Use the 512px lockscreen artwork (not the 144px badge) so the lockscreen
-        // media player card fills at native resolution and palette extraction is accurate.
+        // 320px artwork for the MediaSession lockscreen player — matches
+        // MediaMetadataCompat's internal size threshold so no rescaling occurs.
         val lockscreenArt = notificationHelper.lockscreenArtFor(payload)
         val metadata = MediaMetadataCompat.Builder()
             .putString(

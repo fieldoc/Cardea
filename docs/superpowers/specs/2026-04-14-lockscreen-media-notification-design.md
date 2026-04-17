@@ -56,7 +56,7 @@ WorkoutForegroundService
 ### The badge (large icon / artwork)
 
 - **Shape:** rounded square, 14 px corner radius (relative to badge size)
-- **Size on device:** 144 × 144 px bitmap (rendered at device density, see "Badge rendering")
+- **Size on device:** 144 × 144 px bitmap for the notification large-icon badge (rendered at device density). The MediaSession lockscreen artwork is rendered at 320×320 px (matches MediaMetadataCompat's scaleBitmapIfTooBig threshold so no rescaling occurs).
 - **Content:**
   - Main: current HR number, white, Geist Bold, ~40 % of badge height, tabular numerals
   - Below: "BPM" label, Geist Mono SemiBold, ~11 % of badge height, letter-spaced 0.22 em
@@ -133,7 +133,7 @@ Android will render this as a thin horizontal bar below the title/text. The syst
 
 ### Action button
 
-Single action button on the compact view:
+Compact view shows one action: Pause/Resume. No Stop button on the lockscreen.
 - **When running:** `⏸ Pause` — fires `ACTION_PAUSE` to `WorkoutForegroundService`
 - **When paused or auto-paused:** `▶ Resume` — fires `ACTION_RESUME` to `WorkoutForegroundService`
 - Icon: use Material system icons `ic_media_pause` / `ic_media_play` (already available via `android.R.drawable`)
