@@ -40,7 +40,7 @@ class WorkoutNotificationHelper(
         renderer.render(currentHr = hr, zoneStatus = zone, paused = paused)
     }
 
-    /** 512px full-quality artwork for the MediaSession lockscreen player. */
+    /** 320px artwork for the MediaSession lockscreen player. */
     private val lockscreenArtCache = BadgeBitmapCache<Bitmap>(maxEntries = 16) { hr, zone, paused ->
         renderer.renderLockscreenArt(currentHr = hr, zoneStatus = zone, paused = paused)
     }
