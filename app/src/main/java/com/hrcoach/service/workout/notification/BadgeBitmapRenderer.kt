@@ -8,7 +8,6 @@ import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RadialGradient
-import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
@@ -51,7 +50,13 @@ class BadgeBitmapRenderer {
         zoneStatus: ZoneStatus,
         paused: Boolean,
     ): Bitmap {
-        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bmp = try {
+            Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        } catch (e: OutOfMemoryError) {
+            // Degrade gracefully — return a minimal 1×1 transparent bitmap
+            // rather than crashing the service or entering a hot retry loop.
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
         val canvas = Canvas(bmp)
 
         val cornerRadius = size * 0.14f // ~20px on a 144px bitmap — matches the 14/74 ratio in the mockup
@@ -74,7 +79,8 @@ class BadgeBitmapRenderer {
         drawBottomShadow(canvas, rect)
 
         // 4. HR number + BPM label
-        drawHrText(canvas, rect, currentHr, zoneStatus)
+        drawHrTextScaled(canvas, rect, currentHr, zoneStatus,
+            numberScale = 0.38f, labelYOffsetScale = 0.16f, shadowBlurPx = 2f)
 
         // 5. Heart glyph top-right
         drawHeartGlyph(canvas, rect, paused)
@@ -91,24 +97,30 @@ class BadgeBitmapRenderer {
     }
 
     /**
-     * Full-size artwork for the MediaSession lockscreen player — 512×512 px.
+     * Full-size artwork for the MediaSession lockscreen player — 320×320 px.
      *
-     * Larger than the 144px notification badge so Android's lockscreen media
-     * controller fills its card at native resolution and palette extraction is
-     * accurate. Design: same zone-driven gradient as the badge, but HR number
-     * at 50 % of height (vs 38 % on the badge) and a small zone-label pill at
-     * the bottom edge.
+     * 320px is the maximum size Android's MediaMetadataCompat passes through
+     * without triggering an internal scaleBitmapIfTooBig() downscale. Larger
+     * bitmaps (e.g. 512px) incur a redundant scale + allocation every tick.
+     * Design: same zone-driven gradient as the badge, but HR number at 50 % of
+     * height (vs 38 % on the badge) and a small zone-label pill at the bottom edge.
      */
     fun renderLockscreenArt(
         currentHr: Int,
         zoneStatus: ZoneStatus,
         paused: Boolean,
     ): Bitmap {
-        val artSize = 512
-        val bmp = Bitmap.createBitmap(artSize, artSize, Bitmap.Config.ARGB_8888)
+        val artSize = 320
+        val bmp = try {
+            Bitmap.createBitmap(artSize, artSize, Bitmap.Config.ARGB_8888)
+        } catch (e: OutOfMemoryError) {
+            // Degrade gracefully — return a minimal 1×1 transparent bitmap
+            // rather than crashing the service or entering a hot retry loop.
+            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
         val canvas = Canvas(bmp)
         val rect = RectF(0f, 0f, artSize.toFloat(), artSize.toFloat())
-        val cornerRadius = artSize * 0.12f  // 62px — slightly more rounded than the badge
+        val cornerRadius = artSize * 0.12f  // slightly more rounded than the badge
 
         val clipPath = Path().apply {
             addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
@@ -120,7 +132,8 @@ class BadgeBitmapRenderer {
         drawTopSheen(canvas, rect)
         drawBottomShadow(canvas, rect)
         drawHeartGlyph(canvas, rect, paused)
-        drawHrTextLarge(canvas, rect, currentHr, zoneStatus)
+        drawHrTextScaled(canvas, rect, currentHr, zoneStatus,
+            numberScale = 0.50f, labelYOffsetScale = 0.18f, shadowBlurPx = 4f)
         drawZoneLabel(canvas, rect, zoneStatus, paused)
         if (!paused) drawRimAccent(canvas, rect, zoneStatus)
 
@@ -212,14 +225,36 @@ class BadgeBitmapRenderer {
     }
 
     // ---------------------------------------------------------------------
-    // Text
+    // Text — single parameterized helper for both badge and lockscreen art
     // ---------------------------------------------------------------------
 
-    private fun drawHrText(canvas: Canvas, rect: RectF, currentHr: Int, zone: ZoneStatus) {
+    /**
+     * Draws the HR number and BPM label centred on [rect].
+     *
+     * @param numberScale      fraction of rect.height() used as the HR number text size
+     * @param labelYOffsetScale fraction of rect.height() for the BPM label offset below the number baseline
+     * @param shadowBlurPx     blur radius (px) for the number drop-shadow
+     *
+     * Shadow y-offsets are ratio-based (rect.height() × 0.004f for the number,
+     * × 0.002f for the BPM label) so they scale proportionally with bitmap size.
+     */
+    private fun drawHrTextScaled(
+        canvas: Canvas,
+        rect: RectF,
+        currentHr: Int,
+        zone: ZoneStatus,
+        numberScale: Float,
+        labelYOffsetScale: Float,
+        shadowBlurPx: Float,
+    ) {
         val displayNum = if (currentHr <= 0 || zone == ZoneStatus.NO_DATA) "—" else currentHr.toString()
 
-        val numberSize = rect.height() * 0.38f
+        val numberSize = rect.height() * numberScale
         val cy = rect.centerY() + (numberSize / 3f) - rect.height() * 0.04f
+
+        // Ratio-based shadow offsets — scale proportionally with bitmap size
+        val numberShadowDy = rect.height() * 0.004f   // ~0.58px on 144px badge, ~1.28px on 320px art
+        val labelShadowDy  = rect.height() * 0.002f   // ~0.29px on 144px badge, ~0.64px on 320px art
 
         // Drop-shadow pass for the HR number: draw a soft black offset behind the text.
         // BlurMaskFilter works on software canvases (unlike setShadowLayer).
@@ -228,9 +263,9 @@ class BadgeBitmapRenderer {
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             textSize = numberSize
-            maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
+            maskFilter = BlurMaskFilter(shadowBlurPx, BlurMaskFilter.Blur.NORMAL)
         }
-        canvas.drawText(displayNum, rect.centerX(), cy + 1f, numberShadow)
+        canvas.drawText(displayNum, rect.centerX(), cy + numberShadowDy, numberShadow)
 
         val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = Color.WHITE
@@ -242,7 +277,7 @@ class BadgeBitmapRenderer {
 
         // "BPM" label below — same shadow treatment
         val labelSize = rect.height() * 0.095f
-        val labelYOffset = rect.height() * 0.16f
+        val labelYOffset = rect.height() * labelYOffsetScale
 
         val labelShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = 0x66000000
@@ -252,7 +287,7 @@ class BadgeBitmapRenderer {
             letterSpacing = 0.22f
             maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
         }
-        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset + 1f, labelShadow)
+        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset + labelShadowDy, labelShadow)
 
         val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = 0xEBFFFFFF.toInt() // ~92% white
@@ -351,55 +386,8 @@ class BadgeBitmapRenderer {
     }
 
     // ---------------------------------------------------------------------
-    // Lockscreen art — HR text (larger scale) + zone label pill
+    // Lockscreen art — zone label pill
     // ---------------------------------------------------------------------
-
-    /** Like drawHrText but sized for the 512px lockscreen art (50 % vs 38 % of height). */
-    private fun drawHrTextLarge(canvas: Canvas, rect: RectF, currentHr: Int, zone: ZoneStatus) {
-        val displayNum = if (currentHr <= 0 || zone == ZoneStatus.NO_DATA) "—" else currentHr.toString()
-
-        val numberSize = rect.height() * 0.50f
-        val cy = rect.centerY() + (numberSize / 3f) - rect.height() * 0.04f
-
-        val numberShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-            color = 0x66000000
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = numberSize
-            maskFilter = BlurMaskFilter(4f, BlurMaskFilter.Blur.NORMAL)
-        }
-        canvas.drawText(displayNum, rect.centerX(), cy + 2f, numberShadow)
-
-        val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-            color = Color.WHITE
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-            textSize = numberSize
-        }
-        canvas.drawText(displayNum, rect.centerX(), cy, numberPaint)
-
-        val labelSize = rect.height() * 0.095f
-        val labelYOffset = rect.height() * 0.18f
-
-        val labelShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-            color = 0x66000000
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            textSize = labelSize
-            letterSpacing = 0.22f
-            maskFilter = BlurMaskFilter(2f, BlurMaskFilter.Blur.NORMAL)
-        }
-        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset + 1f, labelShadow)
-
-        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-            color = 0xEBFFFFFF.toInt()
-            textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            textSize = labelSize
-            letterSpacing = 0.22f
-        }
-        canvas.drawText("BPM", rect.centerX(), cy + labelYOffset, labelPaint)
-    }
 
     /** Small pill label at the bottom edge of the lockscreen art showing zone / paused state. */
     private fun drawZoneLabel(canvas: Canvas, rect: RectF, zone: ZoneStatus, paused: Boolean) {
@@ -409,7 +397,10 @@ class BadgeBitmapRenderer {
             zone == ZoneStatus.IN_ZONE -> "ON TARGET"
             zone == ZoneStatus.ABOVE_ZONE -> "ABOVE ZONE"
             zone == ZoneStatus.BELOW_ZONE -> "BELOW ZONE"
-            else -> return
+            else -> {
+                android.util.Log.w("BadgeBitmapRenderer", "Unhandled ZoneStatus in drawZoneLabel: $zone")
+                return
+            }
         }
 
         val textSize = rect.height() * 0.062f
@@ -421,16 +412,19 @@ class BadgeBitmapRenderer {
             letterSpacing = 0.10f
             textAlign = Paint.Align.CENTER
         }
-        val bounds = Rect()
-        textPaint.getTextBounds(text, 0, text.length, bounds)
+
+        // measureText() accounts for letterSpacing; getTextBounds() does not.
+        val textWidth = textPaint.measureText(text)
+        val textAscent = -textPaint.ascent()   // positive ascender height
+        val textDescent = textPaint.descent()  // positive descender depth
 
         val pillPadH = textSize * 0.55f
         val pillPadV = textSize * 0.30f
         val pillRect = RectF(
-            rect.centerX() - bounds.width() / 2f - pillPadH,
-            textY - bounds.height() - pillPadV,
-            rect.centerX() + bounds.width() / 2f + pillPadH,
-            textY + pillPadV,
+            rect.centerX() - textWidth / 2f - pillPadH,
+            textY - textAscent - pillPadV,
+            rect.centerX() + textWidth / 2f + pillPadH,
+            textY + textDescent + pillPadV,
         )
         val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = 0x40000000  // subtle dark backing
