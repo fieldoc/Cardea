@@ -721,10 +721,13 @@ class WorkoutForegroundService : LifecycleService() {
                 runCatching {
                     val currentWorkout = repository.getWorkoutById(workoutId)
                     if (currentWorkout != null) {
+                        val activeSec = (now - workoutStartMs - totalPausedMs - totalAutoPausedMs)
+                            .coerceAtLeast(0L) / 1000L
                         repository.updateWorkout(
                             currentWorkout.copy(
                                 endTime = now,
-                                totalDistanceMeters = WorkoutState.snapshot.value.distanceMeters
+                                totalDistanceMeters = WorkoutState.snapshot.value.distanceMeters,
+                                activeDurationSeconds = activeSec
                             )
                         )
                     }

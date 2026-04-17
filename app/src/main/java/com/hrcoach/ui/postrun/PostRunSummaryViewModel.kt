@@ -15,7 +15,7 @@ import com.hrcoach.domain.engine.MetricsCalculator
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
-import com.hrcoach.util.formatDuration
+import com.hrcoach.util.formatDurationSeconds
 import com.hrcoach.util.formatWorkoutDate
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.domain.model.DistanceUnit
@@ -121,7 +121,7 @@ class PostRunSummaryViewModel @Inject constructor(
                         val unit = DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
                         String.format("%.2f %s", metersToUnit(workout.totalDistanceMeters, unit), distanceUnitLabel(unit))
                     },
-                    durationText = formatDuration(workout.startTime, workout.endTime),
+                    durationText = formatDurationSeconds(activeDurationSecondsOf(workout)),
                     avgHrText = avgHr?.let { "${it.toInt()} bpm" } ?: "--",
                     similarRunCount = similar.size,
                     comparisons = comparisons,
@@ -357,3 +357,7 @@ class PostRunSummaryViewModel @Inject constructor(
         }
     }
 }
+
+private fun activeDurationSecondsOf(workout: WorkoutEntity): Long =
+    workout.activeDurationSeconds.takeIf { it > 0L }
+        ?: ((workout.endTime - workout.startTime).coerceAtLeast(0L) / 1000L)

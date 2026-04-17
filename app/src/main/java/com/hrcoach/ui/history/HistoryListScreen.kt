@@ -76,7 +76,7 @@ import com.hrcoach.ui.theme.ZoneRed
 import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.util.asModeLabel
 import com.hrcoach.util.distanceUnitLabel
-import com.hrcoach.util.formatDuration
+import com.hrcoach.util.formatDurationSeconds
 import com.hrcoach.util.formatPace
 import com.hrcoach.util.metersToUnit
 import java.text.SimpleDateFormat
@@ -337,7 +337,10 @@ private fun WeekWorkoutCard(
     val distanceInUnit = metersToUnit(workout.totalDistanceMeters, distanceUnit)
     val distanceText = "%.2f".format(distanceInUnit)
     val unitLabel = distanceUnitLabel(distanceUnit)
-    val duration = formatDuration(workout.startTime, workout.endTime)
+    val duration = formatDurationSeconds(
+        workout.activeDurationSeconds.takeIf { it > 0L }
+            ?: ((workout.endTime - workout.startTime).coerceAtLeast(0L) / 1000L)
+    )
     val pace = averagePaceLabel(workout, distanceUnit)
     val modeLabel = workout.mode.asModeLabel()
 
@@ -572,7 +575,9 @@ private fun HistoryEmptyState(onStartWorkout: () -> Unit) {
 private fun averagePaceLabel(workout: WorkoutEntity, unit: DistanceUnit): String {
     val distanceKm = workout.totalDistanceMeters / 1000f
     if (distanceKm <= 0f || workout.endTime <= workout.startTime) return "--"
-    val durationMinutes = (workout.endTime - workout.startTime) / 60_000f
+    val activeSec = workout.activeDurationSeconds.takeIf { it > 0L }
+        ?: ((workout.endTime - workout.startTime).coerceAtLeast(0L) / 1000L)
+    val durationMinutes = activeSec / 60f
     if (durationMinutes <= 0f) return "--"
     return formatPace(durationMinutes / distanceKm, unit)
 }

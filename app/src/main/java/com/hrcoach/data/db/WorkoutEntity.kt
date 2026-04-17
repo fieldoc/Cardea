@@ -11,5 +11,6 @@ data class WorkoutEntity(
     val totalDistanceMeters: Float = 0f,
     val mode: String,
     val targetConfig: String,
-    val isSimulated: Boolean = false
+    val isSimulated: Boolean = false,
+    val activeDurationSeconds: Long = 0L,
 )

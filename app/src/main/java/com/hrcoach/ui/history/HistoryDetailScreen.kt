@@ -79,7 +79,7 @@ import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.util.asModeLabel
 import com.hrcoach.util.distanceUnitLabel
 import com.hrcoach.util.durationMinutes
-import com.hrcoach.util.formatDuration
+import com.hrcoach.util.formatDurationSeconds
 import com.hrcoach.util.formatPace
 import com.hrcoach.util.formatWorkoutDate
 import com.hrcoach.util.metersToUnit
@@ -471,7 +471,10 @@ private fun StatsCard(
     distanceUnit: DistanceUnit,
     modifier: Modifier = Modifier
 ) {
-    val duration = formatDuration(workout.startTime, workout.endTime)
+    val duration = formatDurationSeconds(
+        workout.activeDurationSeconds.takeIf { it > 0L }
+            ?: ((workout.endTime - workout.startTime).coerceAtLeast(0L) / 1000L)
+    )
     val fallbackAvg = trackPoints.map { it.heartRate }.filter { it > 0 }
         .takeIf { it.isNotEmpty() }?.average()?.toInt()
     val avgHrValue = avgHr?.toInt() ?: fallbackAvg ?: 0
