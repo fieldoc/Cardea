@@ -721,7 +721,9 @@ class WorkoutForegroundService : LifecycleService() {
                 runCatching {
                     val currentWorkout = repository.getWorkoutById(workoutId)
                     if (currentWorkout != null) {
-                        val activeSec = (now - workoutStartMs - totalPausedMs - totalAutoPausedMs)
+                        val currentPauseMs = if (pauseStartMs > 0L) now - pauseStartMs else 0L
+                        val currentAutoPauseMs = if (autoPauseStartMs > 0L) now - autoPauseStartMs else 0L
+                        val activeSec = (now - workoutStartMs - totalPausedMs - totalAutoPausedMs - currentPauseMs - currentAutoPauseMs)
                             .coerceAtLeast(0L) / 1000L
                         repository.updateWorkout(
                             currentWorkout.copy(

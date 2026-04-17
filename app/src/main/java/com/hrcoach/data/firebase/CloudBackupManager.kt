@@ -182,13 +182,14 @@ class CloudBackupManager @Inject constructor(
                 val updates = mutableMapOf<String, Any?>()
 
                 updates["workouts/$id"] = mapOf(
-                    "id"                  to workout.id,
-                    "startTime"           to workout.startTime,
-                    "endTime"             to workout.endTime,
-                    "totalDistanceMeters" to workout.totalDistanceMeters,
-                    "mode"                to workout.mode,
-                    "targetConfig"        to workout.targetConfig,
-                    "isSimulated"         to workout.isSimulated,
+                    "id"                    to workout.id,
+                    "startTime"             to workout.startTime,
+                    "endTime"               to workout.endTime,
+                    "totalDistanceMeters"   to workout.totalDistanceMeters,
+                    "mode"                  to workout.mode,
+                    "targetConfig"          to workout.targetConfig,
+                    "isSimulated"           to workout.isSimulated,
+                    "activeDurationSeconds" to workout.activeDurationSeconds,
                 )
 
                 // Abbreviated keys reduce payload size per track point

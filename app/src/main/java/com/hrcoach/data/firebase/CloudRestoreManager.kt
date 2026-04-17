@@ -311,7 +311,8 @@ class CloudRestoreManager @Inject constructor(
                     totalDistanceMeters  = child.child("totalDistanceMeters").getValue(Float::class.java) ?: 0f,
                     mode                 = child.child("mode").getValue(String::class.java) ?: "FREE_RUN",
                     targetConfig         = child.child("targetConfig").getValue(String::class.java) ?: "{}",
-                    isSimulated          = child.child("isSimulated").getValue(Boolean::class.java) ?: false,
+                    isSimulated           = child.child("isSimulated").getValue(Boolean::class.java) ?: false,
+                    activeDurationSeconds = child.child("activeDurationSeconds").getValue(Long::class.java) ?: 0L,
                 )
                 workoutDao.upsert(entity)
                 restoredIds.add(id)
