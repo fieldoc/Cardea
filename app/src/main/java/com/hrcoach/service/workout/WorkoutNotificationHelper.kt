@@ -123,6 +123,7 @@ class WorkoutNotificationHelper(
             .setContentTitle(payload.titleText)
             .setContentText(payload.subtitleText)
             .setLargeIcon(badge)
+            .setColorized(true) // Tints the card background with setColor() accent — Spotify-style
             .addAction(buildPauseResumeAction(payload.isPaused))
 
         // Progress bar — indeterminate for free run / unknown total
@@ -199,10 +200,15 @@ class WorkoutNotificationHelper(
         val channel = NotificationChannel(
             channelId,
             "Cardea Workout",
-            NotificationManager.IMPORTANCE_LOW,
+            NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "Active workout tracking"
             setShowBadge(false)
+            // Suppress the default notification sound — we don't want a ding on workout start.
+            // IMPORTANCE_DEFAULT is needed for full-width MediaStyle rendering, but the sound
+            // channel is muted. setOnlyAlertOnce(true) on the builder prevents repeat alerts
+            // on subsequent updates anyway; this just silences the first post too.
+            setSound(null, null)
         }
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)

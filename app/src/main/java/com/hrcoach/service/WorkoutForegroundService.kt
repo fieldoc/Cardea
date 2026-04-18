@@ -79,7 +79,11 @@ class WorkoutForegroundService : LifecycleService() {
         const val EXTRA_DEVICE_ADDRESS = "device_address"
 
         private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "workout_channel"
+        // v2: upgraded from IMPORTANCE_LOW → IMPORTANCE_DEFAULT so the notification renders
+        // as a full-width MediaStyle card (Spotify-style) instead of a compact pill. A new
+        // channel ID is required because Android preserves the user's channel importance
+        // setting — changing the code on the old channel ID has no effect on existing installs.
+        private const val CHANNEL_ID = "workout_media_v2"
         private const val TRACK_POINT_INTERVAL_MS = 5_000L
         private const val AUTO_PAUSE_GRACE_MS = 15_000L
     }
