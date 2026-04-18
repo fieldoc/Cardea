@@ -14,7 +14,7 @@
     <string name="screen_workout_paused_title">Workout Paused</string>
     <string name="screen_account_title">Account</string>
     <string name="button_start_workout">Start Run</string>
-    <string name="button_view_progress">View Progress</string>
+    <string name="button_view_progress">View Trends</string>
     <string name="button_view_run">View This Run</string>
     <string name="button_post_run_insights">Post-run Insights</string>
     <string name="button_open_maps_setup">Open Maps Setup</string>

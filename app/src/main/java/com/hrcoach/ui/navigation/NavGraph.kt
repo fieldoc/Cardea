@@ -613,12 +613,6 @@ fun HrCoachNavGraph(
                 val postRunState by postRunViewModel.uiState.collectAsStateWithLifecycle()
                 PostRunSummaryScreen(
                     workoutId = workoutId,
-                    onViewProgress = {
-                        navController.navigate(Routes.PROGRESS) {
-                            popUpTo(Routes.HOME) { saveState = true }
-                            launchSingleTop = true
-                        }
-                    },
                     onViewHistory = {
                         navController.navigate(Routes.historyDetail(workoutId)) {
                             popUpTo(Routes.HISTORY) { inclusive = false }

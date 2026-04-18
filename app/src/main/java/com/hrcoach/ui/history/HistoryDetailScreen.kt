@@ -24,8 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -105,6 +108,7 @@ fun HistoryDetailScreen(
     val errorMessage by viewModel.detailError.collectAsStateWithLifecycle()
     val isMapsEnabled by viewModel.isMapsEnabled.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -136,8 +140,40 @@ fun HistoryDetailScreen(
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = (-0.3).sp
                     ),
-                    color = CardeaTheme.colors.textPrimary
+                    color = CardeaTheme.colors.textPrimary,
+                    modifier = Modifier.weight(1f)
                 )
+                if (workout != null) {
+                    Box {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More options",
+                            tint = CardeaTheme.colors.textSecondary,
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clickable { menuExpanded = true }
+                                .padding(12.dp)
+                        )
+                        DropdownMenu(
+                            expanded = menuExpanded,
+                            onDismissRequest = { menuExpanded = false },
+                            containerColor = CardeaTheme.colors.bgSecondary
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = stringResource(R.string.button_delete_run),
+                                        color = ZoneRed
+                                    )
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
+                    }
+                }
             }
 
             // ── Content ──────────────────────────────────────────────────
@@ -214,7 +250,7 @@ fun HistoryDetailScreen(
                                 MoreActionsCard(
                                     onViewPostRunSummary = onViewPostRunSummary,
                                     onViewProgress = onViewProgress,
-                                    onDelete = { showDeleteDialog = true }
+                                    onDone = onBack
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
@@ -559,7 +595,7 @@ private fun DetailStatCell(label: String, value: String, modifier: Modifier = Mo
 private fun MoreActionsCard(
     onViewPostRunSummary: () -> Unit,
     onViewProgress: () -> Unit,
-    onDelete: () -> Unit
+    onDone: () -> Unit
 ) {
     GlassCard(contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp)) {
         Text(
@@ -568,15 +604,20 @@ private fun MoreActionsCard(
             color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(14.dp))
-        CardeaButton(
-            text = stringResource(R.string.button_post_run_insights),
-            onClick = onViewPostRunSummary,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            OutlinedButton(
+                onClick = onViewPostRunSummary,
+                modifier = Modifier.weight(1f).height(44.dp),
+                border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
+            ) {
+                Text(
+                    text = stringResource(R.string.button_post_run_insights),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = CardeaTheme.colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             OutlinedButton(
                 onClick = onViewProgress,
                 modifier = Modifier.weight(1f).height(44.dp),
@@ -590,17 +631,15 @@ private fun MoreActionsCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            TextButton(
-                onClick = onDelete,
-                modifier = Modifier.weight(1f).height(44.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.button_delete_run),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = ZoneRed
-                )
-            }
         }
+        Spacer(modifier = Modifier.height(10.dp))
+        CardeaButton(
+            text = stringResource(R.string.button_done),
+            onClick = onDone,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
+        )
     }
 }
 

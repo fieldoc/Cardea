@@ -37,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -85,7 +84,6 @@ private enum class PostRunContentState {
 @Composable
 fun PostRunSummaryScreen(
     workoutId: Long,
-    onViewProgress: () -> Unit,
     onViewHistory: () -> Unit,
     onDone: () -> Unit,
     onBack: () -> Unit,
@@ -350,12 +348,6 @@ fun PostRunSummaryScreen(
                                 modifier = Modifier.weight(1f).height(40.dp),
                                 cornerRadius = 50.dp
                             )
-                        }
-                        TextButton(
-                            onClick = onViewProgress,
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        ) {
-                            Text(stringResource(R.string.button_view_progress), color = CardeaTheme.colors.textSecondary)
                         }
                     }
                 }
