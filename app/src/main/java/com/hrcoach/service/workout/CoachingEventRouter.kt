@@ -2,12 +2,20 @@ package com.hrcoach.service.workout
 
 import com.hrcoach.domain.engine.AdaptivePaceController
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.domain.model.ConfirmCadence
 import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
+import com.hrcoach.service.audio.VoicePlayer
+import kotlin.math.abs
 
 class CoachingEventRouter {
+    // Settable from WFS so mid-workout AudioSettings changes propagate without restarting the
+    // workout. Default STANDARD (180/300) matches the AudioSettings default.
+    // TUNING: exposes FREQUENT (180/180) for users who want the legacy cadence or REDUCED
+    // (180/600) for near-silent steady-state runs.
+    var confirmCadence: ConfirmCadence = ConfirmCadence.STANDARD
     private var wasHrConnected: Boolean = false
     private var previousZoneStatus: ZoneStatus = ZoneStatus.NO_DATA
     private var hasBeenInZone: Boolean = false
@@ -22,8 +30,23 @@ class CoachingEventRouter {
     private var lastVoiceCueTimeMs: Long = 0L
     private var workoutStartMs: Long = 0L
 
+    // IN_ZONE_CONFIRM cadence state. See IN_ZONE_CONFIRM_FIRST_MS / IN_ZONE_CONFIRM_REPEAT_MS.
+    // inZoneConfirmCount also drives the LOW-confidence affirmation rotation so the runner
+    // doesn't hear the same phrase every 3–5 min.
+    private var inZoneConfirmCount: Int = 0
+
     companion object {
         const val RETURN_TO_ZONE_COOLDOWN_MS = 30_000L
+
+        // IN_ZONE_CONFIRM cadence is now controlled by the user-settable ConfirmCadence enum
+        // (see AudioSettings.inZoneConfirmCadence + CoachingEventRouter.confirmCadence).
+        // Default STANDARD: first confirm at 3 min, subsequent at 5 min. Values above.
+
+        // IN_ZONE_CONFIRM is skipped when HR is actively moving (|slope| ≥ this), because
+        // a reassuring chime + "HR falling" voice reads as a mixed signal. The 3-min timer is
+        // NOT reset — we just skip this tick and reassess next tick. TUNING: 0.8 matches
+        // buildGuidance's phrasing threshold for symmetry.
+        const val IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN: Float = 0.8f
     }
 
     /**
@@ -59,6 +82,7 @@ class CoachingEventRouter {
         completeFired = false
         lastSplitAnnounced = 0
         lastVoiceCueTimeMs = 0L
+        inZoneConfirmCount = 0
     }
 
     fun route(
@@ -102,9 +126,19 @@ class CoachingEventRouter {
                 }
 
                 // RETURN_TO_ZONE only fires on re-entry (not first entry), with a 30s cooldown
-                // to absorb HR jitter near the zone boundary.
+                // to absorb HR jitter near the zone boundary. The guidance string provides
+                // contextual re-entry feedback (e.g. "In zone - HR falling" when the runner
+                // overshot and is still coming down, vs. plain "Back in zone" on a clean entry).
+                //
+                // LOW-confidence sessions: suppress contextual guidance and fall through to
+                // VoicePlayer's "Back in zone" fallback. The LOW-confidence in-zone guidance
+                // ("Learning your patterns - hold steady") describes calibration status, not
+                // re-entry — pairing it with the reassuring RETURN_TO_ZONE earcon reads as a
+                // semantic mismatch. High/medium-confidence guidance is genuinely contextual
+                // and carries its own information, so we pass it through.
                 if (hasBeenInZone && nowMs - lastReturnToZoneMs >= RETURN_TO_ZONE_COOLDOWN_MS) {
-                    emitEvent(CoachingEvent.RETURN_TO_ZONE, null)
+                    val returnGuidance = if (adaptiveResult?.hasProjectionConfidence == true) guidance else null
+                    emitEvent(CoachingEvent.RETURN_TO_ZONE, returnGuidance)
                     lastReturnToZoneMs = nowMs
                 }
             }
@@ -183,19 +217,39 @@ class CoachingEventRouter {
             }
         }
 
-        // IN_ZONE_CONFIRM (every 3+ minutes of voice silence while in zone)
-        // Use workoutStartMs as initial baseline so the first confirm fires ~3 min into the workout.
-        // Suppressed when the projection shows imminent drift — audio would contradict visual guidance.
+        // IN_ZONE_CONFIRM — reassurance cue while in zone. Three gates:
+        //   (a) projection stable (existing) — don't reassure when projection says drift is coming.
+        //   (b) slope gate (new) — don't reassure when HR is actively moving ≥ 0.8 bpm/min; a
+        //       "you're cruising" chime paired with "HR falling/rising" voice reads as mixed.
+        //       The timer is not reset on this skip — we just wait for the slope to calm down.
+        //   (c) adaptive cadence (new) — first confirm at 3 min, subsequent at 5 min.
+        //       On a 30-min steady run this drops from ~6 events to ~3.
+        // LOW-confidence substitution: on early sessions the guidance defaults to "Learning
+        // your patterns - hold steady" for the whole workout. Looping that phrase every 3–5 min
+        // reads as indecision, so we rotate through short affirmations instead.
         val projectedStable = adaptiveResult?.projectedZoneStatus?.let {
             it != ZoneStatus.ABOVE_ZONE && it != ZoneStatus.BELOW_ZONE
         } ?: true
-        if (zoneStatus == ZoneStatus.IN_ZONE && projectedStable) {
+        val slopeCalm = adaptiveResult?.hrSlopeBpmPerMin?.let {
+            abs(it) < IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN
+        } ?: true
+        if (zoneStatus == ZoneStatus.IN_ZONE && projectedStable && slopeCalm) {
             val baseline = if (lastVoiceCueTimeMs > 0L) lastVoiceCueTimeMs
                            else if (workoutStartMs > 0L) workoutStartMs
                            else nowMs
-            if (nowMs - baseline >= 180_000L) {
-                emitEvent(CoachingEvent.IN_ZONE_CONFIRM, guidance)
+            val requiredInterval = if (inZoneConfirmCount == 0) confirmCadence.firstMs
+                                   else confirmCadence.repeatMs
+            if (nowMs - baseline >= requiredInterval) {
+                val isLowConfidence = adaptiveResult?.hasProjectionConfidence == false
+                val spokenText = if (isLowConfidence) {
+                    val pool = VoicePlayer.LOW_CONFIDENCE_AFFIRMATIONS
+                    pool[inZoneConfirmCount % pool.size]
+                } else {
+                    guidance
+                }
+                emitEvent(CoachingEvent.IN_ZONE_CONFIRM, spokenText)
                 lastVoiceCueTimeMs = nowMs
+                inZoneConfirmCount += 1
             }
         }
 

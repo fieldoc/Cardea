@@ -256,6 +256,25 @@ class VoicePlayer(context: Context) {
         private const val TAG = "VoicePlayer"
 
         /**
+         * Rotating affirmations for IN_ZONE_CONFIRM on LOW-confidence sessions. Without this,
+         * a first-session runner hears "Learning your patterns - hold steady" 10+ times on
+         * a 40-min run, which reads as indecision. The list is cycled by a counter in
+         * CoachingEventRouter; length doesn't need to be large — 3-4 varied phrases is enough
+         * to break perceived repetition.
+         *
+         * TUNING: keep each phrase short (≤4 words) — they overlap with earcon tail + any
+         * upcoming KM_SPLIT announcement, so longer phrases collide. All affirm without
+         * suggesting the runner should change anything, matching the "pace is fine, HR not
+         * learned yet" semantics of LOW confidence.
+         */
+        val LOW_CONFIDENCE_AFFIRMATIONS: List<String> = listOf(
+            "Nice and steady",
+            "Good pace",
+            "Holding zone",
+            "Keep it going"
+        )
+
+        /**
          * Returns whether the given [event] should be spoken at the given [verbosity].
          *
          * - OFF: nothing

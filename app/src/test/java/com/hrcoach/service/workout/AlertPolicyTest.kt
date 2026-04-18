@@ -13,7 +13,9 @@ class AlertPolicyTest {
         nowMs: Long,
         events: MutableList<CoachingEvent>,
         alertDelaySec: Int = 15,
-        alertCooldownSec: Int = 30
+        alertCooldownSec: Int = 30,
+        hrSlopeBpmPerMin: Float = 0f,
+        currentPaceMinPerKm: Float? = null
     ) {
         policy.handle(
             status = status,
@@ -22,7 +24,9 @@ class AlertPolicyTest {
             alertCooldownSec = alertCooldownSec,
             guidanceText = "guidance",
             onResetEscalation = {},
-            onAlert = { event, _ -> events += event }
+            onAlert = { event, _ -> events += event },
+            hrSlopeBpmPerMin = hrSlopeBpmPerMin,
+            currentPaceMinPerKm = currentPaceMinPerKm
         )
     }
 
@@ -108,5 +112,126 @@ class AlertPolicyTest {
             onAlert = { event, _ -> events += event }
         )
         assertEquals(1, resetCount)
+    }
+
+    // ── Self-correction suppression (added 2026-04-17) ────────────────────
+
+    @Test
+    fun `SLOW_DOWN suppressed when HR is dropping at or beyond threshold`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        // Build up above-zone for delay window.
+        handle(policy, ZoneStatus.ABOVE_ZONE, 1_000L, events, hrSlopeBpmPerMin = -2.0f)
+        // At 16s — delay met, but slope is fast-falling (self-correction). Should suppress.
+        handle(policy, ZoneStatus.ABOVE_ZONE, 16_000L, events, hrSlopeBpmPerMin = -2.0f)
+        assertEquals(emptyList<CoachingEvent>(), events)
+    }
+
+    @Test
+    fun `SLOW_DOWN fires when slope is below suppression threshold`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.ABOVE_ZONE, 1_000L, events, hrSlopeBpmPerMin = -1.0f)
+        // slope -1.0 is below suppression threshold (|1.5|), so the alert should fire.
+        handle(policy, ZoneStatus.ABOVE_ZONE, 16_000L, events, hrSlopeBpmPerMin = -1.0f)
+        assertEquals(listOf(CoachingEvent.SLOW_DOWN), events)
+    }
+
+    @Test
+    fun `suppression debounce prevents immediate re-fire once slope eases`() {
+        // Regression test for the review finding: without lastAlertTime update on suppression,
+        // an eased slope on the next tick fires an alert with no cooldown gap from the previous
+        // (suppressed) cycle.
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.ABOVE_ZONE, 1_000L, events)                                  // register
+        handle(policy, ZoneStatus.ABOVE_ZONE, 16_000L, events, hrSlopeBpmPerMin = -2.0f)       // suppressed
+        // 1s later slope eases — without debounce this would fire.
+        handle(policy, ZoneStatus.ABOVE_ZONE, 17_000L, events, hrSlopeBpmPerMin = -1.0f)
+        assertEquals(emptyList<CoachingEvent>(), events)
+
+        // Only after cooldown (30s) from the suppression tick should the alert fire.
+        handle(policy, ZoneStatus.ABOVE_ZONE, 46_000L, events, hrSlopeBpmPerMin = -1.0f)
+        assertEquals(listOf(CoachingEvent.SLOW_DOWN), events)
+    }
+
+    @Test
+    fun `SPEED_UP self-correction is mirror of SLOW_DOWN`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events, hrSlopeBpmPerMin = 2.0f)
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events, hrSlopeBpmPerMin = 2.0f)
+        assertEquals(emptyList<CoachingEvent>(), events)
+    }
+
+    // ── Walk-break suppression (added 2026-04-17) ─────────────────────────
+
+    @Test
+    fun `SPEED_UP suppressed on cooldown expiry when walking has become sustained`() {
+        // The first alert always fires at delay-met (walking cannot be sustained before the 15s
+        // delay elapses). After that, during cooldown, walking accumulates sustained time. At
+        // cooldown expiry the walk gate suppresses the next alert. Verifies the "walk tracking
+        // runs even during cooldown" property (item #3 in the review).
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events, currentPaceMinPerKm = 11f)
+        // t=16s: delay met, walking sustained=15s (not yet) → alert fires.
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events, currentPaceMinPerKm = 11f)
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+        // t=46s: cooldown met, walking sustained=45s (≥30s) → SPEED_UP suppressed.
+        handle(policy, ZoneStatus.BELOW_ZONE, 46_000L, events, currentPaceMinPerKm = 11f)
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)  // unchanged — no second alert
+    }
+
+    @Test
+    fun `walking boundary is inclusive of exactly WALKING_PACE_MIN_PER_KM`() {
+        // Pace exactly 10 min/km — the fast-walk boundary. Using `>=`, this counts as walking.
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events, currentPaceMinPerKm = 10.0f)
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events, currentPaceMinPerKm = 10.0f)   // alert 1
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+        handle(policy, ZoneStatus.BELOW_ZONE, 46_000L, events, currentPaceMinPerKm = 10.0f)   // suppressed (sustained)
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+    }
+
+    @Test
+    fun `GPS dropout during walk preserves sustained timer`() {
+        // Regression test for the review finding: null pace during a walk must not reset the
+        // walkingSince counter, or tunnel / tree-cover GPS dropouts would restart the 30s window.
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events, currentPaceMinPerKm = 11f)
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events, currentPaceMinPerKm = 11f)   // alert 1
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+        // GPS dropout during cooldown — if null pace zeroed walkingSince, the 30s counter
+        // would restart and the alert at t=46s would NOT be suppressed.
+        handle(policy, ZoneStatus.BELOW_ZONE, 25_000L, events, currentPaceMinPerKm = null)
+        handle(policy, ZoneStatus.BELOW_ZONE, 35_000L, events, currentPaceMinPerKm = null)
+        handle(policy, ZoneStatus.BELOW_ZONE, 46_000L, events, currentPaceMinPerKm = 11f)
+        // walkingSince preserved → sustained → SPEED_UP suppressed.
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+    }
+
+    @Test
+    fun `known non-walking pace resets walk timer`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events, currentPaceMinPerKm = 11f)    // walking
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events, currentPaceMinPerKm = 11f)   // alert 1 fires
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+        // Runner picks up to jogging pace 40s in → walking timer resets.
+        handle(policy, ZoneStatus.BELOW_ZONE, 40_000L, events, currentPaceMinPerKm = 7f)
+        // At t=46s, cooldown met, walking was reset at 40s (sustained=6s, not enough) → alert fires.
+        handle(policy, ZoneStatus.BELOW_ZONE, 46_000L, events, currentPaceMinPerKm = 7f)
+        assertEquals(listOf(CoachingEvent.SPEED_UP, CoachingEvent.SPEED_UP), events)
     }
 }

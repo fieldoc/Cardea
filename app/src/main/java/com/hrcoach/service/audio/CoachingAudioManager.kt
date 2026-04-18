@@ -72,15 +72,30 @@ class CoachingAudioManager(
             else -> { /* coaching alerts always pass through */ }
         }
 
+        val verbosity = currentSettings.voiceVerbosity
+
         when (event) {
             CoachingEvent.SPEED_UP,
             CoachingEvent.SLOW_DOWN -> {
                 val escalationLevel = escalationTracker.onZoneAlert()
-                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
-                if (
+                if (shouldPlayEarcon(verbosity)) earconPlayer.play(event)
+
+                // MINIMAL users explicitly opted for fewer events, so when an alert DOES fire it
+                // should be maximally informative — skip the tier-1 silent-earcon and speak from
+                // the first hit. FULL retains the 3-tier escalation (earcon / earcon+voice /
+                // earcon+voice+vibration) because FULL users are already getting more content
+                // and gradual escalation reduces nag at the threshold.
+                // Gated on the user-controlled `minimalTierOneVoice` setting (default true):
+                // setting it false restores the classic 3-tier escalation for users who prefer
+                // gradual ramp-up.
+                val minimalUpgrade = verbosity == VoiceVerbosity.MINIMAL && currentSettings.minimalTierOneVoice
+
+                val shouldSpeakAlert =
                     escalationLevel == EscalationLevel.EARCON_VOICE ||
-                    escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION
-                ) {
+                    escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION ||
+                    minimalUpgrade
+
+                if (shouldSpeakAlert) {
                     // NonCancellable: a voice alert that has already started must complete even if
                     // destroy() cancels the scope mid-flight, so the runner isn't left with an
                     // earcon beep but no spoken cue.
@@ -99,12 +114,35 @@ class CoachingAudioManager(
             CoachingEvent.RETURN_TO_ZONE -> {
                 // Escalation reset is already handled by AlertPolicy.onResetEscalation callback
                 // (which fires when IN_ZONE is first detected, before this event is emitted).
-                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
+                if (shouldPlayEarcon(verbosity)) earconPlayer.play(event)
                 voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
             }
 
+            CoachingEvent.SIGNAL_LOST -> {
+                // SIGNAL_LOST is meta-info about the app's OWN state (coaching went blind), not
+                // coaching content. It's safety-relevant: a runner with music + pocketed phone
+                // would otherwise never know their HR strap died. Resolution:
+                //   - Vibration always fires (respecting enableVibration) — tactile cue is the
+                //     one channel that works with headphones on and phone buried. This is the
+                //     safety override.
+                //   - Earcon + voice respect verbosity. A user who chose OFF chose silence;
+                //     we don't violate that with audio. MINIMAL/FULL get earcon + voice as
+                //     normal CRITICAL-priority events.
+                if (shouldPlayEarcon(verbosity)) earconPlayer.play(event)
+                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm, distanceUnit)
+                vibrationManager.pulseAlert()
+            }
+
             else -> {
-                if (shouldPlayEarcon(currentSettings.voiceVerbosity)) earconPlayer.play(event)
+                // Priority-aware earcon gate: INFORMATIONAL earcons (IN_ZONE_CONFIRM, HALFWAY,
+                // KM_SPLIT, WORKOUT_COMPLETE) are suppressed at MINIMAL. Without this the chimes
+                // fire every 3 min on a steady run — beeps with no voice = confusing noise at a
+                // level the runner chose specifically to reduce audio. FULL still plays them.
+                val priority = VoiceEventPriority.of(event)
+                val earconSuppressedByMinimal =
+                    verbosity == VoiceVerbosity.MINIMAL && priority == VoiceEventPriority.INFORMATIONAL
+
+                if (shouldPlayEarcon(verbosity) && !earconSuppressedByMinimal) earconPlayer.play(event)
                 voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm, distanceUnit)
             }
         }

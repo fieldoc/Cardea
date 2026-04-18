@@ -227,7 +227,12 @@ class WorkoutForegroundService : LifecycleService() {
             }
 
             ACTION_RELOAD_AUDIO_SETTINGS -> {
-                coachingAudioManager?.applySettings(audioSettingsRepository.getAudioSettings())
+                val audioSettings = audioSettingsRepository.getAudioSettings()
+                coachingAudioManager?.applySettings(audioSettings)
+                // CoachingEventRouter needs to see cadence changes mid-workout too. Other audio
+                // fields (voiceVerbosity, enableKmSplits, etc.) flow through CoachingAudioManager;
+                // cadence is the one setting the router owns directly.
+                coachingEventRouter.confirmCadence = audioSettings.inZoneConfirmCadence
                 return START_NOT_STICKY
             }
 
@@ -347,6 +352,9 @@ class WorkoutForegroundService : LifecycleService() {
                 sessionDistanceUnit = com.hrcoach.domain.model.DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
                 coachingAudioManager?.distanceUnit = sessionDistanceUnit
                 coachingEventRouter.reset(workoutStartMs)  // stamp the start time for IN_ZONE_CONFIRM baseline
+                // Seed router's cadence from current AudioSettings at session start; subsequent
+                // changes flow through ACTION_RELOAD_AUDIO_SETTINGS.
+                coachingEventRouter.confirmCadence = audioSettingsRepository.getAudioSettings().inZoneConfirmCadence
 
                 // Suppress auto-pause for 15 seconds so the runner can pocket
                 // their phone and start moving without seeing "Auto-Paused"
@@ -355,7 +363,7 @@ class WorkoutForegroundService : LifecycleService() {
                 WorkoutState.update { current ->
                     current.copy(
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
-                        guidanceText = if (SimulationController.isActive) "SIM STARTING" else "GET HR SIGNAL",
+                        guidanceText = if (SimulationController.isActive) "SIM STARTING" else "Searching for HR signal",
                         autoPauseEnabled = sessionAutoPauseEnabled,
                     )
                 }
@@ -584,7 +592,13 @@ class WorkoutForegroundService : LifecycleService() {
                     val pace = adaptiveResult?.currentPaceMinPerKm
                     coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
                     coachingEventRouter.noteExternalAlert(nowMs)
-                }
+                },
+                // Threaded through so AlertPolicy can suppress SLOW_DOWN/SPEED_UP when HR is
+                // already self-correcting (|slope| ≥ 1.5 bpm/min) or when the runner is walking
+                // (pace > 10 min/km sustained 30s). Both gates default off when unset, so they
+                // can be disabled by passing default values instead of the live values here.
+                hrSlopeBpmPerMin = adaptiveResult?.hrSlopeBpmPerMin ?: 0f,
+                currentPaceMinPerKm = adaptiveResult?.currentPaceMinPerKm
             )
         }
 

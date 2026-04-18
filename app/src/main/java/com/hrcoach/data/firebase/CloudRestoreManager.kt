@@ -28,6 +28,7 @@ import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.AdaptiveProfile
 import com.hrcoach.domain.model.AudioSettings
+import com.hrcoach.domain.model.ConfirmCadence
 import com.hrcoach.domain.model.PaceHrBucket
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.domain.model.VoiceVerbosity
@@ -234,6 +235,12 @@ class CloudRestoreManager @Inject constructor(
                 enableKmSplits        = snap.child("enableKmSplits").getValue(Boolean::class.java),
                 enableWorkoutComplete = snap.child("enableWorkoutComplete").getValue(Boolean::class.java),
                 enableInZoneConfirm   = snap.child("enableInZoneConfirm").getValue(Boolean::class.java),
+                // Added 2026-04-17. Missing fields fall back to defaults (STANDARD / true),
+                // which match the new default behavior — safe for restores from older backups.
+                inZoneConfirmCadence  = snap.child("inZoneConfirmCadence").getValue(String::class.java)?.let {
+                    runCatching { ConfirmCadence.valueOf(it) }.getOrNull()
+                } ?: ConfirmCadence.STANDARD,
+                minimalTierOneVoice   = snap.child("minimalTierOneVoice").getValue(Boolean::class.java) ?: true,
             )
             audioSettingsRepo.saveAudioSettings(audio)
         }.onFailure { Log.w(TAG, "restoreSettings: audio failed", it) }

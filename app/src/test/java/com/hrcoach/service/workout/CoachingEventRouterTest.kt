@@ -305,7 +305,10 @@ class CoachingEventRouterTest {
     }
 
     @Test
-    fun `RETURN_TO_ZONE passes null guidance so VoicePlayer uses default text`() {
+    fun `RETURN_TO_ZONE falls back to null when no adaptive result is present`() {
+        // When adaptiveResult is null (FREE_RUN, startup, or disconnect), the confidence-gated
+        // branch reduces to "null" — VoicePlayer uses its "Back in zone" fallback. Confident
+        // and LOW-confidence cases are exercised in the two dedicated tests below.
         val router = CoachingEventRouter()
         val events = mutableListOf<Pair<CoachingEvent, String?>>()
         routeTick(router, ZoneStatus.IN_ZONE, 1_000L, events = events)
@@ -379,6 +382,104 @@ class CoachingEventRouterTest {
             "IN_ZONE_CONFIRM must not fire during rapid zone oscillations",
             0, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM }
         )
+    }
+
+    // ── IN_ZONE_CONFIRM gates + cadence + RETURN_TO_ZONE guidance (added 2026-04-17) ─
+
+    private fun inZoneTick(
+        slope: Float = 0f,
+        hasConfidence: Boolean = true,
+        projected: ZoneStatus = ZoneStatus.IN_ZONE
+    ) = AdaptivePaceController.TickResult(
+        zoneStatus = ZoneStatus.IN_ZONE,
+        projectedZoneStatus = projected,
+        predictedHr = 140,
+        currentPaceMinPerKm = 6f,
+        guidance = "unused",
+        hasProjectionConfidence = hasConfidence,
+        hrSlopeBpmPerMin = slope
+    )
+
+    @Test
+    fun `IN_ZONE_CONFIRM is suppressed when HR slope is above the gate threshold`() {
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 1L)  // non-zero baseline so the router's "unset" branch doesn't fire
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1L, events = events, adaptiveResult = inZoneTick(slope = 0f))
+        routeTick(router, ZoneStatus.IN_ZONE, 180_001L, events = events, adaptiveResult = inZoneTick(slope = 1.0f))
+        assertEquals(0, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+    }
+
+    @Test
+    fun `IN_ZONE_CONFIRM fires when slope is calm under the gate threshold`() {
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 1L)
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1L, events = events, adaptiveResult = inZoneTick(slope = 0f))
+        routeTick(router, ZoneStatus.IN_ZONE, 180_001L, events = events, adaptiveResult = inZoneTick(slope = 0.4f))
+        assertEquals(1, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+    }
+
+    @Test
+    fun `IN_ZONE_CONFIRM uses STANDARD cadence - 3 min first, 5 min repeat`() {
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 1L)
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1L, events = events, adaptiveResult = inZoneTick())
+        // First confirm at 3 min.
+        routeTick(router, ZoneStatus.IN_ZONE, 180_001L, events = events, adaptiveResult = inZoneTick())
+        assertEquals(1, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+        // At 5 min (120s later — only 2 min gap since first confirm), repeat interval not yet met.
+        routeTick(router, ZoneStatus.IN_ZONE, 300_001L, events = events, adaptiveResult = inZoneTick())
+        assertEquals(1, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+        // At 8 min (300s = 5 min after first confirm), second confirm fires.
+        routeTick(router, ZoneStatus.IN_ZONE, 480_001L, events = events, adaptiveResult = inZoneTick())
+        assertEquals(2, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+    }
+
+    @Test
+    fun `FREQUENT cadence fires every 3 min after first`() {
+        val router = CoachingEventRouter()
+        router.reset(workoutStartMs = 1L)
+        router.confirmCadence = com.hrcoach.domain.model.ConfirmCadence.FREQUENT
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1L, events = events, adaptiveResult = inZoneTick())
+        routeTick(router, ZoneStatus.IN_ZONE, 180_001L, events = events, adaptiveResult = inZoneTick())
+        routeTick(router, ZoneStatus.IN_ZONE, 360_001L, events = events, adaptiveResult = inZoneTick())
+        assertEquals(2, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE passes null guidance on LOW-confidence re-entry`() {
+        // When the runner is still in calibration (hasProjectionConfidence=false), the in-zone
+        // guidance is "Learning your patterns - hold steady" — not useful as re-entry content.
+        // Router should pass null so VoicePlayer falls back to "Back in zone".
+        val router = CoachingEventRouter()
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1_000L, events = events,
+            adaptiveResult = inZoneTick(hasConfidence = false))
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 2_000L, events = events,
+            adaptiveResult = inZoneTick(hasConfidence = false))
+        routeTick(router, ZoneStatus.IN_ZONE, 33_000L, events = events,
+            adaptiveResult = inZoneTick(hasConfidence = false), guidance = "Learning your patterns - hold steady")
+
+        val returnEvent = events.first { it.first == CoachingEvent.RETURN_TO_ZONE }
+        assertEquals(null, returnEvent.second)
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE passes live guidance on confident re-entry`() {
+        val router = CoachingEventRouter()
+        val events = mutableListOf<Pair<CoachingEvent, String?>>()
+        routeTick(router, ZoneStatus.IN_ZONE, 1_000L, events = events,
+            adaptiveResult = inZoneTick(hasConfidence = true))
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 2_000L, events = events,
+            adaptiveResult = inZoneTick(hasConfidence = true))
+        routeTick(router, ZoneStatus.IN_ZONE, 33_000L, events = events,
+            adaptiveResult = inZoneTick(hasConfidence = true), guidance = "In zone - HR falling")
+
+        val returnEvent = events.first { it.first == CoachingEvent.RETURN_TO_ZONE }
+        assertEquals("In zone - HR falling", returnEvent.second)
     }
 
     @Test

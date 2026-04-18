@@ -57,7 +57,10 @@ class AdaptivePaceController(
         val predictedHr: Int,
         val currentPaceMinPerKm: Float?,
         val guidance: String,
-        val hasProjectionConfidence: Boolean
+        val hasProjectionConfidence: Boolean,
+        // Exposed so AlertPolicy can suppress SLOW_DOWN/SPEED_UP when HR is self-correcting.
+        // EMA-smoothed (0.60/0.40), clamped ±50 bpm/min, decayed ×0.5 on gaps > 1.5 min.
+        val hrSlopeBpmPerMin: Float = 0f
     )
 
     data class SessionResult(
@@ -126,7 +129,8 @@ class AdaptivePaceController(
                 predictedHr = 0,
                 currentPaceMinPerKm = pace,
                 guidance = trendGuidance(),
-                hasProjectionConfidence = false
+                hasProjectionConfidence = false,
+                hrSlopeBpmPerMin = hrSlopeBpmPerMin
             )
         }
 
@@ -143,8 +147,9 @@ class AdaptivePaceController(
                 projectedZoneStatus = ZoneStatus.NO_DATA,
                 predictedHr = hr.coerceAtLeast(0),
                 currentPaceMinPerKm = pace,
-                guidance = "GET HR SIGNAL",
-                hasProjectionConfidence = false
+                guidance = "Searching for HR signal",
+                hasProjectionConfidence = false,
+                hrSlopeBpmPerMin = hrSlopeBpmPerMin
             )
         }
 
@@ -183,8 +188,7 @@ class AdaptivePaceController(
         val guidance = buildGuidance(
             actualZone = actualZone,
             projectedZone = projectedZone,
-            confidence = confidence,
-            paceTrendBias = paceTrendBias
+            confidence = confidence
         )
 
         return TickResult(
@@ -193,7 +197,8 @@ class AdaptivePaceController(
             predictedHr = projectedHr.roundToInt().coerceAtLeast(0).takeIf { showProjection } ?: 0,
             currentPaceMinPerKm = pace,
             guidance = guidance,
-            hasProjectionConfidence = showProjection
+            hasProjectionConfidence = showProjection,
+            hrSlopeBpmPerMin = hrSlopeBpmPerMin
         )
     }
 
@@ -361,64 +366,58 @@ class AdaptivePaceController(
     private fun buildGuidance(
         actualZone: ZoneStatus,
         projectedZone: ZoneStatus,
-        confidence: ProjectionConfidence,
-        paceTrendBias: Float
+        confidence: ProjectionConfidence
     ): String {
+        // Phrasing format: "[current zone state] - [HR trend]" or "[zone] - [action]".
+        // SLOPE_THRESHOLD: |hrSlopeBpmPerMin| >= 0.8 bpm/min (EMA 0.60 prev / 0.40 instant).
+        //   TUNING: 0.8 was chosen as "noticeable drift, not noise." EMA residual persists
+        //   ~10–15 s after HR reverses; phrasing can be briefly stale. Raise to 1.2f to be
+        //   more conservative (fewer trend callouts), lower to 0.5f to surface earlier.
+        // MEDIUM_VS_HIGH: uses distinct verbs (trending/climbing, trending/dropping) rather
+        //   than a single-syllable modifier so the runner can actually hear the confidence tier.
+        // PACE_TREND_BIAS: historically appended "This pace usually runs high/low" as a
+        //   diagnostic. Removed 2026-04-17 — the projection already factors in bias, so the
+        //   sentence repeated information and burned audio budget. paceTrendBias is still
+        //   used for projectedHr computation at the call site (line 167).
         return when (actualZone) {
             ZoneStatus.ABOVE_ZONE -> {
-                if (hrSlopeBpmPerMin <= -0.8f) {
-                    "HR settling back - hold steady"
-                } else {
-                    "Above zone - ease off now"
-                }
+                if (hrSlopeBpmPerMin <= -0.8f) "Above zone - HR falling"
+                else                           "Above zone - ease off now"
             }
 
             ZoneStatus.BELOW_ZONE -> {
-                if (hrSlopeBpmPerMin >= 0.8f) {
-                    "HR climbing back - hold steady"
-                } else {
-                    "Below zone - build pace now"
-                }
+                if (hrSlopeBpmPerMin >= 0.8f) "Below zone - HR rising"
+                else                          "Below zone - pick up pace now"
             }
 
-            ZoneStatus.NO_DATA -> "GET HR SIGNAL"
+            ZoneStatus.NO_DATA -> "Searching for HR signal"
+
             ZoneStatus.IN_ZONE -> {
+                // LOW confidence normally shows calibration phrasing, but when slope is strong
+                // we surface the trend — slope detection has no bucket dependency, so it's safe
+                // for first-session users who'd otherwise get zero warning ahead of zone exit.
                 if (confidence == ProjectionConfidence.LOW) {
-                    "Learning your patterns - hold steady"
+                    when {
+                        hrSlopeBpmPerMin <= -0.8f -> "In zone - HR falling"
+                        hrSlopeBpmPerMin >= 0.8f -> "In zone - HR rising"
+                        else -> "Learning your patterns - hold steady"
+                    }
                 } else {
                     when (projectedZone) {
                         ZoneStatus.ABOVE_ZONE -> {
-                            val qualifier = if (confidence == ProjectionConfidence.MEDIUM) {
-                                "may drift up"
-                            } else {
-                                "drifting up"
-                            }
-                            val paceHint = if (paceTrendBias >= 1.5f) {
-                                " This pace usually runs high."
-                            } else {
-                                ""
-                            }
-                            "HR $qualifier - ease off slightly.$paceHint"
+                            // MEDIUM: "trending up" (softer). HIGH: "climbing" (confident).
+                            val trend = if (confidence == ProjectionConfidence.MEDIUM) "trending up" else "climbing"
+                            "HR $trend - ease off slightly"
                         }
-
                         ZoneStatus.BELOW_ZONE -> {
-                            val qualifier = if (confidence == ProjectionConfidence.MEDIUM) {
-                                "may drift low"
-                            } else {
-                                "drifting low"
-                            }
-                            val paceHint = if (paceTrendBias <= -1.5f) {
-                                " This pace usually runs low."
-                            } else {
-                                ""
-                            }
-                            "HR $qualifier - add a touch of pace.$paceHint"
+                            // MEDIUM: "trending low". HIGH: "dropping" (verb-matches "climbing").
+                            val trend = if (confidence == ProjectionConfidence.MEDIUM) "trending low" else "dropping"
+                            "HR $trend - pick up slightly"
                         }
-
                         else -> {
                             when {
-                                hrSlopeBpmPerMin <= -0.8f -> "HR settling back - hold steady"
-                                hrSlopeBpmPerMin >= 0.8f -> "HR rising - hold steady"
+                                hrSlopeBpmPerMin <= -0.8f -> "In zone - HR falling"
+                                hrSlopeBpmPerMin >= 0.8f -> "In zone - HR rising"
                                 else -> "Pace looks good - hold steady"
                             }
                         }
@@ -428,10 +427,13 @@ class AdaptivePaceController(
         }
     }
 
+    // FREE_RUN (no zone target) — no direction action to take, just a status report.
+    // Thresholds ±2 bpm/min here are wider than buildGuidance's ±0.8 because without a
+    // zone target there's no urgency; only call out a clearly sustained trend.
     private fun trendGuidance(): String {
         return when {
             hrSlopeBpmPerMin > 2f -> "HR rising"
-            hrSlopeBpmPerMin < -2f -> "HR easing down"
+            hrSlopeBpmPerMin < -2f -> "HR falling"
             else -> "HR steady"
         }
     }

@@ -132,6 +132,8 @@ Two separate systems feed `CoachingAudioManager` per tick — they do not share 
 - **`CoachingEventRouter`** (`service/workout/`) — informational cues: splits, halfway, segment changes, RETURN_TO_ZONE, IN_ZONE_CONFIRM, predictive warnings. Tracks `lastVoiceCueTimeMs` to gate the 3-min IN_ZONE_CONFIRM silence window.
 - **Bridging contract:** `AlertPolicy.onAlert` fires through `CoachingAudioManager` directly — router never sees these. After any `alertPolicy.onAlert`, call `coachingEventRouter.noteExternalAlert(nowMs)` or IN_ZONE_CONFIRM can fire within 3 min of an alert.
 - **Live audio settings:** mid-workout changes go via `WorkoutForegroundService.ACTION_RELOAD_AUDIO_SETTINGS` (`startService`). `AccountViewModel.saveAudioSettings()` does this. `CoachingAudioManager.applySettings()` receives — do not call from outside the service.
+- **`AlertPolicy.handle()` only runs when `!isAutoPaused`** (WFS processTick guard). So walk-break suppression, self-correction suppression, and any future AlertPolicy gate is a no-op when auto-pause is engaged — intentional and non-conflicting, but new gates don't need to re-check auto-pause state.
+- **`AudioSettings` has two persistence paths** — local (Gson JSON blob in SharedPreferences, missing fields auto-default) and cloud (field-by-field map in `CloudBackupManager.syncSettings` + field-by-field read in `CloudRestoreManager.restoreSettings`). Adding a new field requires touching BOTH cloud paths; local storage handles it automatically.
 
 ## Audio Pipeline
 

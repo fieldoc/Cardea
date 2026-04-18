@@ -53,7 +53,8 @@ class AdaptivePaceControllerTest {
 
         assertEquals(ZoneStatus.IN_ZONE, result.zoneStatus)
         assertEquals(ZoneStatus.ABOVE_ZONE, result.projectedZoneStatus)
-        assertTrue(result.guidance.contains("drifting up"))
+        // "climbing" (HIGH confidence) or "trending up" (MEDIUM) — 2026-04-17 phrasing update.
+        assertTrue(result.guidance.contains("climbing") || result.guidance.contains("trending up"))
     }
 
     @Test

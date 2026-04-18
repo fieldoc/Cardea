@@ -173,6 +173,48 @@ Valid `Source` values:
 - **Rationale for code/spec divergence:** Code uses 0-indexed tiers internally (mapping to `TierInfo` names Foundation/Development/Performance = spec's T1/T2/T3). Code extends the spec at both ends: Foundation floor = 0 (not spec-10) so new users with CTL < 10 have a valid starting tier; Performance ceiling = 200 (not spec-90) so the terminal tier has no "above tier" prompt. Both divergences were reviewed and documented 2026-04-14.
 - **Last reviewed:** 2026-04-14
 
+### AlertPolicy self-correction threshold
+- **File:** `app/src/main/java/com/hrcoach/service/workout/AlertPolicy.kt` (`SELF_CORRECTION_THRESHOLD_BPM_PER_MIN`)
+- **Value:** `1.5f` bpm/min
+- **Source:** internal-rationale
+- **Citation:** Code review 2026-04-17; in-code TUNING comment. Deliberately stricter than the buildGuidance phrasing threshold (0.8 bpm/min) because the phrasing threshold can be tripped by EMA residual for 10–15 s after HR reverses; the alert-suppression threshold must only fire when the runner is unambiguously correcting.
+- **Effect if wrong:** Too low (<1.0): missed SPEED_UP/SLOW_DOWN alerts during EMA residual windows when HR is actually stable or reversing → runner stays drifted, no cue. Too high (>2.5): suppression rarely engages, runner keeps hearing contradictory "slow down" earcons when already slowing → original complaint re-emerges.
+- **Debounce coupling:** when suppression triggers, `lastAlertTime = nowMs` is set, which means the next alert window opens `alertCooldownSec` later. Without that debounce, sustained suppression would either silence alerts for the entire above-zone period or fire back-to-back the instant slope eased.
+- **Last reviewed:** 2026-04-17
+
+### AlertPolicy walking-pace threshold
+- **File:** `app/src/main/java/com/hrcoach/service/workout/AlertPolicy.kt` (`WALKING_PACE_MIN_PER_KM`)
+- **Value:** `10f` min/km (≥, inclusive of fast-walk boundary at exactly 10 min/km ≈ 6 km/h)
+- **Source:** internal-rationale
+- **Citation:** Code review 2026-04-17; in-code TUNING comment. Based on published walking-pace norms: brisk walk ~5 km/h (12 min/km), fast walk ~6 km/h (10 min/km), jog begins ~7 km/h (~8.5 min/km). Threshold set at the fast-walk boundary so jogs stay active (no false SPEED_UP suppression).
+- **Effect if wrong:** Too fast (< 10 min/km, e.g. 8): slow joggers get SPEED_UP suppressed during recovery intervals. Too slow (>12): runners taking genuine walk breaks still get nagged with SPEED_UP alerts (the exact bug the gate was built to fix).
+- **Last reviewed:** 2026-04-17
+
+### AlertPolicy walking-sustained window
+- **File:** `app/src/main/java/com/hrcoach/service/workout/AlertPolicy.kt` (`WALKING_SUSTAINED_MS`)
+- **Value:** `30_000L` ms (30 seconds)
+- **Source:** internal-rationale
+- **Citation:** Code review 2026-04-17; in-code TUNING comment. Matches the default `alertDelaySec` (15s) × 2 — a runner who slows to walking pace for 30 continuous seconds has made a deliberate choice, not a transient slowdown. GPS dropouts during this window preserve the counter (null pace holds state) to handle tunnels / tree cover.
+- **Effect if wrong:** Too short (<15s): traffic-light stops trigger SPEED_UP suppression that persists into resumed running. Too long (>60s): real walk breaks go unsuppressed for half the walk.
+- **Last reviewed:** 2026-04-17
+
+### IN_ZONE_CONFIRM slope gate
+- **File:** `app/src/main/java/com/hrcoach/service/workout/CoachingEventRouter.kt` (`IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN`)
+- **Value:** `0.8f` bpm/min
+- **Source:** internal-rationale
+- **Citation:** Code review 2026-04-17; in-code TUNING comment. Matches the buildGuidance phrasing threshold for symmetry — if guidance would read "In zone - HR rising/falling" (slope ≥ 0.8), don't play the reassurance cue because the earcon "all good" + voice "HR falling" is a mixed signal.
+- **Effect if wrong:** Too low (<0.5): confirms fire less often, runner feels starved for reassurance on noisy HR. Too high (>1.5): confirms routinely pair with active-slope phrasing, reintroducing the mixed-signal problem.
+- **Last reviewed:** 2026-04-17
+
+### IN_ZONE_CONFIRM adaptive cadence (ConfirmCadence enum)
+- **File:** `app/src/main/java/com/hrcoach/domain/model/AudioSettings.kt` (`ConfirmCadence` enum)
+- **Value:** FREQUENT=180/180 ms, STANDARD=180/300 ms (default), REDUCED=180/600 ms (all in thousands — first/repeat intervals)
+- **Source:** internal-rationale
+- **Citation:** Code review 2026-04-17; spawned from AI audit finding on 30-min run event volume. Rationale: first reassurance at 3 min (quick feedback once settled); subsequent reassurances stretched to 5 min (reduces steady-state chatter from ~6 events per 30 min to ~3).
+- **Effect if wrong:** STANDARD repeatMs too low (<240s): steady-state runs feel chatty, runners tune out and miss real alerts. Too high (>420s): runners who rely on 3-min check-ins feel abandoned on long steady efforts.
+- **User-facing:** toggled via `AudioSettings.inZoneConfirmCadence` (no UI yet — field-testing defaults). Persists through both local Gson blob and cloud backup/restore.
+- **Last reviewed:** 2026-04-17
+
 ### HRR1 post-workout measurement window
 - **File:** Not implemented (design specifies 120s with samples at T=0/60/120s)
 - **Value:** N/A — **feature absent**
