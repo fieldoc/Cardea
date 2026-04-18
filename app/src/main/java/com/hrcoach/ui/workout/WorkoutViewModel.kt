@@ -74,7 +74,8 @@ class WorkoutViewModel @Inject constructor(
     private var loadingWorkoutMetadata: Boolean = false
 
     init {
-        if (WorkoutState.snapshot.value.isRunning) {
+        val initialSnap = WorkoutState.snapshot.value
+        if (initialSnap.isRunning && initialSnap.countdownSecondsRemaining == null) {
             viewModelScope.launch { loadActiveWorkoutMetadata() }
         }
 
@@ -89,8 +90,14 @@ class WorkoutViewModel @Inject constructor(
                 if (!snapshot.isRunning) continue
                 _uiState.update { current ->
                     val snap = current.snapshot
-                    val newElapsed = if (snap.elapsedSeconds > 0L) snap.elapsedSeconds
-                                     else computeElapsedSeconds(System.currentTimeMillis())
+                    // During the pre-run countdown the service has no authoritative clock yet;
+                    // displaying the VM's local tick would count up through TTS + countdown
+                    // and then rewind when the service starts broadcasting.
+                    val newElapsed = when {
+                        snap.countdownSecondsRemaining != null -> 0L
+                        snap.elapsedSeconds > 0L -> snap.elapsedSeconds
+                        else -> computeElapsedSeconds(System.currentTimeMillis())
+                    }
                     val seg = deriveSegmentInfo(current.workoutConfig, newElapsed)
                     val prog = deriveProgressInfo(current.workoutConfig)
                     current.copy(
@@ -114,13 +121,19 @@ class WorkoutViewModel @Inject constructor(
     private fun handleSnapshot(snapshot: WorkoutSnapshot) {
         val nowMs = System.currentTimeMillis()
 
+        // Defer arming the local clock/metadata load until the service-side countdown
+        // clears. Before that, the DB workout row hasn't been created yet (so loading
+        // returns nothing) and pinning workoutStartTimeMs = nowMs would cause elapsed
+        // to tick up through TTS + countdown, then visibly rewind when the DB's real
+        // startTime arrives via loadActiveWorkoutMetadata().
+        val countdownActive = snapshot.countdownSecondsRemaining != null
         when {
-            snapshot.isRunning && workoutStartTimeMs == null -> {
+            snapshot.isRunning && !countdownActive && workoutStartTimeMs == null -> {
                 workoutStartTimeMs = nowMs
                 viewModelScope.launch { loadActiveWorkoutMetadata() }
             }
 
-            snapshot.isRunning && _uiState.value.workoutConfig == null -> {
+            snapshot.isRunning && !countdownActive && _uiState.value.workoutConfig == null -> {
                 viewModelScope.launch { loadActiveWorkoutMetadata() }
             }
 
@@ -152,6 +165,7 @@ class WorkoutViewModel @Inject constructor(
         _uiState.update { current ->
             val newElapsed = when {
                 !snapshot.isRunning -> 0L
+                countdownActive -> 0L
                 snapshot.elapsedSeconds > 0L -> snapshot.elapsedSeconds
                 else -> computeElapsedSeconds(nowMs)
             }

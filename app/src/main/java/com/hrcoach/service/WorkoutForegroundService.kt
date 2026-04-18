@@ -311,11 +311,18 @@ class WorkoutForegroundService : LifecycleService() {
                     }
                 }
 
-                // Navigate to workout screen immediately so user sees the countdown overlay
+                // Navigate to workout screen immediately so user sees the countdown overlay.
+                // Seeding countdownSecondsRemaining = 3 here (rather than waiting for
+                // StartupSequencer) covers the TTS-briefing phase too — during that window
+                // the overlay holds on "3" while the voice briefing plays, and the workout
+                // timer in the ViewModel stays at 0. Without this, the VM's local clock
+                // would tick up during TTS + countdown, then visibly rewind to 0 when the
+                // service's authoritative clock took over after the countdown.
                 WorkoutState.update { current ->
                     WorkoutSnapshot(
                         isRunning = true,
                         isPaused = false,
+                        countdownSecondsRemaining = 3,
                         pendingBootcampSessionId = current.pendingBootcampSessionId,
                     )
                 }
