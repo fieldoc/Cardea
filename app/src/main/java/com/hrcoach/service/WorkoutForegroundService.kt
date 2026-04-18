@@ -47,11 +47,7 @@ import com.hrcoach.service.workout.AlertPolicy
 import com.hrcoach.service.workout.CoachingEventRouter
 import com.hrcoach.service.workout.TrackPointRecorder
 import com.hrcoach.service.workout.WorkoutNotificationHelper
-import android.support.v4.media.MediaMetadataCompat
-import android.support.v4.media.session.MediaSessionCompat
-import android.support.v4.media.session.PlaybackStateCompat
 import com.hrcoach.service.workout.notification.NotifContentFormatter
-import com.hrcoach.service.workout.notification.NotifPayload
 import com.hrcoach.util.JsonCodec
 import com.hrcoach.util.PermissionGate
 import dagger.hilt.android.AndroidEntryPoint
@@ -79,10 +75,9 @@ class WorkoutForegroundService : LifecycleService() {
         const val EXTRA_DEVICE_ADDRESS = "device_address"
 
         private const val NOTIFICATION_ID = 1
-        // v2: upgraded from IMPORTANCE_LOW → IMPORTANCE_DEFAULT so the notification renders
-        // as a full-width MediaStyle card (Spotify-style) instead of a compact pill. A new
-        // channel ID is required because Android preserves the user's channel importance
-        // setting — changing the code on the old channel ID has no effect on existing installs.
+        // v2 channel: the prior v1 ran IMPORTANCE_LOW, which Android preserves per-channel.
+        // A fresh channel id was required to move to IMPORTANCE_DEFAULT so the notification
+        // renders as a first-class Live Update chip on the lockscreen/status bar.
         private const val CHANNEL_ID = "workout_media_v2"
         private const val TRACK_POINT_INTERVAL_MS = 5_000L
         private const val AUTO_PAUSE_GRACE_MS = 15_000L
@@ -126,7 +121,6 @@ class WorkoutForegroundService : LifecycleService() {
 
     private val gson = JsonCodec.gson
     private lateinit var notificationHelper: WorkoutNotificationHelper
-    private lateinit var mediaSession: MediaSessionCompat
     private var activeWorkoutConfig: WorkoutConfig? = null
     private var workoutTotalSeconds: Long = 0L
 
@@ -163,9 +157,6 @@ class WorkoutForegroundService : LifecycleService() {
     private var hrSampleSum: Long = 0L
     private var hrSampleCount: Int = 0
 
-    @Volatile
-    private var sessionReleased = false
-
     private val hrSampleBuffer = ArrayDeque<Int>()      // rolling 120-sample window for artifact detection
     private val hrSessionSamples = mutableListOf<Int>() // full session for hrMax detection
     private var cadenceLockSuspected: Boolean = false
@@ -174,10 +165,6 @@ class WorkoutForegroundService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         notificationHelper = WorkoutNotificationHelper(this, CHANNEL_ID, NOTIFICATION_ID)
-        mediaSession = MediaSessionCompat(this, "CardeaWorkout").apply {
-            isActive = true
-        }
-        notificationHelper.attachMediaSession(mediaSession.sessionToken)
     }
 
     override fun onBind(intent: Intent): IBinder? {
@@ -484,8 +471,8 @@ class WorkoutForegroundService : LifecycleService() {
                     avgHr = current.avgHr
                 ).also { pausedSnapshot = it }
             }
-            // Build rich payload so the lockscreen shows "· Paused" title, dimmed badge,
-            // Resume action button, and the MediaSession reports STATE_PAUSED.
+            // Build rich payload so the chip tints neutral-grey (paused) and the shade shows
+            // "· Paused" title + Resume action.
             // Use the captured snapshot directly to avoid the same-tick StateFlow propagation race.
             val pausedPayload = NotifContentFormatter.format(
                 snapshot = pausedSnapshot!!,
@@ -493,7 +480,6 @@ class WorkoutForegroundService : LifecycleService() {
                 totalSeconds = workoutTotalSeconds,
             )
             notificationHelper.update(pausedPayload)
-            updateMediaSessionState(pausedPayload)
             return
         }
 
@@ -623,7 +609,6 @@ class WorkoutForegroundService : LifecycleService() {
             totalSeconds = workoutTotalSeconds,
         )
         notificationHelper.update(payload)
-        updateMediaSessionState(payload)
     }
 
     private fun pauseWorkout() {
@@ -656,7 +641,6 @@ class WorkoutForegroundService : LifecycleService() {
                     totalSeconds = workoutTotalSeconds,
                 )
                 notificationHelper.update(payload)
-                updateMediaSessionState(payload)
             } else {
                 notificationHelper.update("Workout paused")
             }
@@ -691,7 +675,6 @@ class WorkoutForegroundService : LifecycleService() {
                     totalSeconds = workoutTotalSeconds,
                 )
                 notificationHelper.update(payload)
-                updateMediaSessionState(payload)
             } else {
                 notificationHelper.update("Workout resumed")
             }
@@ -1046,8 +1029,6 @@ class WorkoutForegroundService : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Cancel coroutines FIRST so processTick/updateMediaSessionState cannot fire
-        // against a released MediaSession and throw IllegalStateException.
         startupJob?.cancel()
         simTickJob?.cancel()
         observationJob?.cancel()
@@ -1080,13 +1061,6 @@ class WorkoutForegroundService : LifecycleService() {
         }
         cleanupManagers()
         WorkoutState.reset()
-        // Release MediaSession last — after all coroutines are cancelled and cleanup is done —
-        // so updateMediaSessionState() cannot be called post-release.
-        sessionReleased = true
-        if (::mediaSession.isInitialized) {
-            mediaSession.isActive = false
-            mediaSession.release()
-        }
     }
 
     private fun computeTotalSeconds(config: WorkoutConfig): Long {
@@ -1097,46 +1071,6 @@ class WorkoutForegroundService : LifecycleService() {
         if (segSum > 0L) return segSum
         // 3. Unknown — treated as free run / indeterminate progress
         return 0L
-    }
-
-    private fun updateMediaSessionState(payload: NotifPayload) {
-        if (sessionReleased || !::mediaSession.isInitialized) return
-        val state = PlaybackStateCompat.Builder()
-            .setState(
-                if (payload.isPaused) PlaybackStateCompat.STATE_PAUSED
-                else PlaybackStateCompat.STATE_PLAYING,
-                payload.elapsedSeconds * 1000L,
-                if (payload.isPaused) 0f else 1f,
-            )
-            .setActions(
-                PlaybackStateCompat.ACTION_PAUSE or
-                        PlaybackStateCompat.ACTION_PLAY,
-            )
-            .build()
-        mediaSession.setPlaybackState(state)
-
-        // 320px artwork for the MediaSession lockscreen player — matches
-        // MediaMetadataCompat's internal size threshold so no rescaling occurs.
-        val lockscreenArt = notificationHelper.lockscreenArtFor(payload)
-        val metadata = MediaMetadataCompat.Builder()
-            .putString(
-                MediaMetadataCompat.METADATA_KEY_TITLE,
-                payload.titleText,
-            )
-            .putString(
-                MediaMetadataCompat.METADATA_KEY_ARTIST,
-                payload.subtitleText,
-            )
-            .putLong(
-                MediaMetadataCompat.METADATA_KEY_DURATION,
-                if (payload.isIndeterminate) 0L else payload.totalSeconds * 1000L,
-            )
-            .putBitmap(
-                MediaMetadataCompat.METADATA_KEY_ALBUM_ART,
-                lockscreenArt,
-            )
-            .build()
-        mediaSession.setMetadata(metadata)
     }
 
     private data class WorkoutTick(

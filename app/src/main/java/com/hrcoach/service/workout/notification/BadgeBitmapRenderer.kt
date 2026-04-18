@@ -14,19 +14,18 @@ import android.graphics.Typeface
 import com.hrcoach.domain.model.ZoneStatus
 
 /**
- * Draws the Cardea gradient HR badge to a square Bitmap.
+ * Draws the Cardea gradient HR badge as a 144px square bitmap used as the
+ * notification's large-icon in the expanded shade view. (The lockscreen chip
+ * conveys zone state through its background tint — see WorkoutNotificationHelper.)
  *
  * Every non-NO_DATA zone state keeps the full 4-stop Cardea palette
  * (red → pink → blue → cyan). Only stop positions shift — the badge
  * never becomes a solid colour alert object. Rim accent and badge
  * weighting together carry the zone signal through sweat.
- *
- * See docs/superpowers/specs/2026-04-14-lockscreen-media-notification-design.md
- * for the visual spec.
  */
 class BadgeBitmapRenderer {
 
-    /** Square bitmap dimension in pixels. 144px matches MediaStyle large-icon sweet spot. */
+    /** Square bitmap dimension in pixels. 144px is the large-icon sweet spot for the shade. */
     private val size = 144
 
     private val cardeaRed = CARDEA_RED
@@ -79,8 +78,7 @@ class BadgeBitmapRenderer {
         drawBottomShadow(canvas, rect)
 
         // 4. HR number + BPM label
-        drawHrTextScaled(canvas, rect, currentHr, zoneStatus,
-            numberScale = 0.38f, labelYOffsetScale = 0.16f, shadowBlurPx = 2f)
+        drawHrText(canvas, rect, currentHr, zoneStatus)
 
         // 5. Heart glyph top-right
         drawHeartGlyph(canvas, rect, paused)
@@ -91,53 +89,6 @@ class BadgeBitmapRenderer {
         canvas.restore()
 
         // 7. If paused, apply a global dark overlay on top
-        if (paused) applyPausedOverlay(canvas, rect, cornerRadius)
-
-        return bmp
-    }
-
-    /**
-     * Full-size artwork for the MediaSession lockscreen player — 320×320 px.
-     *
-     * 320px is the maximum size Android's MediaMetadataCompat passes through
-     * without triggering an internal scaleBitmapIfTooBig() downscale. Larger
-     * bitmaps (e.g. 512px) incur a redundant scale + allocation every tick.
-     * Design: same zone-driven gradient as the badge, but HR number at 50 % of
-     * height (vs 38 % on the badge) and a small zone-label pill at the bottom edge.
-     */
-    fun renderLockscreenArt(
-        currentHr: Int,
-        zoneStatus: ZoneStatus,
-        paused: Boolean,
-    ): Bitmap {
-        val artSize = 320
-        val bmp = try {
-            Bitmap.createBitmap(artSize, artSize, Bitmap.Config.ARGB_8888)
-        } catch (e: OutOfMemoryError) {
-            // Degrade gracefully — return a minimal 1×1 transparent bitmap
-            // rather than crashing the service or entering a hot retry loop.
-            return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-        }
-        val canvas = Canvas(bmp)
-        val rect = RectF(0f, 0f, artSize.toFloat(), artSize.toFloat())
-        val cornerRadius = artSize * 0.12f  // slightly more rounded than the badge
-
-        val clipPath = Path().apply {
-            addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
-        }
-        canvas.save()
-        canvas.clipPath(clipPath)
-
-        drawGradient(canvas, rect, zoneStatus)
-        drawTopSheen(canvas, rect)
-        drawBottomShadow(canvas, rect)
-        drawHeartGlyph(canvas, rect, paused)
-        drawHrTextScaled(canvas, rect, currentHr, zoneStatus,
-            numberScale = 0.50f, labelYOffsetScale = 0.18f, shadowBlurPx = 4f)
-        drawZoneLabel(canvas, rect, zoneStatus, paused)
-        if (!paused) drawRimAccent(canvas, rect, zoneStatus)
-
-        canvas.restore()
         if (paused) applyPausedOverlay(canvas, rect, cornerRadius)
 
         return bmp
@@ -225,38 +176,24 @@ class BadgeBitmapRenderer {
     }
 
     // ---------------------------------------------------------------------
-    // Text — single parameterized helper for both badge and lockscreen art
+    // Text
     // ---------------------------------------------------------------------
 
-    /**
-     * Draws the HR number and BPM label centred on [rect].
-     *
-     * @param numberScale      fraction of rect.height() used as the HR number text size
-     * @param labelYOffsetScale fraction of rect.height() for the BPM label offset below the number baseline
-     * @param shadowBlurPx     blur radius (px) for the number drop-shadow
-     *
-     * Shadow y-offsets are ratio-based (rect.height() × 0.004f for the number,
-     * × 0.002f for the BPM label) so they scale proportionally with bitmap size.
-     */
-    private fun drawHrTextScaled(
+    private fun drawHrText(
         canvas: Canvas,
         rect: RectF,
         currentHr: Int,
         zone: ZoneStatus,
-        numberScale: Float,
-        labelYOffsetScale: Float,
-        shadowBlurPx: Float,
     ) {
         val displayNum = if (currentHr <= 0 || zone == ZoneStatus.NO_DATA) "—" else currentHr.toString()
 
-        val numberSize = rect.height() * numberScale
+        val numberSize = rect.height() * 0.38f
         val cy = rect.centerY() + (numberSize / 3f) - rect.height() * 0.04f
 
-        // Ratio-based shadow offsets — scale proportionally with bitmap size
-        val numberShadowDy = rect.height() * 0.004f   // ~0.58px on 144px badge, ~1.28px on 320px art
-        val labelShadowDy  = rect.height() * 0.002f   // ~0.29px on 144px badge, ~0.64px on 320px art
+        val numberShadowDy = rect.height() * 0.004f
+        val labelShadowDy = rect.height() * 0.002f
+        val shadowBlurPx = 2f
 
-        // Drop-shadow pass for the HR number: draw a soft black offset behind the text.
         // BlurMaskFilter works on software canvases (unlike setShadowLayer).
         val numberShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = 0x66000000
@@ -275,9 +212,8 @@ class BadgeBitmapRenderer {
         }
         canvas.drawText(displayNum, rect.centerX(), cy, numberPaint)
 
-        // "BPM" label below — same shadow treatment
         val labelSize = rect.height() * 0.095f
-        val labelYOffset = rect.height() * labelYOffsetScale
+        val labelYOffset = rect.height() * 0.16f
 
         val labelShadow = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             color = 0x66000000
@@ -383,56 +319,6 @@ class BadgeBitmapRenderer {
             strokeCap = Paint.Cap.ROUND
         }
         canvas.drawLine(x0, y, x1, y, linePaint)
-    }
-
-    // ---------------------------------------------------------------------
-    // Lockscreen art — zone label pill
-    // ---------------------------------------------------------------------
-
-    /** Small pill label at the bottom edge of the lockscreen art showing zone / paused state. */
-    private fun drawZoneLabel(canvas: Canvas, rect: RectF, zone: ZoneStatus, paused: Boolean) {
-        val text = when {
-            paused -> "PAUSED"
-            zone == ZoneStatus.NO_DATA -> "ACQUIRING SIGNAL"
-            zone == ZoneStatus.IN_ZONE -> "ON TARGET"
-            zone == ZoneStatus.ABOVE_ZONE -> "ABOVE ZONE"
-            zone == ZoneStatus.BELOW_ZONE -> "BELOW ZONE"
-            else -> {
-                android.util.Log.w("BadgeBitmapRenderer", "Unhandled ZoneStatus in drawZoneLabel: $zone")
-                return
-            }
-        }
-
-        val textSize = rect.height() * 0.062f
-        val textY = rect.bottom - rect.height() * 0.085f
-
-        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
-            this.textSize = textSize
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            letterSpacing = 0.10f
-            textAlign = Paint.Align.CENTER
-        }
-
-        // measureText() accounts for letterSpacing; getTextBounds() does not.
-        val textWidth = textPaint.measureText(text)
-        val textAscent = -textPaint.ascent()   // positive ascender height
-        val textDescent = textPaint.descent()  // positive descender depth
-
-        val pillPadH = textSize * 0.55f
-        val pillPadV = textSize * 0.30f
-        val pillRect = RectF(
-            rect.centerX() - textWidth / 2f - pillPadH,
-            textY - textAscent - pillPadV,
-            rect.centerX() + textWidth / 2f + pillPadH,
-            textY + textDescent + pillPadV,
-        )
-        val pillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x40000000  // subtle dark backing
-        }
-        canvas.drawRoundRect(pillRect, textSize * 0.35f, textSize * 0.35f, pillPaint)
-
-        textPaint.color = 0xCCFFFFFF.toInt()  // 80 % white
-        canvas.drawText(text, rect.centerX(), textY, textPaint)
     }
 
     // ---------------------------------------------------------------------

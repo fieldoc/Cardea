@@ -156,9 +156,12 @@ Three-component layered audio in `service/audio/`:
 - `UserProfileRepository.getDistanceUnit()` → `"km"` or `"mi"`; read synchronously at VM construction.
 - **Mile splits** fire every 1609m — threshold `DistanceUnit.METERS_PER_MILE` in `CoachingEventRouter`.
 
-## Notification Stop Gate
+## Notification (chip-only)
 
-`WorkoutNotificationHelper.stop()` MUST be called before every `stopForeground(STOP_FOREGROUND_REMOVE)`. Without it a late `processTick()` re-posts the notification. `@Volatile stopped` flag short-circuits `update()`. Three call sites in WFS: normal stop, short-run discard, error handler.
+- **Chip-first contract.** The workout notification is a zone-color-tinted `NotificationCompat` chip — NO MediaStyle, NO MediaSession. Android 15 renders FGS ongoing notifications as the compact "Live Update" chip on lockscreen/status-bar regardless; trying to escape it via MediaStyle requires audio focus, which Cardea deliberately does not request (Spotify coexistence). History: 2026-04 experiment with MediaStyle shipped a blue pill that did not tint to the zone colour — reverted on branch `claude/fix-lockscreen-widget-size-FINly`.
+- **Zone → chip colour** is owned by `WorkoutNotificationHelper.chipColorFor()`: IN_ZONE=green, ABOVE_ZONE=red, BELOW_ZONE=amber, NO_DATA/paused=slate-600. `setColor(accent)` + `setColorized(true)` tint the chip background so zone state is legible without unlock. `CHIP_*` constants mirror `ZoneGreen/ZoneAmber/ZoneRed` in `ui/theme/Color.kt` — service-side can't import Compose colours, keep both sides in sync.
+- **`BadgeBitmapRenderer.render()`** draws the 144px shade large-icon only (no 320px lockscreen art). `renderLockscreenArt` + `drawZoneLabel` were deleted with the MediaSession removal.
+- **Stop gate.** `WorkoutNotificationHelper.stop()` MUST be called before every `stopForeground(STOP_FOREGROUND_REMOVE)`. Without it a late `processTick()` re-posts the notification. `@Volatile stopped` flag short-circuits `update()`. Three call sites in WFS: normal stop, short-run discard, error handler.
 
 ## WorkoutState / Same-Tick Race
 

@@ -8,17 +8,29 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
-import androidx.media.app.NotificationCompat.MediaStyle
 import com.hrcoach.MainActivity
 import com.hrcoach.R
+import com.hrcoach.domain.model.ZoneStatus
 import com.hrcoach.service.WorkoutForegroundService
 import com.hrcoach.service.workout.notification.BadgeBitmapCache
 import com.hrcoach.service.workout.notification.BadgeBitmapRenderer
 import com.hrcoach.service.workout.notification.NotifPayload
 
+/**
+ * Chip-first workout notification.
+ *
+ * On Android 15 foreground-service ongoing notifications render as the compact "Live Update"
+ * chip on the lockscreen and in the status bar. We lean into that surface rather than fight it:
+ * the chip background is tinted with the current zone colour (green / amber / red / grey)
+ * via [NotificationCompat.Builder.setColor] + `setColorized(true)`, so zone state is legible
+ * at a glance without the user unlocking or expanding anything.
+ *
+ * The notification-shade expanded view still gets the 144px gradient badge as its large icon.
+ * No MediaStyle / MediaSession — those were impersonating a media player to coax Android into
+ * showing a full-width lockscreen card, which no major running app attempts and which Android 15
+ * reserves for apps that actually hold audio focus.
+ */
 class WorkoutNotificationHelper(
     private val context: Context,
     private val channelId: String,
@@ -30,23 +42,11 @@ class WorkoutNotificationHelper(
     @Volatile
     private var lastPayload: NotifPayload? = null
 
-    /** Supplied by the service in onCreate. Required for MediaStyle. */
-    private var mediaSessionToken: MediaSessionCompat.Token? = null
-
     private val renderer = BadgeBitmapRenderer()
 
-    /** 144px badge for the notification large-icon slot. */
+    /** 144px badge for the notification large-icon slot (shown in the shade, not on the chip). */
     private val bitmapCache = BadgeBitmapCache<Bitmap>(maxEntries = 16) { hr, zone, paused ->
         renderer.render(currentHr = hr, zoneStatus = zone, paused = paused)
-    }
-
-    /** 320px artwork for the MediaSession lockscreen player. */
-    private val lockscreenArtCache = BadgeBitmapCache<Bitmap>(maxEntries = 16) { hr, zone, paused ->
-        renderer.renderLockscreenArt(currentHr = hr, zoneStatus = zone, paused = paused)
-    }
-
-    fun attachMediaSession(token: MediaSessionCompat.Token) {
-        this.mediaSessionToken = token
     }
 
     /** Startup call — plain text notification, before the first processTick runs. */
@@ -63,7 +63,7 @@ class WorkoutNotificationHelper(
         manager.notify(notificationId, buildPlainNotification(text))
     }
 
-    /** Steady-state tick — rich MediaStyle notification. */
+    /** Steady-state tick — zone-tinted chip + rich shade view. */
     fun update(payload: NotifPayload) {
         if (stopped) return
         if (payload == lastPayload) return  // dedup — NotifPayload is a data class
@@ -75,30 +75,12 @@ class WorkoutNotificationHelper(
     fun stop() {
         stopped = true
         bitmapCache.clear()
-        lockscreenArtCache.clear()
         lastPayload = null
     }
 
-    /**
-     * Returns the (cached) 144px badge bitmap used as the notification large-icon.
-     */
+    /** Cached 144px badge bitmap used as the notification large-icon. */
     fun badgeFor(payload: NotifPayload): Bitmap {
         return bitmapCache.get(
-            currentHr = payload.currentHr,
-            zoneStatus = payload.zoneStatus,
-            paused = payload.isPaused,
-        )
-    }
-
-    /**
-     * Returns the (cached) 512px artwork for the MediaSession METADATA_KEY_ALBUM_ART.
-     * This drives the full-width lockscreen media player card — same zone gradient as
-     * the badge but rendered at 4× the resolution so the lockscreen player fills its
-     * card at native quality instead of upscaling a 144px thumbnail.
-     */
-    fun lockscreenArtFor(payload: NotifPayload): Bitmap {
-        if (stopped) return badgeFor(payload)  // fallback to cheap badge on stop race
-        return lockscreenArtCache.get(
             currentHr = payload.currentHr,
             zoneStatus = payload.zoneStatus,
             paused = payload.isPaused,
@@ -110,20 +92,20 @@ class WorkoutNotificationHelper(
     // ------------------------------------------------------------------
 
     private fun buildPlainNotification(text: String): Notification {
-        return baseBuilder()
+        return baseBuilder(accent = CHIP_NEUTRAL)
             .setContentTitle("Cardea")
             .setContentText(text)
             .build()
     }
 
     private fun buildRichNotification(payload: NotifPayload): Notification {
+        val accent = chipColorFor(payload)
         val badge = badgeFor(payload)
 
-        val builder = baseBuilder()
+        val builder = baseBuilder(accent = accent)
             .setContentTitle(payload.titleText)
             .setContentText(payload.subtitleText)
             .setLargeIcon(badge)
-            .setColorized(true) // Tints the card background with setColor() accent — Spotify-style
             .addAction(buildPauseResumeAction(payload.isPaused))
 
         // Progress bar — indeterminate for free run / unknown total
@@ -135,19 +117,10 @@ class WorkoutNotificationHelper(
             payload.isIndeterminate,
         )
 
-        // Attach MediaStyle if we have a session token
-        val token = mediaSessionToken
-        if (token != null) {
-            val style = MediaStyle()
-                .setMediaSession(token)
-                .setShowActionsInCompactView(0) // Pause/Resume visible in compact
-            builder.setStyle(style)
-        }
-
         return builder.build()
     }
 
-    private fun baseBuilder(): NotificationCompat.Builder {
+    private fun baseBuilder(accent: Int): NotificationCompat.Builder {
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -157,7 +130,8 @@ class WorkoutNotificationHelper(
         )
         return NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notif_cardea)
-            .setColor(ContextCompat.getColor(context, R.color.cardea_notif_accent))
+            .setColor(accent)
+            .setColorized(true) // Tints the chip background + shade header with the zone colour
             .setContentIntent(pendingIntent)
             .setOnlyAlertOnce(true)
             .setOngoing(true)
@@ -204,19 +178,47 @@ class WorkoutNotificationHelper(
         ).apply {
             description = "Active workout tracking"
             setShowBadge(false)
-            // Suppress the default notification sound — we don't want a ding on workout start.
-            // IMPORTANCE_DEFAULT is needed for full-width MediaStyle rendering, but the sound
-            // channel is muted. setOnlyAlertOnce(true) on the builder prevents repeat alerts
-            // on subsequent updates anyway; this just silences the first post too.
+            // IMPORTANCE_DEFAULT is required so the chip renders as a first-class Live Update
+            // rather than a silent status-bar-only notification. Sound is muted because we
+            // never want the channel to ding on workout start. setOnlyAlertOnce(true) on the
+            // builder already silences repeat updates.
             setSound(null, null)
         }
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
 
+    // ------------------------------------------------------------------
+    // Zone → chip colour
+    // ------------------------------------------------------------------
+
+    /**
+     * Maps zone state to the chip tint. Runners read these conventionally:
+     * green = on target, red = too hot (slow down), amber = too easy (push), grey = no signal.
+     * Paused overrides zone state so the chip reads as inactive.
+     */
+    private fun chipColorFor(payload: NotifPayload): Int {
+        if (payload.isPaused) return CHIP_NEUTRAL
+        return when (payload.zoneStatus) {
+            ZoneStatus.IN_ZONE -> CHIP_GREEN
+            ZoneStatus.ABOVE_ZONE -> CHIP_RED
+            ZoneStatus.BELOW_ZONE -> CHIP_AMBER
+            ZoneStatus.NO_DATA -> CHIP_NEUTRAL
+        }
+    }
+
     companion object {
         private const val REQUEST_OPEN = 1001
         private const val REQUEST_PAUSE = 1002
         private const val REQUEST_RESUME = 1003
+
+        // Canonical source: ui/theme/Color.kt (ZoneGreen, ZoneAmber, ZoneRed).
+        // Duplicated here as raw ints because this class runs service-side
+        // and cannot import androidx.compose.ui.graphics.Color.
+        // Keep in sync with Color.kt — if the palette changes, update both places.
+        private const val CHIP_GREEN = 0xFF22C55E.toInt()    // ZoneGreen
+        private const val CHIP_AMBER = 0xFFFACC15.toInt()    // ZoneAmber
+        private const val CHIP_RED = 0xFFEF4444.toInt()      // ZoneRed
+        private const val CHIP_NEUTRAL = 0xFF52525B.toInt()  // slate-600 — paused / no data
     }
 }

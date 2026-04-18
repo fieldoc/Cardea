@@ -19,7 +19,7 @@ data class NotifPayload(
     val currentHr: Int,
     /** Drives the badge gradient and rim accent. */
     val zoneStatus: ZoneStatus,
-    /** Seconds since workout start (pauses subtracted). Used for MediaSession position + progress bar. */
+    /** Seconds since workout start (pauses subtracted). Used for the notification progress bar. */
     val elapsedSeconds: Long,
     /** Total planned duration in seconds. 0 for free run / unknown. */
     val totalSeconds: Long,
