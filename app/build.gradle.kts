@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.7.0"
+        versionCode = 9
+        versionName = "0.8.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.7.0: Smarter HRmax auto-calibration — the engine no longer drifts your HRmax upward on moderate-effort runs (old algorithm was silently pushing you at the wrong heart rates on subsequent workouts). New post-workout banner surfaces HRmax updates when they happen. Bootcamp dashboard now shows your current tier, CTL progress within the tier, and auto-promotion prompts when you're ready to level up. 50+ audit fixes across the adaptive engine, coaching events, achievements, cloud backup, partner flow, and post-run summary. New internal Science Constants Register documents every physiological constant's source to prevent future drift."
+                releaseNotes = "v0.8.0: Voice coaching rewrite — clearer 'Above zone - HR falling' phrasing that tells you both where you are AND which direction HR is trending; MEDIUM/HIGH projection confidence now use distinct verbs ('trending up' vs 'climbing') so you can hear the urgency tier. Alert logic smarter: SLOW_DOWN/SPEED_UP suppressed when HR is already self-correcting (no more badgering while you're on it) and when pace drops to walk-break territory (no more 'speed up' during a planned walk). New user settings for in-zone confirm cadence (Frequent/Standard/Reduced) and tier-1 voice at Minimal verbosity. Auto-pause now speaks 'Run autopaused' / 'Run resumed' so you know what's happening without looking. Lockscreen notification rewritten as a full-width Spotify-style MediaStyle card with gradient HR art and zone badge — legible at a glance while running. Workout timer hardening: no more ticking during the countdown, correct active duration when you stop mid-pause (paused time now properly excluded from all displays), countdown overlay appears instantly on Start Run. Post-run summary: delete confirmation, clearer exit flow, consistent naming. Partner backup/restore fixes: partner UIDs now backed up and bidirectional links restored after UID change. Predictive warning fixes: no more firing on zone entry or during rapid oscillations. 13 new test cases covering self-correction, walk-break, cadence, and re-entry guidance."
             }
         }
     }
