@@ -230,6 +230,7 @@ class CloudBackupManager @Inject constructor(
                         "trimpScore"             to metrics.trimpScore,
                         "trimpReliable"          to metrics.trimpReliable,
                         "environmentAffected"    to metrics.environmentAffected,
+                        "cueCountsJson"          to metrics.cueCountsJson,
                     )
                 }
 

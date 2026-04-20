@@ -388,6 +388,9 @@ class CloudRestoreManager @Inject constructor(
                     trimpScore           = child.child("trimpScore").getValue(Float::class.java),
                     trimpReliable        = child.child("trimpReliable").getValue(Boolean::class.java) ?: true,
                     environmentAffected  = child.child("environmentAffected").getValue(Boolean::class.java) ?: false,
+                    // Added 2026-04-19. Nullable TEXT of CoachingEvent.name -> count JSON.
+                    // Older backups missing this field restore as null — post-run recap skips them.
+                    cueCountsJson        = child.child("cueCountsJson").getValue(String::class.java),
                 )
                 workoutMetricsDao.upsert(entity)
             }.onFailure { Log.w(TAG, "restoreMetrics failed for key=${child.key}", it) }
