@@ -58,6 +58,10 @@ data class PostRunSummaryUiState(
     val newAchievements: List<AchievementEntity> = emptyList(),
     // Non-null when HRmax was auto-calibrated during this session: Pair(oldMax, newMax)
     val hrMaxDelta: Pair<Int, Int>? = null,
+    // Per-workout counts of coaching cues fired, parsed from WorkoutMetrics.cueCountsJson.
+    // Rendered by SoundsHeardSection on the first three runs only.
+    val cueCounts: Map<com.hrcoach.domain.model.CoachingEvent, Int> = emptyMap(),
+    val showSoundsRecap: Boolean = false,
 )
 
 @HiltViewModel
@@ -113,6 +117,15 @@ class PostRunSummaryViewModel @Inject constructor(
                     ?.average()
                     ?.toFloat()
 
+                // Parse cue counts from the current workout's metrics, and gate the recap
+                // to the user's first 3 non-simulated workouts. The counts live in
+                // WorkoutMetrics.cueCountsJson (populated by WFS at stop time).
+                val cueCounts = parseCueCounts(currentMetrics?.cueCountsJson)
+                val lifetimeWorkoutCount = runCatching {
+                    workoutRepository.countNonSimulated()
+                }.getOrDefault(0)
+                val showSoundsRecap = cueCounts.isNotEmpty() && lifetimeWorkoutCount in 1..3
+
                 _uiState.value = PostRunSummaryUiState(
                     isLoading = false,
                     errorMessage = null,
@@ -126,6 +139,8 @@ class PostRunSummaryViewModel @Inject constructor(
                     similarRunCount = similar.size,
                     comparisons = comparisons,
                     workoutEndTimeMs = workout.endTime,
+                    cueCounts = cueCounts,
+                    showSoundsRecap = showSoundsRecap,
                 )
             }.onFailure {
                 Log.e("PostRunSummaryVM", "Failed to load workout summary", it)
@@ -361,3 +376,29 @@ class PostRunSummaryViewModel @Inject constructor(
 private fun activeDurationSecondsOf(workout: WorkoutEntity): Long =
     workout.activeDurationSeconds.takeIf { it > 0L }
         ?: ((workout.endTime - workout.startTime).coerceAtLeast(0L) / 1000L)
+
+/**
+ * Parses the `cueCountsJson` blob written by WFS at stop time (see CoachingAudioManager
+ * .consumeCueCounts). Returns a best-effort map, dropping any unknown enum keys.
+ * Gson deserializes numeric values as Double by default, hence the `.toInt()`.
+ */
+internal fun parseCueCounts(json: String?): Map<com.hrcoach.domain.model.CoachingEvent, Int> {
+    if (json.isNullOrBlank()) return emptyMap()
+    return runCatching {
+        @Suppress("UNCHECKED_CAST")
+        val raw = com.google.gson.Gson()
+            .fromJson(json, Map::class.java) as? Map<String, Any?>
+            ?: return@runCatching emptyMap<com.hrcoach.domain.model.CoachingEvent, Int>()
+        raw.mapNotNull { (k, v) ->
+            val event = runCatching {
+                com.hrcoach.domain.model.CoachingEvent.valueOf(k)
+            }.getOrNull() ?: return@mapNotNull null
+            val count = when (v) {
+                is Number -> v.toInt()
+                is String -> v.toIntOrNull() ?: return@mapNotNull null
+                else -> return@mapNotNull null
+            }
+            if (count <= 0) null else event to count
+        }.toMap()
+    }.getOrDefault(emptyMap())
+}

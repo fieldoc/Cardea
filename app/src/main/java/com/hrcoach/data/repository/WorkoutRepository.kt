@@ -47,6 +47,9 @@ class WorkoutRepository @Inject constructor(
         return workoutDao.getAllWorkoutsOnce().count { it.startTime >= weekStartMs && it.endTime > 0 }
     }
 
+    /** Lifetime count of non-simulated workouts. Used by post-run recap's "first 3 runs" gate. */
+    suspend fun countNonSimulated(): Int = workoutDao.getWorkoutCount()
+
     suspend fun cleanupOrphanedWorkouts() {
         val orphans = workoutDao.getOrphanedWorkouts()
         for (orphan in orphans) {

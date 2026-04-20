@@ -666,6 +666,9 @@ fun HrCoachNavGraph(
                             }
                         }
                     },
+                    onNavigateToSoundLibrary = {
+                        navController.navigate(Routes.SOUND_LIBRARY) { launchSingleTop = true }
+                    },
                     viewModel = postRunViewModel
                 )
             }

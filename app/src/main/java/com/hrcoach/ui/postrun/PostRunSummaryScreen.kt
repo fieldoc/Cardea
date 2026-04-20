@@ -87,6 +87,7 @@ fun PostRunSummaryScreen(
     onViewHistory: () -> Unit,
     onDone: () -> Unit,
     onBack: () -> Unit,
+    onNavigateToSoundLibrary: () -> Unit = {},
     viewModel: PostRunSummaryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -329,6 +330,13 @@ fun PostRunSummaryScreen(
                                     }
                                 }
                             }
+                        }
+
+                        if (uiState.showSoundsRecap) {
+                            SoundsHeardSection(
+                                counts = uiState.cueCounts,
+                                onSeeLibrary = onNavigateToSoundLibrary
+                            )
                         }
 
                         Row(
