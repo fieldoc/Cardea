@@ -143,6 +143,17 @@ fun ActiveWorkoutScreen(
             SimulationOverlay(modifier = Modifier.align(Alignment.TopCenter).zIndex(10f))
         }
 
+        // Transient cue banner — visible whenever a coaching event fires.
+        // Ignores voice verbosity: this is a transparency feature.
+        CueBannerOverlay(
+            banner = state.lastCueBanner,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .zIndex(9f)
+        )
+
         // Countdown overlay: shows 3/2/1/GO during startup so users know the run registered
         val countdownSeconds = state.countdownSecondsRemaining
         if (countdownSeconds != null) {
