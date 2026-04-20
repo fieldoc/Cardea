@@ -131,12 +131,36 @@ fun BootcampScreen(
     onBack: () -> Unit,
     onGoToSettings: () -> Unit,
     onGoToManualSetup: (() -> Unit)? = null,
+    onGoToSoundLibrary: () -> Unit = {},
     viewModel: BootcampViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPhaseDetail by remember { mutableStateOf(false) }
     var showDaysSheet by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Stashes the pending start continuation between Start-Run click and
+    // primer-dismissal. Non-null → primer is currently deferring a start action.
+    val pendingStartAction = remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // One-time audio primer gate. Both HR-connect dialog branches (connected or
+    // no monitor) deposit their start lambda into pendingStartAction and call
+    // maybeShowPrimerOrProceed; if the primer has already been shown, that lambda
+    // runs immediately; otherwise the dialog appears and runs it on Finish.
+    if (uiState.showAudioPrimer) {
+        com.hrcoach.ui.workout.AudioPrimerDialog(
+            onFinish = {
+                val proceed = pendingStartAction.value
+                pendingStartAction.value = null
+                viewModel.dismissPrimerThenProceed { proceed?.invoke() }
+            },
+            onSeeLibrary = {
+                pendingStartAction.value = null
+                viewModel.dismissPrimerNoProceed()
+                onGoToSoundLibrary()
+            }
+        )
+    }
 
     // Show swap-rest confirmation
     LaunchedEffect(uiState.swapRestMessage) {
@@ -245,15 +269,29 @@ fun BootcampScreen(
                         onDisconnect = viewModel::disconnectDevice,
                         onStartWithMonitor = {
                             val configJson = uiState.pendingConfigJson ?: return@HrConnectDialog
-                            viewModel.onBootcampWorkoutStarting()
-                            val deviceAddress = viewModel.handoffConnectedDeviceAddress()
-                            onStartWorkout(configJson, deviceAddress)
+                            val proceed = {
+                                viewModel.onBootcampWorkoutStarting()
+                                val deviceAddress = viewModel.handoffConnectedDeviceAddress()
+                                onStartWorkout(configJson, deviceAddress)
+                            }
+                            pendingStartAction.value = proceed
+                            viewModel.maybeShowPrimerOrProceed {
+                                pendingStartAction.value = null
+                                proceed()
+                            }
                         },
                         onStartWithout = {
                             val configJson = uiState.pendingConfigJson ?: return@HrConnectDialog
-                            viewModel.onBootcampWorkoutStarting()
-                            viewModel.dismissHrConnectDialog()
-                            onStartWorkout(configJson, null)
+                            val proceed = {
+                                viewModel.onBootcampWorkoutStarting()
+                                viewModel.dismissHrConnectDialog()
+                                onStartWorkout(configJson, null)
+                            }
+                            pendingStartAction.value = proceed
+                            viewModel.maybeShowPrimerOrProceed {
+                                pendingStartAction.value = null
+                                proceed()
+                            }
                         },
                         onDismiss = viewModel::dismissHrConnectDialog
                     )

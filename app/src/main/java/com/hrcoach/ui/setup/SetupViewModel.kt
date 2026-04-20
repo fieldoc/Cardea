@@ -18,6 +18,7 @@ import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.preset.PresetLibrary
 import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.audio.EarconPlayer
+import com.hrcoach.service.simulation.SimulationController
 import com.hrcoach.util.JsonCodec
 import android.util.Log
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -83,7 +84,9 @@ data class SetupUiState(
     val maxHr: Int? = null,
     val pendingPresetId: String? = null,
     val validation: SetupValidationState = SetupValidationState(),
-    val distanceUnit: com.hrcoach.domain.model.DistanceUnit = com.hrcoach.domain.model.DistanceUnit.KM
+    val distanceUnit: com.hrcoach.domain.model.DistanceUnit = com.hrcoach.domain.model.DistanceUnit.KM,
+    /** True when the one-time audio primer dialog should be rendered. */
+    val showAudioPrimer: Boolean = false
 )
 
 @HiltViewModel
@@ -625,6 +628,49 @@ class SetupViewModel @Inject constructor(
         val parsed = raw.toFloatOrNull() ?: return invalidMessage
         if (parsed <= 0f) return invalidMessage
         return null
+    }
+
+    // ── Audio primer gating ──────────────────────────────────────────────────
+    //
+    // Before the first workout (fresh install), show a 3-slide primer that
+    // explains chime / voice / vibration layering and predictive warnings.
+    // See AudioPrimerDialog. Simulation mode skips the primer entirely (mirrors
+    // the PermissionGate.hasAllRuntimePermissions bypass in NavGraph).
+
+    /**
+     * Call from the Start Run button's onClick.
+     * If the primer hasn't been shown (and we're not in simulation), raises
+     * [SetupUiState.showAudioPrimer] and does NOT invoke [onProceed].
+     * Otherwise invokes [onProceed] immediately.
+     */
+    fun maybeShowPrimerOrProceed(onProceed: () -> Unit) {
+        val audio = audioSettingsRepository.getAudioSettings()
+        if (!audio.audioPrimerShown && !SimulationController.isActive) {
+            _uiState.value = _uiState.value.copy(showAudioPrimer = true)
+        } else {
+            onProceed()
+        }
+    }
+
+    /**
+     * Called from the primer's "Got it — start my run" button. Persists the
+     * primer-shown flag, hides the dialog, then invokes [onProceed] to start
+     * the workout.
+     */
+    fun dismissPrimerThenProceed(onProceed: () -> Unit) {
+        audioSettingsRepository.setAudioPrimerShown(true)
+        _uiState.value = _uiState.value.copy(showAudioPrimer = false)
+        onProceed()
+    }
+
+    /**
+     * Called when the user taps "See all sounds ->" from the primer. Persists
+     * the primer-shown flag, hides the dialog, but does NOT start the workout —
+     * the caller navigates to the sound library screen instead.
+     */
+    fun dismissPrimerNoProceed() {
+        audioSettingsRepository.setAudioPrimerShown(true)
+        _uiState.value = _uiState.value.copy(showAudioPrimer = false)
     }
 
     override fun onCleared() {

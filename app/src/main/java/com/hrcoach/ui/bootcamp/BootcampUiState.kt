@@ -121,7 +121,9 @@ data class BootcampUiState(
     val bleConnectionError: String? = null,
     val pendingConfigJson: String? = null,
     val bleLastKnownDeviceName: String? = null,
-    val bleLastKnownDeviceAddress: String? = null
+    val bleLastKnownDeviceAddress: String? = null,
+    /** True when the one-time audio primer dialog should be rendered. */
+    val showAudioPrimer: Boolean = false
 )
 
 data class SessionUiItem(

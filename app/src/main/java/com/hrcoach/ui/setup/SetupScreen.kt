@@ -137,6 +137,7 @@ fun SetupScreen(
     isWideLayout: Boolean,
     onStartWorkout: (configJson: String, deviceAddress: String?) -> Unit,
     onGoToBootcamp: () -> Unit,
+    onGoToSoundLibrary: () -> Unit = {},
     viewModel: SetupViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -156,14 +157,32 @@ fun SetupScreen(
     )
     val canStart = state.validation.canStartWorkout
 
-    // Reusable start action — return@run is the Kotlin idiom for early return in a lambda
-    val doStartWorkout: () -> Unit = {
+    // Core start action — builds the config JSON, saves audio settings, hands off
+    // the BLE device, and fires the onStartWorkout callback. Gated by the primer
+    // via `requestStartWorkout` below.
+    val proceedWithStart: () -> Unit = {
         run {
             val configJson = viewModel.buildConfigJsonOrNull() ?: return@run
             viewModel.saveAudioSettings()
             val deviceAddress = viewModel.handoffConnectedDeviceAddress()
             onStartWorkout(configJson, deviceAddress)
         }
+    }
+
+    // Button click handler — shows the one-time audio primer on first run,
+    // otherwise proceeds directly.
+    val doStartWorkout: () -> Unit = {
+        viewModel.maybeShowPrimerOrProceed(proceedWithStart)
+    }
+
+    if (state.showAudioPrimer) {
+        com.hrcoach.ui.workout.AudioPrimerDialog(
+            onFinish = { viewModel.dismissPrimerThenProceed(proceedWithStart) },
+            onSeeLibrary = {
+                viewModel.dismissPrimerNoProceed()
+                onGoToSoundLibrary()
+            }
+        )
     }
 
     Box(

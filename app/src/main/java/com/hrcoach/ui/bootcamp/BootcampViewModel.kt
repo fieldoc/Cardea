@@ -6,6 +6,7 @@ import com.hrcoach.data.firebase.CloudBackupManager
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
+import com.hrcoach.data.repository.AudioSettingsRepository
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
@@ -37,6 +38,7 @@ import com.hrcoach.domain.model.BootcampGoal
 import com.hrcoach.domain.model.TrainingPhase
 import com.hrcoach.service.BleConnectionCoordinator
 import com.hrcoach.service.WorkoutState
+import com.hrcoach.service.simulation.SimulationController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -68,7 +70,8 @@ class BootcampViewModel @Inject constructor(
     private val achievementEvaluator: AchievementEvaluator,
     private val notificationManager: BootcampNotificationManager,
     private val bleCoordinator: BleConnectionCoordinator,
-    private val cloudBackupManager: CloudBackupManager
+    private val cloudBackupManager: CloudBackupManager,
+    private val audioSettingsRepository: AudioSettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -1349,6 +1352,49 @@ class BootcampViewModel @Inject constructor(
                 bleConnectionError = null
             )
         }
+    }
+
+    // ── Audio primer gating ──────────────────────────────────────────────────
+    //
+    // Before the first workout (fresh install), show a 3-slide primer that
+    // explains chime / voice / vibration layering and predictive warnings.
+    // See AudioPrimerDialog. Simulation mode skips the primer entirely (mirrors
+    // the PermissionGate.hasAllRuntimePermissions bypass in NavGraph).
+
+    /**
+     * Call from the bootcamp "start workout" entry points.
+     * If the primer hasn't been shown (and we're not in simulation), raises
+     * [BootcampUiState.showAudioPrimer] and does NOT invoke [onProceed].
+     * Otherwise invokes [onProceed] immediately.
+     */
+    fun maybeShowPrimerOrProceed(onProceed: () -> Unit) {
+        val audio = audioSettingsRepository.getAudioSettings()
+        if (!audio.audioPrimerShown && !SimulationController.isActive) {
+            _uiState.update { it.copy(showAudioPrimer = true) }
+        } else {
+            onProceed()
+        }
+    }
+
+    /**
+     * Called from the primer's "Got it — start my run" button. Persists the
+     * primer-shown flag, hides the dialog, then invokes [onProceed] to start
+     * the workout.
+     */
+    fun dismissPrimerThenProceed(onProceed: () -> Unit) {
+        audioSettingsRepository.setAudioPrimerShown(true)
+        _uiState.update { it.copy(showAudioPrimer = false) }
+        onProceed()
+    }
+
+    /**
+     * Called when the user taps "See all sounds ->" from the primer. Persists
+     * the primer-shown flag, hides the dialog, but does NOT start the workout —
+     * the caller navigates to the sound library screen instead.
+     */
+    fun dismissPrimerNoProceed() {
+        audioSettingsRepository.setAudioPrimerShown(true)
+        _uiState.update { it.copy(showAudioPrimer = false) }
     }
 
     private fun startBleCollectors() {

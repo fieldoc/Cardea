@@ -392,6 +392,11 @@ fun HrCoachNavGraph(
                         navController.navigate(Routes.BOOTCAMP) {
                             launchSingleTop = true
                         }
+                    },
+                    onGoToSoundLibrary = {
+                        navController.navigate(Routes.SOUND_LIBRARY) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }
@@ -551,6 +556,11 @@ fun HrCoachNavGraph(
                     onGoToSettings = { navController.navigate(Routes.BOOTCAMP_SETTINGS) },
                     onGoToManualSetup = {
                         navController.navigate(Routes.SETUP) { launchSingleTop = true }
+                    },
+                    onGoToSoundLibrary = {
+                        navController.navigate(Routes.SOUND_LIBRARY) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

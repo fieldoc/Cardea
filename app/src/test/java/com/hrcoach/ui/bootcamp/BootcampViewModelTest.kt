@@ -51,6 +51,7 @@ class BootcampViewModelTest {
     private val notificationManager: com.hrcoach.service.BootcampNotificationManager = mockk(relaxed = true)
     private val bleCoordinator: BleConnectionCoordinator = mockk(relaxed = true)
     private val cloudBackupManager: com.hrcoach.data.firebase.CloudBackupManager = mockk(relaxed = true)
+    private val audioSettingsRepository: com.hrcoach.data.repository.AudioSettingsRepository = mockk(relaxed = true)
 
     @Before
     fun setUp() {
@@ -77,7 +78,8 @@ class BootcampViewModelTest {
             achievementEvaluator = achievementEvaluator,
             notificationManager = notificationManager,
             bleCoordinator = bleCoordinator,
-            cloudBackupManager = cloudBackupManager
+            cloudBackupManager = cloudBackupManager,
+            audioSettingsRepository = audioSettingsRepository
         )
     }
 
