@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew testDebugUnitTest)",
+      "Bash(./gradlew testDebugUnitTest *)",
+      "Bash(./gradlew compileDebugKotlin)",
+      "Bash(./gradlew compileDebugKotlin *)",
+      "Bash(./gradlew assembleDebug)",
+      "Bash(./gradlew assembleDebug *)",
+      "Bash(./gradlew :app:compileDebugKotlin)",
+      "Bash(./gradlew :app:compileDebugKotlin *)",
+      "Bash(./gradlew test)",
+      "Bash(./gradlew test *)",
+      "Bash(adb devices)",
+      "mcp__plugin_episodic-memory_episodic-memory__read",
+      "mcp__plugin_episodic-memory_episodic-memory__search"
+    ]
+  }
+}
