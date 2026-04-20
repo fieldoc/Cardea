@@ -118,6 +118,7 @@ class CloudBackupManager @Inject constructor(
                     "enableInZoneConfirm"   to audio.enableInZoneConfirm,
                     "inZoneConfirmCadence"  to audio.inZoneConfirmCadence.name,
                     "minimalTierOneVoice"   to audio.minimalTierOneVoice,
+                    "audioPrimerShown"      to audio.audioPrimerShown,
                     "autoPauseEnabled"      to autoPauseRepo.isAutoPauseEnabled(),
                     "themeMode"             to themePrefsRepo.getThemeMode().name,
                 )

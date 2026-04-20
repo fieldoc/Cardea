@@ -17,7 +17,10 @@ data class AudioSettings(
     // fires it should be maximally informative. Set false to restore the classic 3-tier
     // escalation (earcon-only → earcon+voice → earcon+voice+vibration) at MINIMAL; FULL
     // always uses the 3-tier pattern regardless of this flag.
-    val minimalTierOneVoice: Boolean = true
+    val minimalTierOneVoice: Boolean = true,
+    // True after the user sees the first-workout audio primer. Default false for
+    // fresh installs. See AudioPrimerDialog / SetupViewModel for gating logic.
+    val audioPrimerShown: Boolean = false
 )
 
 enum class VoiceVerbosity {

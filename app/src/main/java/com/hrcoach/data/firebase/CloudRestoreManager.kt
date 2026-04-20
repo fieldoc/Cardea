@@ -241,6 +241,9 @@ class CloudRestoreManager @Inject constructor(
                     runCatching { ConfirmCadence.valueOf(it) }.getOrNull()
                 } ?: ConfirmCadence.STANDARD,
                 minimalTierOneVoice   = snap.child("minimalTierOneVoice").getValue(Boolean::class.java) ?: true,
+                // Added 2026-04-19 for audio primer. Missing field on older backups defaults to false,
+                // which will re-show the primer on next workout — acceptable, non-destructive.
+                audioPrimerShown      = snap.child("audioPrimerShown").getValue(Boolean::class.java) ?: false,
             )
             audioSettingsRepo.saveAudioSettings(audio)
         }.onFailure { Log.w(TAG, "restoreSettings: audio failed", it) }
