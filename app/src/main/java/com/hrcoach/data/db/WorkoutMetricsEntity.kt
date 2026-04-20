@@ -37,4 +37,8 @@ data class WorkoutMetricsEntity(
     val trimpScore: Float? = null,
     val trimpReliable: Boolean = true,
     val environmentAffected: Boolean = false,
+    // JSON map of CoachingEvent.name -> count, populated at workout stop from
+    // CoachingAudioManager.consumeCueCounts(). Read by the post-run "Sounds heard today"
+    // section. Null for workouts pre-migration or with no cues (OFF verbosity, etc.).
+    val cueCountsJson: String? = null,
 )

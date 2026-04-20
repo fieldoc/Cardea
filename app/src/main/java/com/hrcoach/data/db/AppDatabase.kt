@@ -11,11 +11,17 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
                 BootcampEnrollmentEntity::class, BootcampSessionEntity::class,
                 AchievementEntity::class],
-    version = 18,
+    version = 19,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workout_metrics ADD COLUMN cueCountsJson TEXT")
+            }
+        }
+
         val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE workouts ADD COLUMN activeDurationSeconds INTEGER NOT NULL DEFAULT 0")
