@@ -72,6 +72,7 @@ private fun WorkoutAdaptiveMetrics.toEntity(): WorkoutMetricsEntity {
         trimpScore = trimpScore,
         trimpReliable = trimpReliable,
         environmentAffected = environmentAffected,
+        cueCountsJson = cueCountsJson,
     )
 }
 
@@ -96,5 +97,6 @@ private fun WorkoutMetricsEntity.toDomain(): WorkoutAdaptiveMetrics {
         trimpScore = trimpScore,
         trimpReliable = trimpReliable,
         environmentAffected = environmentAffected,
+        cueCountsJson = cueCountsJson,
     )
 }

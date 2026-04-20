@@ -9,6 +9,7 @@ import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
+import com.hrcoach.service.WorkoutState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -32,6 +33,19 @@ class CoachingAudioManager(
     private val escalationTracker = EscalationTracker()
     private var currentSettings: AudioSettings = settings
     private var currentWorkoutMode: WorkoutMode = WorkoutMode.STEADY_STATE
+
+    // Per-workout counters of cues that passed the toggle filter. Drained by WFS at
+    // stop time into WorkoutMetrics.cueCountsJson for the post-run "Sounds heard today"
+    // recap. Single-threaded access through the fireEvent pipeline (WFS processTick)
+    // — no synchronization required.
+    private val cueCounts = mutableMapOf<CoachingEvent, Int>()
+
+    /** Called by WFS at stop time. Returns a defensive copy and clears internal state. */
+    fun consumeCueCounts(): Map<CoachingEvent, Int> {
+        val snapshot = cueCounts.toMap()
+        cueCounts.clear()
+        return snapshot
+    }
 
     init {
         applySettings(settings)
@@ -72,6 +86,23 @@ class CoachingAudioManager(
             else -> { /* coaching alerts always pass through */ }
         }
 
+        // Count every cue that *passes* the toggle filter. Read by the post-run recap.
+        cueCounts.merge(event, 1) { a, b -> a + b }
+
+        // Flash the visual banner for every cue. Banner ignores voice verbosity — it's a
+        // transparency feature. Users who silenced voice still want to know what fired
+        // (e.g. SIGNAL_LOST vibration with a "Signal lost" banner).
+        val copy = CueCopy.forEvent(event)
+        WorkoutState.flashCueBanner(
+            CueBanner(
+                event = event,
+                title = copy.title,
+                subtitle = copy.subtitle,
+                kind = copy.kind,
+                firedAtMs = System.currentTimeMillis()
+            )
+        )
+
         val verbosity = currentSettings.voiceVerbosity
 
         when (event) {
@@ -107,7 +138,7 @@ class CoachingAudioManager(
                     }
                 }
                 if (escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION) {
-                    vibrationManager.pulseAlert()
+                    vibrationManager.pulseForEvent(event)
                 }
             }
 
@@ -158,6 +189,18 @@ class CoachingAudioManager(
      * Always plays regardless of voice verbosity — tones use earconVolume which is independent.
      */
     fun playPauseFeedback(paused: Boolean) {
+        // Banner for pause/resume — users asked "what was that chime?" during pauses.
+        // Reuses IN_ZONE_CONFIRM enum to satisfy the event field; this code path does NOT
+        // route through fireEvent, so no cueCounts entry is recorded.
+        WorkoutState.flashCueBanner(
+            CueBanner(
+                event = CoachingEvent.IN_ZONE_CONFIRM,
+                title = if (paused) "Paused" else "Resumed",
+                subtitle = if (paused) "Workout paused — tap resume when ready." else "Workout resumed.",
+                kind = CueBannerKind.INFO,
+                firedAtMs = System.currentTimeMillis()
+            )
+        )
         val volume = currentSettings.earconVolume.coerceIn(0, 100)
         scope.launch {
             // ToneGenerator takes an AudioManager.STREAM_* constant, not an AudioAttributes.USAGE_*

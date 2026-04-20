@@ -890,7 +890,17 @@ class WorkoutForegroundService : LifecycleService() {
                         trimpScore = trimpScore,
                         environmentAffected = environmentAffected
                     )
-                    completeMetrics?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
+                    // Drain cue counts (CoachingEvent.name -> Int) and serialize to JSON for the
+                    // post-run "Sounds heard today" recap. Null when no cues fired (e.g. OFF verbosity
+                    // or a very short run). Must be drained AFTER all fireEvent calls for the session
+                    // are complete; at stopWorkout this is guaranteed because WFS destroys the manager
+                    // just after.
+                    val cueCountsMap = coachingAudioManager?.consumeCueCounts().orEmpty()
+                    val cueCountsJson = if (cueCountsMap.isEmpty()) null
+                        else com.google.gson.Gson().toJson(cueCountsMap.mapKeys { it.key.name })
+
+                    completeMetrics?.copy(cueCountsJson = cueCountsJson)
+                        ?.let { workoutMetricsRepository.saveWorkoutMetrics(it) }
 
                     // --- Update CTL / ATL ---
                     if (trimpScore != null) {

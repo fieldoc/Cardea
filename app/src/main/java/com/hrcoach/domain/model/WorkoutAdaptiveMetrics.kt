@@ -24,5 +24,10 @@ data class WorkoutAdaptiveMetrics(
     val trimpScore: Float? = null,
     val trimpReliable: Boolean = true,
     val environmentAffected: Boolean = false,
+    // JSON map of CoachingEvent.name -> Int count of cues that fired and passed the
+    // toggle filter during the workout. Null when no cues fired or not yet drained.
+    // Populated by WFS at stop time from CoachingAudioManager.consumeCueCounts();
+    // read by the post-run "Sounds heard today" recap.
+    val cueCountsJson: String? = null,
 )
 
