@@ -9,6 +9,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.hrcoach.data.db.BootcampSessionEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -130,7 +131,10 @@ class BootcampNotificationManager @Inject constructor(
     ): Instant {
         val zone = ZoneId.systemDefault()
         val startDate = Instant.ofEpochMilli(startDateMs).atZone(zone).toLocalDate()
-        val sessionDate = startDate.plusDays(((session.weekNumber - 1L) * 7L) + (session.dayOfWeek - 1L))
+        val sessionDate = startDate
+            .with(DayOfWeek.MONDAY)
+            .plusWeeks(session.weekNumber - 1L)
+            .plusDays(session.dayOfWeek - 1L)
         return sessionDate
             .minusDays(1)
             .atTime(18, 0)
