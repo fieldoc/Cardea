@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Notifications
@@ -95,6 +96,7 @@ fun AccountScreen(
     onThemeModeChanged: (ThemeMode) -> Unit = {},
     currentThemeMode: ThemeMode = ThemeMode.SYSTEM,
     onNavigateToSimulation: () -> Unit = {},
+    onNavigateToSoundLibrary: () -> Unit = {},
     viewModel: AccountViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -399,6 +401,43 @@ fun AccountScreen(
                         InfoCueToggle("Workout complete", state.enableWorkoutComplete && cuesEnabled, cuesEnabled) { viewModel.setEnableWorkoutComplete(it) }
                         InfoCueToggle("In-zone confirmation", state.enableInZoneConfirm && cuesEnabled, cuesEnabled) { viewModel.setEnableInZoneConfirm(it) }
                     }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Sound library — preview every coaching cue
+            GlassCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigateToSoundLibrary() },
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.VolumeUp,
+                        contentDescription = null,
+                        tint = CardeaTheme.colors.textSecondary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Sound library",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = CardeaTheme.colors.textPrimary
+                        )
+                        Text(
+                            text = "Preview every coaching cue.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CardeaTheme.colors.textSecondary
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = CardeaTheme.colors.textSecondary
+                    )
                 }
             }
 

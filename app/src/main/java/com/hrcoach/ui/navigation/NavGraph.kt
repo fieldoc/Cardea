@@ -105,6 +105,7 @@ object Routes {
     const val SIMULATION        = "simulation"
     const val ONBOARDING        = "onboarding"
     const val BOOTCAMP_SETTINGS = "bootcamp_settings"
+    const val SOUND_LIBRARY    = "sound_library"
     const val HISTORY_DETAIL   = "history/{workoutId}"
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
 
@@ -493,7 +494,22 @@ fun HrCoachNavGraph(
                         navController.navigate(Routes.SIMULATION) {
                             launchSingleTop = true
                         }
+                    },
+                    onNavigateToSoundLibrary = {
+                        navController.navigate(Routes.SOUND_LIBRARY) {
+                            launchSingleTop = true
+                        }
                     }
+                )
+            }
+
+            composable(
+                route = Routes.SOUND_LIBRARY,
+                enterTransition = { defaultEnter(1) },
+                exitTransition = { defaultExit(1) }
+            ) {
+                com.hrcoach.ui.account.SoundLibraryScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
