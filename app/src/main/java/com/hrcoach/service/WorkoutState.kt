@@ -1,10 +1,16 @@
 package com.hrcoach.service
 
 import com.hrcoach.domain.model.ZoneStatus
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class WorkoutSnapshot(
     val isRunning: Boolean = false,
@@ -31,18 +37,22 @@ data class WorkoutSnapshot(
     // can display the calibration banner; explicitly cleared via clearHrMaxUpdatedDelta()
     // once the ViewModel has consumed it.
     val hrMaxUpdatedDelta: Pair<Int, Int>? = null,
+    // Transient banner shown over the active workout screen for ~3.5 s whenever
+    // a coaching event fires. Auto-cleared by flashCueBanner's own delay coroutine.
+    val lastCueBanner: com.hrcoach.service.audio.CueBanner? = null,
 )
 
 object WorkoutState {
     private val _snapshot = MutableStateFlow(WorkoutSnapshot())
     val snapshot: StateFlow<WorkoutSnapshot> = _snapshot.asStateFlow()
 
-    /**
-     * Sets the session ID of the bootcamp session the user is about to run.
-     * Written by BootcampViewModel before navigating to the active workout screen,
-     * cleared when the workout completes or is discarded.
-     * Stored inside [WorkoutSnapshot] so all observers receive the change reactively.
-     */
+    // Supervisor scope so a cancellation of one banner-clear coroutine doesn't
+    // take down sibling workout-level coroutines. IO is fine — all we do is delay.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var bannerClearJob: Job? = null
+
+    private const val BANNER_VISIBLE_MS = 3500L
+
     fun setPendingBootcampSessionId(id: Long?) {
         _snapshot.update { it.copy(pendingBootcampSessionId = id) }
     }
@@ -63,6 +73,8 @@ object WorkoutState {
                 hrMaxUpdatedDelta = current.hrMaxUpdatedDelta
             )
         }
+        bannerClearJob?.cancel()
+        bannerClearJob = null
     }
 
     fun clearCompletedWorkoutId() {
@@ -71,5 +83,23 @@ object WorkoutState {
 
     fun clearHrMaxUpdatedDelta() {
         _snapshot.update { it.copy(hrMaxUpdatedDelta = null) }
+    }
+
+    /**
+     * Sets [WorkoutSnapshot.lastCueBanner] and schedules a clear after [BANNER_VISIBLE_MS].
+     * Cancels any previous pending clear so the new banner always gets its full visibility
+     * window regardless of what fired before it.
+     */
+    fun flashCueBanner(banner: com.hrcoach.service.audio.CueBanner) {
+        _snapshot.update { it.copy(lastCueBanner = banner) }
+        bannerClearJob?.cancel()
+        bannerClearJob = scope.launch {
+            delay(BANNER_VISIBLE_MS)
+            // Only clear if this is still the banner we set (another may have replaced it).
+            _snapshot.update { current ->
+                if (current.lastCueBanner?.firedAtMs == banner.firedAtMs) current.copy(lastCueBanner = null)
+                else current
+            }
+        }
     }
 }
