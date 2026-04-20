@@ -183,7 +183,7 @@ class VoicePlayerEventTextTest {
     @Test
     fun `SIGNAL_LOST returns fixed text`() {
         assertEquals(
-            "Signal lost",
+            "Heart-rate signal lost",
             VoicePlayer.eventText(CoachingEvent.SIGNAL_LOST, null, WorkoutMode.STEADY_STATE)
         )
     }
@@ -191,7 +191,7 @@ class VoicePlayerEventTextTest {
     @Test
     fun `SIGNAL_REGAINED returns fixed text`() {
         assertEquals(
-            "Signal regained",
+            "Heart-rate signal back",
             VoicePlayer.eventText(CoachingEvent.SIGNAL_REGAINED, null, WorkoutMode.STEADY_STATE)
         )
     }
@@ -199,7 +199,7 @@ class VoicePlayerEventTextTest {
     @Test
     fun `SEGMENT_CHANGE returns fixed text`() {
         assertEquals(
-            "Next segment",
+            "Next interval",
             VoicePlayer.eventText(CoachingEvent.SEGMENT_CHANGE, null, WorkoutMode.DISTANCE_PROFILE)
         )
     }

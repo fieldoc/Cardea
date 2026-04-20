@@ -164,20 +164,33 @@ class VoicePlayer(context: Context) {
         guidanceText: String?,
         workoutMode: WorkoutMode,
         paceMinPerKm: Float? = null,
-        distanceUnit: DistanceUnit = DistanceUnit.KM
+        distanceUnit: DistanceUnit = DistanceUnit.KM,
+        hrSlopeBpmPerMin: Float = 0f,
     ) {
         if (!shouldSpeak(event, verbosity)) return
 
-        val text = if (event == CoachingEvent.KM_SPLIT) {
-            // guidanceText carries the split number as a string (e.g. "5")
-            val splitNum = guidanceText?.toIntOrNull()
-            if (splitNum != null) {
-                splitText(splitNum, workoutMode, distanceUnit, paceMinPerKm)
-            } else {
-                eventText(event, guidanceText, workoutMode, distanceUnit)
+        val text = when {
+            event == CoachingEvent.KM_SPLIT -> {
+                // guidanceText carries the split number as a string (e.g. "5")
+                val splitNum = guidanceText?.toIntOrNull()
+                if (splitNum != null) {
+                    splitText(splitNum, workoutMode, distanceUnit, paceMinPerKm)
+                } else {
+                    eventText(event, guidanceText, workoutMode, distanceUnit)
+                }
             }
-        } else {
-            eventText(event, guidanceText, workoutMode, distanceUnit)
+            event == CoachingEvent.PREDICTIVE_WARNING && guidanceText.isNullOrBlank() -> {
+                // Direction-aware fallback when adaptive guidance is absent.
+                // Positive slope = HR climbing → runner should ease off.
+                // Negative slope = HR dropping → runner should pick up pace.
+                // Zero (unlikely in practice) defaults to climbing phrasing for safety.
+                if (hrSlopeBpmPerMin < 0f) {
+                    "Pace dropping. Pick it up to hold zone."
+                } else {
+                    "Pace climbing. Ease off to hold zone."
+                }
+            }
+            else -> eventText(event, guidanceText, workoutMode, distanceUnit)
         }
 
         if (text.isBlank()) return
@@ -338,9 +351,9 @@ class VoicePlayer(context: Context) {
                 CoachingEvent.HALFWAY -> "Halfway"
                 CoachingEvent.WORKOUT_COMPLETE -> "Workout complete"
                 CoachingEvent.IN_ZONE_CONFIRM -> guidanceText ?: "Pace looks good"
-                CoachingEvent.SIGNAL_LOST -> "Signal lost"
-                CoachingEvent.SIGNAL_REGAINED -> "Signal regained"
-                CoachingEvent.SEGMENT_CHANGE -> "Next segment"
+                CoachingEvent.SIGNAL_LOST -> "Heart-rate signal lost"
+                CoachingEvent.SIGNAL_REGAINED -> "Heart-rate signal back"
+                CoachingEvent.SEGMENT_CHANGE -> "Next interval"
                 CoachingEvent.KM_SPLIT -> guidanceText ?: if (unit == DistanceUnit.MI) "Mile" else "Kilometer"
             }
         }

@@ -564,6 +564,11 @@ class WorkoutForegroundService : LifecycleService() {
         }
 
         if (!isAutoPaused) {
+            // Publish current HR slope to the audio manager so the PREDICTIVE_WARNING
+            // fallback can pick direction-aware phrasing ("ease off" vs "pick it up")
+            // when adaptive guidance text is absent. Must precede any fireEvent call
+            // that could emit PREDICTIVE_WARNING below.
+            coachingAudioManager?.setHrSlope(adaptiveResult?.hrSlopeBpmPerMin ?: 0f)
             coachingEventRouter.route(
                 workoutConfig = workoutConfig,
                 connected = tick.connected,

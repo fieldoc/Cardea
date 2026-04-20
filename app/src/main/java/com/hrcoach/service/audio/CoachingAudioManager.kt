@@ -40,6 +40,19 @@ class CoachingAudioManager(
     // — no synchronization required.
     private val cueCounts = mutableMapOf<CoachingEvent, Int>()
 
+    /**
+     * Most-recent HR slope (BPM/min) observed on the current tick, set by WFS before
+     * each fireEvent call. Used by VoicePlayer's PREDICTIVE_WARNING fallback to pick
+     * between "ease off" and "pick it up" phrasing when guidanceText is null/blank.
+     * Single-threaded access through the WFS processTick pipeline — no sync needed.
+     */
+    private var lastHrSlopeBpmPerMin: Float = 0f
+
+    /** Called by WFS each tick so direction-aware fallbacks have current slope. */
+    fun setHrSlope(slope: Float) {
+        lastHrSlopeBpmPerMin = slope
+    }
+
     /** Called by WFS at stop time. Returns a defensive copy and clears internal state. */
     fun consumeCueCounts(): Map<CoachingEvent, Int> {
         val snapshot = cueCounts.toMap()
@@ -133,7 +146,13 @@ class CoachingAudioManager(
                     scope.launch {
                         delay(300L)
                         withContext(NonCancellable) {
-                            voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
+                            voicePlayer.speakEvent(
+                                event,
+                                guidanceText,
+                                currentWorkoutMode,
+                                distanceUnit = distanceUnit,
+                                hrSlopeBpmPerMin = lastHrSlopeBpmPerMin,
+                            )
                         }
                     }
                 }
@@ -146,7 +165,13 @@ class CoachingAudioManager(
                 // Escalation reset is already handled by AlertPolicy.onResetEscalation callback
                 // (which fires when IN_ZONE is first detected, before this event is emitted).
                 if (shouldPlayEarcon(verbosity)) earconPlayer.play(event)
-                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, distanceUnit = distanceUnit)
+                voicePlayer.speakEvent(
+                    event,
+                    guidanceText,
+                    currentWorkoutMode,
+                    distanceUnit = distanceUnit,
+                    hrSlopeBpmPerMin = lastHrSlopeBpmPerMin,
+                )
             }
 
             CoachingEvent.SIGNAL_LOST -> {
@@ -160,7 +185,14 @@ class CoachingAudioManager(
                 //     we don't violate that with audio. MINIMAL/FULL get earcon + voice as
                 //     normal CRITICAL-priority events.
                 if (shouldPlayEarcon(verbosity)) earconPlayer.play(event)
-                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm, distanceUnit)
+                voicePlayer.speakEvent(
+                    event,
+                    guidanceText,
+                    currentWorkoutMode,
+                    paceMinPerKm,
+                    distanceUnit,
+                    hrSlopeBpmPerMin = lastHrSlopeBpmPerMin,
+                )
                 vibrationManager.pulseAlert()
             }
 
@@ -174,7 +206,14 @@ class CoachingAudioManager(
                     verbosity == VoiceVerbosity.MINIMAL && priority == VoiceEventPriority.INFORMATIONAL
 
                 if (shouldPlayEarcon(verbosity) && !earconSuppressedByMinimal) earconPlayer.play(event)
-                voicePlayer.speakEvent(event, guidanceText, currentWorkoutMode, paceMinPerKm, distanceUnit)
+                voicePlayer.speakEvent(
+                    event,
+                    guidanceText,
+                    currentWorkoutMode,
+                    paceMinPerKm,
+                    distanceUnit,
+                    hrSlopeBpmPerMin = lastHrSlopeBpmPerMin,
+                )
             }
         }
     }
