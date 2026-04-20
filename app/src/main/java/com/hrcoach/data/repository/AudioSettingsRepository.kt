@@ -33,6 +33,7 @@ class AudioSettingsRepository @Inject constructor(
         prefs.edit().putString(PREF_AUDIO_SETTINGS_JSON, JsonCodec.gson.toJson(settings)).apply()
     }
 
+    @Synchronized
     fun setAudioPrimerShown(shown: Boolean) {
         val current = getAudioSettings()
         saveAudioSettings(current.copy(audioPrimerShown = shown))
