@@ -46,13 +46,22 @@ object WorkoutState {
     private val _snapshot = MutableStateFlow(WorkoutSnapshot())
     val snapshot: StateFlow<WorkoutSnapshot> = _snapshot.asStateFlow()
 
-    // Supervisor scope so a cancellation of one banner-clear coroutine doesn't
-    // take down sibling workout-level coroutines. IO is fine — all we do is delay.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /*
+     * Supervisor scope so a cancellation of one banner-clear coroutine doesn't
+     * take down sibling workout-level coroutines. Default is appropriate — no
+     * blocking IO, just delay + StateFlow.update.
+     */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var bannerClearJob: Job? = null
 
     private const val BANNER_VISIBLE_MS = 3500L
 
+    /**
+     * Sets the session ID of the bootcamp session the user is about to run.
+     * Written by BootcampViewModel before navigating to the active workout screen,
+     * cleared when the workout completes or is discarded.
+     * Stored inside [WorkoutSnapshot] so all observers receive the change reactively.
+     */
     fun setPendingBootcampSessionId(id: Long?) {
         _snapshot.update { it.copy(pendingBootcampSessionId = id) }
     }
@@ -89,6 +98,12 @@ object WorkoutState {
      * Sets [WorkoutSnapshot.lastCueBanner] and schedules a clear after [BANNER_VISIBLE_MS].
      * Cancels any previous pending clear so the new banner always gets its full visibility
      * window regardless of what fired before it.
+     *
+     * **Caller contract:** must be invoked from a single thread (typically the WFS tick
+     * pipeline). `bannerClearJob` mutation is not synchronized — concurrent callers can
+     * race and orphan a pending clear. The `firedAtMs` equality guard inside the clear
+     * coroutine catches most observable symptoms but isn't bulletproof at millisecond
+     * resolution. Broaden callers only with a `synchronized(...)` fix applied here.
      */
     fun flashCueBanner(banner: com.hrcoach.service.audio.CueBanner) {
         _snapshot.update { it.copy(lastCueBanner = banner) }
