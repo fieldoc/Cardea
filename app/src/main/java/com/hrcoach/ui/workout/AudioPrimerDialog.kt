@@ -213,7 +213,9 @@ private fun Slide2() {
         Text(
             text = "If you drift out of your target zone, Cardea gives you a chime and a voice cue.\n\n" +
                 "Still out 30 seconds later? You'll hear it again, this time with a vibration \u2014 a " +
-                "stronger nudge so you don't miss it.",
+                "stronger nudge so you don't miss it.\n\n" +
+                "On Full voice, the cue also tells you how far off you are \u2014 for example, " +
+                "\u201CSpeed up. 9 under.\u201D",
             style = MaterialTheme.typography.bodyMedium,
             color = CardeaTheme.colors.textSecondary
         )

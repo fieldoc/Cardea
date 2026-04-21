@@ -657,7 +657,17 @@ class WorkoutForegroundService : LifecycleService() {
                     // Reset predictive cooldown so the two alert systems don't fire back-to-back.
                     coachingEventRouter.resetPredictiveWarningTimer()
                     val pace = adaptiveResult?.currentPaceMinPerKm
-                    coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
+                    // Thread current+target HR so VoicePlayer can append "N under/over" on FULL
+                    // verbosity. `target` is the single-BPM target computed upstream; `tick.hr`
+                    // is the same raw HR that drove this zoneStatus — keeping the numbers
+                    // consistent with what triggered the alert.
+                    coachingAudioManager?.fireEvent(
+                        event,
+                        eventGuidance,
+                        paceMinPerKm = pace,
+                        currentHr = if (tick.connected && tick.hr > 0) tick.hr else null,
+                        targetHr = target,
+                    )
                     coachingEventRouter.noteExternalAlert(nowMs)
                 },
                 // Threaded through so AlertPolicy can suppress SLOW_DOWN/SPEED_UP when HR is

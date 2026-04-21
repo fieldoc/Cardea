@@ -213,6 +213,189 @@ class VoicePlayerEventTextTest {
     }
 }
 
+/**
+ * HR-context suffix for zone alerts ("Speed up. 9 under." / "Slow down. 12 over.").
+ * Only applies to SPEED_UP / SLOW_DOWN, only on FULL verbosity, only when both current
+ * and target HR are known, and only when |delta| >= 3 (smaller deltas would be noise
+ * and the AlertPolicy threshold filters most of them anyway).
+ */
+class VoicePlayerHrContextTest {
+
+    @Test
+    fun `SPEED_UP with FULL appends BPM below target`() {
+        assertEquals(
+            "Speed up. 9 under.",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 141,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `SLOW_DOWN with FULL appends BPM above target`() {
+        assertEquals(
+            "Slow down. 12 over.",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SLOW_DOWN,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 162,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `SPEED_UP with FULL preserves adaptive guidance before suffix`() {
+        assertEquals(
+            "Pick it up. 9 under.",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = "Pick it up",
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 141,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `guidance ending in period does not produce double period`() {
+        assertEquals(
+            "Push harder. 9 under.",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = "Push harder.",
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 141,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `MINIMAL verbosity omits HR context suffix`() {
+        assertEquals(
+            "Speed up",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 141,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.MINIMAL
+            )
+        )
+    }
+
+    @Test
+    fun `null currentHr omits suffix even on FULL`() {
+        assertEquals(
+            "Speed up",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = null,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `null targetHr omits suffix even on FULL`() {
+        assertEquals(
+            "Speed up",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 141,
+                targetHr = null,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `delta of 2 BPM omits suffix as noise`() {
+        assertEquals(
+            "Speed up",
+            VoicePlayer.eventText(
+                event = CoachingEvent.SPEED_UP,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 148,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `RETURN_TO_ZONE never appends HR context`() {
+        assertEquals(
+            "Back in zone",
+            VoicePlayer.eventText(
+                event = CoachingEvent.RETURN_TO_ZONE,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 145,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `PREDICTIVE_WARNING never appends HR context`() {
+        assertEquals(
+            "Watch your pace",
+            VoicePlayer.eventText(
+                event = CoachingEvent.PREDICTIVE_WARNING,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 148,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `IN_ZONE_CONFIRM never appends HR context`() {
+        assertEquals(
+            "Pace looks good",
+            VoicePlayer.eventText(
+                event = CoachingEvent.IN_ZONE_CONFIRM,
+                guidanceText = null,
+                mode = WorkoutMode.STEADY_STATE,
+                currentHr = 148,
+                targetHr = 150,
+                verbosity = VoiceVerbosity.FULL
+            )
+        )
+    }
+
+    @Test
+    fun `existing callers without HR params still get baseline text`() {
+        // Backward compatibility: existing VoicePlayer tests must keep passing.
+        assertEquals(
+            "Speed up",
+            VoicePlayer.eventText(CoachingEvent.SPEED_UP, null, WorkoutMode.STEADY_STATE)
+        )
+    }
+}
+
 class VoicePlayerBriefingTextTest {
 
     @Test

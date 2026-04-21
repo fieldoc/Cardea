@@ -176,6 +176,8 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
         paceMinPerKm: Float? = null,
         distanceUnit: DistanceUnit = DistanceUnit.KM,
         hrSlopeBpmPerMin: Float = 0f,
+        currentHr: Int? = null,
+        targetHr: Int? = null,
     ) {
         if (!shouldSpeak(event, verbosity)) {
             debug?.logLine("TTS event=${event.name} action=SKIP reason=verbosity verbosity=${verbosity.name}")
@@ -189,7 +191,7 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
                 if (splitNum != null) {
                     splitText(splitNum, workoutMode, distanceUnit, paceMinPerKm)
                 } else {
-                    eventText(event, guidanceText, workoutMode, distanceUnit)
+                    eventText(event, guidanceText, workoutMode, distanceUnit, currentHr, targetHr, verbosity)
                 }
             }
             event == CoachingEvent.PREDICTIVE_WARNING && guidanceText.isNullOrBlank() -> {
@@ -203,7 +205,7 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
                     "Pace climbing. Ease off to hold zone."
                 }
             }
-            else -> eventText(event, guidanceText, workoutMode, distanceUnit)
+            else -> eventText(event, guidanceText, workoutMode, distanceUnit, currentHr, targetHr, verbosity)
         }
 
         if (text.isBlank()) {
@@ -375,14 +377,38 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
         }
 
         /**
+         * Minimum BPM delta that the HR-context suffix will speak. Below this, the
+         * "under/over" number is noise — buffer-zone thresholds and BLE jitter alone
+         * account for 1-2 BPM differences, and "Speed up. 1 under." reads as a nitpick.
+         * AlertPolicy's continuous-out-of-zone gate means real alerts typically fire at
+         * delta >= bufferBpm+1 (default >= 6), so this floor is rarely hit in practice.
+         */
+        private const val HR_CONTEXT_MIN_DELTA_BPM: Int = 3
+
+        /**
          * Builds spoken text for a coaching event.
          *
          * Zone-alert events (SPEED_UP, SLOW_DOWN, RETURN_TO_ZONE, PREDICTIVE_WARNING)
          * use the provided [guidanceText] if available, falling back to a fixed string.
          * Other events always use fixed text.
+         *
+         * When [verbosity] is [VoiceVerbosity.FULL] and both [currentHr] and [targetHr] are
+         * known, SPEED_UP / SLOW_DOWN cues get a BPM-delta suffix: "Speed up. 9 under." /
+         * "Slow down. 12 over." This lets the runner hear *how far* off target they are,
+         * not just the direction. Gated to FULL because MINIMAL users opted for terser
+         * cues; restricted to SPEED_UP/SLOW_DOWN because those are the only two events
+         * whose magnitude matters to the immediate pace correction.
          */
-        fun eventText(event: CoachingEvent, guidanceText: String?, mode: WorkoutMode, unit: DistanceUnit = DistanceUnit.KM): String {
-            return when (event) {
+        fun eventText(
+            event: CoachingEvent,
+            guidanceText: String?,
+            mode: WorkoutMode,
+            unit: DistanceUnit = DistanceUnit.KM,
+            currentHr: Int? = null,
+            targetHr: Int? = null,
+            verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL,
+        ): String {
+            val base = when (event) {
                 CoachingEvent.SPEED_UP -> guidanceText ?: "Speed up"
                 CoachingEvent.SLOW_DOWN -> guidanceText ?: "Slow down"
                 CoachingEvent.RETURN_TO_ZONE -> guidanceText ?: "Back in zone"
@@ -395,6 +421,27 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
                 CoachingEvent.SEGMENT_CHANGE -> "Next interval"
                 CoachingEvent.KM_SPLIT -> guidanceText ?: if (unit == DistanceUnit.MI) "Mile" else "Kilometer"
             }
+            return appendHrContext(base, event, currentHr, targetHr, verbosity)
+        }
+
+        private fun appendHrContext(
+            base: String,
+            event: CoachingEvent,
+            currentHr: Int?,
+            targetHr: Int?,
+            verbosity: VoiceVerbosity,
+        ): String {
+            if (verbosity != VoiceVerbosity.FULL) return base
+            if (currentHr == null || targetHr == null) return base
+            val direction = when (event) {
+                CoachingEvent.SPEED_UP -> "under"
+                CoachingEvent.SLOW_DOWN -> "over"
+                else -> return base
+            }
+            val delta = kotlin.math.abs(currentHr - targetHr)
+            if (delta < HR_CONTEXT_MIN_DELTA_BPM) return base
+            val trimmed = base.trimEnd('.', ' ')
+            return "$trimmed. $delta $direction."
         }
 
         // ---- Briefing text builders (carried over from TtsBriefingPlayer) ----

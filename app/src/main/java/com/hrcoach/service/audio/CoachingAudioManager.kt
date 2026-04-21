@@ -166,7 +166,13 @@ class CoachingAudioManager(
 
     var distanceUnit: DistanceUnit = DistanceUnit.KM
 
-    fun fireEvent(event: CoachingEvent, guidanceText: String? = null, paceMinPerKm: Float? = null) {
+    fun fireEvent(
+        event: CoachingEvent,
+        guidanceText: String? = null,
+        paceMinPerKm: Float? = null,
+        currentHr: Int? = null,
+        targetHr: Int? = null,
+    ) {
         // Snapshot HR/zone context up-front for the debug log. Reads WorkoutState directly — it's
         // the single source of truth WFS already writes to every tick, so CAM doesn't need a
         // wider signature. Cheap StateFlow read.
@@ -174,6 +180,7 @@ class CoachingAudioManager(
         val ctx = "hr=${snap.currentHr} tgt=${snap.targetHr} zone=${snap.zoneStatus.name} " +
             "slope=${"%+.1f".format(lastHrSlopeBpmPerMin)} paused=${snap.isPaused} autoPaused=${snap.isAutoPaused} " +
             "verbosity=${currentSettings.voiceVerbosity.name} t=${snap.elapsedSeconds}s"
+
 
         // Filter informational cues by individual toggles
         when (event) {
@@ -253,6 +260,8 @@ class CoachingAudioManager(
                                 currentWorkoutMode,
                                 distanceUnit = distanceUnit,
                                 hrSlopeBpmPerMin = lastHrSlopeBpmPerMin,
+                                currentHr = currentHr,
+                                targetHr = targetHr,
                             )
                         }
                     }
