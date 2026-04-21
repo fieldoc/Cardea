@@ -85,7 +85,7 @@ class WorkoutForegroundService : LifecycleService() {
         // setting — changing the code on the old channel ID has no effect on existing installs.
         private const val CHANNEL_ID = "workout_media_v2"
         private const val TRACK_POINT_INTERVAL_MS = 5_000L
-        private const val AUTO_PAUSE_GRACE_MS = 15_000L
+        private const val AUTO_PAUSE_GRACE_MS = 20_000L
     }
 
     @Inject
@@ -151,6 +151,14 @@ class WorkoutForegroundService : LifecycleService() {
     private var autoPauseStartMs: Long = 0L
     private var totalAutoPausedMs: Long = 0L
     private var autoPauseGraceUntilMs: Long = 0L
+    // Auto-pause guard: the runner must have actually moved at least once before auto-pause
+    // can fire. Prevents a pause tone while the runner's still tying their shoes or pocketing
+    // their phone — "paused from movement" only makes sense if you've moved.
+    private var hasMovedSinceStart: Boolean = false
+    // Suppress the TTS "Run autopaused" announcement on the first auto-pause of a session —
+    // tone still plays (safety-critical), but a first-run surprise of TTS is avoided. Subsequent
+    // pauses during the same run still announce.
+    private var autoPauseCountThisSession: Int = 0
 
     private var sessionDistanceUnit = com.hrcoach.domain.model.DistanceUnit.KM
     private var workoutId: Long = 0L
@@ -267,6 +275,8 @@ class WorkoutForegroundService : LifecycleService() {
         autoPauseStartMs = 0L
         totalAutoPausedMs = 0L
         autoPauseGraceUntilMs = 0L
+        hasMovedSinceStart = false
+        autoPauseCountThisSession = 0
         workoutStartMs = 0L
         alertPolicy.reset()
         coachingEventRouter.reset()
@@ -360,10 +370,15 @@ class WorkoutForegroundService : LifecycleService() {
                 // their phone and start moving without seeing "Auto-Paused"
                 autoPauseGraceUntilMs = clock.now() + AUTO_PAUSE_GRACE_MS
 
+                val hrAlreadyConnected = SimulationController.isActive || bleCoordinator.isConnected.value
                 WorkoutState.update { current ->
                     current.copy(
                         targetHr = workoutConfig.targetHrAtDistance(0f) ?: 0,
-                        guidanceText = if (SimulationController.isActive) "SIM STARTING" else "Searching for HR signal",
+                        guidanceText = when {
+                            SimulationController.isActive -> "SIM STARTING"
+                            hrAlreadyConnected -> "Get set"
+                            else -> "Searching for HR signal"
+                        },
                         autoPauseEnabled = sessionAutoPauseEnabled,
                     )
                 }
@@ -429,18 +444,30 @@ class WorkoutForegroundService : LifecycleService() {
         latestTick = tick
         val nowMs = clock.now()
 
-        // Auto-pause detection: run before elapsed-time math so state is fresh this tick
-        // Skip during grace period after start so runner can pocket phone without "Auto-Paused"
+        // Auto-pause detection: run before elapsed-time math so state is fresh this tick.
+        // Gated by THREE conditions:
+        //   1. `sessionAutoPauseEnabled` — user preference
+        //   2. `nowMs >= autoPauseGraceUntilMs` — wall-time grace (20s after start)
+        //   3. `hasMovedSinceStart` — only pause-from-movement after actual movement. Prevents
+        //      a pause tone while runner is still tying shoes or pocketing phone — "paused from
+        //      movement" is only meaningful after you've moved.
+        // ~0.5 m/s ≈ 1.8 km/h covers walking; below that is noise/GPS jitter.
+        if (!hasMovedSinceStart && (tick.speed ?: 0f) > 0.5f) hasMovedSinceStart = true
         var isAutoPaused = WorkoutState.snapshot.value.isAutoPaused  // read BEFORE potential update
-        if (sessionAutoPauseEnabled && nowMs >= autoPauseGraceUntilMs) {
+        if (sessionAutoPauseEnabled && nowMs >= autoPauseGraceUntilMs && hasMovedSinceStart) {
             when (autoPauseDetector?.update(tick.speed, nowMs)) {
                 AutoPauseEvent.PAUSED -> {
                     isAutoPaused = true  // use local var immediately — no StateFlow lag
                     autoPauseStartMs = nowMs
+                    autoPauseCountThisSession++
                     locationSource?.setMoving(false)
                     WorkoutState.update { it.copy(isAutoPaused = true) }
                     coachingAudioManager?.playPauseFeedback(paused = true)
-                    coachingAudioManager?.speakAnnouncement("Run autopaused")
+                    // Skip TTS on first auto-pause of session — tone + banner is enough signal
+                    // for a first-time surprise. Subsequent pauses announce normally.
+                    if (autoPauseCountThisSession > 1) {
+                        coachingAudioManager?.speakAnnouncement("Run autopaused")
+                    }
                 }
                 AutoPauseEvent.RESUMED -> {
                     isAutoPaused = false  // use local var immediately
