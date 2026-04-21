@@ -150,7 +150,26 @@ object ZoneEducationProvider {
         "Threshold sessions improve cognitive flexibility within ~12 weeks \u2014 measurable on attention tasks"
     )
     private val Z45_ONE_LINERS: List<String> = listOf(
-        "Raises your VO\u2082max ceiling and recruits fast-twitch fibers"
+        // physiology — Bassett & Howley, VO2max ceiling
+        "Raises your VO\u2082max ceiling and recruits fast-twitch fibers",
+        // physiology — Helgerud, 4x4 minute intervals stimulus
+        "4x4 minute intervals are among the strongest known stimuli for raising VO\u2082max",
+        // physiology — Coyle, fast-twitch fatigue resistance
+        "Type II fibers shift toward a more fatigue-resistant profile with regular interval work",
+        // physiology — Bishop, buffering capacity adaptation
+        "High-intensity work raises your muscles' ability to buffer hydrogen ions — less burn at race pace",
+        // physiology — Joyner, cardiac output ceiling
+        "Maximum cardiac output rises with VO\u2082max training; resting HR usually falls in parallel",
+        // physiology — Tabata-style protocols, EPOC contribution
+        "Interval afterburn (EPOC) keeps metabolism elevated for hours post-session",
+        // coaching — internal-rationale, last-rep test
+        "If the last rep felt easy, you went too soft — the final rep should hurt",
+        // coaching — Daniels, R-pace pacing discipline
+        "Even-paced reps trump first-rep heroics — negative-split your interval set",
+        // coaching — internal-rationale, recovery between reps
+        "Full HR recovery between reps preserves quality; cut it short and you're training Z3, not Z4-5",
+        // inspiration — Hillman et al., HIIT and BDNF/IGF-1
+        "Hard intervals trigger a sharp post-exercise spike in BDNF and IGF-1, hours-long mood lift"
     )
     private val RECOVERY_ONE_LINERS: List<String> = listOf(
         "Easy effort that maps your HR-to-pace response for zone calibration"
@@ -293,12 +312,75 @@ object ZoneEducationProvider {
         "also rewires how efficiently you think."
     )
     private val Z45_FULL: List<String> = listOf(
-        "Intervals at this intensity target your VO\u2082max \u2014 the ceiling on " +
-        "how much oxygen your cardiovascular system can deliver and your muscles " +
-        "can use. Your heart reaches near-maximal output, and your body recruits " +
-        "fast-twitch (Type II) fibers that stay dormant at easier paces. With " +
-        "training, those fibers shift toward a more fatigue-resistant profile, " +
-        "improving your top-end speed and kick."
+        // physiology — Bassett & Howley, VO2max as ceiling
+        "Intervals at this intensity target your VO\u2082max — the ceiling on how " +
+        "much oxygen your cardiovascular system can deliver and your muscles can use. " +
+        "Your heart reaches near-maximal output, and your body recruits fast-twitch " +
+        "(Type II) fibers that stay dormant at easier paces. With training, those " +
+        "fibers shift toward a more fatigue-resistant profile, improving your top-end " +
+        "speed and kick.",
+
+        // physiology — Helgerud 2007, 4x4 protocol
+        "4x4 minute intervals at 90–95% HRmax with 3 minute recoveries are among " +
+        "the strongest known stimuli for raising VO\u2082max. Trained subjects in " +
+        "controlled studies have raised VO\u2082max by 5–10% in 8 weeks on this " +
+        "protocol alone. The mechanism is a combination of stroke volume increase and " +
+        "improved oxygen extraction at the muscle.",
+
+        // physiology — Coyle, fast-twitch fatigue resistance
+        "Fast-twitch fibers come in two flavours: Type IIa (somewhat fatigue resistant) " +
+        "and Type IIx (powerful but fatigue quickly). Regular interval training shifts " +
+        "Type IIx toward Type IIa, giving you more fast-twitch capacity that can " +
+        "actually sustain race-pace efforts. The shift is reversible — detrain for " +
+        "a few weeks and IIa fibers drift back toward IIx.",
+
+        // physiology — Bishop 2008, buffering capacity
+        "Hard repeated efforts raise your muscles' buffering capacity — their " +
+        "ability to neutralise the hydrogen ions that accompany lactate production. " +
+        "Hydrogen ions, not lactate itself, cause the burning sensation and acid-driven " +
+        "fatigue. Better buffering means you can tolerate higher metabolic load before " +
+        "form breaks down.",
+
+        // physiology — Joyner, max cardiac output
+        "VO\u2082max is the product of maximum cardiac output and maximum oxygen " +
+        "extraction at the muscle. Interval training drives both: your heart's stroke " +
+        "volume rises (more blood per beat at max HR), and your muscle capillary " +
+        "density improves (more surface area for oxygen exchange). Resting HR typically " +
+        "falls 5–10 BPM over a focused VO\u2082max block.",
+
+        // physiology — EPOC after high-intensity work
+        "After a hard interval session, your body keeps metabolism elevated for hours " +
+        "— the excess post-exercise oxygen consumption (EPOC) effect. Hard intervals " +
+        "produce a much larger and longer EPOC than steady-state work. This is one " +
+        "reason a 30-minute interval session can match the total energy cost of a much " +
+        "longer easy run.",
+
+        // coaching — internal-rationale, last-rep test
+        "The last interval should be the hardest, not the easiest. If you finish the " +
+        "set feeling like you could have done two more reps at the same pace, you went " +
+        "too soft on the early ones. The point of intervals is to push the system to " +
+        "near-maximal stress — if you finish fresh, the stimulus didn't land.",
+
+        // coaching — Daniels, R-pace discipline
+        "Even-paced reps beat first-rep heroics. Going out too hard on rep 1 burns " +
+        "buffering capacity and metabolic reserves you'll need for reps 4–6. Aim " +
+        "for a slight negative split across the set: each rep at the same effort or a " +
+        "touch faster than the one before. Consistent pace with rising HR is exactly " +
+        "what you want.",
+
+        // coaching — internal-rationale, recovery quality
+        "Recovery quality between reps determines the workout's stimulus. If you cut " +
+        "recovery short, HR doesn't return to its target band, the next rep starts " +
+        "with a deficit, and the whole session drifts toward threshold work instead of " +
+        "VO\u2082max work. Walk during recovery; jog only if HR drops fast and you feel " +
+        "fully recovered.",
+
+        // inspiration — Hillman, HIIT and post-exercise BDNF spike
+        "High-intensity intervals trigger a sharp post-exercise spike in BDNF and " +
+        "IGF-1 (insulin-like growth factor). The effect lasts several hours after you " +
+        "finish — one reason hard sessions often produce a clearer, calmer afternoon " +
+        "than easy ones. The same molecules that grow new neurons after a hard rep " +
+        "are reshaping how your brain processes the rest of your day."
     )
     private val RECOVERY_FULL: List<String> = listOf(
         "Discovery and check-in sessions collect heart rate data at controlled, " +
