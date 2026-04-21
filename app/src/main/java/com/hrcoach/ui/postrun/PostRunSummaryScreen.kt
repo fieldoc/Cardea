@@ -50,15 +50,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hrcoach.data.db.AchievementEntity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
@@ -78,6 +83,49 @@ private enum class PostRunContentState {
     LOADING,
     ERROR,
     CONTENT
+}
+
+@Composable
+private fun RunCompleteHero(
+    visible: Boolean,
+    distanceText: String,
+    modifier: Modifier = Modifier
+) {
+    val gradient = CardeaTheme.colors.gradient  // CardeaGradient 4-stop
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(animationSpec = tween(500)) +
+            scaleIn(initialScale = 0.92f, animationSpec = tween(500)),
+        modifier = modifier
+    ) {
+        Column(horizontalAlignment = Alignment.Start) {
+            Text(
+                text = "RUN COMPLETE",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 2.sp,
+                    fontSize = 11.sp
+                ),
+                color = CardeaTheme.colors.textTertiary
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = distanceText,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 44.sp,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = CardeaTheme.colors.textPrimary,
+                modifier = Modifier
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(brush = gradient, blendMode = BlendMode.SrcIn)
+                    }
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
