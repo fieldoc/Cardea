@@ -267,8 +267,17 @@ fun SplashScreen(onFinished: () -> Unit) {
                 currentFrameMs = frameMs
 
                 val total    = frameMs - cycleStartMs
-                val cycleIdx = (total / CYCLE_TOTAL_MS).toInt()
-                val elapsed  = total % CYCLE_TOTAL_MS
+                // Cap at cycle 0 — if nav is slow (e.g. cloud restore still running), hold on
+                // the final frame rather than restart the animation. Old behavior: restart every
+                // 2.6s forever, which looks like a hang/glitch to the user.
+                val cycleIdx = (total / CYCLE_TOTAL_MS).toInt().coerceAtMost(0)
+                val elapsed  = if ((total / CYCLE_TOTAL_MS).toInt() >= 1) {
+                    // Freeze at end-of-hold, before fade — keeps the fully-drawn glyph on screen
+                    // while we wait for nav instead of fading to a black frame.
+                    PHASE_DRAW_MS + PHASE_HOLD_MS - 1
+                } else {
+                    total % CYCLE_TOTAL_MS
+                }
 
                 // Per-cycle reset
                 if (cycleIdx != lastCycleIdx) {
@@ -340,7 +349,14 @@ fun SplashScreen(onFinished: () -> Unit) {
             if (cycleStartMs < 0L) return@Canvas
 
             val total   = currentFrameMs - cycleStartMs
-            val elapsed = total % CYCLE_TOTAL_MS
+            // Mirror the frame-loop cap: after the first cycle, freeze at end-of-hold so the
+            // trace stays fully drawn while we wait for nav, instead of fading to black or
+            // re-animating from scratch.
+            val elapsed = if ((total / CYCLE_TOTAL_MS).toInt() >= 1) {
+                PHASE_DRAW_MS + PHASE_HOLD_MS - 1
+            } else {
+                total % CYCLE_TOTAL_MS
+            }
 
             // Derive progress and traceOpacity from phase
             val (progress, traceOpacity) = when {

@@ -267,6 +267,7 @@ fun HrCoachNavGraph(
             ) {
                 val splashVm: OnboardingSplashViewModel = hiltViewModel()
                 var destination by remember { mutableStateOf<String?>(null) }
+                var animationFinished by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {
                     val completed = splashVm.onboardingRepository.autoCompleteForExistingUser()
@@ -275,15 +276,20 @@ fun HrCoachNavGraph(
                     destination = if (completed) Routes.HOME else Routes.ONBOARDING
                 }
 
-                SplashScreen(
-                    onFinished = {
-                        val dest = destination ?: Routes.ONBOARDING
+                // Navigate only once BOTH the animation has finished AND destination has
+                // resolved. If restore takes longer than the 2.6s splash cycle, we used to
+                // fall back to ONBOARDING which was wrong for existing users. Now we hold.
+                LaunchedEffect(animationFinished, destination) {
+                    val dest = destination
+                    if (animationFinished && dest != null) {
                         navController.navigate(dest) {
                             popUpTo(Routes.SPLASH) { inclusive = true }
                             launchSingleTop = true
                         }
                     }
-                )
+                }
+
+                SplashScreen(onFinished = { animationFinished = true })
             }
 
             composable(
