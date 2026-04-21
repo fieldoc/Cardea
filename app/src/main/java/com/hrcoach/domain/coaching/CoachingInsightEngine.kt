@@ -1,9 +1,12 @@
 package com.hrcoach.domain.coaching
 
 import com.hrcoach.data.db.WorkoutEntity
+import com.hrcoach.domain.education.FactSelector
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.google.gson.Gson
+import java.time.Instant
+import java.time.ZoneId
 
 object CoachingInsightEngine {
 
@@ -16,13 +19,14 @@ object CoachingInsightEngine {
         hasBootcamp: Boolean,
         nowMs: Long
     ): CoachingInsight {
+        val dayEpoch = Instant.ofEpochMilli(nowMs)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .toEpochDay()
+
         // Priority 1: No workouts ever
         if (workouts.isEmpty()) {
-            return CoachingInsight(
-                title = "Start your first run",
-                subtitle = "Connect your HR monitor and hit the trail",
-                icon = CoachingIcon.HEART
-            )
+            return pickInsight(FIRST_RUN_VARIANTS, "INSIGHT_FIRST_RUN", dayEpoch, CoachingIcon.HEART)
         }
 
         val lastWorkoutMs = workouts.first().endTime
@@ -30,10 +34,9 @@ object CoachingInsightEngine {
 
         // Priority 2: Inactivity
         if (daysSinceLastRun >= 7) {
-            return CoachingInsight(
-                title = "Time to get moving",
-                subtitle = "It's been $daysSinceLastRun days since your last run",
-                icon = CoachingIcon.WARNING
+            return pickInsight(
+                INACTIVITY_VARIANTS, "INSIGHT_INACTIVITY", dayEpoch, CoachingIcon.WARNING,
+                replacements = mapOf("\$days" to daysSinceLastRun.toString())
             )
         }
 
@@ -41,54 +44,118 @@ object CoachingInsightEngine {
         val recentTypes = workouts.take(5).map { classifySession(it) }
         val consecutiveHard = recentTypes.takeWhile { it == SessionType.HARD }.size
         if (consecutiveHard >= 3) {
-            return CoachingInsight(
-                title = "Consider an easy day",
-                subtitle = "$consecutiveHard hard sessions in a row — an easy run helps recovery",
-                icon = CoachingIcon.HEART
+            return pickInsight(
+                CONSECUTIVE_HARD_VARIANTS, "INSIGHT_CONSECUTIVE_HARD", dayEpoch, CoachingIcon.HEART,
+                replacements = mapOf("\$count" to consecutiveHard.toString())
             )
         }
 
         // Priority 4: Z2 pace improvement
         val z2Improvement = computeZ2PaceImprovement(workouts, nowMs)
         if (z2Improvement != null && z2Improvement >= 5) {
-            return CoachingInsight(
-                title = "Z2 pace improved ${z2Improvement}%",
-                subtitle = "Your aerobic base is growing — keep it up",
-                icon = CoachingIcon.CHART_UP
+            return pickInsight(
+                Z2_IMPROVEMENT_VARIANTS, "INSIGHT_Z2_IMPROVEMENT", dayEpoch, CoachingIcon.CHART_UP,
+                replacements = mapOf("\$pct" to z2Improvement.toString())
             )
         }
 
         // Priority 5: Weekly goal met
         if (workoutsThisWeek >= weeklyTarget && weeklyTarget > 0) {
-            return CoachingInsight(
-                title = "Weekly goal reached!",
-                subtitle = "$workoutsThisWeek runs this week — nice consistency",
-                icon = CoachingIcon.TROPHY
+            return pickInsight(
+                WEEKLY_GOAL_VARIANTS, "INSIGHT_WEEKLY_GOAL", dayEpoch, CoachingIcon.TROPHY,
+                replacements = mapOf("\$count" to workoutsThisWeek.toString())
             )
         }
 
-        // Priority 6: Bootcamp behind schedule (past Thursday = day 4+)
+        // Priority 6: Bootcamp behind schedule
         if (hasBootcamp && weeklyTarget > 0) {
-            val dayOfWeek = java.time.Instant.ofEpochMilli(nowMs)
-                .atZone(java.time.ZoneId.systemDefault()).dayOfWeek.value
+            val dayOfWeek = Instant.ofEpochMilli(nowMs)
+                .atZone(ZoneId.systemDefault()).dayOfWeek.value
             val halfDone = workoutsThisWeek.toFloat() / weeklyTarget < 0.5f
             if (dayOfWeek >= 4 && halfDone) {
                 val remaining = weeklyTarget - workoutsThisWeek
-                return CoachingInsight(
-                    title = "Pick up the pace this week",
-                    subtitle = "$workoutsThisWeek/$weeklyTarget sessions done — $remaining left to stay on track",
-                    icon = CoachingIcon.WARNING
+                return pickInsight(
+                    BEHIND_SCHEDULE_VARIANTS, "INSIGHT_BEHIND", dayEpoch, CoachingIcon.WARNING,
+                    replacements = mapOf(
+                        "\$done" to workoutsThisWeek.toString(),
+                        "\$target" to weeklyTarget.toString(),
+                        "\$remaining" to remaining.toString()
+                    )
                 )
             }
         }
 
         // Priority 7: Default
-        return CoachingInsight(
-            title = "Consistency is key",
-            subtitle = "Regular training builds a stronger aerobic base",
-            icon = CoachingIcon.LIGHTBULB
-        )
+        return pickInsight(DEFAULT_VARIANTS, "INSIGHT_DEFAULT", dayEpoch, CoachingIcon.LIGHTBULB)
     }
+
+    private data class Variant(val title: String, val subtitle: String)
+
+    private fun pickInsight(
+        pool: List<Variant>,
+        seedKey: String,
+        dayEpoch: Long,
+        icon: CoachingIcon,
+        replacements: Map<String, String> = emptyMap()
+    ): CoachingInsight {
+        val v = pool[FactSelector.selectIndex(pool.size, seedKey, dayEpoch)]
+        var title = v.title
+        var subtitle = v.subtitle
+        for ((token, value) in replacements) {
+            title = title.replace(token, value)
+            subtitle = subtitle.replace(token, value)
+        }
+        return CoachingInsight(title = title, subtitle = subtitle, icon = icon)
+    }
+
+    // ── Variant pools ────────────────────────────────────────────────────
+
+    private val FIRST_RUN_VARIANTS = listOf(
+        Variant("Start your first run", "Connect your HR monitor and hit the trail"),
+        Variant("Day one is the hardest", "Start with 20 easy minutes \u2014 the rest unlocks itself"),
+        Variant("Time to lace up", "An easy first run today beats a perfect first run next month")
+    )
+
+    private val INACTIVITY_VARIANTS = listOf(
+        Variant("Time to get moving", "It's been \$days days since your last run"),
+        Variant("Easing back in?", "\$days days off \u2014 today's run can be short and easy, just to reset"),
+        Variant("Welcome back", "\$days days is recoverable in a week of easy runs \u2014 don't try to make it up at once"),
+        Variant("Small step today", "After \$days days off, a 20-minute easy effort beats nothing by a long way")
+    )
+
+    private val CONSECUTIVE_HARD_VARIANTS = listOf(
+        Variant("Consider an easy day", "\$count hard sessions in a row \u2014 an easy run helps recovery"),
+        Variant("Time to back off", "\$count hard days running \u2014 the next adaptation lives in the rest"),
+        Variant("Go easy today", "After \$count hard sessions, today's gain comes from recovery, not load"),
+        Variant("Recovery is training", "\$count hard days stacked \u2014 a true easy run unlocks tomorrow's quality")
+    )
+
+    private val Z2_IMPROVEMENT_VARIANTS = listOf(
+        Variant("Z2 pace improved \$pct%", "Your aerobic base is growing \u2014 keep it up"),
+        Variant("Aerobic engine up \$pct%", "Same HR, faster pace \u2014 the easy work is paying off"),
+        Variant("\$pct% faster at the same effort", "Stroke volume and capillary density are rewarding the consistency"),
+        Variant("Easy pace up \$pct%", "The boring miles are showing up in the data \u2014 trust the process")
+    )
+
+    private val WEEKLY_GOAL_VARIANTS = listOf(
+        Variant("Weekly goal reached!", "\$count runs this week \u2014 nice consistency"),
+        Variant("\$count runs done this week", "Consistency beats heroics \u2014 this is exactly the pattern"),
+        Variant("Target hit", "\$count sessions in the books \u2014 the streak is the engine"),
+        Variant("Solid week", "\$count runs logged \u2014 each one stacks on the last")
+    )
+
+    private val BEHIND_SCHEDULE_VARIANTS = listOf(
+        Variant("Pick up the pace this week", "\$done/\$target sessions done \u2014 \$remaining left to stay on track"),
+        Variant("Catch-up window", "\$done/\$target this week \u2014 \$remaining easy sessions get you there"),
+        Variant("\$remaining runs from on-track", "\$done/\$target so far \u2014 the back half of the week is decisive")
+    )
+
+    private val DEFAULT_VARIANTS = listOf(
+        Variant("Consistency is key", "Regular training builds a stronger aerobic base"),
+        Variant("Show up today", "The runs you do beat the perfect runs you plan"),
+        Variant("Stack the habit", "Adaptations compound when sessions don't slip"),
+        Variant("Easy days enable hard days", "The shape of a good week is mostly easy with a few sharper edges")
+    )
 
     private enum class SessionType { HARD, EASY, UNKNOWN }
 
