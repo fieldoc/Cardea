@@ -21,20 +21,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.DirectionsWalk
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -242,167 +239,161 @@ fun PostRunSummaryScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(padding)
-                            .verticalScroll(rememberScrollState())
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        AnimatedVisibility(
-                            visible = showCelebration,
-                            enter = scaleIn(animationSpec = tween(400)) + fadeIn(animationSpec = tween(400))
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                text = "Run Complete",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = GradientPink
+                            RunCompleteHero(
+                                visible = showCelebration,
+                                distanceText = uiState.distanceText
                             )
-                        }
 
-                        if (uiState.newAchievements.isNotEmpty()) {
-                            NewAchievementsSection(achievements = uiState.newAchievements)
-                        }
+                            if (uiState.newAchievements.isNotEmpty()) {
+                                NewAchievementsSection(achievements = uiState.newAchievements)
+                            }
 
-                        if (isHrrActive) {
-                            HrrCooldownCard(endTimeMs = uiState.workoutEndTimeMs)
-                        }
+                            if (isHrrActive) {
+                                HrrCooldownCard(endTimeMs = uiState.workoutEndTimeMs)
+                            }
 
-                        uiState.hrMaxDelta?.let { (oldMax, newMax) ->
-                            HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
-                        }
+                            uiState.hrMaxDelta?.let { (oldMax, newMax) ->
+                                HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
+                            }
 
-                        uiState.bootcampProgressLabel
-                            ?.takeIf { it.isNotBlank() }
-                            ?.let { progressLabel ->
-                                BootcampContextCard(
-                                    progressLabel = progressLabel,
-                                    weekComplete = uiState.bootcampWeekComplete
+                            uiState.bootcampProgressLabel
+                                ?.takeIf { it.isNotBlank() }
+                                ?.let { progressLabel ->
+                                    BootcampContextCard(
+                                        progressLabel = progressLabel,
+                                        weekComplete = uiState.bootcampWeekComplete
+                                    )
+                                }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                SummaryStatCard(
+                                    title = stringResource(R.string.label_duration),
+                                    value = uiState.durationText,
+                                    icon = Icons.Default.Timer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                SummaryStatCard(
+                                    title = stringResource(R.string.label_avg_hr),
+                                    value = uiState.avgHrText,
+                                    icon = Icons.Default.Favorite,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            SummaryStatCard(
-                                title = stringResource(R.string.label_distance),
-                                value = uiState.distanceText,
-                                icon = Icons.AutoMirrored.Filled.DirectionsRun,
-                                modifier = Modifier.weight(1f)
-                            )
-                            SummaryStatCard(
-                                title = stringResource(R.string.label_duration),
-                                value = uiState.durationText,
-                                icon = Icons.Default.Timer,
-                                modifier = Modifier.weight(1f)
-                            )
-                            SummaryStatCard(
-                                title = stringResource(R.string.label_avg_hr),
-                                value = uiState.avgHrText,
-                                icon = Icons.Default.Favorite,
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-
-                        Text(
-                            text = "Compared to Similar Runs",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = CardeaTheme.colors.textPrimary
-                        )
-
-                        if (uiState.comparisons.isEmpty()) {
-                            GlassCard {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Insights,
-                                        contentDescription = null,
-                                        tint = CardeaTheme.colors.textSecondary
-                                    )
-                                    Column {
-                                        Text(
-                                            text = "Not enough data yet.",
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            color = CardeaTheme.colors.textPrimary
-                                        )
-                                        Text(
-                                            text = "Complete a few similar sessions to unlock this view.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textSecondary
-                                        )
-                                    }
-                                }
-                            }
-                        } else {
                             Text(
-                                text = "Based on ${uiState.similarRunCount} similar sessions",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = CardeaTheme.colors.textSecondary
+                                text = "Compared to Similar Runs",
+                                style = MaterialTheme.typography.titleLarge,
+                                color = CardeaTheme.colors.textPrimary
                             )
-                            uiState.comparisons.forEach { item ->
+
+                            if (uiState.comparisons.isEmpty()) {
                                 GlassCard {
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column(modifier = Modifier.weight(1f)) {
+                                        Icon(
+                                            imageVector = Icons.Default.Insights,
+                                            contentDescription = null,
+                                            tint = CardeaTheme.colors.textSecondary
+                                        )
+                                        Column {
                                             Text(
-                                                text = item.title,
-                                                style = MaterialTheme.typography.titleMedium,
+                                                text = "Not enough data yet.",
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 color = CardeaTheme.colors.textPrimary
                                             )
                                             Text(
-                                                text = item.value,
-                                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                                                color = CardeaTheme.colors.textPrimary
+                                                text = "Complete a few similar sessions to unlock this view.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = CardeaTheme.colors.textSecondary
                                             )
-                                            item.insight?.let { insight ->
+                                        }
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = "Based on ${uiState.similarRunCount} similar sessions",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CardeaTheme.colors.textSecondary
+                                )
+                                uiState.comparisons.forEach { item ->
+                                    GlassCard {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = insight,
+                                                    text = item.title,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    color = CardeaTheme.colors.textPrimary
+                                                )
+                                                Text(
+                                                    text = item.value,
+                                                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                                                    color = CardeaTheme.colors.textPrimary
+                                                )
+                                                item.insight?.let { insight ->
+                                                    Text(
+                                                        text = insight,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = CardeaTheme.colors.textSecondary
+                                                    )
+                                                }
+                                            }
+                                            item.delta?.let { delta ->
+                                                Text(
+                                                    text = delta,
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = CardeaTheme.colors.textSecondary
+                                                    color = when (item.positive) {
+                                                        true -> ZoneGreen
+                                                        false -> ZoneRed
+                                                        null -> CardeaTheme.colors.textSecondary
+                                                    }
                                                 )
                                             }
                                         }
-                                        item.delta?.let { delta ->
-                                            Text(
-                                                text = delta,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = when (item.positive) {
-                                                    true -> ZoneGreen
-                                                    false -> ZoneRed
-                                                    null -> CardeaTheme.colors.textSecondary
-                                                }
-                                            )
-                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (uiState.showSoundsRecap) {
-                            SoundsHeardSection(
-                                counts = uiState.cueCounts,
-                                onSeeLibrary = onNavigateToSoundLibrary
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = onViewHistory,
-                                modifier = Modifier.weight(1f),
-                                border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
-                            ) {
-                                Text("View Route", color = CardeaTheme.colors.textPrimary)
+                            if (uiState.showSoundsRecap) {
+                                SoundsHeardSection(
+                                    counts = uiState.cueCounts,
+                                    onSeeLibrary = onNavigateToSoundLibrary
+                                )
                             }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        // Pinned action footer — sits below the scroll area, always visible.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(CardeaBgPrimary.copy(alpha = 0.92f))
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
                             CardeaButton(
                                 text = stringResource(R.string.button_done),
                                 onClick = onDone,
-                                modifier = Modifier.weight(1f).height(40.dp),
-                                cornerRadius = 50.dp
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                cornerRadius = 14.dp
                             )
                         }
                     }
