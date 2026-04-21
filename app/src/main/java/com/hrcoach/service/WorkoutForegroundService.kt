@@ -738,6 +738,35 @@ class WorkoutForegroundService : LifecycleService() {
         hrSampleSum = 0L
         hrSampleCount = 0
 
+        // Audio bookend: symmetrical with playStartSequence. Must fire BEFORE teardown
+        // because cleanupManagers() destroys the CoachingAudioManager. speakAnnouncement
+        // hands text to the TTS engine which outlives our scope — final utterance will
+        // complete even after the service transitions.
+        runCatching {
+            val now = clock.now()
+            val currentPauseMs = if (pauseStartMs > 0L) now - pauseStartMs else 0L
+            val currentAutoPauseMs = if (autoPauseStartMs > 0L) now - autoPauseStartMs else 0L
+            val activeSec = (now - workoutStartMs - totalPausedMs - totalAutoPausedMs
+                - currentPauseMs - currentAutoPauseMs).coerceAtLeast(0L) / 1000L
+            val distanceMeters = WorkoutState.snapshot.value.distanceMeters
+            val avgHr = if (finalHrSampleCount > 0) {
+                (finalHrSampleSum.toFloat() / finalHrSampleCount).toInt()
+            } else null
+            // Skip bookend for runs that will be discarded (< 200m AND < 1 min — same
+            // threshold used below). A phantom "Workout complete" on a 10-second tap
+            // would be confusing.
+            val willBeDiscarded = distanceMeters < 200f && activeSec < 60L
+            if (!willBeDiscarded) {
+                coachingAudioManager?.playEndSequence(
+                    distanceMeters = distanceMeters,
+                    activeDurationSec = activeSec,
+                    avgHr = avgHr
+                )
+            }
+        }.onFailure { e ->
+            Log.w("WorkoutService", "End-of-workout bookend failed (non-fatal)", e)
+        }
+
         stopJob?.cancel()
         stopJob = lifecycleScope.launch(Dispatchers.IO) {
             startupJob?.join()
