@@ -129,7 +129,6 @@ private fun RunCompleteHero(
 @Composable
 fun PostRunSummaryScreen(
     workoutId: Long,
-    onViewHistory: () -> Unit,
     onDone: () -> Unit,
     onBack: () -> Unit,
     onNavigateToSoundLibrary: () -> Unit = {},
@@ -376,8 +375,6 @@ fun PostRunSummaryScreen(
                                     onSeeLibrary = onNavigateToSoundLibrary
                                 )
                             }
-
-                            Spacer(modifier = Modifier.height(8.dp))
                         }
 
                         // Pinned action footer — sits below the scroll area, always visible.
