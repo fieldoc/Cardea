@@ -106,7 +106,26 @@ object ZoneEducationProvider {
     // as a 1-element list. Tasks 3–7 expand each to ~10 variants with provenance.
 
     private val Z2_ONE_LINERS: List<String> = listOf(
-        "Builds stroke volume and capillary density \u2014 same pace, less effort over time"
+        // physiology — Coyle 1995, stroke volume / capillary density
+        "Builds stroke volume and capillary density \u2014 same pace, less effort over time",
+        // physiology — Holloszy 1967, mitochondrial biogenesis at moderate intensity
+        "Easy minutes grow mitochondria \u2014 the cellular furnaces that turn fat into ATP",
+        // physiology — Maffetone, fat oxidation curve peaks below LT1
+        "Trains your body to burn fat at faster paces, sparing glycogen for race day",
+        // physiology — Brooks, MCT-1 expression in slow-twitch fibers
+        "Slow-twitch fibers grow denser mitochondria when worked at this exact intensity",
+        // physiology — Joyner, plasma volume expansion within 2\u20133 weeks
+        "Regular Z2 expands your plasma volume in 2\u20133 weeks, lowering working HR at the same pace",
+        // physiology — Daniels, aerobic enzyme adaptation timeline
+        "Aerobic enzymes (citrate synthase, SDH) upregulate within 4\u20136 weeks of consistent easy volume",
+        // coaching — internal-rationale, talk-test calibration
+        "If you can sing a chorus without gulping air, you're in Z2; if not, ease back",
+        // coaching — Maffetone, nasal-breathing as Z2 governor
+        "Try nasal-only breathing on the easy parts \u2014 it caps your effort right around Z2",
+        // coaching — internal-rationale, drift watch
+        "HR drifts up over a long Z2 run; honour the HR cap, not the starting pace",
+        // inspiration \u2014 Erickson 2011, hippocampal volume in older adults
+        "Aerobic exercise raises BDNF, the protein that lets your hippocampus grow new neurons"
     )
     private val Z3_ONE_LINERS: List<String> = listOf(
         "Pushes your lactate threshold so you can hold faster paces longer"
@@ -122,12 +141,71 @@ object ZoneEducationProvider {
     )
 
     private val Z2_FULL: List<String> = listOf(
-        "At this intensity your heart adapts to eject more blood per beat \u2014 " +
-        "what physiologists call increased stroke volume. Your muscles respond " +
-        "by growing denser capillary networks, improving oxygen delivery at the " +
-        "cellular level. The benefit comes from accumulated volume at this effort, " +
-        "not a magic intensity window \u2014 which is why elite plans keep 75\u201380% " +
-        "of weekly running here."
+        // physiology \u2014 Coyle 1995, stroke volume and capillary growth
+        "At this intensity your heart adapts to eject more blood per beat \u2014 what " +
+        "physiologists call increased stroke volume. Your muscles respond by growing " +
+        "denser capillary networks, improving oxygen delivery at the cellular level. " +
+        "The benefit comes from accumulated volume at this effort, not a magic " +
+        "intensity window \u2014 which is why elite plans keep 75\u201380% of weekly running here.",
+
+        // physiology \u2014 Holloszy 1967, mitochondrial biogenesis
+        "Easy aerobic running is the most potent stimulus for mitochondrial biogenesis " +
+        "in slow-twitch fibers. Mitochondria are the cellular powerhouses that convert " +
+        "fat and carbohydrate into ATP using oxygen. More mitochondria means you can " +
+        "produce more energy aerobically before lactate accumulates \u2014 which is what " +
+        "makes you faster at every distance from 5K to marathon.",
+
+        // physiology \u2014 Maffetone, fat oxidation curve
+        "Fat oxidation peaks at moderate aerobic effort and falls off sharply once you " +
+        "cross your first lactate threshold. Training the fat-burning machinery here " +
+        "spares the limited glycogen you'll need late in a hard race. Highly trained " +
+        "endurance athletes can oxidise fat at paces that would force untrained runners " +
+        "into pure carbohydrate burn within minutes.",
+
+        // physiology \u2014 Joyner, plasma volume expansion
+        "Within 2\u20133 weeks of consistent Z2 work, your plasma (blood liquid) volume " +
+        "expands by 10\u201320%. The thinner, larger blood volume means each heartbeat " +
+        "moves more oxygen, your working HR drops at the same pace, and thermoregulation " +
+        "improves. This is one of the fastest visible adaptations in endurance training.",
+
+        // physiology \u2014 Brooks, lactate shuttle in slow-twitch fibers
+        "Slow-twitch (Type I) fibers don't just resist fatigue; they consume lactate " +
+        "produced elsewhere as fuel. Z2 training upregulates the MCT-1 transporters " +
+        "those fibers use to import lactate. The net effect: at any given pace, the " +
+        "lactate your muscles produce gets cleared faster \u2014 which is functionally " +
+        "the same as raising your threshold.",
+
+        // physiology \u2014 Daniels, aerobic enzyme timeline
+        "The enzymes that drive aerobic metabolism (citrate synthase, succinate " +
+        "dehydrogenase) take 4\u20136 weeks of consistent easy work to upregulate. " +
+        "This is why a sudden jump to harder training without an aerobic base produces " +
+        "fast initial gains but plateaus quickly \u2014 the underlying machinery hasn't " +
+        "scaled to support the load.",
+
+        // coaching \u2014 internal-rationale, talk-test
+        "The talk test is the most reliable Z2 governor without a HR strap: you should " +
+        "be able to speak in full sentences, even sing a chorus, without gulping for " +
+        "air. If conversation comes in short phrases you've drifted into Z3 \u2014 " +
+        "still useful, but not what today's session is for. Slow down a touch.",
+
+        // coaching \u2014 Maffetone, nasal breathing
+        "Nasal-only breathing is a built-in effort governor. The nasal airway is " +
+        "narrower than the mouth, capping how much air you can move per minute \u2014 " +
+        "which caps your sustainable effort right around Z2. Drop into nasal breathing " +
+        "on long runs and let the discomfort tell you when to ease.",
+
+        // coaching \u2014 internal-rationale, cardiac drift
+        "Heart rate drifts upward over a long Z2 run even at unchanged pace. This is " +
+        "called cardiac drift and is driven by core temperature rise and dehydration. " +
+        "Honour the HR cap, not the starting pace \u2014 letting pace creep up to keep " +
+        "HR pinned defeats the point of the easy day.",
+
+        // inspiration \u2014 Erickson et al. 2011, BDNF and hippocampal volume
+        "Sustained aerobic exercise raises BDNF \u2014 brain-derived neurotrophic factor " +
+        "\u2014 a protein that supports new neuron growth in the hippocampus. The biggest " +
+        "jumps come from sessions over 30 minutes at exactly this kind of effort. " +
+        "Runners over 50 show measurably larger hippocampal volume than non-runners, " +
+        "and the gap widens with consistent years of training."
     )
     private val Z3_FULL: List<String> = listOf(
         "Tempo effort sits near your lactate turnpoint \u2014 the intensity where " +
