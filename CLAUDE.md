@@ -79,6 +79,7 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp depending on enrol
 
 - **Cardea design system** — dark glass-morphic, background `#050505` (radial with `#0D0D0D`). All tokens in `ui/theme/Color.kt`. Authoritative spec: `docs/plans/2026-03-02-cardea-ui-ux-design.md`. **Token drift rule:** spec conflicts with `Color.kt` → fix the spec.
 - **`CardeaTheme`** is primary; `HrCoachTheme` = back-compat wrapper; `HrCoachThemeTokens` = typealias of `CardeaThemeTokens`. Dynamic color `false`. System/Light/Dark are user preferences — light mode is NOT a bug.
+- **`cueBannerBorderColor(kind, alpha)`** (`ui/workout/CueBannerColors.kt`) — SSOT for cue-banner kind→hue. `CueBannerOverlay` uses α=0.5; `SoundLibraryScreen` list rows use α=0.4. Do not reintroduce per-screen `borderFor` helpers or hardcoded hex for banner tints.
 - **Three gradients — use the right one:**
   - `CardeaGradient` (4-stop `#FF4D5A→#FF2DA6→#4D61FF→#00E5FF`, 135°) — ring foregrounds, gradient text, Tier 1 accent borders only. Do NOT alter stops.
   - `CardeaCtaGradient` (Red→Pink) — all buttons, active chips, selection indicators, day dots. Only ~3 legit `CardeaGradient` uses remain — grep before adding new ones. `BootcampScreen.kt` is fully purged; do NOT reintroduce the 4-stop there.
