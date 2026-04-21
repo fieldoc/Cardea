@@ -128,7 +128,26 @@ object ZoneEducationProvider {
         "Aerobic exercise raises BDNF, the protein that lets your hippocampus grow new neurons"
     )
     private val Z3_ONE_LINERS: List<String> = listOf(
-        "Pushes your lactate threshold so you can hold faster paces longer"
+        // physiology \u2014 Brooks, MCT transporter upregulation
+        "Pushes your lactate threshold so you can hold faster paces longer",
+        // physiology \u2014 Daniels, T-pace adaptation
+        "Tempo effort raises the pace you can sustain for an hour without unravelling",
+        // physiology \u2014 Coyle, fractional utilisation of VO2max
+        "Trains the percentage of your VO\u2082max you can hold for long efforts",
+        // physiology \u2014 Costill, glycogen sparing at sub-threshold paces
+        "Just below threshold, your body burns the highest sustainable mix of fat and carbs",
+        // physiology \u2014 Brooks, lactate clearance pathways
+        "Type I fibers learn to consume the lactate Type II fibers produce \u2014 net clearance rises",
+        // physiology \u2014 Hoffmann/Joyner, OBLA shift with training
+        "The HR at which lactate accumulates faster than you can clear it shifts upward",
+        // coaching \u2014 internal-rationale, RPE for tempo
+        "Comfortably hard \u2014 you can speak 3\u20134 word bursts, not full sentences",
+        // coaching \u2014 Daniels, T-pace for marathon prep
+        "Marathon-specific tempo: settle in at the effort you'd hold for one steady hour",
+        // coaching \u2014 internal-rationale, second-wind cue
+        "The first 5 minutes of tempo feel hardest; settle in, breathe rhythmically, hold the line",
+        // inspiration \u2014 Hopkins et al., cognitive flexibility from sustained moderate exercise
+        "Threshold sessions improve cognitive flexibility within ~12 weeks \u2014 measurable on attention tasks"
     )
     private val Z45_ONE_LINERS: List<String> = listOf(
         "Raises your VO\u2082max ceiling and recruits fast-twitch fibers"
@@ -208,12 +227,70 @@ object ZoneEducationProvider {
         "and the gap widens with consistent years of training."
     )
     private val Z3_FULL: List<String> = listOf(
-        "Tempo effort sits near your lactate turnpoint \u2014 the intensity where " +
-        "lactate production outpaces your muscles\u2019 ability to use it. " +
-        "Lactate isn\u2019t waste; it\u2019s a fuel that gets shuttled between fibers " +
-        "via monocarboxylate transporters (MCTs). Training here upregulates those " +
-        "transporters, so the pace you can sustain before lactate overwhelms the " +
-        "system shifts faster."
+        // physiology \u2014 Brooks, MCT-1 / MCT-4 lactate shuttle
+        "Tempo effort sits near your lactate turnpoint \u2014 the intensity where lactate " +
+        "production outpaces your muscles' ability to use it. Lactate isn't waste; it's " +
+        "a fuel that gets shuttled between fibers via monocarboxylate transporters (MCTs). " +
+        "Training here upregulates those transporters, so the pace you can sustain before " +
+        "lactate overwhelms the system shifts faster.",
+
+        // physiology \u2014 Daniels, T-pace and lactate steady state
+        "T-pace (tempo pace) is roughly the speed you could hold for one hour at race " +
+        "effort. Training repeatedly at this intensity teaches your body to clear lactate " +
+        "as fast as it produces it, raising the threshold pace itself. A 6\u201312 week " +
+        "tempo block typically shifts threshold pace by 10\u201320 seconds per kilometre " +
+        "in trained runners.",
+
+        // physiology \u2014 Coyle, fractional utilisation
+        "Two runners with the same VO\u2082max can have very different race times, because " +
+        "the fraction of VO\u2082max they can sustain (their fractional utilisation) " +
+        "differs. Threshold training is the most direct way to raise that fraction. " +
+        "Elite marathoners hold ~85% of VO\u2082max for the race; recreational runners " +
+        "typically hold 70\u201375%.",
+
+        // physiology \u2014 Costill, fuel mix at sub-threshold
+        "Just below threshold, your body burns the highest sustainable mix of fat and " +
+        "carbohydrate \u2014 about 50/50 in trained runners. This is the metabolic " +
+        "intensity that builds the engine for efforts from 10K to half marathon. Lower " +
+        "is more aerobic but doesn't push the threshold; higher tips into pure-carb burn.",
+
+        // physiology \u2014 Brooks, intramuscular lactate shuttle
+        "Your fast-twitch fibers produce lactate; your slow-twitch fibers can consume " +
+        "it. Threshold training increases the slow-twitch fibers' uptake capacity \u2014 " +
+        "the same mechanism as MCT-1 upregulation \u2014 so within-muscle clearance " +
+        "improves. The net effect is the threshold itself shifts to a higher pace.",
+
+        // physiology \u2014 Hoffmann/Joyner, OBLA shift
+        "OBLA \u2014 onset of blood lactate accumulation \u2014 is the heart rate at which " +
+        "blood lactate concentration rises above ~4 mmol/L. Threshold training shifts " +
+        "OBLA to a higher HR over 6\u201312 weeks. Runners who measured OBLA before and " +
+        "after a tempo block typically see shifts of 5\u201312 BPM, depending on training " +
+        "background.",
+
+        // coaching \u2014 internal-rationale, tempo RPE
+        "The tempo target is 'comfortably hard' \u2014 you can speak in 3\u20134 word " +
+        "bursts but not full sentences. If conversation feels normal, push a touch. If " +
+        "you can't manage even short phrases, ease back: you've drifted into VO\u2082max " +
+        "territory and the lactate clearance training stops working as intended.",
+
+        // coaching \u2014 Daniels, marathon-pace tempo
+        "For marathon preparation, tempo runs are the bedrock workout. The goal isn't " +
+        "speed for its own sake; it's teaching your body to hold a high fractional " +
+        "utilisation of VO\u2082max without crossing the threshold and triggering " +
+        "lactate runaway. Settle in early, find the rhythm, hold the line.",
+
+        // coaching \u2014 internal-rationale, second-wind
+        "The first 5 minutes of a tempo run usually feel disproportionately hard \u2014 " +
+        "your aerobic system is still ramping up. By minute 8\u201310, breathing " +
+        "stabilises, HR settles into its target band, and the effort feels more " +
+        "manageable. Don't bail in those first 5 minutes; trust the warm-up.",
+
+        // inspiration \u2014 Hopkins et al., aerobic exercise and cognition
+        "Sustained moderate-intensity exercise like threshold running improves cognitive " +
+        "flexibility within ~12 weeks \u2014 measurable as faster, more accurate switching " +
+        "between attention tasks. The physiological pace of your aerobic gain and the " +
+        "cognitive gain run roughly in parallel: the same training that builds your engine " +
+        "also rewires how efficiently you think."
     )
     private val Z45_FULL: List<String> = listOf(
         "Intervals at this intensity target your VO\u2082max \u2014 the ceiling on " +
