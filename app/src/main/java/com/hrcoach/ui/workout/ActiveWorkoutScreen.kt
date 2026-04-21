@@ -143,24 +143,39 @@ fun ActiveWorkoutScreen(
             SimulationOverlay(modifier = Modifier.align(Alignment.TopCenter).zIndex(10f))
         }
 
+        // Countdown overlay: shows 3/2/1/GO during startup so users know the run registered.
+        // Rendered first (below cue banner in source order but gated so banner is suppressed
+        // while countdown is visible — avoids two transient overlays competing for attention).
+        val countdownSeconds = state.countdownSecondsRemaining
+        val countdownActive = countdownSeconds != null
+
         // Transient cue banner — visible whenever a coaching event fires.
         // Ignores voice verbosity: this is a transparency feature.
-        CueBannerOverlay(
-            banner = state.lastCueBanner,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .zIndex(9f)
-        )
+        // Suppressed during countdown overlay so BLE/GPS "searching" cues don't stack on top
+        // of the "3-2-1-GO" digits during the TTS+countdown window.
+        if (!countdownActive) {
+            CueBannerOverlay(
+                banner = state.lastCueBanner,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .zIndex(9f)
+            )
+        }
 
-        // Countdown overlay: shows 3/2/1/GO during startup so users know the run registered
-        val countdownSeconds = state.countdownSecondsRemaining
         if (countdownSeconds != null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.75f))
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.92f),
+                                CardeaBgPrimary.copy(alpha = 0.82f),
+                            )
+                        )
+                    )
                     .zIndex(8f),
                 contentAlignment = Alignment.Center
             ) {
@@ -173,6 +188,10 @@ fun ActiveWorkoutScreen(
             }
         }
 
+        // Hide workout chrome entirely during countdown — a 0.92-alpha radial overlay still
+        // lets faint outlines bleed through, and a zeroed stat card ("0 bpm", "0.00 km") is
+        // more jarring than empty space.
+        if (!countdownActive) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -382,6 +401,7 @@ fun ActiveWorkoutScreen(
                 }
             }
         }
+        }  // end if (!countdownActive)
     }
 
     if (stopConfirmationVisible) {
