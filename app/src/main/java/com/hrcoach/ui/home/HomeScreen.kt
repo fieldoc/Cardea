@@ -72,6 +72,7 @@ import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.util.metersToUnit
+import java.time.LocalDate
 
 // ── Zone pill color mapping ─────────────────────────────────────
 
@@ -219,6 +220,7 @@ private fun PulseHero(
     modifier: Modifier = Modifier
 ) {
     val (pillBg, pillText) = zonePillColors(session.sessionType)
+    val dayEpoch = remember { LocalDate.now().toEpochDay() }
     val sessionLabel = session.sessionType
         .replace("_", " ")
         .split(" ")
@@ -304,7 +306,7 @@ private fun PulseHero(
                 )
             }
             ZoneEducationProvider.forSessionType(
-                session.sessionType, ContentDensity.ONE_LINER
+                session.sessionType, ContentDensity.ONE_LINER, dayEpoch = dayEpoch
             )?.let { oneLiner ->
                 Spacer(Modifier.height(12.dp))
                 Row(

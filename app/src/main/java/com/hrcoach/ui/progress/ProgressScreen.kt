@@ -24,6 +24,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -67,6 +68,7 @@ import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.education.ZoneId
 import com.hrcoach.ui.theme.ZoneGreen
 import com.hrcoach.ui.theme.ZoneRed
+import java.time.LocalDate
 import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -534,13 +536,14 @@ private fun ZoneDistributionCard(uiState: ProgressUiState, modifier: Modifier = 
                     .fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(12.dp))
-            ZoneEducationLegend()
+            val dayEpoch = remember { LocalDate.now().toEpochDay() }
+            ZoneEducationLegend(dayEpoch = dayEpoch)
         }
     }
 }
 
 @Composable
-private fun ZoneEducationLegend() {
+private fun ZoneEducationLegend(dayEpoch: Long) {
     val zones = listOf(
         ZoneId.ZONE_2 to "Z2",
         ZoneId.ZONE_3 to "Z3",
@@ -562,7 +565,7 @@ private fun ZoneEducationLegend() {
                     modifier = Modifier.width(36.dp)
                 )
                 Text(
-                    text = ZoneEducationProvider.getContent(zoneId, ContentDensity.ONE_LINER),
+                    text = ZoneEducationProvider.getContent(zoneId, ContentDensity.ONE_LINER, dayEpoch = dayEpoch),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
                     color = CardeaTheme.colors.textTertiary,
                     maxLines = 2

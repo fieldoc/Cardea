@@ -124,6 +124,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import java.time.LocalDate
 
 @Composable
 fun BootcampScreen(
@@ -1804,6 +1805,7 @@ private fun SessionDetailSheet(
     onRestToday: (() -> Unit)? = null
 ) {
     val sessionId = session.sessionId
+    val dayEpoch = remember { LocalDate.now().toEpochDay() }
     // Determine which actions to show based on session state
     val canAct = sessionId != null && !session.isCompleted
     val showStartRun = canAct && session.isToday && onStartRun != null
@@ -1841,7 +1843,7 @@ private fun SessionDetailSheet(
                         color = CardeaTheme.colors.textSecondary
                     )
                     ZoneEducationProvider.forSessionType(
-                        session.rawTypeName, ContentDensity.BADGE
+                        session.rawTypeName, ContentDensity.BADGE, dayEpoch = dayEpoch
                     )?.let { badge ->
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
@@ -1902,7 +1904,7 @@ private fun SessionDetailSheet(
 
             GlassCard {
                 Text(
-                    text = SessionDescription.forType(session.rawTypeName, session.presetId, maxHr),
+                    text = SessionDescription.forType(session.rawTypeName, session.presetId, maxHr, dayEpoch),
                     style = MaterialTheme.typography.bodyMedium,
                     color = CardeaTheme.colors.textPrimary,
                     lineHeight = 22.sp
@@ -1996,9 +1998,14 @@ private fun SessionDetailSheet(
 }
 
 private object SessionDescription {
-    fun forType(rawType: String, presetId: String?, maxHr: Int? = null): String {
+    fun forType(
+        rawType: String,
+        presetId: String?,
+        maxHr: Int? = null,
+        dayEpoch: Long = LocalDate.now().toEpochDay()
+    ): String {
         val educationFull = ZoneEducationProvider.forSessionType(
-            rawType, ContentDensity.FULL, maxHr
+            rawType, ContentDensity.FULL, maxHr, dayEpoch = dayEpoch
         )
         if (educationFull != null) return educationFull
 
@@ -2046,6 +2053,7 @@ private fun TodayHeroSection(
     onEndProgram: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    val dayEpoch = remember { LocalDate.now().toEpochDay() }
     // Hoisted unconditionally to satisfy Compose rules-of-hooks (used inside RunUpcoming branch)
     var oneLinerExpanded by remember { mutableStateOf(false) }
     val ctaBreathe = rememberInfiniteTransition(label = "ctaBreathe")
@@ -2304,11 +2312,11 @@ private fun TodayHeroSection(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             val badge = ZoneEducationProvider.forSessionType(
-                                today.session.type.name, ContentDensity.BADGE
+                                today.session.type.name, ContentDensity.BADGE, dayEpoch = dayEpoch
                             )
                             if (badge != null) MetaChip(badge)
                             ZoneEducationProvider.forSessionType(
-                                today.session.type.name, ContentDensity.ONE_LINER
+                                today.session.type.name, ContentDensity.ONE_LINER, dayEpoch = dayEpoch
                             )?.let { oneLiner ->
                                 Text(
                                     text = oneLiner,
