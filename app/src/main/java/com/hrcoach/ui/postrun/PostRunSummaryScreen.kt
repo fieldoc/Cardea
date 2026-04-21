@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -501,7 +502,7 @@ private fun HrMaxUpdatedCard(
     oldMax: Int,
     newMax: Int
 ) {
-    GlassCard {
+    GlassCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -540,7 +541,7 @@ private fun BootcampContextCard(
     progressLabel: String,
     weekComplete: Boolean
 ) {
-    GlassCard {
+    GlassCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
