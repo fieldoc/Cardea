@@ -172,10 +172,48 @@ object ZoneEducationProvider {
         "Hard intervals trigger a sharp post-exercise spike in BDNF and IGF-1, hours-long mood lift"
     )
     private val RECOVERY_ONE_LINERS: List<String> = listOf(
-        "Easy effort that maps your HR-to-pace response for zone calibration"
+        // physiology — internal-rationale, low-intensity HR-pace stability
+        "Easy effort that maps your HR-to-pace response for zone calibration",
+        // physiology — Joyner, controlled-effort signal-to-noise
+        "Low-effort runs give the cleanest HR-to-pace data — less drift, less noise",
+        // physiology — Friel, HRV-based recovery readiness
+        "Easy runs preserve heart-rate variability — a marker of recovery and adaptive readiness",
+        // physiology — Costill, parasympathetic recovery during easy work
+        "Truly easy effort lets the parasympathetic nervous system rebound between hard sessions",
+        // physiology — Maffetone, MAF and aerobic restoration
+        "Easy aerobic work restores capillary circulation faster than full rest",
+        // physiology — internal-rationale, glycogen replenishment alignment
+        "Low-intensity sessions don't deplete glycogen, so adaptations from yesterday's hard work continue",
+        // coaching — internal-rationale, calibration discipline
+        "On a calibration run, hold the cap; don't 'just push for the next light'",
+        // coaching — internal-rationale, recovery vs lazy
+        "Recovery effort should feel almost too easy — if it feels like a 'normal run', it's too hard",
+        // coaching — Friel, pre-run HRV check
+        "If morning HRV is low, today's planned easy run is the right call — not the wrong one",
+        // inspiration — Erickson et al., default mode network changes
+        "Regular runners show distinct white-matter changes in the brain's default mode network within 6 months"
     )
     private val RACE_ONE_LINERS: List<String> = listOf(
-        "Rehearses the neuromuscular patterns and pacing you\u2019ll need on race day"
+        // physiology — Hawley, race-specific neuromuscular patterning
+        "Rehearses the neuromuscular patterns and pacing you'll need on race day",
+        // physiology — Costill, glycogen sparing and pacing
+        "Even pacing spares glycogen for the closing kilometres — negative splits beat fades",
+        // physiology — Daniels, race-specific economy
+        "Specific work at goal pace improves running economy at that pace, not just at any pace",
+        // physiology — Joyner, lactate steady state for the race distance
+        "Race-pace work calibrates the lactate steady state you'll be holding for the duration",
+        // physiology — Brooks, fuel mix at race intensity
+        "At race effort your fat/carb fuel ratio settles into the mix you'll burn on the day",
+        // physiology — Maffetone, heat-acclimation through race-pace efforts
+        "Race-pace work teaches thermoregulation under sustained moderate-high load",
+        // coaching — internal-rationale, pacing discipline
+        "If the first kilometre at goal pace feels easy, hold the pace — don't push faster",
+        // coaching — Daniels, race tactics rehearsal
+        "Use race-pace runs to rehearse fueling timing, gear choice, and split discipline",
+        // coaching — internal-rationale, mental rehearsal
+        "Visualise the hard kilometres while you run them — the brain pattern transfers to race day",
+        // inspiration — cortisol and approach motivation
+        "Race rehearsal shifts race-day cortisol from threat-response into approach-motivation"
     )
 
     private val Z2_FULL: List<String> = listOf(
@@ -383,18 +421,149 @@ object ZoneEducationProvider {
         "are reshaping how your brain processes the rest of your day."
     )
     private val RECOVERY_FULL: List<String> = listOf(
-        "Discovery and check-in sessions collect heart rate data at controlled, " +
-        "easy effort. At low intensity, the HR-to-pace relationship is most stable " +
-        "and interpretable, giving Cardea clean data to identify your aerobic and " +
-        "lactate thresholds without requiring an all-out effort. This calibration " +
-        "personalizes every zone target in your program."
+        // physiology — calibration rationale
+        "Discovery and check-in sessions collect heart rate data at controlled, easy " +
+        "effort. At low intensity, the HR-to-pace relationship is most stable and " +
+        "interpretable, giving Cardea clean data to identify your aerobic and lactate " +
+        "thresholds without requiring an all-out effort. This calibration personalizes " +
+        "every zone target in your program.",
+
+        // physiology — Joyner, signal-to-noise at low effort
+        "At low effort, the relationship between heart rate and pace is nearly linear " +
+        "and free from the cardiac drift that contaminates harder efforts. This is why " +
+        "Cardea uses controlled easy runs as the calibration substrate — the data " +
+        "is cleaner, the underlying aerobic system shows up unmasked, and we can fit " +
+        "your personal HR-pace curve without forcing a maximum effort.",
+
+        // physiology — Friel, HRV and recovery
+        "Easy running preserves heart-rate variability (HRV), a measure of how " +
+        "responsively your autonomic nervous system can switch between sympathetic " +
+        "(fight-or-flight) and parasympathetic (rest-and-digest) modes. High HRV " +
+        "correlates with recovery readiness and adaptation. Stacking too many hard " +
+        "days in a row crashes HRV; easy days bring it back up.",
+
+        // physiology — Costill, parasympathetic rebound
+        "After a hard session, your parasympathetic nervous system needs time to " +
+        "reassert dominance and drive recovery. Truly easy effort — below the " +
+        "first lactate threshold — lets that rebound happen. Push too hard on " +
+        "an 'easy' day and you sit in sympathetic dominance, blunting the recovery " +
+        "and the adaptation it enables.",
+
+        // physiology — Maffetone, aerobic restoration
+        "Light aerobic movement after a hard day restores capillary circulation in " +
+        "the working muscles faster than complete rest. The increased blood flow " +
+        "clears metabolic by-products and delivers nutrients for repair. This is why " +
+        "active recovery often feels better the next morning than a full off day, " +
+        "though both have their place in a balanced plan.",
+
+        // physiology — internal-rationale, glycogen sparing
+        "Low-intensity work runs primarily on fat for fuel, leaving muscle glycogen " +
+        "stores largely intact. This matters because the adaptations from yesterday's " +
+        "hard session — enzyme synthesis, mitochondrial growth — require " +
+        "energy to complete. Burning down glycogen on a recovery day diverts resources " +
+        "away from those repair processes.",
+
+        // coaching — calibration discipline
+        "On a calibration session the goal is data, not training stimulus. Hold the " +
+        "HR cap even when the legs want to push, don't sprint for the next traffic " +
+        "light, and don't try to keep up with anyone. Treat it like a measurement " +
+        "appointment: the cleaner the inputs, the more accurate your personalised " +
+        "zones and predictions for every session that follows.",
+
+        // coaching — internal-rationale, recovery vs lazy
+        "True recovery effort should feel almost embarrassingly easy — like " +
+        "you're under-running your fitness. If a recovery run feels like a 'normal " +
+        "run', it's too hard. The sign you got it right is waking up the next day " +
+        "fresher than you would have without it. The temptation to push because you " +
+        "feel good is the trap that breaks training cycles.",
+
+        // coaching — Friel, HRV-guided training
+        "If morning HRV is suppressed, today's planned easy run isn't a soft option " +
+        "— it's the right call. Trying to convert it into a hard session because " +
+        "you 'feel okay' typically produces a poor session and digs the recovery hole " +
+        "deeper. Trust the data, do the easy work, get to tomorrow with capacity to " +
+        "spare.",
+
+        // inspiration — Erickson, brain white matter
+        "MRI studies of regular runners show distinct white-matter changes in the " +
+        "default mode network — the brain regions active during rest and " +
+        "introspection — within 6 months of consistent training. Those changes " +
+        "correlate with measurable reductions in rumination and depressive symptoms. " +
+        "The 'runner's brain' isn't a metaphor; it's a structural rewiring you can " +
+        "see on a scan."
     )
     private val RACE_FULL: List<String> = listOf(
+        // physiology — Hawley, neuromuscular specificity
         "Race simulation trains the specific neuromuscular coordination and energy " +
-        "pacing you\u2019ll use on race day. At goal pace, your body practises " +
-        "sparing glycogen early so reserves remain for the final kilometres \u2014 " +
-        "a negative-split strategy that produces better finishing times. It also " +
-        "builds race-day confidence in a controlled setting."
+        "pacing you'll use on race day. At goal pace, your body practises sparing " +
+        "glycogen early so reserves remain for the final kilometres — a " +
+        "negative-split strategy that produces better finishing times. It also " +
+        "builds race-day confidence in a controlled setting.",
+
+        // physiology — Costill, glycogen and pacing
+        "Glycogen depletion is the single biggest physiological cause of race-day " +
+        "fades. Going out too fast burns glycogen at a rate your aerobic system can't " +
+        "sustain, and once stores tip below ~30% of capacity, pace falls off a cliff. " +
+        "Race-pace rehearsals train you to hold even or slightly negative splits, " +
+        "preserving glycogen for the final third where it actually counts.",
+
+        // physiology — Daniels, specificity of running economy
+        "Running economy — how much oxygen you consume to maintain a given pace " +
+        "— improves most at the specific pace you train. A runner who trains " +
+        "extensively at marathon pace will be more economical at marathon pace than " +
+        "one with the same VO\u2082max who didn't. This is why race-specific work in " +
+        "the final 6–8 weeks of a build is non-negotiable for goal performances.",
+
+        // physiology — Joyner, lactate steady state at race effort
+        "Each race distance has a characteristic lactate steady state — the highest " +
+        "intensity at which lactate production matches clearance for the race duration. " +
+        "Marathon pace sits well below threshold; 10K pace sits at threshold; 5K pace " +
+        "sits above. Race-pace sessions calibrate the steady state you'll be holding " +
+        "and let your body settle into its rhythm under that exact load.",
+
+        // physiology — Brooks, fuel mix at race intensity
+        "Your fat/carbohydrate fuel mix shifts as intensity rises. At marathon pace, " +
+        "trained runners burn ~50/50 fat-carb; at half-marathon pace, more like 30/70; " +
+        "at 10K pace, near-pure carbohydrate. Race-pace work trains the metabolic " +
+        "machinery for the specific mix you'll use, including the enzymes that handle " +
+        "the dominant fuel at that intensity.",
+
+        // physiology — Maffetone, thermoregulation under sustained load
+        "Race-pace efforts train heat dissipation under sustained moderate-high load. " +
+        "Plasma volume expands further, sweat onset comes earlier and at lower core " +
+        "temperatures, and the cardiovascular system handles the dual demand of muscle " +
+        "blood flow and skin blood flow more efficiently. These adaptations don't " +
+        "happen on easy days; they require the specific stress of race-pace work.",
+
+        // coaching — internal-rationale, pacing discipline
+        "If the first kilometre at goal race pace feels suspiciously easy, hold the " +
+        "pace anyway. The sense of ease is a function of full glycogen, fresh legs, " +
+        "and adrenaline — conditions that won't last. Pushing faster early because " +
+        "it feels easy is the most common cause of late-race blowups. Pace is set in " +
+        "the first kilometre; the result is decided in the last.",
+
+        // coaching — Daniels, rehearsal beyond pace
+        "Race-pace runs are the place to rehearse everything you'll do on race day: " +
+        "the gear, the fuel-and-fluid timing, the warm-up routine, even the mental " +
+        "checklist for handling discomfort. Every detail you nail in rehearsal is one " +
+        "less variable on race day. Treat the run as a dress rehearsal, not just a " +
+        "physical workout.",
+
+        // coaching — internal-rationale, mental rehearsal
+        "Use the hard kilometres of a race-pace session to mentally rehearse the hard " +
+        "kilometres of the race itself. Visualise the course, the discomfort, the " +
+        "cues you'll use to hold form. Sport-psychology research shows the brain " +
+        "patterns you build in rehearsal transfer to race day, reducing the gap " +
+        "between what you can do in training and what you actually deliver under " +
+        "race pressure.",
+
+        // inspiration — race-rehearsal and dopamine pathway
+        "Race rehearsal also rehearses the dopamine pathway. Visualising and physically " +
+        "practising the goal effort shifts race-day arousal from threat-response into " +
+        "approach-motivation — measurable in pre-race cortisol patterns. Athletes " +
+        "who consistently rehearse race conditions report less pre-race anxiety and " +
+        "more usable adrenaline; the line between 'nervous' and 'ready' is largely " +
+        "decided by how familiar the effort feels."
     )
 
     // ── BPM range helper ─────────────────────────────────────────────────
