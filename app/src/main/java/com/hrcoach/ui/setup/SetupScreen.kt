@@ -141,8 +141,18 @@ fun SetupScreen(
     viewModel: SetupViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val workoutState by com.hrcoach.service.WorkoutState.snapshot.collectAsStateWithLifecycle()
     var pulseOn by remember { mutableStateOf(false) }
     var expandedSection by remember { mutableStateOf<String?>(null) }
+    // Local tap→nav-transition indicator. Between the user tapping Start Run and
+    // WorkoutState.isRunning flipping true (service bootstrap, BLE/GPS warmup, TTS init),
+    // the button would otherwise appear unresponsive for 1-5 seconds. Set true in
+    // proceedWithStart; WorkoutState.isRunning flipping true auto-navigates this screen away.
+    var isStarting by remember { mutableStateOf(false) }
+    // If the service ever stops before navigation completes (e.g. start failure), reset.
+    LaunchedEffect(workoutState.isRunning) {
+        if (!workoutState.isRunning) isStarting = false
+    }
 
     LaunchedEffect(state.liveHr, state.isHrConnected) {
         if (state.liveHr > 0 && state.isHrConnected) {
@@ -163,6 +173,7 @@ fun SetupScreen(
     val proceedWithStart: () -> Unit = {
         run {
             val configJson = viewModel.buildConfigJsonOrNull() ?: return@run
+            isStarting = true
             viewModel.saveAudioSettings()
             val deviceAddress = viewModel.handoffConnectedDeviceAddress()
             onStartWorkout(configJson, deviceAddress)
@@ -261,7 +272,8 @@ fun SetupScreen(
             // Quick-launch — last settings + one-tap start
             QuickLaunchCard(
                 state = state,
-                canStart = canStart,
+                canStart = canStart && !isStarting,
+                isStarting = isStarting,
                 onStart = doStartWorkout
             )
 
@@ -541,6 +553,7 @@ private fun BootcampEntryCard(onClick: () -> Unit) {
 private fun QuickLaunchCard(
     state: SetupUiState,
     canStart: Boolean,
+    isStarting: Boolean = false,
     onStart: () -> Unit
 ) {
     GlassCard(modifier = Modifier.fillMaxWidth()) {
@@ -575,17 +588,38 @@ private fun QuickLaunchCard(
                 .height(50.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(
-                    if (canStart) CardeaCtaGradient
-                    else Brush.linearGradient(listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary))
+                    when {
+                        isStarting -> CardeaCtaGradient
+                        canStart -> CardeaCtaGradient
+                        else -> Brush.linearGradient(listOf(CardeaTheme.colors.textTertiary, CardeaTheme.colors.textTertiary))
+                    }
                 )
-                .clickable(enabled = canStart, onClick = onStart),
+                .clickable(enabled = canStart && !isStarting, onClick = onStart),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Start Run",
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTheme.colors.onGradient
-            )
+            if (isStarting) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = CardeaTheme.colors.onGradient
+                    )
+                    Text(
+                        text = "Starting…",
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = CardeaTheme.colors.onGradient
+                    )
+                }
+            } else {
+                Text(
+                    text = "Start Run",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    color = CardeaTheme.colors.onGradient
+                )
+            }
         }
     }
 }
