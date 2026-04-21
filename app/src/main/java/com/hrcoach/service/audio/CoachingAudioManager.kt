@@ -100,6 +100,52 @@ class CoachingAudioManager(
         startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
     }
 
+    /**
+     * Plays the end-of-workout bookend: earcon + TTS summary. Called by WFS at the top
+     * of stopWorkout() for ALL stops (manual Stop, target hit, auto-end). Mirrors
+     * playStartSequence so the runner gets symmetrical audio boundaries.
+     *
+     * Gated on [AudioSettings.enableWorkoutComplete] AND the existing verbosity rules.
+     * OFF verbosity plays neither earcon nor voice. MINIMAL plays neither (WORKOUT_COMPLETE
+     * is INFORMATIONAL; MINIMAL suppresses informational earcons — consistent with fireEvent).
+     * FULL plays both. The summary text is suppressed when activeDurationSec <= 0 or
+     * distanceMeters <= 0 (discarded/very-short runs — caller may also choose not to call).
+     *
+     * Does NOT suspend on voice completion — WFS teardown can proceed in parallel. TTS lives
+     * on an android service scope; final utterances complete after the screen transitions.
+     */
+    fun playEndSequence(
+        distanceMeters: Float,
+        activeDurationSec: Long,
+        avgHr: Int?
+    ) {
+        if (currentSettings.enableWorkoutComplete == false) return
+
+        val verbosity = currentSettings.voiceVerbosity
+        if (verbosity == VoiceVerbosity.OFF) return
+
+        // Count the event so SoundsHeardSection sees it on first-3 runs.
+        cueCounts.merge(CoachingEvent.WORKOUT_COMPLETE, 1) { a, b -> a + b }
+
+        // Earcon: FULL only (mirrors fireEvent's MINIMAL-suppresses-informational rule).
+        if (verbosity == VoiceVerbosity.FULL) {
+            earconPlayer.play(CoachingEvent.WORKOUT_COMPLETE)
+        }
+
+        // Voice summary: MINIMAL and FULL. MINIMAL users opted for fewer cues, but the
+        // end-of-workout summary is high-value, low-frequency (once per run), and they
+        // already accept zone alerts — this is symmetric with the start briefing.
+        if (activeDurationSec > 0L || distanceMeters > 0f) {
+            val text = VoicePlayer.buildEndSummaryText(
+                distanceMeters = distanceMeters,
+                activeDurationSec = activeDurationSec,
+                avgHr = avgHr,
+                unit = distanceUnit
+            )
+            voicePlayer.speakAnnouncement(text)
+        }
+    }
+
     var distanceUnit: DistanceUnit = DistanceUnit.KM
 
     fun fireEvent(event: CoachingEvent, guidanceText: String? = null, paceMinPerKm: Float? = null) {
