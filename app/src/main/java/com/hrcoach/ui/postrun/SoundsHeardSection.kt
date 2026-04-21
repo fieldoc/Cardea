@@ -63,7 +63,8 @@ fun SoundsHeardSection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "$count \u00d7 ${entry.title.lowercase()}",
+                        text = if (count == 1) entry.title.lowercase()
+                        else "$count \u00d7 ${entry.title.lowercase()}",
                         style = MaterialTheme.typography.titleSmall,
                         color = CardeaTheme.colors.textPrimary,
                         modifier = Modifier.weight(0.42f)

@@ -26,18 +26,15 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hrcoach.domain.model.CoachingEvent
-import com.hrcoach.service.audio.CueBannerKind
 import com.hrcoach.service.audio.CueCopy
 import com.hrcoach.service.audio.EarconPlayer
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaTheme
-import com.hrcoach.ui.theme.ZoneGreen
-import com.hrcoach.ui.theme.ZoneRed
+import com.hrcoach.ui.workout.cueBannerBorderColor
 
 @Composable
 fun SoundLibraryScreen(onBack: () -> Unit) {
@@ -109,7 +106,7 @@ private fun SoundRow(event: CoachingEvent, onPreview: () -> Unit) {
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(12.dp),
-        borderColor = borderFor(entry.kind)
+        borderColor = cueBannerBorderColor(entry.kind, alpha = 0.4f)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -142,9 +139,3 @@ private fun SoundRow(event: CoachingEvent, onPreview: () -> Unit) {
     }
 }
 
-private fun borderFor(kind: CueBannerKind): Color = when (kind) {
-    CueBannerKind.ALERT -> ZoneRed.copy(alpha = 0.4f)
-    CueBannerKind.GUIDANCE -> Color(0x66FF4D5A)
-    CueBannerKind.MILESTONE -> ZoneGreen.copy(alpha = 0.4f)
-    CueBannerKind.INFO -> Color(0x1AFFFFFF)
-}

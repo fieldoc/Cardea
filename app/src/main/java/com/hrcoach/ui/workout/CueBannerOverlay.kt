@@ -29,11 +29,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hrcoach.service.audio.CueBanner
-import com.hrcoach.service.audio.CueBannerKind
 import com.hrcoach.service.audio.CueCopy
 import com.hrcoach.ui.theme.CardeaTheme
-import com.hrcoach.ui.theme.ZoneGreen
-import com.hrcoach.ui.theme.ZoneRed
 
 /**
  * Transient pill overlay shown above the active workout screen whenever a coaching
@@ -57,15 +54,10 @@ fun CueBannerOverlay(banner: CueBanner?, modifier: Modifier = Modifier) {
 
 @Composable
 private fun BannerPill(banner: CueBanner) {
-    val borderColor = when (banner.kind) {
-        CueBannerKind.ALERT -> ZoneRed.copy(alpha = 0.5f)
-        CueBannerKind.GUIDANCE -> Color(0x80FF4D5A)
-        CueBannerKind.MILESTONE -> ZoneGreen.copy(alpha = 0.5f)
-        CueBannerKind.INFO -> Color(0x33FFFFFF)
-    }
+    val borderColor = cueBannerBorderColor(banner.kind, alpha = 0.5f)
     // Soft dark glass fill — strengthen a bit for readability over gradient bg
     val fill = Brush.verticalGradient(
-        colors = listOf(Color(0x33000000), Color(0x22000000))
+        colors = listOf(Color.Black.copy(alpha = 0.2f), Color.Black.copy(alpha = 0.13f))
     )
     val icon = CueCopy.forEvent(banner.event).icon
 
