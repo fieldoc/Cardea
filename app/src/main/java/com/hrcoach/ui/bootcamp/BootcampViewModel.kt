@@ -1384,6 +1384,9 @@ class BootcampViewModel @Inject constructor(
     fun dismissPrimerThenProceed(onProceed: () -> Unit) {
         audioSettingsRepository.setAudioPrimerShown(true)
         _uiState.update { it.copy(showAudioPrimer = false) }
+        // Skip the next workout's TTS briefing — primer already explained the audio system.
+        // See SetupViewModel.dismissPrimerThenProceed for the same pattern.
+        com.hrcoach.service.audio.CoachingAudioManager.skipNextBriefing = true
         onProceed()
     }
 

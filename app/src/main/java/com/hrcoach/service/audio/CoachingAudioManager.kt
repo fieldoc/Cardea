@@ -79,11 +79,24 @@ class CoachingAudioManager(
     /**
      * Plays the full startup sequence: TTS voice briefing of the workout config,
      * followed by a 3-2-1-GO countdown WAV. Suspends for the full duration.
+     *
+     * When [skipBriefing] is true, the TTS briefing is skipped and we go straight
+     * to the countdown — used on first-ever workout start, right after the audio
+     * primer dialog has already explained the audio system. A briefing on top of
+     * that feels redundant and stretches the pre-run audio to ~10s.
      */
-    suspend fun playStartSequence(config: WorkoutConfig) {
+    suspend fun playStartSequence(config: WorkoutConfig, skipBriefing: Boolean = false) {
         currentWorkoutMode = config.mode
-        voicePlayer.speakBriefing(config)
-        delay(500L)
+        // Consume the cross-layer primer-just-dismissed flag. Either explicit param OR the
+        // transient flag triggers a skip; flag is cleared after read so it can't leak into a
+        // later session.
+        val pendingSkip = skipNextBriefing
+        skipNextBriefing = false
+        if (!skipBriefing && !pendingSkip) {
+            voicePlayer.speakBriefing(config)
+        }
+        // Start the countdown WAV immediately after the briefing (or immediately if skipped) —
+        // no gap. A half-second of silence before "three" used to feel like the app had hung.
         startupSequencer.playCountdown(volumePercent = currentSettings.earconVolume)
     }
 
@@ -288,5 +301,14 @@ class CoachingAudioManager(
         /** Returns true when earcons should fire. OFF suppresses earcons; other levels allow them. */
         fun shouldPlayEarcon(verbosity: VoiceVerbosity): Boolean =
             verbosity != VoiceVerbosity.OFF
+
+        /**
+         * Process-lifetime hint set by SetupViewModel after the audio primer is dismissed and
+         * the runner taps "Got it — start my run". The next [playStartSequence] call reads and
+         * clears this flag, skipping its TTS briefing so the runner isn't given a briefing
+         * right after a 30-second primer explaining the audio system. One-shot; cleared on read.
+         */
+        @Volatile
+        var skipNextBriefing: Boolean = false
     }
 }

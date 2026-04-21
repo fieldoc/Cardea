@@ -660,6 +660,10 @@ class SetupViewModel @Inject constructor(
     fun dismissPrimerThenProceed(onProceed: () -> Unit) {
         audioSettingsRepository.setAudioPrimerShown(true)
         _uiState.value = _uiState.value.copy(showAudioPrimer = false)
+        // Skip the next workout's TTS briefing — the primer the user just dismissed already
+        // explained the audio system, so the briefing right after it feels redundant. One-shot
+        // flag; CoachingAudioManager reads and clears at the next playStartSequence.
+        com.hrcoach.service.audio.CoachingAudioManager.skipNextBriefing = true
         onProceed()
     }
 
