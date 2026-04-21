@@ -293,7 +293,7 @@ fun PostRunSummaryScreen(
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 SectionHeader(
                                     title = "COMPARED",
-                                    subtitle = if (uiState.comparisons.isNotEmpty()) {
+                                    subtitle = if (uiState.similarRunCount > 0) {
                                         "vs. ${uiState.similarRunCount} similar sessions"
                                     } else null
                                 )
