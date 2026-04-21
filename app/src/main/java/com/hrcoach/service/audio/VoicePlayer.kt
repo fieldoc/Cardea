@@ -417,6 +417,36 @@ class VoicePlayer(context: Context) {
             return parts.joinToString(". ") + "."
         }
 
+        /**
+         * Builds a TTS-friendly end-of-workout summary.
+         * Pure function — unit-tested in VoicePlayerEndSummaryTest.
+         *
+         * Returns "Workout complete." alone when distance and duration are both zero
+         * (short/discarded run path — caller should skip TTS entirely in that case,
+         * but we keep the fallback for safety).
+         */
+        fun buildEndSummaryText(
+            distanceMeters: Float,
+            activeDurationSec: Long,
+            avgHr: Int?,
+            unit: DistanceUnit
+        ): String {
+            if (distanceMeters <= 0f && activeDurationSec <= 0L) {
+                return "Workout complete."
+            }
+            val distanceInUnit = if (unit == DistanceUnit.MI) {
+                distanceMeters / 1609.344f
+            } else {
+                distanceMeters / 1000f
+            }
+            val unitWord = if (unit == DistanceUnit.MI) "miles" else "kilometers"
+            val distancePart = String.format("%.1f %s", distanceInUnit, unitWord)
+            val minutes = maxOf(1L, (activeDurationSec + 30L) / 60L)  // round to nearest, min 1
+            val minutesWord = if (minutes == 1L) "minute" else "minutes"
+            val hrClause = avgHr?.let { " Average heart rate $it." } ?: ""
+            return "Workout complete. $distancePart in $minutes $minutesWord.$hrClause"
+        }
+
         private fun formatDuration(seconds: Long): String {
             val minutes = seconds / 60
             return when {
