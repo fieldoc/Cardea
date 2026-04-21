@@ -30,7 +30,7 @@ Cardea — Android (Kotlin + Compose) real-time HR zone coaching during runs. BL
 - **Windows path-length:** KSP/AAPT fail in deeply-nested worktree build dirs. Copy changed files back to main and build there. Do NOT use `subst` — writes through the mapped drive silently revert edits made via the original path.
 - **Merge worktree into dirty main:** run THREE separate commands (never chain with `&&`): `git stash push -m "..."` → `git merge --ff-only <branch>` → `git stash pop`. If `stash pop` exits 1 on chain, merge never runs.
 - **Rewritten-file stash conflicts:** procedure above fails when popped WIP (a) touches a file the branch rewrote, or (b) references untracked files not yet committed. Recovery: `git checkout HEAD -- <file>` → `git reset HEAD` → `git stash drop`. WIP remains as unstaged changes.
-- **Branch diverged behind main:** `--ff-only` fails. Fix: in worktree `git rebase main`, then in main `git merge --ff-only <branch>`. Back-to-back — second main commit forces another rebase.
+- **Branch diverged behind main:** `--ff-only` fails. Fix: in worktree `git rebase main`, then in main `git merge --ff-only <branch>`. Back-to-back — second main commit forces another rebase. Note: `git fetch . main:main` from the worktree errors ("refusing to fetch into branch checked out at ...") — no need, `git rebase main` reads the local ref directly.
 - **`git rebase --continue --no-edit` is invalid** and hard-errors. Use `GIT_EDITOR=true git rebase --continue` for non-interactive continue.
 - **Untracked files block `git merge`:** if the incoming branch creates a file present as untracked, `rm` the untracked copy first.
 - **`git worktree remove` permission denied:** shell cwd must be outside the worktree. Use `git worktree prune` to clear stale registrations.
@@ -94,6 +94,9 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp depending on enrol
 - **`CardeaLogo`** — Canvas heart+ECG+orbital ring with gradient fill. `LARGE` (splash 180dp, though splash now uses its own Canvas animation), `SMALL` (nav 32dp).
 - **App icon "Pure Signal"** — single ECG P-QRS-T trace bleeding off both edges; gradient left→right; bg `#0D0D14`; QRS spike near-full-height, needle-sharp. No heart shape. Mipmaps generated via PIL (`gen_cardea_icon.py`, `/c/Python314/python.exe`). Sizes: mdpi 48, hdpi 72, xhdpi 96, xxhdpi 144, xxxhdpi 192. Both `ic_launcher.png` and `ic_launcher_round.png` per density.
 - **Splash screen** (`SplashScreen.kt`) — full Canvas animation via `withFrameMillis` loop (no `CardeaLogo`, no `animateFloatAsState`). Phases: 1600ms draw-on / 500ms hold / 500ms fade. `onFinished()` fires once. Do NOT add Compose animation APIs. Capture on device: `adb shell am force-stop com.hrcoach && adb shell monkey -p com.hrcoach -c android.intent.category.LAUNCHER 1 >/dev/null & sleep 0.9 && adb shell screencap //data/local/tmp/s.png && adb pull //data/local/tmp/s.png /tmp/s.png`.
+- **Splash freeze-at-hold** — loop caps at `cycleIdx >= 1` and freezes `elapsed` at `PHASE_DRAW_MS + PHASE_HOLD_MS - 1` (fully-drawn, pre-fade). Both the `withFrameMillis` block AND the `Canvas` block MUST apply the same cap — they re-derive `elapsed` independently. Without both, slow cloud restore either re-animates from scratch or fades to black.
+- **NavGraph splash contract:** navigation fires only when **both** `animationFinished` (from `onFinished`) AND `destination != null` (from `autoCompleteForExistingUser` + `checkAndRestoreIfNeeded`) are true. Falling back to `ONBOARDING` on null destination misroutes existing users whose cloud restore is slow.
+- **Countdown overlay invariants** (`ActiveWorkoutScreen.kt`): `countdownActive = countdownSecondsRemaining != null`. While active: (1) `CueBannerOverlay` is suppressed (BLE/GPS cues would stack over "3-2-1-GO"), (2) the stat-card `Column` is entirely hidden (zeroed values bleed through 0.92α overlay), (3) backdrop is a radial gradient `Black(0.92) → bgPrimary(0.82)`, not flat black. Don't regress any of these.
 - **Canvas glow in Compose** — use `drawIntoCanvas { canvas -> canvas.drawPath(path, Paint().also { it.asFrameworkPaint().maskFilter = BlurMaskFilter(...) }) }`. No CSS-blur equivalent exists.
 - **Gradient nav icons** — `CompositingStrategy.Offscreen` + `BlendMode.SrcIn` with `CardeaNavGradient` for pixel-perfect gradient fill on any `ImageVector`.
 - **Charts are custom Canvas** (`ui/charts/`) — BarChart, PieChart, ScatterPlot use `DrawScope` directly. Must use `CardeaTheme.colors` (M3-free as of 2026-04-12). `HrCoachThemeTokens.subtleText` is legacy — use `CardeaTheme.colors.textSecondary`. Canvas sizing must use `X.dp.toPx()`, not raw float px.
@@ -143,7 +146,8 @@ Three-component layered audio in `service/audio/`:
 - **`EarconPlayer`** — SoundPool, short WAV zone alerts. `USAGE_ASSISTANCE_NAVIGATION_GUIDANCE`.
 - **`VoicePlayer`** — TTS for briefings, zone alerts (using adaptive guidance text), splits, cues. Priority-gated via `VoiceEventPriority` (CRITICAL > NORMAL > INFORMATIONAL). Layers over music.
 - **`StartupSequencer`** — MediaPlayer plays `countdown_321_go.wav` (custom marimba). Updates `WorkoutState.countdownSecondsRemaining` for UI.
-- **`CoachingAudioManager`** — Orchestrator. Startup: TTS briefing (await) → countdown WAV (await) → return (timer starts). `VoiceVerbosity.OFF` gates ALL audio (earcons + voice). `shouldPlayEarcon(verbosity)` is the single earcon gate.
+- **`CoachingAudioManager`** — Orchestrator. Startup: TTS briefing (await) → countdown WAV (await) → return (timer starts). No delay between briefing and countdown — removed 500ms dead air that felt like a hang. `VoiceVerbosity.OFF` gates ALL audio (earcons + voice). `shouldPlayEarcon(verbosity)` is the single earcon gate.
+- **`CoachingAudioManager.skipNextBriefing`** — `@Volatile` companion flag, one-shot. Set by primer-dismiss handlers in `SetupViewModel.dismissPrimerThenProceed` AND `BootcampViewModel.dismissPrimerThenProceed` so the very next `playStartSequence` skips TTS briefing (primer just explained the audio system — briefing on top feels redundant). Cleared on read. This is the canonical cross-layer signal — do not plumb a parameter through Intent/Service layers to replicate.
 - **Pause/resume tones exempt from verbosity** — `playPauseFeedback()` plays regardless. Safety-critical.
 - **`AudioSettings`:** `earconVolume` and `voiceVolume` independent (0–100).
 - **Verbosity:** OFF silent; MINIMAL = critical/normal only; FULL = all events including informational.
@@ -174,6 +178,29 @@ Manual pause and auto-pause can be simultaneous. Three guards keep `elapsedSecon
 1. **`pauseWorkout()`:** if `isAutoPaused`, latch `totalAutoPausedMs += nowMs - autoPauseStartMs` and zero `autoPauseStartMs`.
 2. **`resumeWorkout()`:** if `isAutoPaused` still true on manual resume, restart `autoPauseStartMs = nowMs`.
 3. **`AutoPauseEvent.RESUMED` handler:** guard `if (autoPauseStartMs > 0L)` before accumulating — `pauseWorkout()` may have zeroed it.
+
+## Auto-pause Startup Gates (WFS)
+
+Auto-pause firing in the first seconds of a run is user-hostile. Three AND-gated conditions must all be true before `AutoPauseDetector.update()` is consulted:
+
+1. **`sessionAutoPauseEnabled`** — user preference (`AutoPauseSettingsRepository`).
+2. **`nowMs >= autoPauseGraceUntilMs`** — wall-time grace, `AUTO_PAUSE_GRACE_MS = 20_000L` (raised from 15s 2026-04-20; covers stop-and-go starts like crossing traffic).
+3. **`hasMovedSinceStart`** — latches true on first `tick.speed > 0.5f` (≈1.8 km/h). "Paused from movement" is only meaningful after actual movement; prevents pause tones while the runner is still tying shoes or pocketing the phone.
+
+All three reset in `startWorkout()`. Also: `autoPauseCountThisSession` counter — first auto-pause of a session plays tone + banner but skips the "Run autopaused" TTS announcement (surprise management). Subsequent pauses announce normally.
+
+## Startup Guidance Branching (WFS)
+
+Initial `WorkoutState.guidanceText` set after the countdown block in `startWorkout()`:
+- `SimulationController.isActive` → "SIM STARTING"
+- `bleCoordinator.isConnected.value` (true at this point for users who connected on Setup) → "Get set"
+- Otherwise → "Searching for HR signal"
+
+Unconditionally setting "Searching for HR signal" causes a one-frame flash for users who connected pre-run — the first `processTick` then overwrites with real guidance. Do not regress the branch.
+
+## WorkoutTick nullables
+
+`WorkoutTick.speed` is `Float?` (nullable). Comparisons need `?: 0f` coercion — `tick.speed > 0.5f` is a compile error. `tick.hr` is non-nullable `Int`; `tick.connected` is `Boolean`.
 
 ## DataStore / Slider
 
