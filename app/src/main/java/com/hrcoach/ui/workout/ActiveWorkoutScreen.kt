@@ -29,11 +29,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -405,48 +403,12 @@ fun ActiveWorkoutScreen(
     }
 
     if (stopConfirmationVisible) {
-        AlertDialog(
-            onDismissRequest = { stopConfirmationVisible = false },
-            containerColor = CardeaBgPrimary,
-            shape = RoundedCornerShape(20.dp),
-            tonalElevation = 0.dp,
-            title = {
-                Text(
-                    text = stringResource(R.string.dialog_stop_workout_title),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = CardeaTextPrimary
-                )
+        StopConfirmationSheet(
+            onConfirm = {
+                stopConfirmationVisible = false
+                onStopConfirmed()
             },
-            text = {
-                Text(
-                    text = stringResource(R.string.dialog_stop_workout_message),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTextSecondary
-                )
-            },
-            confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(ZoneRed)
-                        .clickable {
-                            stopConfirmationVisible = false
-                            onStopConfirmed()
-                        }
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.button_stop),
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { stopConfirmationVisible = false }) {
-                    Text(stringResource(R.string.dialog_cancel), color = CardeaTextSecondary)
-                }
-            }
+            onDismiss = { stopConfirmationVisible = false }
         )
     }
 }
