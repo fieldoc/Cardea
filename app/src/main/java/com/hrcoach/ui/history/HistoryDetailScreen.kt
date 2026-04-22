@@ -662,7 +662,7 @@ private fun parseTargetSummary(config: WorkoutConfig?): String? {
     }
 }
 
-private fun hrToColor(
+internal fun hrToColor(
     hr: Int,
     distanceMeters: Float,
     config: WorkoutConfig?,
