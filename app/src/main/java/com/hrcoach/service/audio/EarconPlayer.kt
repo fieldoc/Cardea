@@ -8,7 +8,7 @@ import com.hrcoach.R
 import com.hrcoach.domain.model.CoachingEvent
 import java.util.concurrent.ConcurrentHashMap
 
-class EarconPlayer(context: Context) {
+class EarconPlayer(context: Context, private val debug: TtsDebugLogger? = null) {
 
     private val soundPool: SoundPool
     private val soundIds = mutableMapOf<CoachingEvent, Int>()
@@ -61,12 +61,18 @@ class EarconPlayer(context: Context) {
     }
 
     fun play(event: CoachingEvent) {
-        val soundId = soundIds[event] ?: return
+        val soundId = soundIds[event]
+        if (soundId == null) {
+            debug?.logLine("EARCON event=${event.name} action=DROP reason=no-sound-id")
+            return
+        }
         if (soundId !in loadedSampleIds) {
             Log.w(TAG, "Dropping earcon $event — sample $soundId not yet loaded")
+            debug?.logLine("EARCON event=${event.name} action=DROP reason=not-loaded soundId=$soundId")
             return
         }
         soundPool.play(soundId, volumeScalar, volumeScalar, 1, 0, 1f)
+        debug?.logLine("EARCON event=${event.name} action=PLAY vol=${(volumeScalar * 100).toInt()}")
     }
 
     fun destroy() {

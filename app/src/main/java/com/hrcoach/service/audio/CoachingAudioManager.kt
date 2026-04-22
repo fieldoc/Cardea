@@ -26,8 +26,9 @@ class CoachingAudioManager(
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    private val earconPlayer = EarconPlayer(context)
-    private val voicePlayer = VoicePlayer(context)
+    private val debugLogger = TtsDebugLogger(context)
+    private val earconPlayer = EarconPlayer(context, debugLogger)
+    private val voicePlayer = VoicePlayer(context, debugLogger)
     private val vibrationManager = VibrationManager(context)
     private val startupSequencer = StartupSequencer(context)
     private val escalationTracker = EscalationTracker()
@@ -51,6 +52,21 @@ class CoachingAudioManager(
     /** Called by WFS each tick so direction-aware fallbacks have current slope. */
     fun setHrSlope(slope: Float) {
         lastHrSlopeBpmPerMin = slope
+    }
+
+    /** Opens a per-run TTS debug log. Called by WFS at workout start. See [TtsDebugLogger]. */
+    fun startDebugLog(isSimulation: Boolean, workoutMode: String?) {
+        debugLogger.startRun(isSimulation, workoutMode)
+    }
+
+    /** Closes the current TTS debug log. Called by WFS at workout stop. */
+    fun endDebugLog(detail: String) {
+        debugLogger.endRun(detail)
+    }
+
+    /** Writes a lifecycle or external-context line to the TTS debug log. */
+    fun logDebug(line: String) {
+        debugLogger.logLine(line)
     }
 
     /** Called by WFS at stop time. Returns a defensive copy and clears internal state. */
@@ -92,6 +108,7 @@ class CoachingAudioManager(
         // later session.
         val pendingSkip = skipNextBriefing
         skipNextBriefing = false
+        debugLogger.logLine("LIFECYCLE action=START_SEQUENCE mode=${config.mode.name} skipBriefing=${skipBriefing || pendingSkip}")
         if (!skipBriefing && !pendingSkip) {
             voicePlayer.speakBriefing(config)
         }
@@ -119,6 +136,7 @@ class CoachingAudioManager(
         activeDurationSec: Long,
         avgHr: Int?
     ) {
+        debugLogger.logLine("LIFECYCLE action=END_SEQUENCE distance=${distanceMeters.toInt()}m active=${activeDurationSec}s avgHr=${avgHr ?: "null"}")
         if (currentSettings.enableWorkoutComplete == false) return
 
         val verbosity = currentSettings.voiceVerbosity
@@ -149,14 +167,38 @@ class CoachingAudioManager(
     var distanceUnit: DistanceUnit = DistanceUnit.KM
 
     fun fireEvent(event: CoachingEvent, guidanceText: String? = null, paceMinPerKm: Float? = null) {
+        // Snapshot HR/zone context up-front for the debug log. Reads WorkoutState directly — it's
+        // the single source of truth WFS already writes to every tick, so CAM doesn't need a
+        // wider signature. Cheap StateFlow read.
+        val snap = WorkoutState.snapshot.value
+        val ctx = "hr=${snap.currentHr} tgt=${snap.targetHr} zone=${snap.zoneStatus.name} " +
+            "slope=${"%+.1f".format(lastHrSlopeBpmPerMin)} paused=${snap.isPaused} autoPaused=${snap.isAutoPaused} " +
+            "verbosity=${currentSettings.voiceVerbosity.name} t=${snap.elapsedSeconds}s"
+
         // Filter informational cues by individual toggles
         when (event) {
-            CoachingEvent.HALFWAY -> if (currentSettings.enableHalfwayReminder == false) return
-            CoachingEvent.KM_SPLIT -> if (currentSettings.enableKmSplits == false) return
-            CoachingEvent.WORKOUT_COMPLETE -> if (currentSettings.enableWorkoutComplete == false) return
-            CoachingEvent.IN_ZONE_CONFIRM -> if (currentSettings.enableInZoneConfirm == false) return
+            CoachingEvent.HALFWAY -> if (currentSettings.enableHalfwayReminder == false) {
+                debugLogger.logLine("FIRE event=${event.name} $ctx action=BLOCK reason=toggle-halfway-off")
+                return
+            }
+            CoachingEvent.KM_SPLIT -> if (currentSettings.enableKmSplits == false) {
+                debugLogger.logLine("FIRE event=${event.name} $ctx action=BLOCK reason=toggle-kmsplits-off")
+                return
+            }
+            CoachingEvent.WORKOUT_COMPLETE -> if (currentSettings.enableWorkoutComplete == false) {
+                debugLogger.logLine("FIRE event=${event.name} $ctx action=BLOCK reason=toggle-workoutcomplete-off")
+                return
+            }
+            CoachingEvent.IN_ZONE_CONFIRM -> if (currentSettings.enableInZoneConfirm == false) {
+                debugLogger.logLine("FIRE event=${event.name} $ctx action=BLOCK reason=toggle-inzoneconfirm-off")
+                return
+            }
             else -> { /* coaching alerts always pass through */ }
         }
+
+        debugLogger.logLine(
+            "FIRE event=${event.name} $ctx guidance=" + quoteOrNull(guidanceText)
+        )
 
         // Count every cue that *passes* the toggle filter. Read by the post-run recap.
         cueCounts.merge(event, 1) { a, b -> a + b }
@@ -287,6 +329,7 @@ class CoachingAudioManager(
      * Always plays regardless of voice verbosity — tones use earconVolume which is independent.
      */
     fun playPauseFeedback(paused: Boolean) {
+        debugLogger.logLine("LIFECYCLE action=${if (paused) "PAUSE" else "RESUME"}")
         // Banner for pause/resume — users asked "what was that chime?" during pauses.
         // Reuses IN_ZONE_CONFIRM enum to satisfy the event field; this code path does NOT
         // route through fireEvent, so no cueCounts entry is recorded.
@@ -342,6 +385,9 @@ class CoachingAudioManager(
         voicePlayer.destroy()
         vibrationManager.destroy()
     }
+
+    private fun quoteOrNull(s: String?): String =
+        if (s == null) "null" else "\"" + s.replace("\"", "\\\"") + "\""
 
     companion object {
         /** Returns true when earcons should fire. OFF suppresses earcons; other levels allow them. */

@@ -346,6 +346,14 @@ class WorkoutForegroundService : LifecycleService() {
                     )
                 }
 
+                // Open the TTS debug log for this run BEFORE the briefing/countdown so the start
+                // sequence itself is captured. Keeps the last 2 runs on disk in
+                // filesDir/tts_debug/run_*.log. Diagnostic-only — does not touch saved workouts.
+                coachingAudioManager?.startDebugLog(
+                    isSimulation = SimulationController.isActive,
+                    workoutMode = workoutConfig.mode.name
+                )
+
                 // Play 3-2-1-GO countdown (suspends ~4 seconds)
                 coachingAudioManager?.playStartSequence(workoutConfig)
 
@@ -1102,6 +1110,9 @@ class WorkoutForegroundService : LifecycleService() {
         locationSource = null
         hrSource = null
         clock = RealClock()
+        // Close the TTS debug log before destroying the audio manager. Idempotent — safe across
+        // all cleanup paths (normal stop, handleStartFailure, onDestroy).
+        coachingAudioManager?.endDebugLog("cleanup")
         coachingAudioManager?.destroy()
         coachingAudioManager = null
         zoneEngine = null

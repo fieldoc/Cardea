@@ -24,7 +24,7 @@ import java.util.Locale
  * Uses [AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE] so speech layers
  * over music without stealing audio focus.
  */
-class VoicePlayer(context: Context) {
+class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
 
     private var tts: TextToSpeech? = null
     @Volatile private var ttsReady = false
@@ -177,7 +177,10 @@ class VoicePlayer(context: Context) {
         distanceUnit: DistanceUnit = DistanceUnit.KM,
         hrSlopeBpmPerMin: Float = 0f,
     ) {
-        if (!shouldSpeak(event, verbosity)) return
+        if (!shouldSpeak(event, verbosity)) {
+            debug?.logLine("TTS event=${event.name} action=SKIP reason=verbosity verbosity=${verbosity.name}")
+            return
+        }
 
         val text = when {
             event == CoachingEvent.KM_SPLIT -> {
@@ -203,7 +206,10 @@ class VoicePlayer(context: Context) {
             else -> eventText(event, guidanceText, workoutMode, distanceUnit)
         }
 
-        if (text.isBlank()) return
+        if (text.isBlank()) {
+            debug?.logLine("TTS event=${event.name} action=SKIP reason=blank-text")
+            return
+        }
 
         val priority = VoiceEventPriority.of(event)
         val nowMs = System.currentTimeMillis()
@@ -215,7 +221,9 @@ class VoicePlayer(context: Context) {
         // the callback dropped and reset state so the next cue can play.
         if (currentPriority != null && currentPrioritySetAtMs > 0L &&
             nowMs - currentPrioritySetAtMs > WATCHDOG_MAX_UTTERANCE_MS) {
-            Log.w(TAG, "Voice watchdog: clearing stale priority=$currentPriority after ${nowMs - currentPrioritySetAtMs}ms")
+            val stuckFor = nowMs - currentPrioritySetAtMs
+            Log.w(TAG, "Voice watchdog: clearing stale priority=$currentPriority after ${stuckFor}ms")
+            debug?.logLine("TTS WATCHDOG cleared stale priority=$currentPriority age=${stuckFor}ms")
             currentPriority = null
             currentPrioritySetAtMs = 0L
             utteranceDeferred?.complete(Unit)
@@ -228,6 +236,7 @@ class VoicePlayer(context: Context) {
             if (priority.ordinal > currentPriority!!.ordinal) {
                 // Lower priority — skip
                 Log.d(TAG, "Skipping $event (priority $priority < current $currentPriority)")
+                debug?.logLine("TTS event=${event.name} action=SKIP reason=lower-priority curPriority=$currentPriority newPriority=$priority")
                 return
             }
         }
@@ -243,6 +252,9 @@ class VoicePlayer(context: Context) {
 
         if (ttsReady) {
             tts?.speak(text, queueMode, speechParams(), "event_${event.name}_${System.nanoTime()}")
+            debug?.logLine("TTS event=${event.name} action=SPEAK prio=$priority queue=${if (queueMode == TextToSpeech.QUEUE_FLUSH) "FLUSH" else "ADD"} text=${quote(text)}")
+        } else {
+            debug?.logLine("TTS event=${event.name} action=DROP reason=tts-not-ready text=${quote(text)}")
         }
     }
 
@@ -253,14 +265,19 @@ class VoicePlayer(context: Context) {
      * Respects verbosity: skipped when OFF or TTS not ready.
      */
     fun speakAnnouncement(text: String) {
-        if (verbosity == VoiceVerbosity.OFF) return
+        if (verbosity == VoiceVerbosity.OFF) {
+            debug?.logLine("TTS ann action=SKIP reason=verbosity-off text=${quote(text)}")
+            return
+        }
         if (!ttsReady) {
             Log.w(TAG, "Dropping announcement — TTS not ready: $text")
+            debug?.logLine("TTS ann action=DROP reason=tts-not-ready text=${quote(text)}")
             return
         }
         currentPriority = VoiceEventPriority.INFORMATIONAL
         currentPrioritySetAtMs = System.currentTimeMillis()
         tts?.speak(text, TextToSpeech.QUEUE_ADD, speechParams(), "announcement_${System.nanoTime()}")
+        debug?.logLine("TTS ann action=SPEAK text=${quote(text)}")
     }
 
     suspend fun awaitCompletion() {
@@ -295,6 +312,8 @@ class VoicePlayer(context: Context) {
         utteranceDeferred?.complete(Unit)
         utteranceDeferred = null
     }
+
+    private fun quote(s: String): String = "\"" + s.replace("\"", "\\\"") + "\""
 
     companion object {
         private const val TAG = "VoicePlayer"
