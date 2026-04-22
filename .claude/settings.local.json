@@ -24,7 +24,11 @@
       "Bash(./gradlew.bat help:*)",
       "Bash(xargs cat:*)",
       "Bash(powershell.exe:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(rm \"C:/Users/glm_6/.claude/skills/ai-review/agents/1-wiring.md\" \"C:/Users/glm_6/.claude/skills/ai-review/agents/2-adversarial.md\" \"C:/Users/glm_6/.claude/skills/ai-review/agents/3-convention.md\" \"C:/Users/glm_6/.claude/skills/ai-review/agents/4-skeptic.md\")",
+      "Read(//c/Users/glm_6/.claude/skills/ai-review/agents/**)",
+      "Bash(mkdir -p ~/.claude/skills/building-cardea-features)",
+      "Read(//c/Users/glm_6/.claude/skills/**)"
     ]
   },
   "hooks": {
