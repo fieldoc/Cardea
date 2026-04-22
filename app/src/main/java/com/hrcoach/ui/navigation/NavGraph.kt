@@ -619,11 +619,6 @@ fun HrCoachNavGraph(
                             launchSingleTop = true
                         }
                     },
-                    onViewPostRunSummary = {
-                        navController.navigate(Routes.postRunSummary(workoutId, fresh = false)) {
-                            launchSingleTop = true
-                        }
-                    },
                     onDeleteWorkout = { navController.popBackStack() }
                 )
             }
@@ -668,6 +663,18 @@ fun HrCoachNavGraph(
                     },
                     onNavigateToSoundLibrary = {
                         navController.navigate(Routes.SOUND_LIBRARY) { launchSingleTop = true }
+                    },
+                    onOpenFullMap = {
+                        navController.navigate(Routes.historyDetail(workoutId)) {
+                            popUpTo(Routes.HISTORY) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onOpenMapsSetup = {
+                        navController.navigate(Routes.ACCOUNT) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                        }
                     },
                     viewModel = postRunViewModel
                 )

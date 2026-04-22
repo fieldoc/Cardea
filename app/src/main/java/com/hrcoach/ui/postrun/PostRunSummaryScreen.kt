@@ -7,6 +7,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -135,6 +136,8 @@ fun PostRunSummaryScreen(
     onDone: () -> Unit,
     onBack: () -> Unit,
     onNavigateToSoundLibrary: () -> Unit = {},
+    onOpenFullMap: () -> Unit,
+    onOpenMapsSetup: () -> Unit,
     viewModel: PostRunSummaryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -289,7 +292,7 @@ fun PostRunSummaryScreen(
                                 }
                             }
 
-                            // ── Section 2: Your Run (hero + 2 stat cards) ──
+                            // ── Section 2: Your Run (hero + 2 stat cards + route map) ──
                             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 RunCompleteHero(
                                     visible = showCelebration,
@@ -310,6 +313,22 @@ fun PostRunSummaryScreen(
                                         value = uiState.avgHrText,
                                         icon = Icons.Default.Favorite,
                                         modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                // ── Route map preview — tappable, opens HistoryDetail for deep-dive ──
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(220.dp)
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .clickable(onClick = onOpenFullMap)
+                                ) {
+                                    com.hrcoach.ui.components.RouteMap(
+                                        trackPoints = uiState.trackPoints,
+                                        workoutConfig = uiState.workoutConfig,
+                                        isMapsEnabled = uiState.isMapsEnabled,
+                                        onOpenMapsSetup = onOpenMapsSetup,
+                                        modifier = Modifier.fillMaxSize()
                                     )
                                 }
                             }

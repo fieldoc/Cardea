@@ -81,7 +81,6 @@ fun HistoryDetailScreen(
     onBack: () -> Unit,
     onOpenMapsSetup: () -> Unit,
     onViewProgress: () -> Unit,
-    onViewPostRunSummary: () -> Unit,
     onDeleteWorkout: () -> Unit,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
@@ -234,7 +233,6 @@ fun HistoryDetailScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
                                 MoreActionsCard(
-                                    onViewPostRunSummary = onViewPostRunSummary,
                                     onViewProgress = onViewProgress,
                                     onDone = onBack
                                 )
@@ -459,7 +457,6 @@ private fun DetailStatCell(label: String, value: String, modifier: Modifier = Mo
 
 @Composable
 private fun MoreActionsCard(
-    onViewPostRunSummary: () -> Unit,
     onViewProgress: () -> Unit,
     onDone: () -> Unit
 ) {
@@ -470,33 +467,18 @@ private fun MoreActionsCard(
             color = CardeaTheme.colors.textPrimary
         )
         Spacer(modifier = Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(
-                onClick = onViewPostRunSummary,
-                modifier = Modifier.weight(1f).height(44.dp),
-                border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
-            ) {
-                Text(
-                    text = stringResource(R.string.button_post_run_insights),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = CardeaTheme.colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            OutlinedButton(
-                onClick = onViewProgress,
-                modifier = Modifier.weight(1f).height(44.dp),
-                border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
-            ) {
-                Text(
-                    text = stringResource(R.string.button_view_progress),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = CardeaTheme.colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+        OutlinedButton(
+            onClick = onViewProgress,
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+            border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
+        ) {
+            Text(
+                text = stringResource(R.string.button_view_progress),
+                style = MaterialTheme.typography.labelLarge,
+                color = CardeaTheme.colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Spacer(modifier = Modifier.height(10.dp))
         CardeaButton(
