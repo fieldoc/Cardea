@@ -1,6 +1,5 @@
 package com.hrcoach.ui.history
 
-import android.util.Log
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,7 +40,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,18 +51,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapType
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.Polyline
-import com.google.maps.android.compose.rememberCameraPositionState
 import com.hrcoach.R
 import com.hrcoach.data.db.TrackPointEntity
 import com.hrcoach.data.db.WorkoutEntity
@@ -299,75 +285,21 @@ private fun DetailMapCard(
     onOpenMapsSetup: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .border(border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder), shape = RoundedCornerShape(18.dp))
-            .background(CardeaTheme.colors.glassHighlight, RoundedCornerShape(18.dp))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(1.dp)
-                .background(CardeaTheme.colors.bgPrimary, RoundedCornerShape(17.dp))
-        ) {
-            when {
-                trackPoints.size >= 2 && isMapsEnabled -> {
-                    HrHeatmapRouteMap(trackPoints = trackPoints, workoutConfig = workoutConfig)
-                    MapHeaderOverlay(hasWorkoutTarget = workoutConfig != null)
-                    MapLegendOverlay(hasWorkoutTarget = workoutConfig != null)
-                }
-                trackPoints.size >= 2 -> {
-                    EmptyMapState(
-                        title = "Route ready, map setup missing",
-                        body = "Add your Google Maps API key in Setup > App Settings to unlock the route replay overlay.",
-                        actionLabel = stringResource(R.string.button_open_maps_setup),
-                        onAction = onOpenMapsSetup
-                    )
-                }
-                else -> {
-                    EmptyMapState(
-                        title = "No route data captured",
-                        body = "This workout does not include enough track points to draw a route or heart-rate heatmap."
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyMapState(
-    title: String,
-    body: String,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null
-) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier.padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                color = CardeaTheme.colors.textPrimary,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = body,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CardeaTheme.colors.textSecondary,
-                textAlign = TextAlign.Center
-            )
-            if (actionLabel != null && onAction != null) {
-                OutlinedButton(
-                    onClick = onAction,
-                    border = BorderStroke(1.dp, CardeaTheme.colors.glassBorder)
-                ) {
-                    Text(actionLabel, color = CardeaTheme.colors.textPrimary)
-                }
-            }
+    // Delegate route drawing + empty-state rendering to the shared RouteMap.
+    // HistoryDetail keeps its own overlays (MapHeaderOverlay + MapLegendOverlay) on top
+    // of the map when it is drawable, since those are HistoryDetail-specific UI not used
+    // by the compact PostRun variant.
+    Box(modifier = modifier) {
+        com.hrcoach.ui.components.RouteMap(
+            trackPoints = trackPoints,
+            workoutConfig = workoutConfig,
+            isMapsEnabled = isMapsEnabled,
+            onOpenMapsSetup = onOpenMapsSetup,
+            modifier = Modifier.fillMaxSize()
+        )
+        if (trackPoints.size >= 2 && isMapsEnabled) {
+            MapHeaderOverlay(hasWorkoutTarget = workoutConfig != null)
+            MapLegendOverlay(hasWorkoutTarget = workoutConfig != null)
         }
     }
 }
@@ -427,72 +359,6 @@ private fun LegendChip(label: String, color: Color) {
             style = MaterialTheme.typography.labelSmall,
             color = CardeaTheme.colors.textPrimary
         )
-    }
-}
-
-// ── Map route ────────────────────────────────────────────────────────────────
-
-@Composable
-private fun HrHeatmapRouteMap(
-    trackPoints: List<TrackPointEntity>,
-    workoutConfig: WorkoutConfig?
-) {
-    val context = LocalContext.current
-    val mapStyle = remember {
-        runCatching {
-            MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
-        }.getOrNull()
-    }
-    val cameraPositionState = rememberCameraPositionState()
-    var isMapLoaded by remember { mutableStateOf(false) }
-
-    LaunchedEffect(isMapLoaded, trackPoints) {
-        if (!isMapLoaded || trackPoints.isEmpty()) return@LaunchedEffect
-        runCatching {
-            val boundsBuilder = LatLngBounds.builder()
-            trackPoints.forEach { boundsBuilder.include(LatLng(it.latitude, it.longitude)) }
-            cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 64))
-        }.onFailure { e ->
-            Log.w("HistoryDetail", "Map bounds calculation failed, centering on first point", e)
-            val first = trackPoints.first()
-            cameraPositionState.move(
-                CameraUpdateFactory.newLatLngZoom(LatLng(first.latitude, first.longitude), 15f)
-            )
-        }
-    }
-
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-        onMapLoaded = { isMapLoaded = true },
-        uiSettings = MapUiSettings(zoomControlsEnabled = false, mapToolbarEnabled = false),
-        properties = MapProperties(
-            mapStyleOptions = mapStyle,
-            mapType = MapType.NORMAL
-        )
-    ) {
-        for (i in 0 until trackPoints.lastIndex) {
-            val p1 = trackPoints[i]
-            val p2 = trackPoints[i + 1]
-            Polyline(
-                points = listOf(LatLng(p1.latitude, p1.longitude), LatLng(p2.latitude, p2.longitude)),
-                color = hrToColor(
-                    hr = p2.heartRate,
-                    distanceMeters = p2.distanceMeters,
-                    config = workoutConfig,
-                    inZoneColor = ZoneGreen,
-                    warningColor = ZoneAmber,
-                    highColor = ZoneRed
-                ),
-                width = 8f
-            )
-        }
-        trackPoints.firstOrNull()?.let { start ->
-            Marker(state = MarkerState(LatLng(start.latitude, start.longitude)), title = "Start")
-        }
-        trackPoints.lastOrNull()?.let { end ->
-            Marker(state = MarkerState(LatLng(end.latitude, end.longitude)), title = "Finish")
-        }
     }
 }
 
