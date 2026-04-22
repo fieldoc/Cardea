@@ -232,15 +232,21 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
             utteranceDeferred = null
         }
 
-        // Priority gating: if something is speaking, only allow higher priority
+        // Priority gating. Previously ANY lower-priority cue was dropped while something was
+        // speaking, which silently ate KM splits whenever a PREDICTIVE_WARNING was in flight
+        // (observed 2026-04-22 sim: "Kilometer 2" voice dropped, earcon chimed with no number —
+        // confusing). New policy:
+        //   - CRITICAL speaking (SPEED_UP/SLOW_DOWN/SIGNAL_LOST): drop non-CRITICAL so a stale
+        //     split can't shadow an urgent alert's tail.
+        //   - Otherwise: QUEUE_ADD everything — Android TTS plays utterances back-to-back (each
+        //     ~2-3s) so a split announced right after a PW just plays a moment later instead of
+        //     vanishing. CRITICAL itself still uses QUEUE_FLUSH below to interrupt.
         val speaking = tts?.isSpeaking == true
-        if (speaking && currentPriority != null) {
-            if (priority.ordinal > currentPriority!!.ordinal) {
-                // Lower priority — skip
-                Log.d(TAG, "Skipping $event (priority $priority < current $currentPriority)")
-                debug?.logLine("TTS event=${event.name} action=SKIP reason=lower-priority curPriority=$currentPriority newPriority=$priority")
-                return
-            }
+        if (speaking && currentPriority == VoiceEventPriority.CRITICAL &&
+            priority != VoiceEventPriority.CRITICAL) {
+            Log.d(TAG, "Skipping $event (CRITICAL in flight, new=$priority)")
+            debug?.logLine("TTS event=${event.name} action=SKIP reason=behind-critical curPriority=$currentPriority newPriority=$priority")
+            return
         }
 
         val queueMode = if (priority == VoiceEventPriority.CRITICAL) {

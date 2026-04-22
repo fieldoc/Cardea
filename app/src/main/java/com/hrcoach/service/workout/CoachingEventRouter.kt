@@ -21,6 +21,10 @@ class CoachingEventRouter {
     private var lastReturnToZoneMs: Long = 0L
     private var lastSegmentIndex: Int = -1
     private var lastPredictiveWarningTime: Long = 0L
+    // Fresh-evidence gate: disarmed after each PW fires, rearmed on a tick where HR is within
+    // PREDICTIVE_REARM_BAND_BPM of target. Ensures each PW corresponds to a distinct drift event
+    // rather than sustained offset. Starts true so the first eligible drift after warmup can fire.
+    private var predictiveArmed: Boolean = true
 
     // Informational cue state
     private var halfwayFired: Boolean = false
@@ -46,6 +50,25 @@ class CoachingEventRouter {
         // NOT reset — we just skip this tick and reassess next tick. TUNING: 0.8 matches
         // buildGuidance's phrasing threshold for symmetry.
         const val IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN: Float = 0.8f
+
+        // PREDICTIVE_WARNING tuning (2026-04-22, after the FULL-verbosity sim exposed 33 PWs in a
+        // single 20-min run — same "HR climbing - ease off slightly" every ~60s while HR was held
+        // flat above target). Three gates tightened:
+        //
+        //   1. COOLDOWN raised 60s → 180s — matches IN_ZONE_CONFIRM cadence. The runner already
+        //      knows they're drifting from the first PW; a minute-by-minute reminder is nagging,
+        //      not coaching.
+        //   2. SLOPE GATE added — require the EMA to actually reflect motion toward the boundary
+        //      (|slope| ≥ 0.5 BPM/min AND slope sign matches projected-drift direction). When HR
+        //      is stable at an offset (slope ≈ 0), it has already drifted — that's a JOB for the
+        //      reactive AlertPolicy, not for PW. PW's value is flagging drift *in progress*.
+        //   3. FRESH-EVIDENCE gate — after PW fires, the runner must briefly return to within a
+        //      narrow band of target before the next PW is eligible. Encoded via [predictiveArmed]:
+        //      set false after each fire, set true again when HR is within ±PREDICTIVE_REARM_BAND_BPM
+        //      of target for one tick. Prevents endless "still drifting high" repetition.
+        const val PREDICTIVE_WARNING_COOLDOWN_MS: Long = 180_000L
+        const val PREDICTIVE_SLOPE_GATE_BPM_PER_MIN: Float = 0.5f
+        const val PREDICTIVE_REARM_BAND_BPM: Int = 4
     }
 
     /**
@@ -77,6 +100,7 @@ class CoachingEventRouter {
         lastReturnToZoneMs = 0L
         lastSegmentIndex = -1
         lastPredictiveWarningTime = 0L
+        predictiveArmed = true
         halfwayFired = false
         completeFired = false
         lastSplitAnnounced = 0
@@ -113,14 +137,14 @@ class CoachingEventRouter {
                 // rapid out/in oscillations kept the RETURN_TO_ZONE cooldown busy).
                 lastVoiceCueTimeMs = nowMs
 
-                // lastPredictiveWarningTime — conditionally reset (only when the 60s cooldown
-                // was already expired). This suppresses PREDICTIVE_WARNING on the entry tick
-                // itself (simultaneous cues sound confusing), while preserving the running
-                // cooldown for rapid oscillators whose 60s hasn't elapsed yet — they continue
-                // to receive warnings once they've been in zone for 60s. Also guards first zone
-                // entry: returning runners have adaptive projection confidence from prior sessions
-                // and would otherwise hear a predictive cue the very first tick they reach zone.
-                if (nowMs - lastPredictiveWarningTime >= 60_000L) {
+                // lastPredictiveWarningTime — conditionally reset (only when the cooldown was
+                // already expired). This suppresses PREDICTIVE_WARNING on the entry tick itself
+                // (simultaneous cues sound confusing), while preserving the running cooldown for
+                // rapid oscillators whose cooldown hasn't elapsed yet — they continue to receive
+                // warnings once they've been in zone for the full cooldown window. Also guards
+                // first zone entry: returning runners have adaptive projection confidence from
+                // prior sessions and would otherwise hear a predictive cue the very first tick.
+                if (nowMs - lastPredictiveWarningTime >= PREDICTIVE_WARNING_COOLDOWN_MS) {
                     lastPredictiveWarningTime = nowMs
                 }
 
@@ -159,20 +183,43 @@ class CoachingEventRouter {
             lastSegmentIndex = -1
         }
 
-        val projectedDrift = adaptiveResult?.projectedZoneStatus in
-            setOf(ZoneStatus.ABOVE_ZONE, ZoneStatus.BELOW_ZONE)
+        val projectedAbove = adaptiveResult?.projectedZoneStatus == ZoneStatus.ABOVE_ZONE
+        val projectedBelow = adaptiveResult?.projectedZoneStatus == ZoneStatus.BELOW_ZONE
+        val projectedDrift = projectedAbove || projectedBelow
         // Suppress predictive coaching during cardiovascular warmup (first 90s) — the slope EMA
         // reflects the expected HR rise from rest, not a real drift, and would fire false warnings.
         val warmupComplete = elapsedSeconds >= 90L
+
+        // Slope must reflect motion toward the projected boundary. If HR is stable at an offset
+        // (|slope| near zero), that's a present-tense condition for AlertPolicy, not a prediction.
+        val slope = adaptiveResult?.hrSlopeBpmPerMin ?: 0f
+        val slopeMatchesDrift = when {
+            projectedAbove -> slope >= PREDICTIVE_SLOPE_GATE_BPM_PER_MIN
+            projectedBelow -> slope <= -PREDICTIVE_SLOPE_GATE_BPM_PER_MIN
+            else -> false
+        }
+
+        // Fresh-evidence rearm: after a PW fires, predictiveArmed stays false until HR visibly
+        // returns toward target (IN_ZONE + low slope). This stops the "same drift, repeated cue"
+        // loop — next PW requires a NEW drift event, not ongoing drift.
+        if (!predictiveArmed &&
+            zoneStatus == ZoneStatus.IN_ZONE &&
+            abs(slope) < PREDICTIVE_SLOPE_GATE_BPM_PER_MIN) {
+            predictiveArmed = true
+        }
+
         if (zoneStatus == ZoneStatus.IN_ZONE &&
             adaptiveResult?.hasProjectionConfidence == true &&
             projectedDrift &&
+            slopeMatchesDrift &&
+            predictiveArmed &&
             warmupComplete &&
-            nowMs - lastPredictiveWarningTime >= 60_000L
+            nowMs - lastPredictiveWarningTime >= PREDICTIVE_WARNING_COOLDOWN_MS
         ) {
             emitEvent(CoachingEvent.PREDICTIVE_WARNING, guidance)
             lastPredictiveWarningTime = nowMs
             lastVoiceCueTimeMs = nowMs
+            predictiveArmed = false
         }
 
         // ── Informational cues ──────────────────────────────────────
