@@ -62,6 +62,10 @@ data class PostRunSummaryUiState(
     // Rendered by SoundsHeardSection on the first three runs only.
     val cueCounts: Map<com.hrcoach.domain.model.CoachingEvent, Int> = emptyMap(),
     val showSoundsRecap: Boolean = false,
+    // ── New fields for inline route map ──
+    val trackPoints: List<com.hrcoach.data.db.TrackPointEntity> = emptyList(),
+    val workoutConfig: com.hrcoach.domain.model.WorkoutConfig? = null,
+    val isMapsEnabled: Boolean = false,
 )
 
 @HiltViewModel
@@ -74,6 +78,7 @@ class PostRunSummaryViewModel @Inject constructor(
     private val achievementDao: AchievementDao,
     private val adaptiveProfileRepository: AdaptiveProfileRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val mapsSettingsRepository: com.hrcoach.data.repository.MapsSettingsRepository,
     private val hrrAudio: HrrAudio
 ) : ViewModel() {
 
@@ -122,11 +127,20 @@ class PostRunSummaryViewModel @Inject constructor(
                     currentMetrics = currentMetrics,
                     similarMetrics = similar.mapNotNull { it.second }
                 )
-                val avgHr = currentMetrics?.avgHr ?: workoutRepository.getTrackPoints(workout.id)
+                // Load track points ONCE — shared for avgHr fallback and for map rendering.
+                val allTrackPoints = workoutRepository.getTrackPoints(workout.id)
+                val avgHr = currentMetrics?.avgHr ?: allTrackPoints
                     .map { it.heartRate }
                     .takeIf { it.isNotEmpty() }
                     ?.average()
                     ?.toFloat()
+                val isMapsEnabled = hasAnyMapsApiKey()
+                val parsedConfig = runCatching {
+                    com.hrcoach.util.JsonCodec.gson.fromJson(
+                        workout.targetConfig,
+                        com.hrcoach.domain.model.WorkoutConfig::class.java
+                    )
+                }.getOrNull()
 
                 // Parse cue counts from the current workout's metrics, and gate the recap
                 // to the user's first 3 non-simulated workouts. The counts live in
@@ -152,6 +166,9 @@ class PostRunSummaryViewModel @Inject constructor(
                     workoutEndTimeMs = workout.endTime,
                     cueCounts = cueCounts,
                     showSoundsRecap = showSoundsRecap,
+                    trackPoints = allTrackPoints,
+                    workoutConfig = parsedConfig,
+                    isMapsEnabled = isMapsEnabled,
                 )
             }.onFailure {
                 Log.e("PostRunSummaryVM", "Failed to load workout summary", it)
@@ -349,6 +366,13 @@ class PostRunSummaryViewModel @Inject constructor(
         }
 
         return items
+    }
+
+    private fun hasAnyMapsApiKey(): Boolean {
+        val runtimeKey = mapsSettingsRepository.getMapsApiKey()
+        val builtIn = com.hrcoach.BuildConfig.MAPS_API_KEY
+        return runtimeKey.isNotBlank() ||
+            (builtIn.isNotBlank() && builtIn != "YOUR_API_KEY_HERE")
     }
 
     internal companion object {

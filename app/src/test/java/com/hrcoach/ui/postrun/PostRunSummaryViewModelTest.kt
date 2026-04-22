@@ -46,6 +46,7 @@ class PostRunSummaryViewModelTest {
     private val bootcampRepository: BootcampRepository = mockk(relaxed = true)
     private val adaptiveProfileRepository: AdaptiveProfileRepository = mockk(relaxed = true)
     private val userProfileRepository: UserProfileRepository = mockk(relaxed = true)
+    private val mapsSettingsRepository: com.hrcoach.data.repository.MapsSettingsRepository = mockk(relaxed = true)
     private val hrrAudio: com.hrcoach.ui.postrun.HrrAudio = mockk(relaxed = true)
 
     @Before
@@ -96,6 +97,7 @@ class PostRunSummaryViewModelTest {
             achievementDao = achievementDao,
             adaptiveProfileRepository = adaptiveProfileRepository,
             userProfileRepository = userProfileRepository,
+            mapsSettingsRepository = mapsSettingsRepository,
             hrrAudio = hrrAudio
         )
     }
