@@ -152,6 +152,17 @@ Three-component layered audio in `service/audio/`:
 - **`AudioSettings`:** `earconVolume` and `voiceVolume` independent (0–100).
 - **Verbosity:** OFF silent; MINIMAL = critical/normal only; FULL = all events including informational.
 - **KM splits:** "Kilometer N" (STEADY_STATE/DISTANCE_PROFILE); "Kilometer N. Pace: X minutes Y." (FREE_RUN).
+- **IN_ZONE_CONFIRM speaks the fixed string "In zone"** — hard-coded in `VoicePlayer.eventText` (ignores `guidanceText`); router emits with `null`. Do NOT reintroduce guidance-text relay — zone2's long preset string fires every 3-5 min via STANDARD cadence and reads as nagging. `LOW_CONFIDENCE_AFFIRMATIONS` removed 2026-04-21.
+- **`VoicePlayer` stale-priority watchdog** — `speakEvent` clears `currentPriority` if `currentPrioritySetAtMs` is older than `WATCHDOG_MAX_UTTERANCE_MS` (15s). Recovers from dropped TTS `onDone` (engine hang, audio-focus loss, doze), which would otherwise silence every non-CRITICAL cue for the rest of the run. Do not remove or shorten below ~10s. `speakAnnouncement` also stamps the timestamp.
+- **`EarconPlayer.play()` gated on `loadedSampleIds`** populated by `setOnLoadCompleteListener`. `SoundPool.play()` on a not-yet-loaded sample returns streamId=0 silently, so early `SIGNAL_LOST` during briefing would drop with no log. Do not revert to unguarded `play()`.
+
+### TTS Debug Log (`TtsDebugLogger`)
+
+Per-run append log at `filesDir/tts_debug/run_YYYYMMDD_HHmmss[_sim].log`. Retention: **last 2 runs kept**; older deleted on next `startRun`. 5 MB per-file safety cap. Diagnostic-only — does NOT touch Room / cloud backup.
+
+- Opened in `WFS.startWorkout` IO startup coroutine just before `playStartSequence` (briefing captured); closed in `cleanupManagers` (idempotent across stop, `handleStartFailure`, `onDestroy`).
+- Captures: `LIFECYCLE` (START_SEQUENCE/END_SEQUENCE/PAUSE/RESUME), `FIRE event=... hr=... tgt=... zone=... slope=... verbosity=... t=...s guidance=...`, `TTS ... action=SPEAK|SKIP|DROP|WATCHDOG`, `EARCON ... action=PLAY|DROP`. Reads HR context from `WorkoutState.snapshot.value` at fireEvent entry.
+- Pull: `adb shell "run-as com.hrcoach cat files/tts_debug/<filename>"`. Logcat `main` ring buffer (~5 MiB) rolls out within hours — rely on this file log, or `adb logcat -f /sdcard/cardea.log -v time` before the run, for any run older than ~an hour.
 
 ## Distance Unit
 
