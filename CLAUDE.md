@@ -63,10 +63,6 @@ Four-tab bottom bar: **Home**, **Workout** (setup or bootcamp depending on enrol
 
 Never call DataStore `edit {}` inside `onValueChange` (fires hundreds of times/s). Persist in `onValueChangeFinished`; update in-memory `StateFlow` in `onValueChange` for smooth UI.
 
-## Ralph Loop
-
-Windows: `setup-ralph-loop.sh` fails on `(`, `×`, `&` — plain ASCII prompts only. Good for well-defined TDD tasks with explicit file changes + test commands. Not for UX/brainstorming (use `superpowers:brainstorming` first).
-
 ## MCP Servers
 
 Registered in `.mcp.json`. **mobile-mcp** for on-device UI verification (prereq: `adb devices`). **GitHub MCP** for PRs/CI status — requires PAT with `repo`/`read:org`/`workflow`. **Firebase MCP** for RTDB. Detailed playbooks in `docs/claude-rules/mobile-mcp.md` and `docs/claude-rules/github-mcp.md`.
