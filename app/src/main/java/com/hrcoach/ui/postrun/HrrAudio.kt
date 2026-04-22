@@ -34,10 +34,9 @@ import javax.inject.Singleton
  * Asset reuse: earcon_in_zone_confirm for the start cue, earcon_workout_complete for the
  * end cue. No new audio assets required.
  *
- * KNOWN LIMITATION: The very first invocation after process start may silently drop the
- * TTS (VoicePlayer needs a few hundred ms to initialize its TextToSpeech engine; it no-ops
- * when !ttsReady). The earcon still plays. On subsequent runs within the same process,
- * TTS is warm and both parts play. Acceptable trade-off for keeping the helper simple.
+ * Players are pre-warmed at construction so the TextToSpeech engine has time to finish
+ * its ~200-500ms async init before the first run ever ends. Settings are re-applied on
+ * every invocation so live volume/verbosity changes between runs take effect immediately.
  */
 @Singleton
 class HrrAudio @Inject constructor(
@@ -46,37 +45,40 @@ class HrrAudio @Inject constructor(
 ) {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var earconPlayer: EarconPlayer? = null
-    private var voicePlayer: VoicePlayer? = null
+    private val earconPlayer: EarconPlayer = EarconPlayer(context)
+    private val voicePlayer: VoicePlayer = VoicePlayer(context)
 
-    private fun ensureInitialised(settings: AudioSettings) {
-        if (earconPlayer == null) earconPlayer = EarconPlayer(context).also {
-            it.setVolume(settings.earconVolume)
-        }
-        if (voicePlayer == null) voicePlayer = VoicePlayer(context).also {
-            it.setVolume(settings.voiceVolume)
-            it.verbosity = settings.voiceVerbosity
-        }
+    init {
+        // Pre-warm so the TTS engine has time to initialize before the first run ends.
+        // Settings are applied here AND on each invocation — the per-invocation refresh
+        // catches live changes the user makes in between runs.
+        applyCurrentSettings()
+    }
+
+    private fun applyCurrentSettings(): AudioSettings {
+        val settings = audioSettingsRepository.getAudioSettings()
+        earconPlayer.setVolume(settings.earconVolume)
+        voicePlayer.setVolume(settings.voiceVolume)
+        voicePlayer.verbosity = settings.voiceVerbosity
+        return settings
     }
 
     fun playHrrStart() = scope.launch {
-        val settings = audioSettingsRepository.getAudioSettings()
+        val settings = applyCurrentSettings()
         if (settings.voiceVerbosity == VoiceVerbosity.OFF) return@launch
-        ensureInitialised(settings)
         if (settings.voiceVerbosity == VoiceVerbosity.FULL) {
-            earconPlayer?.play(CoachingEvent.IN_ZONE_CONFIRM)
+            earconPlayer.play(CoachingEvent.IN_ZONE_CONFIRM)
         }
-        voicePlayer?.speakAnnouncement("Walk slowly. Measuring your recovery.")
+        voicePlayer.speakAnnouncement("Walk slowly. Measuring your recovery.")
     }
 
     fun playHrrComplete() = scope.launch {
-        val settings = audioSettingsRepository.getAudioSettings()
+        val settings = applyCurrentSettings()
         if (settings.voiceVerbosity == VoiceVerbosity.OFF) return@launch
-        ensureInitialised(settings)
         if (settings.voiceVerbosity == VoiceVerbosity.FULL) {
-            earconPlayer?.play(CoachingEvent.WORKOUT_COMPLETE)
+            earconPlayer.play(CoachingEvent.WORKOUT_COMPLETE)
         }
-        voicePlayer?.speakAnnouncement("Recovery measurement complete.")
+        voicePlayer.speakAnnouncement("Recovery measurement complete.")
     }
 
     /**
@@ -85,9 +87,7 @@ class HrrAudio @Inject constructor(
      * of singleton scope.
      */
     fun release() {
-        earconPlayer?.destroy()
-        earconPlayer = null
-        voicePlayer?.destroy()
-        voicePlayer = null
+        earconPlayer.destroy()
+        voicePlayer.destroy()
     }
 }

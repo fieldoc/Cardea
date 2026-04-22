@@ -121,14 +121,16 @@ class PostRunSummaryViewModel @Inject constructor(
             val summaryLoaded = runCatching {
                 val workout = workoutRepository.getWorkoutById(id)
                     ?: error("Workout not found.")
-                val currentMetrics = getOrDeriveMetrics(workout)
+                // Fetch track points ONCE — shared by metrics derivation (when not cached),
+                // avgHr fallback, AND map rendering. Passing into getOrDeriveMetrics prevents
+                // the second full table scan the dynamic reviewer flagged.
+                val allTrackPoints = workoutRepository.getTrackPoints(workout.id)
+                val currentMetrics = getOrDeriveMetrics(workout, allTrackPoints)
                 val similar = loadSimilarWorkouts(workout, allWorkouts)
                 val comparisons = buildComparisons(
                     currentMetrics = currentMetrics,
                     similarMetrics = similar.mapNotNull { it.second }
                 )
-                // Load track points ONCE — shared for avgHr fallback and for map rendering.
-                val allTrackPoints = workoutRepository.getTrackPoints(workout.id)
                 val avgHr = currentMetrics?.avgHr ?: allTrackPoints
                     .map { it.heartRate }
                     .takeIf { it.isNotEmpty() }
@@ -243,11 +245,16 @@ class PostRunSummaryViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getOrDeriveMetrics(workout: WorkoutEntity): WorkoutAdaptiveMetrics? {
+    private suspend fun getOrDeriveMetrics(
+        workout: WorkoutEntity,
+        preloadedTrackPoints: List<com.hrcoach.data.db.TrackPointEntity>? = null
+    ): WorkoutAdaptiveMetrics? {
         val stored = workoutMetricsRepository.getWorkoutMetrics(workout.id)
         if (stored != null) return stored
 
-        val trackPoints = workoutRepository.getTrackPoints(workout.id)
+        // Reuse preloaded track points when the caller already fetched them
+        // (primary path in load()). loadSimilarWorkouts still passes null per candidate.
+        val trackPoints = preloadedTrackPoints ?: workoutRepository.getTrackPoints(workout.id)
         val derived = MetricsCalculator.deriveFullMetrics(
             workoutId = workout.id,
             recordedAtMs = workout.recordedAtMs,

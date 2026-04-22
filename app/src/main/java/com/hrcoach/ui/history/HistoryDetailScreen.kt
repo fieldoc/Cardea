@@ -43,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -510,31 +509,3 @@ private fun parseTargetSummary(config: WorkoutConfig?): String? {
     }
 }
 
-internal fun hrToColor(
-    hr: Int,
-    distanceMeters: Float,
-    config: WorkoutConfig?,
-    inZoneColor: Color,
-    warningColor: Color,
-    highColor: Color
-): Color {
-    if (config == null) return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
-    val target = config.targetHrAtDistance(distanceMeters)
-        ?: return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
-    val buffer = config.bufferBpm.coerceAtLeast(1)
-    val absDelta = kotlin.math.abs(hr - target).toFloat()
-    return when {
-        absDelta <= buffer -> inZoneColor
-        absDelta <= buffer * 2f -> lerp(inZoneColor, warningColor, (absDelta - buffer) / buffer.toFloat())
-        absDelta <= buffer * 4f -> lerp(warningColor, highColor, (absDelta - buffer * 2f) / (buffer * 2f))
-        else -> highColor
-    }
-}
-
-private fun fallbackHrColor(hr: Int, inZoneColor: Color, warningColor: Color, highColor: Color): Color =
-    when {
-        hr <= 100 -> inZoneColor
-        hr in 101..149 -> lerp(inZoneColor, warningColor, (hr - 100) / 50f)
-        hr in 150..199 -> lerp(warningColor, highColor, (hr - 150) / 50f)
-        else -> highColor
-    }

@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Insights
@@ -315,13 +315,17 @@ fun PostRunSummaryScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
-                                // ── Route map preview — tappable, opens HistoryDetail for deep-dive ──
+                                // ── Route map preview ──
+                                // GoogleMap consumes touch gestures for pan/zoom, so a wrapping
+                                // `Modifier.clickable` on the map surface never fires. The
+                                // explicit "See full route" TextButton below is the only
+                                // working tap affordance; it's only shown when there IS a
+                                // route to see (≥2 points + Maps enabled).
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(220.dp)
                                         .clip(RoundedCornerShape(18.dp))
-                                        .clickable(onClick = onOpenFullMap)
                                 ) {
                                     com.hrcoach.ui.components.RouteMap(
                                         trackPoints = uiState.trackPoints,
@@ -330,6 +334,29 @@ fun PostRunSummaryScreen(
                                         onOpenMapsSetup = onOpenMapsSetup,
                                         modifier = Modifier.fillMaxSize()
                                     )
+                                }
+                                if (uiState.trackPoints.size >= 2 && uiState.isMapsEnabled) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .clickable(onClick = onOpenFullMap)
+                                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                                        horizontalArrangement = Arrangement.End,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "See full route",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = CardeaTheme.colors.textPrimary
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = CardeaTheme.colors.textPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
 
@@ -492,15 +519,12 @@ private fun HrrCooldownCard(endTimeMs: Long) {
 
     val isComplete = remainingSeconds <= 0
 
+    // Tiered-gradient rule (CLAUDE.md): only ONE CardeaGradient accent per screen.
+    // RunCompleteHero already owns Tier 1, so the HRR card uses a ZoneGreen border as
+    // a recovery-health cue instead. Radius matches GlassCard's inner 18dp shape.
     GlassCard(
-        borderColor = Color.Transparent,
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.5.dp,
-                brush = CardeaTheme.colors.gradient,
-                shape = RoundedCornerShape(14.dp)
-            )
+        borderColor = ZoneGreen.copy(alpha = 0.55f),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

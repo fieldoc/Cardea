@@ -37,10 +37,11 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import com.hrcoach.R
 import com.hrcoach.data.db.TrackPointEntity
 import com.hrcoach.domain.model.WorkoutConfig
-import com.hrcoach.ui.history.hrToColor
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.ZoneAmber
 import com.hrcoach.ui.theme.ZoneGreen
@@ -198,3 +199,42 @@ private fun RouteMapEmpty(
         }
     }
 }
+
+/**
+ * Maps a heart-rate sample to a heatmap colour by comparing against the workout's
+ * target HR at that point along the route. Has two modes:
+ *  - config + target-at-distance available: grades by absolute delta from target,
+ *    lerping through inZone → warning → high across buffer bands.
+ *  - fallback (no config / no target at this distance): grades by absolute HR bands.
+ *
+ * Private to RouteMap — no other consumers. Moved here from HistoryDetailScreen
+ * because the shared ui/components layer should not import up into feature packages.
+ */
+private fun hrToColor(
+    hr: Int,
+    distanceMeters: Float,
+    config: WorkoutConfig?,
+    inZoneColor: Color,
+    warningColor: Color,
+    highColor: Color
+): Color {
+    if (config == null) return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
+    val target = config.targetHrAtDistance(distanceMeters)
+        ?: return fallbackHrColor(hr, inZoneColor, warningColor, highColor)
+    val buffer = config.bufferBpm.coerceAtLeast(1)
+    val absDelta = kotlin.math.abs(hr - target).toFloat()
+    return when {
+        absDelta <= buffer -> inZoneColor
+        absDelta <= buffer * 2f -> lerp(inZoneColor, warningColor, (absDelta - buffer) / buffer.toFloat())
+        absDelta <= buffer * 4f -> lerp(warningColor, highColor, (absDelta - buffer * 2f) / (buffer * 2f))
+        else -> highColor
+    }
+}
+
+private fun fallbackHrColor(hr: Int, inZoneColor: Color, warningColor: Color, highColor: Color): Color =
+    when {
+        hr <= 100 -> inZoneColor
+        hr in 101..149 -> lerp(inZoneColor, warningColor, (hr - 100) / 50f)
+        hr in 150..199 -> lerp(warningColor, highColor, (hr - 150) / 50f)
+        else -> highColor
+    }

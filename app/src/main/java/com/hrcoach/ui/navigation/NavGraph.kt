@@ -110,7 +110,7 @@ object Routes {
     const val POST_RUN_SUMMARY = "postrun/{workoutId}?fresh={fresh}"
 
     fun historyDetail(workoutId: Long): String = "history/$workoutId"
-    fun postRunSummary(workoutId: Long, fresh: Boolean = false): String = "postrun/$workoutId?fresh=$fresh"
+    fun postRunSummary(workoutId: Long, fresh: Boolean): String = "postrun/$workoutId?fresh=$fresh"
 }
 
 @Composable
@@ -647,8 +647,11 @@ fun HrCoachNavGraph(
                                 launchSingleTop = true
                             }
                         } else {
+                            // Replace PostRun in the stack so Done leaves the user on
+                            // HistoryDetail and Back from there goes to the previous
+                            // destination (Home/Activity), not back to the summary.
                             navController.navigate(Routes.historyDetail(workoutId)) {
-                                popUpTo(Routes.HISTORY) { inclusive = false }
+                                popUpTo(Routes.POST_RUN_SUMMARY) { inclusive = true }
                                 launchSingleTop = true
                             }
                         }
@@ -665,8 +668,10 @@ fun HrCoachNavGraph(
                         navController.navigate(Routes.SOUND_LIBRARY) { launchSingleTop = true }
                     },
                     onOpenFullMap = {
+                        // Keep PostRun on the stack so Back from HistoryDetail returns
+                        // to the summary. launchSingleTop prevents duplicate HistoryDetail
+                        // if the user taps this multiple times.
                         navController.navigate(Routes.historyDetail(workoutId)) {
-                            popUpTo(Routes.HISTORY) { inclusive = false }
                             launchSingleTop = true
                         }
                     },

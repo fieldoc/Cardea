@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import com.hrcoach.data.db.AchievementDao
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.AdaptiveProfileRepository
-import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.data.repository.WorkoutRepository
@@ -43,7 +42,6 @@ class PostRunSummaryViewModelTest {
     private val bootcampSessionCompleter: BootcampSessionCompleter = mockk(relaxed = true)
     private val achievementEvaluator: AchievementEvaluator = mockk(relaxed = true)
     private val achievementDao: AchievementDao = mockk(relaxed = true)
-    private val bootcampRepository: BootcampRepository = mockk(relaxed = true)
     private val adaptiveProfileRepository: AdaptiveProfileRepository = mockk(relaxed = true)
     private val userProfileRepository: UserProfileRepository = mockk(relaxed = true)
     private val mapsSettingsRepository: com.hrcoach.data.repository.MapsSettingsRepository = mockk(relaxed = true)
@@ -78,7 +76,6 @@ class PostRunSummaryViewModelTest {
         coEvery { workoutRepository.getAllWorkoutsOnce() } returns emptyList()
         coEvery { workoutRepository.sumAllDistanceKm() } returns 10.0
         coEvery { workoutMetricsRepository.getWorkoutMetrics(workoutId) } returns null
-        coEvery { bootcampRepository.getActiveEnrollmentOnce() } returns null
         coEvery { achievementDao.getUnshownAchievements() } returns emptyList()
         coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } returns
             BootcampSessionCompleter.CompletionResult(completed = false)
