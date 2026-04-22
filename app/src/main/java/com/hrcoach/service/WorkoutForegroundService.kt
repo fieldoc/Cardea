@@ -75,6 +75,7 @@ class WorkoutForegroundService : LifecycleService() {
         const val ACTION_RESCAN_BLE = "com.hrcoach.ACTION_RESCAN_BLE"
         const val ACTION_TOGGLE_AUTO_PAUSE = "com.hrcoach.ACTION_TOGGLE_AUTO_PAUSE"
         const val ACTION_RELOAD_AUDIO_SETTINGS = "com.hrcoach.ACTION_RELOAD_AUDIO_SETTINGS"
+        const val ACTION_FINISH_BOOTCAMP_EARLY = "com.hrcoach.ACTION_FINISH_BOOTCAMP_EARLY"
         const val EXTRA_CONFIG_JSON = "config_json"
         const val EXTRA_DEVICE_ADDRESS = "device_address"
 
@@ -257,6 +258,32 @@ class WorkoutForegroundService : LifecycleService() {
                     WorkoutState.update { it.copy(isAutoPaused = false, autoPauseEnabled = false) }
                 } else {
                     WorkoutState.update { it.copy(autoPauseEnabled = true) }
+                }
+                return START_NOT_STICKY
+            }
+
+            ACTION_FINISH_BOOTCAMP_EARLY -> {
+                // Graceful bootcamp-session finish from the active-run settings menu.
+                // Mirrors the WFS sim-path completion flow: read lastTuningDirection from the
+                // saved AdaptiveProfile, call the completer, then funnel through stopWorkout()
+                // for the authoritative teardown (notification stop gate, dual-pause cleanup,
+                // metrics save, stopForeground, stopSelf). If there is no pending bootcamp
+                // session, we still stop the workout — the action is a "finish" first.
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
+                    if (pendingId != null && workoutId > 0L) {
+                        runCatching {
+                            val profile = adaptiveProfileRepository.getProfile()
+                            bootcampSessionCompleter.complete(
+                                workoutId = workoutId,
+                                pendingSessionId = pendingId,
+                                tuningDirection = profile.lastTuningDirection ?: TuningDirection.HOLD
+                            )
+                        }.onFailure { e ->
+                            Log.w("WorkoutService", "Bootcamp early-finish completion failed", e)
+                        }
+                    }
+                    stopWorkout()
                 }
                 return START_NOT_STICKY
             }

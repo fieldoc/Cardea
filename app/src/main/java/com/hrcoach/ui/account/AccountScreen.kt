@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hrcoach.domain.model.AudioSettings
 import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.emblem.Emblem
@@ -72,6 +73,8 @@ import com.hrcoach.ui.components.EmblemIconWithRing
 import com.hrcoach.ui.components.EmblemPicker
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.components.cardeaSegmentedButtonColors
+import com.hrcoach.ui.components.settings.AudioSettingsEvent
+import com.hrcoach.ui.components.settings.AudioSettingsSection
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
@@ -299,110 +302,45 @@ fun AccountScreen(
             SectionHeader("Audio & Coaching")
             Spacer(modifier = Modifier.height(6.dp))
 
-            GlassCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                // Volume
-                SettingSection(icon = Icons.Default.VolumeUp, title = "Alert Volume") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CardeaSlider(
-                            value = state.earconVolume.toFloat(),
-                            onValueChange = viewModel::setVolume,
-                            valueRange = 0f..100f,
-                            steps = 0,
-                            onValueChangeFinished = viewModel::saveAudioSettings,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "${state.earconVolume}%",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = CardeaTheme.colors.textSecondary
-                        )
+            AudioSettingsSection(
+                state = AudioSettings(
+                    earconVolume = state.earconVolume,
+                    voiceVolume = state.voiceVolume,
+                    voiceVerbosity = state.voiceVerbosity,
+                    enableVibration = state.enableVibration,
+                    enableHalfwayReminder = state.enableHalfwayReminder,
+                    enableKmSplits = state.enableKmSplits,
+                    enableWorkoutComplete = state.enableWorkoutComplete,
+                    enableInZoneConfirm = state.enableInZoneConfirm,
+                ),
+                distanceUnit = state.distanceUnit,
+                onEvent = { event ->
+                    when (event) {
+                        is AudioSettingsEvent.EarconVolumeChanged ->
+                            if (event.committed) viewModel.saveAudioSettings()
+                            else viewModel.setVolume(event.value)
+                        is AudioSettingsEvent.VoiceVolumeChanged ->
+                            if (event.committed) viewModel.saveAudioSettings()
+                            else viewModel.setVoiceVolume(event.value)
+                        is AudioSettingsEvent.VoiceVerbosityChanged -> {
+                            viewModel.setVerbosity(event.verbosity)
+                            viewModel.saveAudioSettings()
+                        }
+                        is AudioSettingsEvent.VibrationEnabledToggled -> {
+                            viewModel.setVibration(event.enabled)
+                            viewModel.saveAudioSettings()
+                        }
+                        is AudioSettingsEvent.HalfwayReminderToggled ->
+                            viewModel.setEnableHalfwayReminder(event.enabled)
+                        is AudioSettingsEvent.KmSplitsToggled ->
+                            viewModel.setEnableKmSplits(event.enabled)
+                        is AudioSettingsEvent.WorkoutCompleteToggled ->
+                            viewModel.setEnableWorkoutComplete(event.enabled)
+                        is AudioSettingsEvent.InZoneConfirmToggled ->
+                            viewModel.setEnableInZoneConfirm(event.enabled)
                     }
                 }
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                // Voice volume
-                SettingSection(icon = Icons.Default.Mic, title = "Voice Volume") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CardeaSlider(
-                            value = state.voiceVolume.toFloat(),
-                            onValueChange = viewModel::setVoiceVolume,
-                            valueRange = 0f..100f,
-                            steps = 0,
-                            onValueChangeFinished = viewModel::saveAudioSettings,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "${state.voiceVolume}%",
-                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = CardeaTheme.colors.textSecondary
-                        )
-                    }
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                // Voice Coaching
-                SettingSection(icon = Icons.Default.Mic, title = "Voice Coaching") {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        listOf(VoiceVerbosity.OFF to "Off", VoiceVerbosity.MINIMAL to "Minimal", VoiceVerbosity.FULL to "Full")
-                            .forEachIndexed { i, (v, label) ->
-                                SegmentedButton(
-                                    shape = SegmentedButtonDefaults.itemShape(i, 3),
-                                    selected = state.voiceVerbosity == v,
-                                    onClick = { viewModel.setVerbosity(v); viewModel.saveAudioSettings() },
-                                    colors = cardeaSegmentedButtonColors()
-                                ) { Text(label) }
-                            }
-                    }
-                }
-
-                // Show only the active voice mode description (not all 3)
-                ActiveVoiceModeHint(currentVerbosity = state.voiceVerbosity)
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                // Vibration toggle
-                SettingToggleRow(
-                    icon = Icons.Default.Notifications,
-                    title = "Vibration Alerts",
-                    checked = state.enableVibration,
-                    onCheckedChange = { viewModel.setVibration(it); viewModel.saveAudioSettings() }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = CardeaTheme.colors.glassBorder)
-
-                // Fine-tune Cues
-                SettingSection(icon = Icons.Default.Mic, title = "Fine-tune Cues") {
-                    val cuesEnabled = state.voiceVerbosity != VoiceVerbosity.OFF
-                    Text(
-                        text = "These only apply when Voice Coaching is set to Full.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = CardeaTheme.colors.textTertiary,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                    val cueAlpha = if (cuesEnabled) 1f else 0.4f
-                    Column(modifier = Modifier.alpha(cueAlpha)) {
-                        InfoCueToggle("Halfway reminder", state.enableHalfwayReminder && cuesEnabled, cuesEnabled) { viewModel.setEnableHalfwayReminder(it) }
-                        InfoCueToggle(
-                            if (state.distanceUnit == DistanceUnit.MI) "Mile splits" else "Kilometer splits",
-                            state.enableKmSplits && cuesEnabled, cuesEnabled
-                        ) { viewModel.setEnableKmSplits(it) }
-                        InfoCueToggle("Workout complete", state.enableWorkoutComplete && cuesEnabled, cuesEnabled) { viewModel.setEnableWorkoutComplete(it) }
-                        InfoCueToggle("In-zone confirmation", state.enableInZoneConfirm && cuesEnabled, cuesEnabled) { viewModel.setEnableInZoneConfirm(it) }
-                    }
-                }
-            }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 

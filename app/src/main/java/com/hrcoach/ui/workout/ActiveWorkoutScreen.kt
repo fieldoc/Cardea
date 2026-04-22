@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
@@ -90,6 +94,9 @@ fun ActiveWorkoutScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val state = uiState.snapshot
     var stopConfirmationVisible by remember { mutableStateOf(false) }
+    // Top-level hoist — `remember` must never live inside a conditional branch
+    // (rule: "Compose `remember` rule — remember ... NEVER in conditional branches").
+    var sheetOpen by remember { mutableStateOf(false) }
     var pulseOn by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.currentHr, state.hrConnected) {
@@ -147,6 +154,12 @@ fun ActiveWorkoutScreen(
         val countdownSeconds = state.countdownSecondsRemaining
         val countdownActive = countdownSeconds != null
 
+        // Force-close the settings sheet if countdown starts while it's open.
+        // Countdown is an exclusive focus window — no overlays should compete with "3-2-1-GO".
+        LaunchedEffect(countdownActive) {
+            if (countdownActive) sheetOpen = false
+        }
+
         // Transient cue banner — visible whenever a coaching event fires.
         // Ignores voice verbosity: this is a transparency feature.
         // Suppressed during countdown overlay so BLE/GPS "searching" cues don't stack on top
@@ -199,10 +212,41 @@ fun ActiveWorkoutScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Top bar — gear lives here rather than floating above MissionCard, so it
+            // doesn't overlap the in-card NO SIGNAL / zone pill. Chip-styled affordance
+            // (GlassHighlight + GlassBorder) gives it a clear tappable surface on dark bg.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(GlassHighlight)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .clickable(
+                            onClick = { sheetOpen = true },
+                            role = Role.Button
+                        )
+                        .semantics { contentDescription = "Run settings" },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = CardeaTextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
             // Mission Card: goal context, zone status, timer, target HR
             MissionCard(
                 uiState = uiState,
-                modifier = Modifier.padding(top = 8.dp)
             )
 
             // Progress bar with halfway turn marker
@@ -409,6 +453,17 @@ fun ActiveWorkoutScreen(
                 onStopConfirmed()
             },
             onDismiss = { stopConfirmationVisible = false }
+        )
+    }
+
+    // Run settings sheet — audio settings + bootcamp "end early" action. Host is declared
+    // here (outside the `if (!countdownActive)` branch) so the `sheetOpen`/rememberSheetState
+    // lifecycle doesn't depend on countdown state, but `countdownActive` can still force-close
+    // via the LaunchedEffect above.
+    if (sheetOpen) {
+        ActiveRunSettingsSheet(
+            pendingBootcampSessionId = state.pendingBootcampSessionId,
+            onDismiss = { sheetOpen = false }
         )
     }
 }

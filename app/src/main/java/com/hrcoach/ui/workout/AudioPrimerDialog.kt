@@ -1,6 +1,7 @@
 package com.hrcoach.ui.workout
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -23,17 +30,34 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.hrcoach.ui.components.CardeaButton
-import com.hrcoach.ui.components.GlassCard
+import com.hrcoach.ui.theme.CardeaBgPrimary
 import com.hrcoach.ui.theme.CardeaTheme
+import com.hrcoach.ui.theme.GlassBorder
+import com.hrcoach.ui.theme.GlassHighlight
 
 /**
  * One-time primer shown before the user's first workout. Three skippable slides
  * explaining chime / voice / vibration layering and the predictive-warning concept.
+ *
+ * Design notes:
+ * - Uses an OPAQUE [CardeaBgPrimary] container (NOT [GlassCard]) so Training screen
+ *   content — including the Start Run CTA gradient — does not bleed through the modal.
+ *   Earlier implementation wrapped in `GlassCard`, whose semi-transparent
+ *   `DarkGlassFillBrush` let the pink CTA stripe show through behind the Voice row.
+ * - Bullets use the same icon language as `AudioSettingsSection` (VolumeUp / Mic /
+ *   Notifications) so returning users recognize the same vocabulary on the first run
+ *   AND inside the mid-run settings sheet.
+ * - Slide indicator is a three-dot progress row (Cardea CTA gradient dot for active)
+ *   rather than "1 of 3" raw text, matching the visual density of the rest of the
+ *   design system.
  *
  * Gated by [com.hrcoach.domain.model.AudioSettings.audioPrimerShown] — once
  * dismissed or finished, the caller must set the flag true.
@@ -52,38 +76,50 @@ fun AudioPrimerDialog(
     var slideIndex by remember { mutableStateOf(0) }
     Dialog(
         onDismissRequest = onFinish,
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false
+        )
     ) {
-        GlassCard(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            contentPadding = PaddingValues(20.dp)
+                .padding(horizontal = 20.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(CardeaBgPrimary)
+                .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                .padding(horizontal = 22.dp, vertical = 22.dp)
         ) {
+            // Header: progress dots + skip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "${slideIndex + 1} of 3",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = CardeaTheme.colors.textSecondary
-                )
-                TextButton(onClick = onFinish) {
+                ProgressDots(current = slideIndex, total = 3)
+                TextButton(
+                    onClick = onFinish,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
                     Text(
                         text = "Skip",
+                        style = MaterialTheme.typography.labelMedium,
                         color = CardeaTheme.colors.textSecondary
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
+
+            Spacer(Modifier.height(18.dp))
+
             when (slideIndex) {
                 0 -> Slide1(onSeeLibrary)
                 1 -> Slide2()
                 else -> Slide3()
             }
-            Spacer(Modifier.height(20.dp))
+
+            Spacer(Modifier.height(22.dp))
+
             CardeaButton(
                 text = if (slideIndex < 2) "Next" else "Got it \u2014 start my run",
                 onClick = {
@@ -91,6 +127,27 @@ fun AudioPrimerDialog(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressDots(current: Int, total: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        repeat(total) { i ->
+            val active = i == current
+            Box(
+                modifier = Modifier
+                    .size(width = if (active) 20.dp else 6.dp, height = 6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(
+                        if (active) CardeaTheme.colors.accentPink
+                        else CardeaTheme.colors.glassBorder
+                    )
             )
         }
     }
@@ -105,20 +162,38 @@ private fun Slide1(onSeeLibrary: () -> Unit) {
             color = CardeaTheme.colors.textPrimary,
             fontWeight = FontWeight.Bold
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
         Text(
             text = "You'll hear three kinds of sound during your run:",
             style = MaterialTheme.typography.bodyMedium,
             color = CardeaTheme.colors.textSecondary
         )
-        Spacer(Modifier.height(8.dp))
-        Bullet("Chime", "A quick status ping.")
-        Bullet("Voice", "What to do about it.")
-        Bullet("Vibration", "Something urgent.")
-        Spacer(Modifier.height(12.dp))
-        TextButton(onClick = onSeeLibrary) {
+        Spacer(Modifier.height(16.dp))
+        IconBullet(
+            icon = Icons.Default.VolumeUp,
+            title = "Chime",
+            body = "A quick status ping."
+        )
+        Spacer(Modifier.height(10.dp))
+        IconBullet(
+            icon = Icons.Default.Mic,
+            title = "Voice",
+            body = "What to do about it."
+        )
+        Spacer(Modifier.height(10.dp))
+        IconBullet(
+            icon = Icons.Default.Notifications,
+            title = "Vibration",
+            body = "Something urgent."
+        )
+        Spacer(Modifier.height(14.dp))
+        TextButton(
+            onClick = onSeeLibrary,
+            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 6.dp)
+        ) {
             Text(
                 text = "See all sounds \u2192",
+                style = MaterialTheme.typography.titleSmall,
                 color = CardeaTheme.colors.textPrimary
             )
         }
@@ -137,8 +212,8 @@ private fun Slide2() {
         Spacer(Modifier.height(12.dp))
         Text(
             text = "If you drift out of your target zone, Cardea gives you a chime and a voice cue.\n\n" +
-                "If you're still out of zone 30 seconds later, you'll hear it again \u2014 with vibration. " +
-                "That's escalation \u2014 it means you haven't adjusted yet.",
+                "Still out 30 seconds later? You'll hear it again, this time with a vibration \u2014 a " +
+                "stronger nudge so you don't miss it.",
             style = MaterialTheme.typography.bodyMedium,
             color = CardeaTheme.colors.textSecondary
         )
@@ -158,30 +233,50 @@ private fun Slide3() {
         Text(
             text = "Sometimes Cardea coaches you while you're still in zone. If your heart rate is " +
                 "trending toward the edge, you'll hear a heads-up like \"Pace climbing \u2014 ease off.\"\n\n" +
-                "Adjust early and you'll stay in. That's a feature, not a bug.",
+                "Catching drift early means smaller adjustments \u2014 and you stay in zone longer.",
             style = MaterialTheme.typography.bodyMedium,
             color = CardeaTheme.colors.textSecondary
         )
     }
 }
 
+/**
+ * Icon-based bullet for the audio primer. Uses the same icon-box pattern as
+ * `AudioSettingsSection.SettingIconBox` (30dp rounded-square glass chip) so users
+ * see the same visual vocabulary in the primer as in the settings screens.
+ */
 @Composable
-private fun Bullet(title: String, body: String) {
-    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+private fun IconBullet(
+    icon: ImageVector,
+    title: String,
+    body: String,
+) {
+    Row(verticalAlignment = Alignment.Top) {
         Box(
             modifier = Modifier
-                .padding(top = 7.dp)
-                .size(6.dp)
-                .background(CardeaTheme.colors.textSecondary, CircleShape)
-        )
-        Spacer(Modifier.width(10.dp))
-        Column {
+                .padding(top = 2.dp)
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(GlassHighlight)
+                .border(1.dp, GlassBorder, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = CardeaTheme.colors.textSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.padding(top = 2.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleSmall,
                 color = CardeaTheme.colors.textPrimary,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.SemiBold
             )
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = body,
                 style = MaterialTheme.typography.bodySmall,
