@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -139,20 +140,43 @@ fun PostRunSummaryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showCelebration by remember { mutableStateOf(false) }
 
-    // Dynamic HRR gate: shows the card if within 3 minutes of workout end, then auto-hides.
+    // Dynamic HRR gate: shows the card while within the visibility window, then auto-hides.
     // Computed here (not in VM) so it re-evaluates if the user navigates away and returns
     // while the ViewModel is still alive.
+    //
+    // Two timers run here:
+    //   - HRR_MEASUREMENT_COMPLETE_MS (120_000): when the HR recovery measurement is done.
+    //     Audio "Recovery measurement complete" TTS fires at this point. The card's own
+    //     internal countdown also ends here and flips into its "you can stop walking" text.
+    //   - hrrWindowMs (180_000): how long the card stays visually pinned after that.
+    //     Keeping it visible for another minute lets a tired runner who glances at their
+    //     phone late still see the measurement result before it disappears.
     val hrrWindowMs = 180_000L
+    val hrrMeasurementCompleteMs = 120_000L
     var isHrrActive by remember { mutableStateOf(false) }
     LaunchedEffect(uiState.workoutEndTimeMs) {
         val endMs = uiState.workoutEndTimeMs
         if (endMs <= 0L) return@LaunchedEffect
-        val remaining = hrrWindowMs - (System.currentTimeMillis() - endMs)
-        if (remaining > 0L) {
-            isHrrActive = true
-            delay(remaining)
-            isHrrActive = false
+        val elapsed = System.currentTimeMillis() - endMs
+        if (elapsed >= hrrWindowMs) return@LaunchedEffect  // past visibility — leave hidden
+
+        // Fresh entry = within the first few seconds of the window. Returning to this screen
+        // mid-window (e.g. after popping back from HistoryDetail) must NOT re-announce.
+        val isFreshEntry = elapsed < 5_000L
+        isHrrActive = true
+        if (isFreshEntry) viewModel.onHrrWindowStarted()
+
+        // Fire "measurement complete" TTS at t = 120s (or immediately if we opened the
+        // screen after that point but still inside the visibility window).
+        val timeToComplete = (hrrMeasurementCompleteMs - elapsed).coerceAtLeast(0L)
+        if (timeToComplete > 0L) {
+            delay(timeToComplete)
+            viewModel.onHrrWindowEnded()
         }
+        // Keep the card visible until the visibility window closes.
+        val remainingVisibility = hrrWindowMs - maxOf(elapsed, hrrMeasurementCompleteMs)
+        if (remainingVisibility > 0L) delay(remainingVisibility)
+        isHrrActive = false
     }
 
     LaunchedEffect(uiState.isLoading) {
@@ -449,7 +473,16 @@ private fun HrrCooldownCard(endTimeMs: Long) {
 
     val isComplete = remainingSeconds <= 0
 
-    GlassCard {
+    GlassCard(
+        borderColor = Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.5.dp,
+                brush = CardeaTheme.colors.gradient,
+                shape = RoundedCornerShape(14.dp)
+            )
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
