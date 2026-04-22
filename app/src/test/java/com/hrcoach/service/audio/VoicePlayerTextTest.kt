@@ -175,7 +175,7 @@ class VoicePlayerEventTextTest {
     @Test
     fun `IN_ZONE_CONFIRM returns fixed text`() {
         assertEquals(
-            "Pace looks good",
+            "In zone",
             VoicePlayer.eventText(CoachingEvent.IN_ZONE_CONFIRM, null, WorkoutMode.STEADY_STATE)
         )
     }

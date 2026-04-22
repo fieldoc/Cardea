@@ -36,6 +36,15 @@ class VoicePlayer(context: Context) {
     /** Tracks the priority of the currently speaking utterance. */
     @Volatile private var currentPriority: VoiceEventPriority? = null
 
+    /**
+     * Wall-clock ms when [currentPriority] was last set. Used by the stale-priority watchdog in
+     * [speakEvent]: if TTS onDone/onError never fires (engine hang, audio-focus loss mid-utterance,
+     * doze mode) currentPriority stays non-null and the priority gate silently drops every
+     * subsequent informational cue — exactly the "voice goes silent after warmup" failure mode.
+     * On entry to speakEvent we force-clear if the age exceeds [WATCHDOG_MAX_UTTERANCE_MS].
+     */
+    @Volatile private var currentPrioritySetAtMs: Long = 0L
+
     /** Deferred that completes when the current utterance finishes. */
     @Volatile private var utteranceDeferred: CompletableDeferred<Unit>? = null
 
@@ -89,6 +98,7 @@ class VoicePlayer(context: Context) {
      */
     private fun handleUtteranceEnd(utteranceId: String?) {
         currentPriority = null
+        currentPrioritySetAtMs = 0L
         when {
             utteranceId?.startsWith("briefing") == true -> {
                 pendingBriefingDeferred?.complete(Unit)
@@ -196,6 +206,21 @@ class VoicePlayer(context: Context) {
         if (text.isBlank()) return
 
         val priority = VoiceEventPriority.of(event)
+        val nowMs = System.currentTimeMillis()
+
+        // Stale-priority watchdog. If TTS onDone/onError failed to fire (engine hang, audio-focus
+        // loss mid-utterance, doze) currentPriority would stay non-null and the priority gate
+        // below would silently drop every subsequent informational cue for the rest of the run.
+        // No real utterance should exceed WATCHDOG_MAX_UTTERANCE_MS; if we're past that, assume
+        // the callback dropped and reset state so the next cue can play.
+        if (currentPriority != null && currentPrioritySetAtMs > 0L &&
+            nowMs - currentPrioritySetAtMs > WATCHDOG_MAX_UTTERANCE_MS) {
+            Log.w(TAG, "Voice watchdog: clearing stale priority=$currentPriority after ${nowMs - currentPrioritySetAtMs}ms")
+            currentPriority = null
+            currentPrioritySetAtMs = 0L
+            utteranceDeferred?.complete(Unit)
+            utteranceDeferred = null
+        }
 
         // Priority gating: if something is speaking, only allow higher priority
         val speaking = tts?.isSpeaking == true
@@ -214,6 +239,7 @@ class VoicePlayer(context: Context) {
         }
 
         currentPriority = priority
+        currentPrioritySetAtMs = nowMs
 
         if (ttsReady) {
             tts?.speak(text, queueMode, speechParams(), "event_${event.name}_${System.nanoTime()}")
@@ -228,8 +254,12 @@ class VoicePlayer(context: Context) {
      */
     fun speakAnnouncement(text: String) {
         if (verbosity == VoiceVerbosity.OFF) return
-        if (!ttsReady) return
+        if (!ttsReady) {
+            Log.w(TAG, "Dropping announcement — TTS not ready: $text")
+            return
+        }
         currentPriority = VoiceEventPriority.INFORMATIONAL
+        currentPrioritySetAtMs = System.currentTimeMillis()
         tts?.speak(text, TextToSpeech.QUEUE_ADD, speechParams(), "announcement_${System.nanoTime()}")
     }
 
@@ -258,6 +288,7 @@ class VoicePlayer(context: Context) {
         tts = null
         ttsReady = false
         currentPriority = null
+        currentPrioritySetAtMs = 0L
         pendingBriefingConfig = null
         pendingBriefingDeferred?.complete(Unit)
         pendingBriefingDeferred = null
@@ -269,23 +300,12 @@ class VoicePlayer(context: Context) {
         private const val TAG = "VoicePlayer"
 
         /**
-         * Rotating affirmations for IN_ZONE_CONFIRM on LOW-confidence sessions. Without this,
-         * a first-session runner hears "Learning your patterns - hold steady" 10+ times on
-         * a 40-min run, which reads as indecision. The list is cycled by a counter in
-         * CoachingEventRouter; length doesn't need to be large — 3-4 varied phrases is enough
-         * to break perceived repetition.
-         *
-         * TUNING: keep each phrase short (≤4 words) — they overlap with earcon tail + any
-         * upcoming KM_SPLIT announcement, so longer phrases collide. All affirm without
-         * suggesting the runner should change anything, matching the "pace is fine, HR not
-         * learned yet" semantics of LOW confidence.
+         * Maximum plausible TTS utterance age before the stale-priority watchdog force-clears
+         * [currentPriority]. Real utterances top out around 3-5s; 15s is a generous safety net
+         * that won't fire during normal operation but will recover within one cue of a dropped
+         * onDone callback.
          */
-        val LOW_CONFIDENCE_AFFIRMATIONS: List<String> = listOf(
-            "Nice and steady",
-            "Good pace",
-            "Holding zone",
-            "Keep it going"
-        )
+        private const val WATCHDOG_MAX_UTTERANCE_MS: Long = 15_000L
 
         /**
          * Returns whether the given [event] should be spoken at the given [verbosity].
@@ -350,7 +370,7 @@ class VoicePlayer(context: Context) {
                 CoachingEvent.PREDICTIVE_WARNING -> guidanceText ?: "Watch your pace"
                 CoachingEvent.HALFWAY -> "Halfway"
                 CoachingEvent.WORKOUT_COMPLETE -> "Workout complete"
-                CoachingEvent.IN_ZONE_CONFIRM -> guidanceText ?: "Pace looks good"
+                CoachingEvent.IN_ZONE_CONFIRM -> "In zone"
                 CoachingEvent.SIGNAL_LOST -> "Heart-rate signal lost"
                 CoachingEvent.SIGNAL_REGAINED -> "Heart-rate signal back"
                 CoachingEvent.SEGMENT_CHANGE -> "Next interval"

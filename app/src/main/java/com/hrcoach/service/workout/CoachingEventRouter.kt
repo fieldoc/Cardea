@@ -7,7 +7,6 @@ import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.domain.model.ZoneStatus
-import com.hrcoach.service.audio.VoicePlayer
 import kotlin.math.abs
 
 class CoachingEventRouter {
@@ -224,9 +223,9 @@ class CoachingEventRouter {
         //       The timer is not reset on this skip — we just wait for the slope to calm down.
         //   (c) adaptive cadence (new) — first confirm at 3 min, subsequent at 5 min.
         //       On a 30-min steady run this drops from ~6 events to ~3.
-        // LOW-confidence substitution: on early sessions the guidance defaults to "Learning
-        // your patterns - hold steady" for the whole workout. Looping that phrase every 3–5 min
-        // reads as indecision, so we rotate through short affirmations instead.
+        // Spoken text is always the fixed "In zone" phrase built in VoicePlayer.eventText —
+        // preset guidance strings (e.g. zone2's "Easy pace builds your aerobic engine. Hold a
+        // conversation.") are long, static, and re-reading them every 3-5 min reads as nagging.
         val projectedStable = adaptiveResult?.projectedZoneStatus?.let {
             it != ZoneStatus.ABOVE_ZONE && it != ZoneStatus.BELOW_ZONE
         } ?: true
@@ -240,14 +239,7 @@ class CoachingEventRouter {
             val requiredInterval = if (inZoneConfirmCount == 0) confirmCadence.firstMs
                                    else confirmCadence.repeatMs
             if (nowMs - baseline >= requiredInterval) {
-                val isLowConfidence = adaptiveResult?.hasProjectionConfidence == false
-                val spokenText = if (isLowConfidence) {
-                    val pool = VoicePlayer.LOW_CONFIDENCE_AFFIRMATIONS
-                    pool[inZoneConfirmCount % pool.size]
-                } else {
-                    guidance
-                }
-                emitEvent(CoachingEvent.IN_ZONE_CONFIRM, spokenText)
+                emitEvent(CoachingEvent.IN_ZONE_CONFIRM, null)
                 lastVoiceCueTimeMs = nowMs
                 inZoneConfirmCount += 1
             }

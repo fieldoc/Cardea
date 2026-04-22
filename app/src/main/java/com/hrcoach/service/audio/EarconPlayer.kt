@@ -3,13 +3,21 @@ package com.hrcoach.service.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.SoundPool
+import android.util.Log
 import com.hrcoach.R
 import com.hrcoach.domain.model.CoachingEvent
+import java.util.concurrent.ConcurrentHashMap
 
 class EarconPlayer(context: Context) {
 
     private val soundPool: SoundPool
     private val soundIds = mutableMapOf<CoachingEvent, Int>()
+    // Samples whose async load completed. SoundPool.play() on a not-yet-loaded sample returns
+    // streamId=0 silently — on cold service start a SIGNAL_LOST earcon can easily race ahead of
+    // its load and drop with no log. This set is populated by setOnLoadCompleteListener and
+    // gated in play().
+    private val loadedSampleIds = ConcurrentHashMap.newKeySet<Int>()
+
     private var volumeScalar: Float = 0.8f
 
     init {
@@ -21,6 +29,14 @@ class EarconPlayer(context: Context) {
             .setMaxStreams(2)
             .setAudioAttributes(attrs)
             .build()
+
+        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
+            if (status == 0) {
+                loadedSampleIds.add(sampleId)
+            } else {
+                Log.w(TAG, "Earcon sample $sampleId failed to load (status=$status)")
+            }
+        }
 
         val mapping = mapOf(
             CoachingEvent.SPEED_UP to R.raw.earcon_speed_up,
@@ -46,10 +62,19 @@ class EarconPlayer(context: Context) {
 
     fun play(event: CoachingEvent) {
         val soundId = soundIds[event] ?: return
+        if (soundId !in loadedSampleIds) {
+            Log.w(TAG, "Dropping earcon $event — sample $soundId not yet loaded")
+            return
+        }
         soundPool.play(soundId, volumeScalar, volumeScalar, 1, 0, 1f)
     }
 
     fun destroy() {
         soundPool.release()
+        loadedSampleIds.clear()
+    }
+
+    companion object {
+        private const val TAG = "EarconPlayer"
     }
 }
