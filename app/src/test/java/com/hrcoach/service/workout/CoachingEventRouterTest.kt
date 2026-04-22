@@ -58,16 +58,19 @@ class CoachingEventRouterTest {
         val router = CoachingEventRouter()
         val events = mutableListOf<CoachingEvent>()
         val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+        // Slope must exceed PREDICTIVE_SLOPE_GATE_BPM_PER_MIN (0.5) AND match projected-drift
+        // direction. ABOVE_ZONE projection needs positive slope.
         val adaptiveResult = AdaptivePaceController.TickResult(
             zoneStatus = ZoneStatus.IN_ZONE,
             projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
             predictedHr = 150,
             currentPaceMinPerKm = 6f,
             guidance = "ease off",
-            hasProjectionConfidence = true
+            hasProjectionConfidence = true,
+            hrSlopeBpmPerMin = 1.0f
         )
 
-        // First tick establishes zone entry; the entry reset absorbs the 60s predictive cooldown.
+        // First tick establishes zone entry; the entry reset absorbs the cooldown.
         router.route(
             workoutConfig = config,
             connected = true,
@@ -80,16 +83,16 @@ class CoachingEventRouterTest {
             emitEvent = { event, _ -> events += event }
         )
 
-        // After 60s in zone with drift projection — warning should fire.
+        // After PREDICTIVE_WARNING_COOLDOWN_MS (180s) in zone with drifting slope — warning fires.
         router.route(
             workoutConfig = config,
             connected = true,
             distanceMeters = 100f,
-            elapsedSeconds = 180L,
+            elapsedSeconds = 300L,
             zoneStatus = ZoneStatus.IN_ZONE,
             adaptiveResult = adaptiveResult,
             guidance = "ease off",
-            nowMs = 160_001L,
+            nowMs = 280_001L,
             emitEvent = { event, _ -> events += event }
         )
 
@@ -164,11 +167,9 @@ class CoachingEventRouterTest {
 
     @Test
     fun `PREDICTIVE_WARNING does not fire on zone re-entry even when projection shows drift`() {
-        // Regression: the adaptive engine projects drift immediately on re-entry (the runner keeps
-        // overshooting). Without the fix, PREDICTIVE_WARNING fires simultaneously with RETURN_TO_ZONE
-        // on the same tick — the user hears the guidance description every time they step back in zone.
-        // Fix: when the 60s cooldown was already expired on re-entry, lastPredictiveWarningTime is
-        // reset to nowMs, imposing a fresh 60s grace before the next warning can fire.
+        // After a PW fires and the runner drops out of zone, returning within the cooldown
+        // window must not immediately re-fire PW. With the 2026-04-22 rearm gate, re-entry
+        // rearms predictiveArmed but the cooldown itself still blocks — both paths verified here.
         val router = CoachingEventRouter()
         router.reset(workoutStartMs = 0L)
         val events = mutableListOf<Pair<CoachingEvent, String?>>()
@@ -179,42 +180,38 @@ class CoachingEventRouterTest {
             predictedHr = 150,
             currentPaceMinPerKm = 6f,
             guidance = "ease off slightly",
-            hasProjectionConfidence = true
+            hasProjectionConfidence = true,
+            hrSlopeBpmPerMin = 1.0f  // positive slope matches ABOVE projection
         )
 
         // Initial zone entry at T=0 (warmup not done, cooldown not expired) — no warning.
-        routeTick(router, ZoneStatus.IN_ZONE, 0L, config, events,
-            elapsedSeconds = 0L)
+        routeTick(router, ZoneStatus.IN_ZONE, 0L, config, events, elapsedSeconds = 0L)
 
-        // Step 1: fire a PREDICTIVE_WARNING while stably in zone (past warmup + 60s cooldown).
-        // lastPredictiveWarningTime = 100_000.
-        routeTick(router, ZoneStatus.IN_ZONE, 100_000L, config, events,
-            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 120L)
+        // Step 1: fire a PREDICTIVE_WARNING while stably in zone past warmup + cooldown.
+        routeTick(router, ZoneStatus.IN_ZONE, 200_000L, config, events,
+            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 200L)
         assertTrue("setup: PREDICTIVE_WARNING must fire while stably in zone",
             events.any { it.first == CoachingEvent.PREDICTIVE_WARNING })
 
-        // Step 2: leave zone. Then return 63s later (cooldown of 60s has elapsed).
-        // On re-entry the fix resets lastPredictiveWarningTime = nowMs, so PREDICTIVE_WARNING
-        // must NOT fire this tick even though the 60s cooldown has expired.
-        routeTick(router, ZoneStatus.ABOVE_ZONE, 101_000L, config, events, elapsedSeconds = 180L)
+        // Step 2: leave zone. Then return 63s later (well within the 180s cooldown).
+        // PW must NOT fire on re-entry — cooldown alone blocks it here.
+        routeTick(router, ZoneStatus.ABOVE_ZONE, 201_000L, config, events, elapsedSeconds = 201L)
         val countBeforeReturn = events.count { it.first == CoachingEvent.PREDICTIVE_WARNING }
 
-        routeTick(router, ZoneStatus.IN_ZONE, 163_000L, config, events,  // 63s after last warning
-            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 200L)
+        routeTick(router, ZoneStatus.IN_ZONE, 263_000L, config, events,
+            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 263L)
 
         assertEquals(
-            "PREDICTIVE_WARNING must not fire on the zone re-entry tick — 60s grace applies",
+            "PREDICTIVE_WARNING must not fire on the zone re-entry tick — cooldown applies",
             countBeforeReturn,
             events.count { it.first == CoachingEvent.PREDICTIVE_WARNING }
         )
     }
 
     @Test
-    fun `PREDICTIVE_WARNING still fires for rapid oscillators after 60s elapses in zone`() {
-        // The entry reset only fires when the 60s cooldown is already expired. For rapid
-        // oscillators (< 60s cycles), the cooldown hasn't expired on re-entry, so the reset
-        // is skipped and the timer continues running. Once the runner has been in zone for
-        // 60s without the cooldown being reset, the warning fires normally.
+    fun `PREDICTIVE_WARNING still fires for rapid oscillators after cooldown elapses in zone`() {
+        // Rapid oscillators (cycles << cooldown) don't trigger the entry reset — the cooldown
+        // simply keeps running. Once the full cooldown elapses, PW fires normally (given slope).
         val router = CoachingEventRouter()
         router.reset(workoutStartMs = 0L)
         val events = mutableListOf<Pair<CoachingEvent, String?>>()
@@ -225,26 +222,27 @@ class CoachingEventRouterTest {
             predictedHr = 150,
             currentPaceMinPerKm = 6f,
             guidance = "ease off slightly",
-            hasProjectionConfidence = true
+            hasProjectionConfidence = true,
+            hrSlopeBpmPerMin = 1.0f
         )
 
         // First zone entry at T=0; cooldown starts from 0L (no reset since cooldown not expired).
         routeTick(router, ZoneStatus.IN_ZONE, 0L, config, events, elapsedSeconds = 0L)
 
-        // Rapid oscillations every 20s (< 60s cooldown). Each re-entry skips the reset because
-        // the cooldown hasn't expired. The timer stays at 0L throughout.
+        // Rapid oscillations (each cycle << cooldown). Each re-entry skips the reset because
+        // the cooldown hasn't expired. Timer stays at 0L throughout.
         routeTick(router, ZoneStatus.ABOVE_ZONE, 10_000L, config, events, elapsedSeconds = 10L)
         routeTick(router, ZoneStatus.IN_ZONE,    30_000L, config, events, elapsedSeconds = 30L)
         routeTick(router, ZoneStatus.ABOVE_ZONE, 40_000L, config, events, elapsedSeconds = 40L)
         routeTick(router, ZoneStatus.IN_ZONE,    50_000L, config, events, elapsedSeconds = 50L)
 
-        // After warmup (90s) with drift projection — warning fires because 60s has elapsed
-        // since lastPredictiveWarningTime = 0L (no re-entry reset occurred during rapid cycles).
-        routeTick(router, ZoneStatus.IN_ZONE, 95_000L, config, events,
-            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 95L)
+        // After warmup (90s) + full cooldown (180s) since lastPredictiveWarningTime=0,
+        // with slope matching drift — warning fires.
+        routeTick(router, ZoneStatus.IN_ZONE, 200_000L, config, events,
+            adaptiveResult = driftResult, guidance = "ease off slightly", elapsedSeconds = 200L)
 
         assertTrue(
-            "PREDICTIVE_WARNING must still fire for rapid oscillators once 60s elapses",
+            "PREDICTIVE_WARNING must fire once the full cooldown has elapsed in zone",
             events.any { it.first == CoachingEvent.PREDICTIVE_WARNING }
         )
     }

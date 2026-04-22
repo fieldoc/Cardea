@@ -373,8 +373,10 @@ class VoicePlayerHrContextTest {
 
     @Test
     fun `IN_ZONE_CONFIRM never appends HR context`() {
+        // IN_ZONE_CONFIRM is the fixed short phrase "In zone" (see VoicePlayer.eventText);
+        // BPM delta must NOT be appended even under FULL.
         assertEquals(
-            "Pace looks good",
+            "In zone",
             VoicePlayer.eventText(
                 event = CoachingEvent.IN_ZONE_CONFIRM,
                 guidanceText = null,
