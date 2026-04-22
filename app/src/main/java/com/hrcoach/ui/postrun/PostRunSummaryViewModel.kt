@@ -73,7 +73,8 @@ class PostRunSummaryViewModel @Inject constructor(
     private val achievementEvaluator: AchievementEvaluator,
     private val achievementDao: AchievementDao,
     private val adaptiveProfileRepository: AdaptiveProfileRepository,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val hrrAudio: HrrAudio
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PostRunSummaryUiState())
@@ -83,6 +84,16 @@ class PostRunSummaryViewModel @Inject constructor(
 
     init {
         load()
+    }
+
+    /** Called by the Screen when the 120s HRR cooldown window begins on a fresh run. */
+    fun onHrrWindowStarted() {
+        hrrAudio.playHrrStart()
+    }
+
+    /** Called by the Screen when the 120s HRR cooldown window ends. */
+    fun onHrrWindowEnded() {
+        hrrAudio.playHrrComplete()
     }
 
     private fun load() {
