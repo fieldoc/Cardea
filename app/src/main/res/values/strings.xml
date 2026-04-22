@@ -16,7 +16,6 @@
     <string name="button_start_workout">Start Run</string>
     <string name="button_view_progress">View Trends</string>
     <string name="button_view_run">View This Run</string>
-    <string name="button_post_run_insights">Post-run Insights</string>
     <string name="button_open_maps_setup">Open Maps Setup</string>
     <string name="button_delete_run">Delete Run</string>
     <string name="button_done">Done</string>
