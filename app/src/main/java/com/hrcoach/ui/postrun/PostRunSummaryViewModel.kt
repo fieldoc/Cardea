@@ -195,6 +195,15 @@ class PostRunSummaryViewModel @Inject constructor(
                 // 2b. Best-effort: complete bootcamp session
                 val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
                 if (pendingId != null) {
+                    // If there was a pending bootcamp session id at stop time, this IS a
+                    // bootcamp run — regardless of whether complete() succeeds here. The
+                    // "End session early" path (WFS ACTION_FINISH_BOOTCAMP_EARLY) credits
+                    // the session before reaching PostRun, so the re-invocation below will
+                    // return completed=false due to the idempotency guard in
+                    // BootcampSessionCompleter. Gate isBootcampRun on pendingId presence,
+                    // NOT on result.completed, so the Done button still routes to the
+                    // bootcamp dashboard and the bootcamp-completion UI still renders.
+                    _uiState.update { it.copy(isBootcampRun = true) }
                     runCatching {
                         val tuningDirection = adaptiveProfileRepository.getProfile().lastTuningDirection
                             ?: TuningDirection.HOLD
@@ -205,7 +214,6 @@ class PostRunSummaryViewModel @Inject constructor(
                         )
                         if (result.completed) {
                             _uiState.update { it.copy(
-                                isBootcampRun = true,
                                 bootcampProgressLabel = result.progressLabel,
                                 bootcampWeekComplete = result.weekComplete
                             ) }

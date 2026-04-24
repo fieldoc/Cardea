@@ -187,8 +187,11 @@ class PostRunSummaryViewModelTest {
         assertFalse(state.isLoading)
         assertNull(state.errorMessage)
         assertTrue("distanceText should contain '5.00'", state.distanceText.contains("5.00"))
-        // Bootcamp status should remain false (completion threw)
-        assertFalse(state.isBootcampRun)
+        // The run IS a bootcamp run (pendingId was set at stop time) — a crashing
+        // completer does not change the run's origin. Done must still route to the
+        // bootcamp dashboard. Progress label may be absent when the completer threw.
+        assertTrue(state.isBootcampRun)
+        assertNull(state.bootcampProgressLabel)
     }
 
     @Test
@@ -220,6 +223,28 @@ class PostRunSummaryViewModelTest {
 
         // Must be cleared to avoid stale-state on next run
         assertNull(WorkoutState.snapshot.value.pendingBootcampSessionId)
+    }
+
+    @Test
+    fun `end-session-early path still marks run as bootcamp even when completer returns false`() = runTest {
+        // Simulates the WFS ACTION_FINISH_BOOTCAMP_EARLY flow: the WFS handler already
+        // credited the bootcamp session row as COMPLETED before stopWorkout(), so when
+        // PostRunSummaryViewModel re-invokes the completer, the idempotency guard in
+        // BootcampSessionCompleter returns completed=false. The run is still a bootcamp
+        // run and must render as such so Done routes to the bootcamp dashboard.
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 55L))
+        coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } returns
+            BootcampSessionCompleter.CompletionResult(completed = false)
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(
+            "Pending bootcamp id at stop time must flip isBootcampRun=true regardless of completer result",
+            state.isBootcampRun
+        )
     }
 
     @Test

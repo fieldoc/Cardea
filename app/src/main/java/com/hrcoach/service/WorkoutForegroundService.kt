@@ -283,7 +283,13 @@ class WorkoutForegroundService : LifecycleService() {
                             Log.w("WorkoutService", "Bootcamp early-finish completion failed", e)
                         }
                     }
-                    stopWorkout()
+                    // skipShortRunDiscard=true is critical here: we just credited the
+                    // bootcamp session with completedWorkoutId=this workoutId. If the
+                    // user ended within 60s/200m, the normal discard branch would delete
+                    // the workout row and FK CASCADE SET NULL would orphan the session.
+                    // Pass true unconditionally on this action — even if no pendingId
+                    // (defensive), the UX is that the user explicitly asked to finish.
+                    stopWorkout(skipShortRunDiscard = true)
                 }
                 return START_NOT_STICKY
             }
@@ -775,7 +781,16 @@ class WorkoutForegroundService : LifecycleService() {
         }
     }
 
-    private fun stopWorkout() {
+    /**
+     * [skipShortRunDiscard] — when true, disables the short-run discard branch that
+     * normally deletes workouts under 200m AND under 1 min. Set by the
+     * ACTION_FINISH_BOOTCAMP_EARLY handler so that ending a bootcamp session within
+     * the first minute preserves BOTH the workout row AND the bootcamp session credit.
+     * Without this, the FK `bootcamp_sessions.completedWorkoutId -> workouts.id`
+     * (ON DELETE SET NULL, see AppDatabase) would null out after the workout row is
+     * deleted, leaving a "completed" session that points to nothing.
+     */
+    private fun stopWorkout(skipShortRunDiscard: Boolean = false) {
         if (isStopping) return
         isStopping = true
         val finalHrSampleSum = hrSampleSum
@@ -799,8 +814,9 @@ class WorkoutForegroundService : LifecycleService() {
             } else null
             // Skip bookend for runs that will be discarded (< 200m AND < 1 min — same
             // threshold used below). A phantom "Workout complete" on a 10-second tap
-            // would be confusing.
-            val willBeDiscarded = distanceMeters < 200f && activeSec < 60L
+            // would be confusing. When skipShortRunDiscard is set (end-early from
+            // bootcamp), the run is kept regardless, so play the bookend.
+            val willBeDiscarded = !skipShortRunDiscard && distanceMeters < 200f && activeSec < 60L
             if (!willBeDiscarded) {
                 coachingAudioManager?.playEndSequence(
                     distanceMeters = distanceMeters,
@@ -868,10 +884,14 @@ class WorkoutForegroundService : LifecycleService() {
                     Log.e("WorkoutService", "Failed to save essential workout data", e)
                 }
 
-                // Discard runs that are too short to be meaningful (< 200m AND < 1 min)
+                // Discard runs that are too short to be meaningful (< 200m AND < 1 min).
+                // Bypassed when skipShortRunDiscard is set — the end-early bootcamp path
+                // credits the session before calling stopWorkout(), so deleting the
+                // workout row here would null out bootcamp_sessions.completedWorkoutId
+                // via ON DELETE SET NULL and leave a completed session pointing nowhere.
                 val finalDistance = WorkoutState.snapshot.value.distanceMeters
                 val durationMs = now - workoutStartMs
-                if (finalDistance < 200f && durationMs < 60_000L) {
+                if (!skipShortRunDiscard && finalDistance < 200f && durationMs < 60_000L) {
                     Log.i("WorkoutService", "Discarding short run: ${finalDistance}m, ${durationMs}ms")
                     runCatching { repository.deleteWorkout(workoutId) }
                     WorkoutState.setPendingBootcampSessionId(null)
