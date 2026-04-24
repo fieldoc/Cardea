@@ -5,7 +5,9 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hrcoach.data.repository.AudioSettingsRepository
+import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.domain.model.AudioSettings
+import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.service.WorkoutForegroundService
 import com.hrcoach.ui.components.settings.AudioSettingsEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -32,10 +34,14 @@ import javax.inject.Inject
 class ActiveRunSettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val audioRepo: AudioSettingsRepository,
+    private val userProfileRepo: UserProfileRepository,
 ) : ViewModel() {
 
     private val _audioSettings = MutableStateFlow(audioRepo.getAudioSettings())
     val audioSettings: StateFlow<AudioSettings> = _audioSettings.asStateFlow()
+
+    private val _distanceUnit = MutableStateFlow(DistanceUnit.fromString(userProfileRepo.getDistanceUnit()))
+    val distanceUnit: StateFlow<DistanceUnit> = _distanceUnit.asStateFlow()
 
     /**
      * Handle an event from the shared [com.hrcoach.ui.components.settings.AudioSettingsSection].

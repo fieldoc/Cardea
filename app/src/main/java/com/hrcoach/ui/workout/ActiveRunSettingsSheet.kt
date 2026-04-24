@@ -64,6 +64,7 @@ fun ActiveRunSettingsSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val audioSettings by viewModel.audioSettings.collectAsStateWithLifecycle()
+    val distanceUnit by viewModel.distanceUnit.collectAsStateWithLifecycle()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -109,6 +110,7 @@ fun ActiveRunSettingsSheet(
             AudioSettingsSection(
                 state = audioSettings,
                 onEvent = viewModel::onEvent,
+                distanceUnit = distanceUnit,
                 modifier = Modifier.fillMaxWidth()
             )
 
