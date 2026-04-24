@@ -28,8 +28,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VolumeUp
@@ -51,7 +49,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -67,7 +64,6 @@ import com.hrcoach.domain.model.ThemeMode
 import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.emblem.Emblem
 import com.hrcoach.domain.model.DistanceUnit
-import com.hrcoach.ui.components.CardeaSlider
 import com.hrcoach.ui.components.CardeaSwitch
 import com.hrcoach.ui.components.EmblemIconWithRing
 import com.hrcoach.ui.components.EmblemPicker
@@ -77,7 +73,6 @@ import com.hrcoach.ui.components.settings.AudioSettingsEvent
 import com.hrcoach.ui.components.settings.AudioSettingsSection
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
-import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
 import com.hrcoach.ui.theme.GradientPink
 import com.hrcoach.ui.theme.GradientRed
@@ -732,38 +727,6 @@ private fun GradientSaveButton(onClick: () -> Unit) {
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             color = CardeaTheme.colors.onGradient
         )
-    }
-}
-
-@Composable
-private fun ActiveVoiceModeHint(currentVerbosity: VoiceVerbosity) {
-    val hint = when (currentVerbosity) {
-        VoiceVerbosity.OFF -> "Silent running. Pause/resume tones still play for safety."
-        VoiceVerbosity.MINIMAL -> "Zone change alerts and workout start/end cues only."
-        VoiceVerbosity.FULL -> "All coaching: zone alerts, splits, pacing, and informational cues."
-    }
-    Text(
-        text = hint,
-        style = MaterialTheme.typography.bodySmall,
-        color = CardeaTheme.colors.textTertiary,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-    )
-}
-
-@Composable
-private fun InfoCueToggle(
-    label: String,
-    checked: Boolean,
-    enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = CardeaTheme.colors.textSecondary)
-        CardeaSwitch(checked = checked, onCheckedChange = { if (enabled) onCheckedChange(it) })
     }
 }
 
