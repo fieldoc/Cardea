@@ -229,7 +229,7 @@ class CloudRestoreManager @Inject constructor(
                 voiceVolume           = snap.child("voiceVolume").getValue(Int::class.java) ?: 80,
                 voiceVerbosity        = snap.child("voiceVerbosity").getValue(String::class.java)?.let {
                     runCatching { VoiceVerbosity.valueOf(it) }.getOrNull()
-                } ?: VoiceVerbosity.MINIMAL,
+                } ?: VoiceVerbosity.FULL,
                 enableVibration       = snap.child("enableVibration").getValue(Boolean::class.java) ?: true,
                 enableHalfwayReminder = snap.child("enableHalfwayReminder").getValue(Boolean::class.java),
                 enableKmSplits        = snap.child("enableKmSplits").getValue(Boolean::class.java),
