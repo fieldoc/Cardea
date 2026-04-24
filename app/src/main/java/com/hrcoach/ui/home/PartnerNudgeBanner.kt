@@ -36,7 +36,11 @@ fun PartnerNudgeBanner(
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    // Matches the Home-screen card family: 16dp radius, 16dp horizontal
+    // padding, glass highlight + hairline border. Keeps this banner as a
+    // Tier-3 surface in quiet conversation with VolumeTile and the
+    // coaching strip rather than a visual outlier.
+    val shape = RoundedCornerShape(16.dp)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

@@ -41,8 +41,8 @@ val CardeaNavGradient = Brush.linearGradient(
 
 // ── Text colors ────────────────────────────────────────────
 val CardeaTextPrimary   = Color(0xFFFFFFFF)
-val CardeaTextSecondary = Color(0xFFA1A1AA) // Neutral Gray
-val CardeaTextTertiary  = Color(0xFF6B6B73) // Neutral Gray — min 3.5:1 on #050505 (WCAG AA)
+val CardeaTextSecondary = Color(0xFFC8C8D0) // Neutral Gray — brightened for readability
+val CardeaTextTertiary  = Color(0xFFB0B0B8) // Neutral Gray — brightened for readability, stays below secondary
 
 // ── Zone colors (Athletic Neon) ────────────────────────────
 val ZoneGreen = Color(0xFF22C55E) // Sharp Emerald

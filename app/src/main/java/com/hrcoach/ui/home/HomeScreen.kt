@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -62,6 +63,7 @@ import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.domain.coaching.CoachingInsight
 import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
+import com.hrcoach.ui.components.CardeaButtonEmphasis
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
@@ -72,6 +74,60 @@ import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.util.metersToUnit
 import java.time.LocalDate
+
+// ── Home Identity Tokens ────────────────────────────────────────
+// A small, deliberate set of constants that keep every card on Home
+// speaking the same visual language. Polish, not reinvention — one
+// radius, one padding, one label treatment, one signature mark.
+
+private val HomeCardRadius = RoundedCornerShape(16.dp)
+private val HomeCardPadding = 16.dp
+private val HomeGutter = 20.dp
+private val HomeCardGap = 12.dp
+
+/**
+ * Cardea's signature "pulse dot" — a single cyan glyph the size of the
+ * ECG line's QRS peak, echoed on every uppercase section label. It's
+ * the only identity accent on the Home screen and is the thing that
+ * reads as "Cardea" before any other pixel on the page does.
+ */
+@Composable
+private fun PulseDot(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(4.dp)
+            .clip(CircleShape)
+            .background(GradientCyan)
+    )
+}
+
+/**
+ * Standard section label — uppercase, tight tracking, tertiary text,
+ * prefixed with the pulse dot. Used on every card header on Home.
+ */
+@Composable
+private fun PulseLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = CardeaTheme.colors.textTertiary,
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        PulseDot()
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp,
+                fontSize = 10.sp,
+            ),
+            color = color,
+        )
+    }
+}
 
 // ── Greeting Row ────────────────────────────────────────────────
 
@@ -97,7 +153,7 @@ private fun GreetingRow(
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp
             ),
-            color = CardeaTheme.colors.textSecondary
+            color = CardeaTheme.colors.textTertiary
         )
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             IconButton32(onClick = onSensorClick) {
@@ -222,27 +278,22 @@ private fun PulseHero(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                Brush.linearGradient(
+                // Vertical wash — fades toward the background at the bottom
+                // so the hero dissolves into the CTA rather than sitting as
+                // a separate island above it.
+                Brush.verticalGradient(
                     colorStops = arrayOf(
-                        0f to GradientRed.copy(alpha = 0.08f * heroAlpha),
-                        0.5f to GradientBlue.copy(alpha = 0.08f * heroAlpha),
-                        1f to GradientCyan.copy(alpha = 0.03f * heroAlpha)
+                        0f to GradientRed.copy(alpha = 0.10f * heroAlpha),
+                        0.55f to GradientPink.copy(alpha = 0.05f * heroAlpha),
+                        1f to Color.Transparent
                     )
                 )
             )
     ) {
         Column(
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = HomeGutter, end = HomeGutter, top = 18.dp, bottom = 8.dp)
         ) {
-            Text(
-                text = headerText,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp,
-                    fontSize = 10.sp
-                ),
-                color = CardeaTheme.colors.textTertiary
-            )
+            PulseLabel(text = headerText)
             Spacer(Modifier.height(6.dp))
             val heroGradient = CardeaTheme.colors.gradient
             Text(
@@ -252,7 +303,7 @@ private fun PulseHero(
                     fontSize = 34.sp,
                     letterSpacing = (-0.5).sp
                 ),
-                color = if (isToday) CardeaTheme.colors.textPrimary else CardeaTheme.colors.textSecondary,
+                color = CardeaTheme.colors.textPrimary,
                 modifier = if (isToday) {
                     Modifier
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -282,13 +333,16 @@ private fun PulseHero(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.Top
                 ) {
+                    // Signature accent — 2dp vertical stripe in cyan to
+                    // echo the ECG/PulseDot identity. Faded so it reads
+                    // as "quiet presence" not "primary CTA".
                     Box(
                         modifier = Modifier
                             .padding(top = 2.dp)
                             .width(2.dp)
                             .height(30.dp)
                             .background(
-                                CardeaTheme.colors.textTertiary,
+                                GradientCyan.copy(alpha = 0.55f),
                                 RoundedCornerShape(1.dp)
                             )
                     )
@@ -305,6 +359,95 @@ private fun PulseHero(
                 }
             }
         }
+
+        // ECG glow + line sit below the text content
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(85.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(y = (-15).dp)
+                    .size(width = 180.dp, height = 60.dp)
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(
+                                GradientPink.copy(alpha = 0.15f),
+                                Color.Transparent
+                            )
+                        ),
+                        shape = CircleShape
+                    )
+            )
+            EcgLine(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(85.dp),
+                alpha = if (isToday) 0.70f else 0.50f
+            )
+        }
+    }
+}
+
+@Composable
+private fun EcgLine(modifier: Modifier = Modifier, alpha: Float = 0.45f) {
+    Canvas(modifier = modifier.graphicsLayer { this.alpha = alpha }) {
+        val w = size.width
+        val h = size.height
+
+        // ECG path points normalized from mockup SVG viewBox 393x85
+        val points = listOf(
+            0f to 0.612f,
+            0.191f to 0.612f,
+            0.242f to 0.612f,
+            0.285f to 0.212f,
+            0.326f to 0.871f,
+            0.366f to 0.118f,
+            0.407f to 0.706f,
+            0.445f to 0.494f,
+            0.489f to 0.612f,
+            0.682f to 0.612f,
+            0.733f to 0.612f,
+            0.776f to 0.235f,
+            0.817f to 0.847f,
+            0.857f to 0.165f,
+            0.898f to 0.682f,
+            0.936f to 0.518f,
+            0.975f to 0.612f,
+            1f to 0.612f
+        )
+
+        val path = Path().apply {
+            points.forEachIndexed { i, (nx, ny) ->
+                val x = nx * w
+                val y = ny * h
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
+            }
+        }
+
+        // Gradient distribution is biased early: red lives where the
+        // first QRS spike fires, pink holds the dense middle beats,
+        // blue/cyan tail off into the quiet baseline. The line should
+        // feel like a signal decaying into the page, not a rainbow
+        // stripe wiped across it.
+        drawPath(
+            path = path,
+            brush = Brush.horizontalGradient(
+                colorStops = arrayOf(
+                    0.00f to GradientRed,
+                    0.30f to GradientPink,
+                    0.65f to GradientBlue,
+                    1.00f to GradientCyan
+                )
+            ),
+            style = Stroke(
+                width = 2.5f * density,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
     }
 }
 
@@ -321,15 +464,15 @@ private fun CtaRow(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .padding(horizontal = HomeGutter, vertical = 0.dp)
     ) {
         CardeaButton(
             text = if (hasActiveBootcamp) "Start Session" else "Set Up Bootcamp",
             onClick = if (hasActiveBootcamp) onStartSession else onSetupBootcamp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(52.dp),
+            emphasis = CardeaButtonEmphasis.Tonal,
         )
     }
 }
@@ -347,8 +490,8 @@ private fun BottomHalf(
         modifier = modifier
             .fillMaxWidth()
             .then(if (state.hasActiveBootcamp) Modifier.verticalScroll(scrollState) else Modifier)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = HomeGutter, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(HomeCardGap)
     ) {
         if (state.hasActiveBootcamp) {
             // Bootcamp enrolled: ring goal card + full-width volume tile
@@ -413,21 +556,13 @@ private fun GoalTile(current: Int, target: Int, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(HomeCardRadius)
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(18.dp))
-            .padding(18.dp),
+            .border(1.dp, CardeaTheme.colors.glassBorder, HomeCardRadius)
+            .padding(HomeCardPadding),
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "WEEKLY GOAL",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp,
-                fontSize = 10.sp
-            ),
-            color = CardeaTheme.colors.textTertiary
-        )
+        PulseLabel(text = "WEEKLY GOAL")
         Spacer(Modifier.height(6.dp))
         Text(
             text = "$current/$target",
@@ -454,21 +589,13 @@ private fun StreakTile(streak: Int, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(18.dp))
+            .clip(HomeCardRadius)
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(18.dp))
-            .padding(18.dp),
+            .border(1.dp, CardeaTheme.colors.glassBorder, HomeCardRadius)
+            .padding(HomeCardPadding),
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "STREAK",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp,
-                fontSize = 10.sp
-            ),
-            color = CardeaTheme.colors.textTertiary
-        )
+        PulseLabel(text = "STREAK")
         Spacer(Modifier.height(6.dp))
         Text(
             text = streak.toString(),
@@ -505,10 +632,10 @@ private fun WeekGoalRingCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(HomeCardRadius)
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp),
+            .border(1.dp, CardeaTheme.colors.glassBorder, HomeCardRadius)
+            .padding(HomeCardPadding),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
@@ -571,13 +698,7 @@ private fun WeekGoalRingCard(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Text(
-                    text = "THIS WEEK",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.2.sp,
-                    color = CardeaTheme.colors.textTertiary
-                )
+                PulseLabel(text = "THIS WEEK")
                 Text(
                     text = if (completedRuns == 0)
                         "$totalRuns ${if (totalRuns == 1) "run" else "runs"} scheduled"
@@ -623,21 +744,13 @@ private fun VolumeTile(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(HomeCardRadius)
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .border(1.dp, CardeaTheme.colors.glassBorder, HomeCardRadius)
+            .padding(HomeCardPadding),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(
-            text = "THIS WEEK",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.2.sp,
-                fontSize = 10.sp
-            ),
-            color = CardeaTheme.colors.textTertiary
-        )
+        PulseLabel(text = "VOLUME")
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(20.dp),
@@ -685,10 +798,10 @@ private fun CoachingStrip(insight: CoachingInsight, modifier: Modifier = Modifie
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .clip(HomeCardRadius)
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .border(1.dp, CardeaTheme.colors.glassBorder, HomeCardRadius)
+            .padding(horizontal = HomeCardPadding, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -752,22 +865,18 @@ private fun AllCaughtUpCard(onGoToTraining: () -> Unit, modifier: Modifier = Mod
             .border(
                 width = 1.dp,
                 color = CardeaTheme.colors.glassBorder,
-                shape = RoundedCornerShape(20.dp)
+                shape = HomeCardRadius
             )
             .background(
                 color = CardeaTheme.colors.glassHighlight,
-                shape = RoundedCornerShape(20.dp)
+                shape = HomeCardRadius
             )
-            .padding(20.dp),
+            .padding(HomeCardPadding + 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
+        PulseLabel(
             text = "THIS WEEK\u2019S SESSIONS",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp
-            ),
-            color = CardeaTheme.colors.textSecondary
+            color = CardeaTheme.colors.textSecondary,
         )
         Spacer(Modifier.height(8.dp))
         // 7a: Celebration ring
@@ -837,32 +946,24 @@ private fun NoBootcampCard(
     modifier: Modifier = Modifier
 ) {
     val heroGradient = CardeaTheme.colors.gradient
-    Column(modifier = modifier.padding(horizontal = 20.dp)) {
+    Column(modifier = modifier.padding(horizontal = HomeGutter)) {
         // ── Feature showcase hero ──
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(HomeCardRadius)
                 .border(
                     width = 1.dp,
                     color = CardeaTheme.colors.glassBorder,
-                    shape = RoundedCornerShape(20.dp)
+                    shape = HomeCardRadius
                 )
                 .background(
                     color = CardeaTheme.colors.glassHighlight,
-                    shape = RoundedCornerShape(20.dp)
+                    shape = HomeCardRadius
                 )
-                .padding(20.dp)
+                .padding(HomeCardPadding + 4.dp)
         ) {
-            // Badge
-            Text(
-                text = "YOUR PERSONAL RUNNING COACH",
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                ),
-                color = CardeaTheme.colors.textTertiary
-            )
+            PulseLabel(text = "YOUR PERSONAL RUNNING COACH")
             Spacer(Modifier.height(10.dp))
 
             // Title
@@ -975,18 +1076,18 @@ private fun JustRunStrip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(HomeCardRadius)
             .border(
                 width = 1.dp,
                 color = CardeaTheme.colors.glassBorder,
-                shape = RoundedCornerShape(16.dp)
+                shape = HomeCardRadius
             )
             .background(
                 color = CardeaTheme.colors.glassHighlight,
-                shape = RoundedCornerShape(16.dp)
+                shape = HomeCardRadius
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = HomeCardPadding, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
