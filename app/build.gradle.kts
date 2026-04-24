@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.8.0"
+        versionCode = 10
+        versionName = "0.9.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.8.0: Voice coaching rewrite — clearer 'Above zone - HR falling' phrasing that tells you both where you are AND which direction HR is trending; MEDIUM/HIGH projection confidence now use distinct verbs ('trending up' vs 'climbing') so you can hear the urgency tier. Alert logic smarter: SLOW_DOWN/SPEED_UP suppressed when HR is already self-correcting (no more badgering while you're on it) and when pace drops to walk-break territory (no more 'speed up' during a planned walk). New user settings for in-zone confirm cadence (Frequent/Standard/Reduced) and tier-1 voice at Minimal verbosity. Auto-pause now speaks 'Run autopaused' / 'Run resumed' so you know what's happening without looking. Lockscreen notification rewritten as a full-width Spotify-style MediaStyle card with gradient HR art and zone badge — legible at a glance while running. Workout timer hardening: no more ticking during the countdown, correct active duration when you stop mid-pause (paused time now properly excluded from all displays), countdown overlay appears instantly on Start Run. Post-run summary: delete confirmation, clearer exit flow, consistent naming. Partner backup/restore fixes: partner UIDs now backed up and bidirectional links restored after UID change. Predictive warning fixes: no more firing on zone entry or during rapid oscillations. 13 new test cases covering self-correction, walk-break, cadence, and re-entry guidance."
+                releaseNotes = "v0.9.0: Audio cue education — first workout now shows a one-time primer explaining the coaching sounds; in-run a cue banner flashes each cue's label + meaning; direction-coded vibration patterns (up/down) fire alongside voice; new Sound Library screen in settings with samples; post-run 'Sounds you heard today' recap for the first three runs. Voice verbosity defaults to FULL for new installs; FULL now appends a BPM-delta suffix to zone alerts so you hear HOW far off zone you are; lower-priority TTS queues instead of dropping; predictive-warning gates tightened to cut false fires. New post-run summary: gradient hero with inline compact route map, pinned Done CTA, Status / Your Run / Compared / More sections, HRR cooldown audio bookends with gradient border. Rotating science facts — zone explanations, coaching insights, and race-pace/recovery content now rotate through 10-variant pools seeded by the day, so repeat viewers see fresh material. Startup UX: splash holds until destination resolves, 'Starting…' spinner on Start Run, countdown overlay polished, startup audio pacing tightened, auto-pause grace hardened. New active-run settings sheet from the top bar with audio controls + bootcamp 'End session early' (now preserves the workout row and bootcamp credit even when ended under a minute). Bootcamp reminder-notification date formula fixed. Stop confirmation now a themed bottom sheet. Cloud restore defaults voice verbosity to FULL to match new installs."
             }
         }
     }
