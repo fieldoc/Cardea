@@ -108,6 +108,15 @@ class CoachingEventRouter {
         inZoneConfirmCount = 0
     }
 
+    /**
+     * [guidance] is the VOICE guidance string — what should be spoken if this event routes
+     * through TTS. Callers pass null (not the on-screen display text) when the current
+     * guidance is a static preset quip that must NOT be spoken (e.g. zone2's "Easy pace
+     * builds your aerobic engine. Hold a conversation."). When null, VoicePlayer falls back
+     * to its fixed per-event phrasing ("Back in zone", "Watch your pace", etc.) — the same
+     * rule that already applies to IN_ZONE_CONFIRM. The on-screen `WorkoutState.guidanceText`
+     * is maintained separately in WFS and is unaffected by this null-ing.
+     */
     fun route(
         workoutConfig: WorkoutConfig,
         connected: Boolean,
@@ -115,7 +124,7 @@ class CoachingEventRouter {
         elapsedSeconds: Long,
         zoneStatus: ZoneStatus,
         adaptiveResult: AdaptivePaceController.TickResult?,
-        guidance: String,
+        guidance: String?,
         nowMs: Long,
         distanceUnit: DistanceUnit = DistanceUnit.KM,
         emitEvent: (CoachingEvent, String?) -> Unit

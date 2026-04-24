@@ -597,6 +597,14 @@ class WorkoutForegroundService : LifecycleService() {
             actualZone = zoneStatus
         )
 
+        // Which preset branch produced the guidance? We use this below to decide whether the
+        // string is safe to speak. Preset overrides are long, static motivational quips meant
+        // for on-screen display only — speaking them every zone re-entry (RETURN_TO_ZONE) or
+        // every projected-drift (PREDICTIVE_WARNING) reads as nagging. See router docstring.
+        val isPresetQuip =
+            (workoutConfig.guidanceTag == "strides" && elapsedSeconds >= 1200 && zoneStatus == ZoneStatus.IN_ZONE) ||
+            (zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides"))
+
         val guidance = when {
             isAutoPaused -> "STOPPED \u2022 ALERTS PAUSED"
             // Preset-specific overrides take priority over adaptive guidance
@@ -612,6 +620,14 @@ class WorkoutForegroundService : LifecycleService() {
                 ZoneStatus.NO_DATA -> "GET HR SIGNAL"
             }
         }
+
+        // Voice-layer guidance: null for preset quips and pause text; otherwise the same
+        // contextual/adaptive string used on screen. Null makes VoicePlayer fall back to its
+        // fixed per-event phrasing ("Back in zone", "Watch your pace"). AlertPolicy only fires
+        // SPEED_UP/SLOW_DOWN when out-of-zone, so it never sees the zone2 IN_ZONE preset quip
+        // — we still feed it the display guidance so short ALL_CAPS fallbacks like "SPEED UP
+        // NOW" (used when adaptive is absent) continue to reach VoicePlayer as today.
+        val voiceGuidance: String? = if (isPresetQuip || isAutoPaused) null else guidance
 
         var nextSnapshot: WorkoutSnapshot? = null
         WorkoutState.update { current ->
@@ -644,7 +660,7 @@ class WorkoutForegroundService : LifecycleService() {
                 elapsedSeconds = elapsedSeconds,
                 zoneStatus = zoneStatus,
                 adaptiveResult = adaptiveResult,
-                guidance = guidance,
+                guidance = voiceGuidance,
                 nowMs = nowMs,
                 distanceUnit = sessionDistanceUnit,
                 emitEvent = { event, eventGuidance ->

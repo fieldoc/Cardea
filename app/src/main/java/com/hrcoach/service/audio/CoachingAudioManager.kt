@@ -234,18 +234,27 @@ class CoachingAudioManager(
 
                 // MINIMAL users explicitly opted for fewer events, so when an alert DOES fire it
                 // should be maximally informative — skip the tier-1 silent-earcon and speak from
-                // the first hit. FULL retains the 3-tier escalation (earcon / earcon+voice /
-                // earcon+voice+vibration) because FULL users are already getting more content
-                // and gradual escalation reduces nag at the threshold.
-                // Gated on the user-controlled `minimalTierOneVoice` setting (default true):
+                // the first hit (gated by user-controlled `minimalTierOneVoice`, default true;
                 // setting it false restores the classic 3-tier escalation for users who prefer
-                // gradual ramp-up.
+                // gradual ramp-up).
+                //
+                // FULL now ALSO speaks from tier-1. The original "gradual escalation on FULL"
+                // design (bug, fixed 2026-04-24) assumed the escalation counter would accumulate
+                // across an out-of-zone drift; in practice AlertPolicy.onResetEscalation fires
+                // the moment HR touches IN_ZONE, so any realistic run (oscillating near a
+                // threshold) never escapes tier-1 — the FULL user heard earcons but never voice.
+                // The 2026-04-22 audit ("slow down not firing") traces back to this gate.
+                // Tier-3 (earcon+voice+vibration) still requires sustained drift and remains
+                // escalated because vibration is a stronger signal reserved for runners who are
+                // not responding to the first voice cue.
                 val minimalUpgrade = verbosity == VoiceVerbosity.MINIMAL && currentSettings.minimalTierOneVoice
+                val fullUpgrade = verbosity == VoiceVerbosity.FULL
 
                 val shouldSpeakAlert =
                     escalationLevel == EscalationLevel.EARCON_VOICE ||
                     escalationLevel == EscalationLevel.EARCON_VOICE_VIBRATION ||
-                    minimalUpgrade
+                    minimalUpgrade ||
+                    fullUpgrade
 
                 if (shouldSpeakAlert) {
                     // NonCancellable: a voice alert that has already started must complete even if
