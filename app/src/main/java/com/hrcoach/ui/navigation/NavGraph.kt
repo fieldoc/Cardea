@@ -204,7 +204,7 @@ fun HrCoachNavGraph(
                         NavItem(
                             route = Routes.BOOTCAMP,
                             icon = Icons.Default.FavoriteBorder,
-                            labelRes = R.string.nav_workout,
+                            labelRes = R.string.nav_training,
                             isSelected = { it == Routes.SETUP || it == Routes.BOOTCAMP }
                         ),
                         NavItem(

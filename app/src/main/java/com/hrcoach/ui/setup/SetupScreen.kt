@@ -138,6 +138,7 @@ fun SetupScreen(
     onStartWorkout: (configJson: String, deviceAddress: String?) -> Unit,
     onGoToBootcamp: () -> Unit,
     onGoToSoundLibrary: () -> Unit = {},
+    showBootcampTeaser: Boolean = false,
     viewModel: SetupViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -254,8 +255,26 @@ fun SetupScreen(
                 }
             }
 
-            // ── Bootcamp hero ──────────────────────────────────────────────────
-            BootcampEntryCard(onClick = onGoToBootcamp)
+            // ── Bootcamp hero / teaser ────────────────────────────────────────
+            if (showBootcampTeaser) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CardeaTheme.colors.glassSurface)
+                        .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Prefer a structured plan? Check Bootcamp.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                }
+            } else {
+                BootcampEntryCard(onClick = onGoToBootcamp)
+            }
 
             // ── Manual Run section ─────────────────────────────────────────────
             // Section label — Manual Run is a full peer section, not an afterthought

@@ -131,7 +131,6 @@ fun BootcampScreen(
     onStartWorkout: (configJson: String, deviceAddress: String?) -> Unit,
     onBack: () -> Unit,
     onGoToSettings: () -> Unit,
-    onGoToManualSetup: (() -> Unit)? = null,
     onGoToSoundLibrary: () -> Unit = {},
     viewModel: BootcampViewModel = hiltViewModel()
 ) {
@@ -243,8 +242,7 @@ fun BootcampScreen(
                     onTierClick = viewModel::showTierDetail,
                     onSavePreferredDays = viewModel::savePreferredDays,
                     onSettingsClick = onGoToSettings,
-                    onPreferredDaysClick = { showDaysSheet = true },
-                    onGoToManualSetup = onGoToManualSetup
+                    onPreferredDaysClick = { showDaysSheet = true }
                 )
 
                 if (uiState.showMaxHrGate) {
@@ -1481,8 +1479,7 @@ private fun ActiveBootcampDashboard(
     onTierClick: () -> Unit,
     onSavePreferredDays: (List<DayPreference>) -> Unit,
     onSettingsClick: () -> Unit,
-    onPreferredDaysClick: () -> Unit,
-    onGoToManualSetup: (() -> Unit)? = null
+    onPreferredDaysClick: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         var missedDismissedIds by remember { mutableStateOf(emptySet<Long>()) }
@@ -1496,7 +1493,6 @@ private fun ActiveBootcampDashboard(
             onReschedule = todaySessionId?.let { id -> { onReschedule(id) } },
             onSwapTodayForRest = onSwapTodayForRest,
             onPullForward = { sessionId -> onReschedule(sessionId) },
-            onGoToManualSetup = onGoToManualSetup,
             onGoalClick = onGoalClick,
             onTierClick = onTierClick,
             onProgressClick = onProgressClick,
@@ -2042,7 +2038,6 @@ private fun TodayHeroSection(
     onReschedule: (() -> Unit)?,
     onSwapTodayForRest: () -> Unit,
     onPullForward: ((Long) -> Unit)? = null,
-    onGoToManualSetup: (() -> Unit)? = null,
     onGoalClick: () -> Unit,
     onTierClick: () -> Unit,
     onProgressClick: () -> Unit,

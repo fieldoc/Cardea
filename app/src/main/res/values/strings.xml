@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Cardea</string>
     <string name="nav_home">Home</string>
-    <string name="nav_workout">Training</string>
+    <string name="nav_training">Training</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_history">Activity</string>
     <string name="nav_account">Profile</string>

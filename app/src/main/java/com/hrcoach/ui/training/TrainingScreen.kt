@@ -19,7 +19,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hrcoach.ui.bootcamp.BootcampScreen
+import com.hrcoach.ui.bootcamp.BootcampStatusViewModel
 import com.hrcoach.ui.setup.SetupScreen
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
@@ -39,6 +42,9 @@ fun TrainingScreen(
     // don't tear down TabRow state. Key on initialSegment so nav-level deep links
     // override the saved state.
     var selected by rememberSaveable(initialSegment) { mutableStateOf(initialSegment) }
+
+    val statusVm: BootcampStatusViewModel = hiltViewModel()
+    val hasActiveEnrollment by statusVm.hasActiveEnrollment.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -91,7 +97,6 @@ fun TrainingScreen(
                 onStartWorkout = onStartWorkout,
                 onBack = onBack,
                 onGoToSettings = onGoToBootcampSettings,
-                onGoToManualSetup = { selected = TrainingSegment.FreeRun },
                 onGoToSoundLibrary = onGoToSoundLibrary,
             )
             TrainingSegment.FreeRun -> SetupScreen(
@@ -99,6 +104,7 @@ fun TrainingScreen(
                 onStartWorkout = onStartWorkout,
                 onGoToBootcamp = { selected = TrainingSegment.Bootcamp },
                 onGoToSoundLibrary = onGoToSoundLibrary,
+                showBootcampTeaser = !hasActiveEnrollment,
             )
         }
     }
