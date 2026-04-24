@@ -65,15 +65,14 @@ import com.hrcoach.service.simulation.SimulationController
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import com.hrcoach.ui.account.AccountScreen
-import com.hrcoach.ui.bootcamp.BootcampScreen
-import com.hrcoach.ui.bootcamp.BootcampStatusViewModel
 import com.hrcoach.ui.history.HistoryDetailScreen
 import com.hrcoach.ui.history.HistoryListScreen
 import com.hrcoach.ui.home.HomeScreen
 import com.hrcoach.ui.postrun.PostRunSummaryScreen
 import com.hrcoach.ui.postrun.PostRunSummaryViewModel
 import com.hrcoach.ui.progress.ProgressScreen
-import com.hrcoach.ui.setup.SetupScreen
+import com.hrcoach.ui.training.TrainingScreen
+import com.hrcoach.ui.training.TrainingSegment
 import com.hrcoach.ui.onboarding.OnboardingSplashViewModel
 import com.hrcoach.ui.onboarding.OnboardingScreen
 import com.hrcoach.ui.splash.SplashScreen
@@ -132,10 +131,6 @@ fun HrCoachNavGraph(
     val isWorkoutRunning = navState.isRunning
     val completedWorkoutId = navState.completedId
     val isWideLayout = windowSizeClass.widthSizeClass != WindowWidthSizeClass.Compact
-
-    // Lightweight enrollment check — drives Training tab adaptive routing
-    val enrollmentVm: BootcampStatusViewModel = hiltViewModel()
-    val isBootcampEnrolled by enrollmentVm.hasActiveEnrollment.collectAsStateWithLifecycle()
 
     LaunchedEffect(isWorkoutRunning, completedWorkoutId) {
         val routeNow = navController.currentBackStackEntry?.destination?.route
@@ -201,13 +196,13 @@ fun HrCoachNavGraph(
                         val isSelected: (String?) -> Boolean = { it == route }
                     )
 
-                    // Training tab target depends on enrollment state
-                    val trainingRoute = if (isBootcampEnrolled) Routes.BOOTCAMP else Routes.SETUP
-
+                    // Training tab always lands on the Bootcamp segment of the
+                    // combined TrainingScreen — segmented TabRow makes Free Run
+                    // one tap away without hiding it from unenrolled users.
                     val navItems = listOf(
                         NavItem(Routes.HOME,    Icons.Default.Home,                  R.string.nav_home),
                         NavItem(
-                            route = trainingRoute,
+                            route = Routes.BOOTCAMP,
                             icon = Icons.Default.FavoriteBorder,
                             labelRes = R.string.nav_workout,
                             isSelected = { it == Routes.SETUP || it == Routes.BOOTCAMP }
@@ -366,38 +361,15 @@ fun HrCoachNavGraph(
                 enterTransition = { defaultEnter(1) },
                 exitTransition = { defaultExit(1) }
             ) {
-                SetupScreen(
+                TrainingScreen(
+                    initialSegment = TrainingSegment.FreeRun,
                     isWideLayout = isWideLayout,
                     onStartWorkout = { configJson, deviceAddress ->
-                        if (!PermissionGate.hasAllRuntimePermissions(context) && !SimulationController.isActive) {
-                            Toast.makeText(
-                                context,
-                                "Grant required permissions before starting workout.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            val intent = Intent(context, WorkoutForegroundService::class.java).apply {
-                                action = WorkoutForegroundService.ACTION_START
-                                putExtra(WorkoutForegroundService.EXTRA_CONFIG_JSON, configJson)
-                                putExtra(WorkoutForegroundService.EXTRA_DEVICE_ADDRESS, deviceAddress)
-                            }
-                            runCatching {
-                                context.startForegroundService(intent)
-                            }.onFailure {
-                                Log.e("NavGraph", "Failed to start workout service", it)
-                                val msg = if (it is ForegroundServiceStartNotAllowedException) {
-                                    "Cannot start workout in background. Open the app and try again."
-                                } else {
-                                    "Unable to start workout."
-                                }
-                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                            }
-                        }
+                        startWorkoutService(context, configJson, deviceAddress)
                     },
-                    onGoToBootcamp = {
-                        navController.navigate(Routes.BOOTCAMP) {
-                            launchSingleTop = true
-                        }
+                    onBack = { navController.popBackStack() },
+                    onGoToBootcampSettings = {
+                        navController.navigate(Routes.BOOTCAMP_SETTINGS)
                     },
                     onGoToSoundLibrary = {
                         navController.navigate(Routes.SOUND_LIBRARY) {
@@ -528,40 +500,16 @@ fun HrCoachNavGraph(
                 route = Routes.BOOTCAMP,
                 enterTransition = { defaultEnter(1) },
                 exitTransition = { defaultExit(1) }
-            ) { backStackEntry ->
-                val isTabRoot = navController.previousBackStackEntry?.destination?.route == null ||
-                    navController.previousBackStackEntry?.destination?.route == Routes.HOME
-                BootcampScreen(
+            ) {
+                TrainingScreen(
+                    initialSegment = TrainingSegment.Bootcamp,
+                    isWideLayout = isWideLayout,
                     onStartWorkout = { configJson, deviceAddress ->
-                        if (!PermissionGate.hasAllRuntimePermissions(context) && !SimulationController.isActive) {
-                            Toast.makeText(
-                                context,
-                                "Grant required permissions before starting workout.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } else {
-                            val intent = Intent(context, WorkoutForegroundService::class.java).apply {
-                                action = WorkoutForegroundService.ACTION_START
-                                putExtra(WorkoutForegroundService.EXTRA_CONFIG_JSON, configJson)
-                                putExtra(WorkoutForegroundService.EXTRA_DEVICE_ADDRESS, deviceAddress)
-                            }
-                            runCatching {
-                                context.startForegroundService(intent)
-                            }.onFailure {
-                                Log.e("NavGraph", "Failed to start workout service", it)
-                                val msg = if (it is ForegroundServiceStartNotAllowedException) {
-                                    "Cannot start workout in background. Open the app and try again."
-                                } else {
-                                    "Unable to start workout."
-                                }
-                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                            }
-                        }
+                        startWorkoutService(context, configJson, deviceAddress)
                     },
                     onBack = { navController.popBackStack() },
-                    onGoToSettings = { navController.navigate(Routes.BOOTCAMP_SETTINGS) },
-                    onGoToManualSetup = {
-                        navController.navigate(Routes.SETUP) { launchSingleTop = true }
+                    onGoToBootcampSettings = {
+                        navController.navigate(Routes.BOOTCAMP_SETTINGS)
                     },
                     onGoToSoundLibrary = {
                         navController.navigate(Routes.SOUND_LIBRARY) {
@@ -718,6 +666,37 @@ private fun GradientNavIcon(
             contentDescription = contentDescription,
             tint = CardeaTheme.colors.textSecondary
         )
+    }
+}
+
+private fun startWorkoutService(
+    context: android.content.Context,
+    configJson: String,
+    deviceAddress: String?
+) {
+    if (!PermissionGate.hasAllRuntimePermissions(context) && !SimulationController.isActive) {
+        Toast.makeText(
+            context,
+            "Grant required permissions before starting workout.",
+            Toast.LENGTH_LONG
+        ).show()
+        return
+    }
+    val intent = Intent(context, WorkoutForegroundService::class.java).apply {
+        action = WorkoutForegroundService.ACTION_START
+        putExtra(WorkoutForegroundService.EXTRA_CONFIG_JSON, configJson)
+        putExtra(WorkoutForegroundService.EXTRA_DEVICE_ADDRESS, deviceAddress)
+    }
+    runCatching {
+        context.startForegroundService(intent)
+    }.onFailure {
+        Log.e("NavGraph", "Failed to start workout service", it)
+        val msg = if (it is ForegroundServiceStartNotAllowedException) {
+            "Cannot start workout in background. Open the app and try again."
+        } else {
+            "Unable to start workout."
+        }
+        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
     }
 }
 

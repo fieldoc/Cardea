@@ -2151,7 +2151,7 @@ private fun TodayHeroSection(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("End program...", color = GradientRed) },
+                            text = { Text("Delete bootcamp...", color = GradientRed) },
                             onClick = { menuExpanded = false; onEndProgram() }
                         )
                     }
@@ -2425,35 +2425,22 @@ private fun TodayHeroSection(
                             color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
-                        // ── Action row: pull forward + manual run ────────
-                        if (today.nextFutureSessionId != null || onGoToManualSetup != null) {
+                        // Free Run is now reachable via the segmented TabRow, so
+                        // this action row only surfaces the "pull forward" affordance.
+                        if (today.nextFutureSessionId != null && onPullForward != null) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                if (today.nextFutureSessionId != null && onPullForward != null) {
-                                    TextButton(
-                                        onClick = { onPullForward(today.nextFutureSessionId) },
-                                        contentPadding = PaddingValues(horizontal = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Pull forward next run",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textSecondary
-                                        )
-                                    }
-                                }
-                                if (onGoToManualSetup != null) {
-                                    TextButton(
-                                        onClick = onGoToManualSetup,
-                                        contentPadding = PaddingValues(horizontal = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Manual run \u2192",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textTertiary
-                                        )
-                                    }
+                                TextButton(
+                                    onClick = { onPullForward(today.nextFutureSessionId) },
+                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Pull forward next run",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CardeaTheme.colors.textSecondary
+                                    )
                                 }
                             }
                         }
@@ -2481,35 +2468,22 @@ private fun TodayHeroSection(
                             color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.padding(top = 4.dp)
                         )
-                        // ── Action row: pull forward + manual run ────────
-                        if (today.nextFutureSessionId != null || onGoToManualSetup != null) {
+                        // Free Run is now reachable via the segmented TabRow, so
+                        // this action row only surfaces the "pull forward" affordance.
+                        if (today.nextFutureSessionId != null && onPullForward != null) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                if (today.nextFutureSessionId != null && onPullForward != null) {
-                                    TextButton(
-                                        onClick = { onPullForward(today.nextFutureSessionId) },
-                                        contentPadding = PaddingValues(horizontal = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Pull forward next run",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textSecondary
-                                        )
-                                    }
-                                }
-                                if (onGoToManualSetup != null) {
-                                    TextButton(
-                                        onClick = onGoToManualSetup,
-                                        contentPadding = PaddingValues(horizontal = 4.dp)
-                                    ) {
-                                        Text(
-                                            text = "Manual run \u2192",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = CardeaTheme.colors.textTertiary
-                                        )
-                                    }
+                                TextButton(
+                                    onClick = { onPullForward(today.nextFutureSessionId) },
+                                    contentPadding = PaddingValues(horizontal = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Pull forward next run",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CardeaTheme.colors.textSecondary
+                                    )
                                 }
                             }
                         }
@@ -3349,26 +3323,26 @@ private fun DeleteConfirmDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "End this program?",
+                text = "Delete this bootcamp?",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = CardeaTheme.colors.textPrimary
             )
         },
         text = {
             Text(
-                text = "Your schedule and progress will be permanently deleted. Your completed run history stays in the app.",
+                text = "Your schedule and bootcamp preferences will be removed. Your run history and fitness profile are kept \u2014 you can start a new program anytime.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = CardeaTheme.colors.textSecondary
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("End Program", color = GradientRed)
+                Text("Delete bootcamp", color = GradientRed)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Keep it", color = CardeaTheme.colors.textSecondary)
+                Text("Cancel", color = CardeaTheme.colors.textSecondary)
             }
         },
         containerColor = CardeaTheme.colors.bgPrimary,
