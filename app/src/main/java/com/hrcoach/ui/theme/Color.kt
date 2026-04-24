@@ -101,6 +101,11 @@ val ChartZoneHard     = Color(0xFFF59E0B) // Orange-amber — distinct from Zone
 val SessionTintCool   = Color(0xFF0EA5E9) // Sky-teal (Easy/Strides)
 val SessionTintDeep   = Color(0xFF6366F1) // Deep indigo (Long)
 
+// ── Social / partner accent ─────────────────────────────────────
+// Muted sky-teal for partner/social surfaces. Distinct from ZoneGreen
+// (reserved for HR zones / AllCaughtUp) and from the warm-pink CTA.
+val PartnerTeal = Color(0xFF38BDF8) // Tailwind sky-400 — readable on #050505, alive but not electric
+
 val ChartGridDark  = Color(0x0AFFFFFF)
 val ChartGridLight = Color(0x14000000)
 

@@ -58,6 +58,8 @@ data class HomeUiState(
     val coachingInsight: CoachingInsight? = null,
     val nudgeBanner: NudgeBannerState? = null,
     val distanceUnit: DistanceUnit = DistanceUnit.KM,
+    val maxHr: Int? = null,
+    val restHr: Int? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -71,6 +73,8 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val distanceUnit = DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
+    private val maxHr: Int? = userProfileRepository.getMaxHr()
+    private val restHr: Int? = null
 
     val uiState: StateFlow<HomeUiState> = combine(
         combine(
@@ -217,6 +221,8 @@ class HomeViewModel @Inject constructor(
                 coachingInsight = coachingInsight,
                 nudgeBanner = nudgeBanner,
                 distanceUnit = distanceUnit,
+                maxHr = maxHr,
+                restHr = restHr,
             ))
         }
     }

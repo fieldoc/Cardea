@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,22 +72,6 @@ import com.hrcoach.domain.education.ContentDensity
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.util.metersToUnit
 import java.time.LocalDate
-
-// ── Zone pill color mapping ─────────────────────────────────────
-
-@Composable
-private fun zonePillColors(sessionType: String): Pair<Color, Color> = when {
-    sessionType.contains("Z2", ignoreCase = true) ||
-    sessionType.contains("EASY", ignoreCase = true) ||
-    sessionType.contains("AEROBIC", ignoreCase = true) ->
-        Color(0xFF4D61FF).copy(alpha = 0.2f) to Color(0xFF7B8FFF)
-    sessionType.contains("Z4", ignoreCase = true) ||
-    sessionType.contains("TEMPO", ignoreCase = true) ||
-    sessionType.contains("INTERVAL", ignoreCase = true) ->
-        Color(0xFFFF4D5A).copy(alpha = 0.2f) to Color(0xFFFF7B84)
-    else ->
-        CardeaTheme.colors.glassBorder to CardeaTheme.colors.textSecondary
-}
 
 // ── Greeting Row ────────────────────────────────────────────────
 
@@ -217,9 +200,10 @@ private fun PulseHero(
     weekNumber: Int,
     isToday: Boolean,
     dayLabel: String,
+    maxHr: Int?,
+    restHr: Int?,
     modifier: Modifier = Modifier
 ) {
-    val (pillBg, pillText) = zonePillColors(session.sessionType)
     val dayEpoch = remember { LocalDate.now().toEpochDay() }
     val sessionLabel = session.sessionType
         .replace("_", " ")
@@ -286,27 +270,12 @@ private fun PulseHero(
                 style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                 color = CardeaTheme.colors.textSecondary
             )
-            Spacer(Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .background(
-                        color = pillBg,
-                        shape = RoundedCornerShape(100.dp)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 7.dp)
-            ) {
-                Text(
-                    text = session.sessionType.replace("_", " "),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.5.sp,
-                        fontSize = 12.sp
-                    ),
-                    color = pillText
-                )
-            }
             ZoneEducationProvider.forSessionType(
-                session.sessionType, ContentDensity.ONE_LINER, dayEpoch = dayEpoch
+                session.sessionType,
+                ContentDensity.ONE_LINER,
+                maxHr = maxHr,
+                restHr = restHr,
+                dayEpoch = dayEpoch
             )?.let { oneLiner ->
                 Spacer(Modifier.height(12.dp))
                 Row(
@@ -336,83 +305,6 @@ private fun PulseHero(
                 }
             }
         }
-
-        // ECG glow + line sit below the text content
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(85.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(y = (-15).dp)
-                    .size(width = 180.dp, height = 60.dp)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                GradientPink.copy(alpha = 0.15f),
-                                Color.Transparent
-                            )
-                        ),
-                        shape = CircleShape
-                    )
-            )
-            EcgLine(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(85.dp),
-                alpha = if (isToday) 0.45f else 0.20f
-            )
-        }
-    }
-}
-
-@Composable
-private fun EcgLine(modifier: Modifier = Modifier, alpha: Float = 0.45f) {
-    Canvas(modifier = modifier.graphicsLayer { this.alpha = alpha }) {
-        val w = size.width
-        val h = size.height
-
-        // ECG path points normalized from mockup SVG viewBox 393x85
-        val points = listOf(
-            0f to 0.612f,
-            0.191f to 0.612f,
-            0.242f to 0.612f,
-            0.285f to 0.212f,
-            0.326f to 0.871f,
-            0.366f to 0.118f,
-            0.407f to 0.706f,
-            0.445f to 0.494f,
-            0.489f to 0.612f,
-            0.682f to 0.612f,
-            0.733f to 0.612f,
-            0.776f to 0.235f,
-            0.817f to 0.847f,
-            0.857f to 0.165f,
-            0.898f to 0.682f,
-            0.936f to 0.518f,
-            0.975f to 0.612f,
-            1f to 0.612f
-        )
-
-        val path = Path().apply {
-            points.forEachIndexed { i, (nx, ny) ->
-                val x = nx * w
-                val y = ny * h
-                if (i == 0) moveTo(x, y) else lineTo(x, y)
-            }
-        }
-
-        drawPath(
-            path = path,
-            brush = Brush.horizontalGradient(listOf(GradientRed, GradientPink, GradientBlue, GradientCyan)),
-            style = Stroke(
-                width = 2.5f * density,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
-            )
-        )
     }
 }
 
@@ -445,7 +337,11 @@ private fun CtaRow(
 // ── Bottom Half ─────────────────────────────────────────────────
 
 @Composable
-private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
+private fun BottomHalf(
+    state: HomeUiState,
+    onNudgeTap: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val scrollState = rememberScrollState()
     Column(
         modifier = modifier
@@ -463,9 +359,7 @@ private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
             )
             VolumeTile(
                 distanceKm = metersToUnit(state.totalDistanceThisWeekMeters.toFloat(), state.distanceUnit),
-                distanceTargetKm = state.weeklyDistanceTargetKm,
                 timeMinutes = state.totalTimeThisWeekMinutes,
-                timeTargetMinutes = state.weeklyTimeTargetMinutes,
                 distanceLabel = if (state.distanceUnit == com.hrcoach.domain.model.DistanceUnit.MI) "mi" else "km",
                 modifier = Modifier.fillMaxWidth()
             )
@@ -480,6 +374,9 @@ private fun BottomHalf(state: HomeUiState, modifier: Modifier = Modifier) {
             state.coachingInsight?.let { insight ->
                 CoachingStrip(insight = insight)
             }
+        }
+        state.nudgeBanner?.let { nudge ->
+            PartnerNudgeBanner(state = nudge, onTap = onNudgeTap)
         }
     }
 }
@@ -720,9 +617,7 @@ private fun WeekGoalRingCard(
 @Composable
 private fun VolumeTile(
     distanceKm: Float,
-    distanceTargetKm: Double,
     timeMinutes: Long,
-    timeTargetMinutes: Long,
     distanceLabel: String = "km",
     modifier: Modifier = Modifier
 ) {
@@ -731,8 +626,8 @@ private fun VolumeTile(
             .clip(RoundedCornerShape(14.dp))
             .background(CardeaTheme.colors.glassHighlight)
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
             text = "THIS WEEK",
@@ -743,63 +638,42 @@ private fun VolumeTile(
             ),
             color = CardeaTheme.colors.textTertiary
         )
-        VolumeRow(
-            label = "DIST",
-            value = "%.0f / %.0f %s".format(distanceKm, distanceTargetKm, distanceLabel),
-            progress = (distanceKm / distanceTargetKm.toFloat()).coerceIn(0f, 1f)
-        )
-        VolumeRow(
-            label = "TIME",
-            value = "$timeMinutes / $timeTargetMinutes min",
-            progress = (timeMinutes.toFloat() / timeTargetMinutes.coerceAtLeast(1)).coerceIn(0f, 1f)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            VolumeMetric(
+                value = "%.1f $distanceLabel".format(distanceKm),
+                label = "DISTANCE"
+            )
+            VolumeMetric(
+                value = "$timeMinutes min",
+                label = "TIME"
+            )
+        }
     }
 }
 
 @Composable
-private fun VolumeRow(label: String, value: String, progress: Float) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+private fun VolumeMetric(value: String, label: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium.copy(
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = CardeaTheme.colors.textPrimary
+        )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.8.sp,
-                fontSize = 10.sp
+                fontSize = 10.sp,
+                letterSpacing = 1.sp,
+                fontWeight = FontWeight.Medium
             ),
-            color = CardeaTheme.colors.textTertiary,
-            modifier = Modifier.width(30.dp)
-        )
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(CardeaTheme.colors.glassBorder)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(progress.coerceAtLeast(0.01f))
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                GradientRed.copy(alpha = 0.55f),
-                                GradientPink.copy(alpha = 0.55f),
-                                GradientBlue.copy(alpha = 0.55f)
-                            )
-                        )
-                    )
-            )
-        }
-        Text(
-            text = value,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = CardeaTheme.colors.textSecondary
+            color = CardeaTheme.colors.textTertiary
         )
     }
 }
@@ -1207,7 +1081,9 @@ fun HomeScreen(
                         session = nextSession,
                         weekNumber = state.currentWeekNumber,
                         isToday = state.isNextSessionToday,
-                        dayLabel = state.nextSessionDayLabel
+                        dayLabel = state.nextSessionDayLabel,
+                        maxHr = state.maxHr,
+                        restHr = state.restHr
                     )
                 }
                 state.hasActiveBootcamp -> {
@@ -1221,16 +1097,6 @@ fun HomeScreen(
                 }
             }
 
-            // Partner nudge banner — visible when a partner ran today and user hasn't
-            if (state.nudgeBanner != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                PartnerNudgeBanner(
-                    state = state.nudgeBanner!!,
-                    onTap = onGoToBootcamp,
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                )
-            }
-
             // CTA — only when bootcamp is active (NoBootcampCard has its own button)
             if (state.hasActiveBootcamp) {
                 CtaRow(
@@ -1241,9 +1107,12 @@ fun HomeScreen(
                 )
             }
 
-            // Bottom half fills remaining space
+            // Bottom half fills remaining space. PartnerNudgeBanner lives
+            // inside BottomHalf so it sits below the user's primary CTA and
+            // progress content rather than fighting with them for hierarchy.
             BottomHalf(
                 state = state,
+                onNudgeTap = onGoToBootcamp,
                 modifier = Modifier.weight(1f)
             )
         }

@@ -21,7 +21,7 @@ Load when touching anything under `ui/`, `ui/theme/`, `ui/components/`, composab
 - **Glass surfaces:** `GlassBorder = 0x1AFFFFFF` (10%), `GlassHighlight = 0x0AFFFFFF`. Use `ui/components/GlassCard.kt` for all cards. `GlassCard.containerColor` IS wired — pass `borderColor = Color.Transparent` when using an outer `Modifier.border(brush=…)` to avoid double-borders. Same when adding tinted borders (e.g. `ZoneGreen.copy(alpha = 0.15f)`).
 - **`DarkGlassFillBrush`** = 8%/4% white (strengthened from 6%/2%) so glass is visible on `#050505`.
 - **`CardeaTextTertiary`** = `#6B6B73` (raised from `#52525B` for WCAG AA on `#050505`); `DisabledGray` and `ThresholdLine` follow.
-- **Single green** — `ZoneGreen` (#22C55E) everywhere including `PartnerNudgeBanner`. `NudgeGreen` (#4ADE80) is removed — do not reintroduce.
+- **Single green** — `ZoneGreen` (#22C55E) is reserved for HR-zone indicators and `AllCaughtUpCard`. `NudgeGreen` (#4ADE80) is removed — do not reintroduce. **Partner/social accent** is `PartnerTeal` (in `Color.kt`), NOT green — used in `PartnerNudgeBanner` and any future partner/social surface. Rationale: green collided with the warm-pink CTA hierarchy on Home.
 
 ## Typography & sizing
 
