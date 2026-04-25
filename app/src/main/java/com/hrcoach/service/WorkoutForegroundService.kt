@@ -633,15 +633,19 @@ class WorkoutForegroundService : LifecycleService() {
 
         // Strides phase text is also a "preset quip" for voice-leak purposes \u2014 the per-rep
         // text would otherwise leak through RETURN_TO_ZONE / PREDICTIVE_WARNING fallbacks.
-        val isStridesActive = stridesController?.isActive == true
+        // Gate on guidanceText presence (not controller.isActive) so the SetComplete text
+        // ("Strides complete \u2014 finish easy") still renders after the controller has
+        // transitioned to Done. stridesGuidanceText starts null and only flips non-null
+        // once the first event fires, so this doesn't disturb pre-strides ticks.
+        val isStridesPhaseText = workoutConfig.guidanceTag == "strides" && stridesGuidanceText != null
         val isPresetQuip =
-            isStridesActive ||
+            isStridesPhaseText ||
             (zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides"))
 
         val guidance = when {
             isAutoPaused -> "STOPPED \u2022 ALERTS PAUSED"
-            // Strides timer phase text takes priority over the zone2 quip when active
-            isStridesActive && stridesGuidanceText != null -> stridesGuidanceText!!
+            // Strides timer phase text takes priority over the zone2 quip when present
+            isStridesPhaseText -> stridesGuidanceText!!
             zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides") ->
                 "Easy pace builds your aerobic engine. Hold a conversation."
             adaptiveResult != null -> adaptiveResult.guidance

@@ -162,11 +162,12 @@ fun BootcampScreen(
         )
     }
 
-    // First-time strides primer. Independent of the audio primer above; both
-    // can be queued (audio primer wins when start-flow gating is active —
-    // strides primer is purely educational and doesn't block start). See
-    // BootcampViewModel.dismissStridesPrimer.
-    if (uiState.showStridesPrimer) {
+    // First-time strides primer. Suppressed while the audio primer is showing
+    // so the two dialogs don't stack on first bootcamp visit for a fresh user
+    // who has neither flag dismissed. The strides primer naturally appears on
+    // the next composition once showAudioPrimer flips false (audio primer was
+    // dismissed) — no explicit queueing needed.
+    if (!uiState.showAudioPrimer && uiState.showStridesPrimer) {
         StridesPrimer(
             totalReps = uiState.stridesPrimerTotalReps,
             onDismiss = { viewModel.dismissStridesPrimer() }

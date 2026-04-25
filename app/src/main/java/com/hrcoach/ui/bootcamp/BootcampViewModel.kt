@@ -32,6 +32,7 @@ import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.TierCtlRanges
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.domain.engine.FitnessSignalEvaluator
+import com.hrcoach.domain.engine.StridesController
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
@@ -349,7 +350,7 @@ class BootcampViewModel @Inject constructor(
         val stridesPrimerSeen = audioSettingsRepository.getAudioSettings().stridesPrimerSeen
         val showStridesPrimer = isStridesUpcoming && !stridesPrimerSeen
         val stridesPrimerTotalReps = upcomingSession
-            ?.let { stridesRepsForDuration(it.targetMinutes) }
+            ?.let { StridesController.repsForDuration(it.targetMinutes) }
             ?: 5
 
         _uiState.value = BootcampUiState(
@@ -1575,16 +1576,3 @@ private fun BootcampSessionEntity.isStridesSession(): Boolean {
     return pid == "strides_20s" || pid == "zone2_with_strides"
 }
 
-/**
- * Rep count derivation from session duration. Mirrors `StridesController
- * .repsForDuration(min)` (lands in a sister branch — duplicated here so the
- * primer reads correctly even before that branch merges). Mapping:
- * 20→4, 22→6, 24→8, 26→10, fallback 5.
- */
-private fun stridesRepsForDuration(durationMin: Int): Int = when (durationMin) {
-    20 -> 4
-    22 -> 6
-    24 -> 8
-    26 -> 10
-    else -> 5
-}
