@@ -12,6 +12,9 @@ class EarconPlayer(context: Context, private val debug: TtsDebugLogger? = null) 
 
     private val soundPool: SoundPool
     private val soundIds = mutableMapOf<CoachingEvent, Int>()
+    // Strides timer earcons keyed by [StridesEarcon] kind. Loaded into the same SoundPool as
+    // CoachingEvent earcons (same USAGE/CONTENT_TYPE), gated by the same loadedSampleIds set.
+    private val stridesSoundIds = mutableMapOf<StridesEarcon, Int>()
     // Samples whose async load completed. SoundPool.play() on a not-yet-loaded sample returns
     // streamId=0 silently — on cold service start a SIGNAL_LOST earcon can easily race ahead of
     // its load and drop with no log. This set is populated by setOnLoadCompleteListener and
@@ -54,6 +57,15 @@ class EarconPlayer(context: Context, private val debug: TtsDebugLogger? = null) 
         mapping.forEach { (event, resId) ->
             soundIds[event] = soundPool.load(context, resId, 1)
         }
+
+        val stridesMapping = mapOf(
+            StridesEarcon.GO to R.raw.earcon_strides_go,
+            StridesEarcon.EASE to R.raw.earcon_strides_ease,
+            StridesEarcon.SET_COMPLETE to R.raw.earcon_strides_set_complete,
+        )
+        stridesMapping.forEach { (kind, resId) ->
+            stridesSoundIds[kind] = soundPool.load(context, resId, 1)
+        }
     }
 
     fun setVolume(percent: Int) {
@@ -75,6 +87,26 @@ class EarconPlayer(context: Context, private val debug: TtsDebugLogger? = null) 
         debug?.logLine("EARCON event=${event.name} action=PLAY vol=${(volumeScalar * 100).toInt()}")
     }
 
+    /**
+     * Plays a strides timer earcon. Same load-gate as [play] — drops silently if the
+     * sample hasn't finished loading. Caller (CoachingAudioManager) handles verbosity
+     * + per-feature toggle gating.
+     */
+    fun playStridesEvent(kind: StridesEarcon) {
+        val soundId = stridesSoundIds[kind]
+        if (soundId == null) {
+            debug?.logLine("EARCON strides=${kind.name} action=DROP reason=no-sound-id")
+            return
+        }
+        if (soundId !in loadedSampleIds) {
+            Log.w(TAG, "Dropping strides earcon $kind — sample $soundId not yet loaded")
+            debug?.logLine("EARCON strides=${kind.name} action=DROP reason=not-loaded soundId=$soundId")
+            return
+        }
+        soundPool.play(soundId, volumeScalar, volumeScalar, 1, 0, 1f)
+        debug?.logLine("EARCON strides=${kind.name} action=PLAY vol=${(volumeScalar * 100).toInt()}")
+    }
+
     fun destroy() {
         soundPool.release()
         loadedSampleIds.clear()
@@ -84,3 +116,6 @@ class EarconPlayer(context: Context, private val debug: TtsDebugLogger? = null) 
         private const val TAG = "EarconPlayer"
     }
 }
+
+/** Discriminator for the three strides-timer earcons. */
+enum class StridesEarcon { GO, EASE, SET_COMPLETE }

@@ -307,6 +307,7 @@ fun AccountScreen(
                     enableKmSplits = state.enableKmSplits,
                     enableWorkoutComplete = state.enableWorkoutComplete,
                     enableInZoneConfirm = state.enableInZoneConfirm,
+                    stridesTimerEarcons = state.stridesTimerEarcons,
                 ),
                 distanceUnit = state.distanceUnit,
                 onEvent = { event ->
@@ -333,6 +334,8 @@ fun AccountScreen(
                             viewModel.setEnableWorkoutComplete(event.enabled)
                         is AudioSettingsEvent.InZoneConfirmToggled ->
                             viewModel.setEnableInZoneConfirm(event.enabled)
+                        is AudioSettingsEvent.StridesTimerEarconsToggled ->
+                            viewModel.setStridesTimerEarcons(event.enabled)
                     }
                 }
             )

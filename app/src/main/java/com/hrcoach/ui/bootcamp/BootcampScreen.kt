@@ -162,6 +162,17 @@ fun BootcampScreen(
         )
     }
 
+    // First-time strides primer. Independent of the audio primer above; both
+    // can be queued (audio primer wins when start-flow gating is active —
+    // strides primer is purely educational and doesn't block start). See
+    // BootcampViewModel.dismissStridesPrimer.
+    if (uiState.showStridesPrimer) {
+        StridesPrimer(
+            totalReps = uiState.stridesPrimerTotalReps,
+            onDismiss = { viewModel.dismissStridesPrimer() }
+        )
+    }
+
     // Show swap-rest confirmation
     LaunchedEffect(uiState.swapRestMessage) {
         uiState.swapRestMessage?.let {

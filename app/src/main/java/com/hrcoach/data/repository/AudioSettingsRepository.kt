@@ -38,4 +38,10 @@ class AudioSettingsRepository @Inject constructor(
         val current = getAudioSettings()
         saveAudioSettings(current.copy(audioPrimerShown = shown))
     }
+
+    @Synchronized
+    fun setStridesPrimerSeen(seen: Boolean) {
+        val current = getAudioSettings()
+        saveAudioSettings(current.copy(stridesPrimerSeen = seen))
+    }
 }
