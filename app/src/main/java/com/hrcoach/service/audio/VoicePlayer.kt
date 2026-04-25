@@ -12,6 +12,7 @@ import com.hrcoach.domain.model.VoiceVerbosity
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 
 /**
@@ -33,7 +34,18 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
 
     var verbosity: VoiceVerbosity = VoiceVerbosity.MINIMAL
 
-    /** Tracks the priority of the currently speaking utterance. */
+    /**
+     * Guards the watchdog/gate compound action in [speakEvent], the state-set in
+     * [speakAnnouncement], and the state-clear in [handleUtteranceEnd]. Without this,
+     * two concurrent callers (HR tick + KM split landing in the same window after a
+     * stalled utterance) could both pass the watchdog check, both clear, both set
+     * their own priority, and the second silently overrides the first inside
+     * `tts.speak`. Held through the `tts.speak` call itself — speak is a fast JNI
+     * enqueue, not a blocking call, so the critical section stays short.
+     */
+    private val priorityLock = Any()
+
+    /** Tracks the priority of the currently speaking utterance. Guarded by [priorityLock]. */
     @Volatile private var currentPriority: VoiceEventPriority? = null
 
     /**
@@ -42,6 +54,7 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
      * doze mode) currentPriority stays non-null and the priority gate silently drops every
      * subsequent informational cue — exactly the "voice goes silent after warmup" failure mode.
      * On entry to speakEvent we force-clear if the age exceeds [WATCHDOG_MAX_UTTERANCE_MS].
+     * Guarded by [priorityLock].
      */
     @Volatile private var currentPrioritySetAtMs: Long = 0L
 
@@ -97,8 +110,14 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
      * Routes utterance completion/error to the correct deferred based on utterance ID prefix.
      */
     private fun handleUtteranceEnd(utteranceId: String?) {
-        currentPriority = null
-        currentPrioritySetAtMs = 0L
+        synchronized(priorityLock) {
+            currentPriority = null
+            currentPrioritySetAtMs = 0L
+        }
+        // Deferred completions outside the lock — Deferred.complete may resume continuations
+        // synchronously on this (TTS engine) thread, and a resumed coroutine that calls back
+        // into speakEvent would re-acquire priorityLock. Releasing first keeps the lock scope
+        // bounded to state mutation only.
         when {
             utteranceId?.startsWith("briefing") == true -> {
                 pendingBriefingDeferred?.complete(Unit)
@@ -161,7 +180,29 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
             Log.d(TAG, "TTS not ready, buffering briefing until init completes")
         }
 
-        deferred.await()
+        // Briefing watchdog. Mirrors the speakEvent watchdog rationale: if the briefing
+        // utterance's onDone never fires (TTS engine hang, audio focus loss, doze) the
+        // deferred would block forever and the next workout's startup sequence would
+        // hang at the briefing-await step. Real briefings are 2-8s; 30s is a generous
+        // safety net that still fails fast enough to let the run start.
+        val completed = withTimeoutOrNull(BRIEFING_WATCHDOG_MS) {
+            deferred.await()
+            true
+        }
+        if (completed == null) {
+            Log.w(TAG, "Briefing watchdog: TTS onDone never fired after ${BRIEFING_WATCHDOG_MS}ms — completing deferred")
+            debug?.logLine("TTS BRIEFING_WATCHDOG fired timeout=${BRIEFING_WATCHDOG_MS}ms")
+            // Best-effort: stop whatever's queued so it doesn't bleed into the run, and
+            // clear our deferred reference so a late onDone doesn't double-complete.
+            tts?.stop()
+            pendingBriefingDeferred = null
+            // Also clear stale priority state — a hung briefing leaves currentPriority set
+            // by no one (briefing path doesn't stamp it), but defensive in case of refactor.
+            synchronized(priorityLock) {
+                currentPriority = null
+                currentPrioritySetAtMs = 0L
+            }
+        }
     }
 
     /**
@@ -216,53 +257,59 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
         val priority = VoiceEventPriority.of(event)
         val nowMs = System.currentTimeMillis()
 
-        // Stale-priority watchdog. If TTS onDone/onError failed to fire (engine hang, audio-focus
-        // loss mid-utterance, doze) currentPriority would stay non-null and the priority gate
-        // below would silently drop every subsequent informational cue for the rest of the run.
-        // No real utterance should exceed WATCHDOG_MAX_UTTERANCE_MS; if we're past that, assume
-        // the callback dropped and reset state so the next cue can play.
-        if (currentPriority != null && currentPrioritySetAtMs > 0L &&
-            nowMs - currentPrioritySetAtMs > WATCHDOG_MAX_UTTERANCE_MS) {
-            val stuckFor = nowMs - currentPrioritySetAtMs
-            Log.w(TAG, "Voice watchdog: clearing stale priority=$currentPriority after ${stuckFor}ms")
-            debug?.logLine("TTS WATCHDOG cleared stale priority=$currentPriority age=${stuckFor}ms")
-            currentPriority = null
-            currentPrioritySetAtMs = 0L
-            utteranceDeferred?.complete(Unit)
-            utteranceDeferred = null
-        }
+        // Compound watchdog → gate → state-set → speak under priorityLock so two concurrent
+        // callers can't both pass the watchdog or both override each other's currentPriority.
+        // tts.speak is a fast JNI enqueue (does not block on speech), so the critical section
+        // stays sub-millisecond in normal operation.
+        synchronized(priorityLock) {
+            // Stale-priority watchdog. If TTS onDone/onError failed to fire (engine hang,
+            // audio-focus loss mid-utterance, doze) currentPriority would stay non-null and the
+            // priority gate below would silently drop every subsequent informational cue for
+            // the rest of the run. No real utterance should exceed WATCHDOG_MAX_UTTERANCE_MS;
+            // if we're past that, assume the callback dropped and reset state.
+            if (currentPriority != null && currentPrioritySetAtMs > 0L &&
+                nowMs - currentPrioritySetAtMs > WATCHDOG_MAX_UTTERANCE_MS) {
+                val stuckFor = nowMs - currentPrioritySetAtMs
+                Log.w(TAG, "Voice watchdog: clearing stale priority=$currentPriority after ${stuckFor}ms")
+                debug?.logLine("TTS WATCHDOG cleared stale priority=$currentPriority age=${stuckFor}ms")
+                currentPriority = null
+                currentPrioritySetAtMs = 0L
+                utteranceDeferred?.complete(Unit)
+                utteranceDeferred = null
+            }
 
-        // Priority gating. Previously ANY lower-priority cue was dropped while something was
-        // speaking, which silently ate KM splits whenever a PREDICTIVE_WARNING was in flight
-        // (observed 2026-04-22 sim: "Kilometer 2" voice dropped, earcon chimed with no number —
-        // confusing). New policy:
-        //   - CRITICAL speaking (SPEED_UP/SLOW_DOWN/SIGNAL_LOST): drop non-CRITICAL so a stale
-        //     split can't shadow an urgent alert's tail.
-        //   - Otherwise: QUEUE_ADD everything — Android TTS plays utterances back-to-back (each
-        //     ~2-3s) so a split announced right after a PW just plays a moment later instead of
-        //     vanishing. CRITICAL itself still uses QUEUE_FLUSH below to interrupt.
-        val speaking = tts?.isSpeaking == true
-        if (speaking && currentPriority == VoiceEventPriority.CRITICAL &&
-            priority != VoiceEventPriority.CRITICAL) {
-            Log.d(TAG, "Skipping $event (CRITICAL in flight, new=$priority)")
-            debug?.logLine("TTS event=${event.name} action=SKIP reason=behind-critical curPriority=$currentPriority newPriority=$priority")
-            return
-        }
+            // Priority gating. Previously ANY lower-priority cue was dropped while something
+            // was speaking, which silently ate KM splits whenever a PREDICTIVE_WARNING was in
+            // flight (observed 2026-04-22 sim: "Kilometer 2" voice dropped, earcon chimed with
+            // no number). New policy:
+            //   - CRITICAL speaking (SPEED_UP/SLOW_DOWN/SIGNAL_LOST): drop non-CRITICAL so a
+            //     stale split can't shadow an urgent alert's tail.
+            //   - Otherwise: QUEUE_ADD everything — Android TTS plays utterances back-to-back
+            //     (each ~2-3s) so a split announced right after a PW just plays a moment later
+            //     instead of vanishing. CRITICAL itself still uses QUEUE_FLUSH below.
+            val speaking = tts?.isSpeaking == true
+            if (speaking && currentPriority == VoiceEventPriority.CRITICAL &&
+                priority != VoiceEventPriority.CRITICAL) {
+                Log.d(TAG, "Skipping $event (CRITICAL in flight, new=$priority)")
+                debug?.logLine("TTS event=${event.name} action=SKIP reason=behind-critical curPriority=$currentPriority newPriority=$priority")
+                return
+            }
 
-        val queueMode = if (priority == VoiceEventPriority.CRITICAL) {
-            TextToSpeech.QUEUE_FLUSH
-        } else {
-            TextToSpeech.QUEUE_ADD
-        }
+            val queueMode = if (priority == VoiceEventPriority.CRITICAL) {
+                TextToSpeech.QUEUE_FLUSH
+            } else {
+                TextToSpeech.QUEUE_ADD
+            }
 
-        currentPriority = priority
-        currentPrioritySetAtMs = nowMs
+            currentPriority = priority
+            currentPrioritySetAtMs = nowMs
 
-        if (ttsReady) {
-            tts?.speak(text, queueMode, speechParams(), "event_${event.name}_${System.nanoTime()}")
-            debug?.logLine("TTS event=${event.name} action=SPEAK prio=$priority queue=${if (queueMode == TextToSpeech.QUEUE_FLUSH) "FLUSH" else "ADD"} text=${quote(text)}")
-        } else {
-            debug?.logLine("TTS event=${event.name} action=DROP reason=tts-not-ready text=${quote(text)}")
+            if (ttsReady) {
+                tts?.speak(text, queueMode, speechParams(), "event_${event.name}_${System.nanoTime()}")
+                debug?.logLine("TTS event=${event.name} action=SPEAK prio=$priority queue=${if (queueMode == TextToSpeech.QUEUE_FLUSH) "FLUSH" else "ADD"} text=${quote(text)}")
+            } else {
+                debug?.logLine("TTS event=${event.name} action=DROP reason=tts-not-ready text=${quote(text)}")
+            }
         }
     }
 
@@ -282,10 +329,12 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
             debug?.logLine("TTS ann action=DROP reason=tts-not-ready text=${quote(text)}")
             return
         }
-        currentPriority = VoiceEventPriority.INFORMATIONAL
-        currentPrioritySetAtMs = System.currentTimeMillis()
-        tts?.speak(text, TextToSpeech.QUEUE_ADD, speechParams(), "announcement_${System.nanoTime()}")
-        debug?.logLine("TTS ann action=SPEAK text=${quote(text)}")
+        synchronized(priorityLock) {
+            currentPriority = VoiceEventPriority.INFORMATIONAL
+            currentPrioritySetAtMs = System.currentTimeMillis()
+            tts?.speak(text, TextToSpeech.QUEUE_ADD, speechParams(), "announcement_${System.nanoTime()}")
+            debug?.logLine("TTS ann action=SPEAK text=${quote(text)}")
+        }
     }
 
     suspend fun awaitCompletion() {
@@ -333,6 +382,14 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
          * onDone callback.
          */
         private const val WATCHDOG_MAX_UTTERANCE_MS: Long = 15_000L
+
+        /**
+         * Maximum plausible briefing duration before [speakBriefing]'s watchdog gives up.
+         * Real briefings are 2-8s; 30s lets even the longest "30 minute workout. 5 segments.
+         * First segment target heart rate: 145." render and still fail fast enough that a
+         * stalled TTS engine doesn't wedge the workout startup sequence forever.
+         */
+        private const val BRIEFING_WATCHDOG_MS: Long = 30_000L
 
         /**
          * Returns whether the given [event] should be spoken at the given [verbosity].
