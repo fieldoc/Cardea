@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.9.0"
+        versionCode = 11
+        versionName = "0.9.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.9.0: Audio cue education — first workout now shows a one-time primer explaining the coaching sounds; in-run a cue banner flashes each cue's label + meaning; direction-coded vibration patterns (up/down) fire alongside voice; new Sound Library screen in settings with samples; post-run 'Sounds you heard today' recap for the first three runs. Voice verbosity defaults to FULL for new installs; FULL now appends a BPM-delta suffix to zone alerts so you hear HOW far off zone you are; lower-priority TTS queues instead of dropping; predictive-warning gates tightened to cut false fires. New post-run summary: gradient hero with inline compact route map, pinned Done CTA, Status / Your Run / Compared / More sections, HRR cooldown audio bookends with gradient border. Rotating science facts — zone explanations, coaching insights, and race-pace/recovery content now rotate through 10-variant pools seeded by the day, so repeat viewers see fresh material. Startup UX: splash holds until destination resolves, 'Starting…' spinner on Start Run, countdown overlay polished, startup audio pacing tightened, auto-pause grace hardened. New active-run settings sheet from the top bar with audio controls + bootcamp 'End session early' (now preserves the workout row and bootcamp credit even when ended under a minute). Bootcamp reminder-notification date formula fixed. Stop confirmation now a themed bottom sheet. Cloud restore defaults voice verbosity to FULL to match new installs."
+                releaseNotes = "v0.9.1: Audio reliability hardening + UI polish. AUDIO: Two new safeguards in the voice pipeline. (1) speakEvent's watchdog → priority-gate → state-set → speak sequence is now serialized under a single lock — previously two cues landing in the same window after a stalled utterance could both pass the watchdog and silently override each other inside TTS. (2) speakBriefing now has its own 30-second watchdog so a dropped briefing onDone callback can no longer wedge the next workout's startup forever — on timeout we stop TTS, complete the deferred, and let the run begin. Earlier in 0.9.1: zone2 preset 'Easy pace builds your aerobic engine' string no longer leaks into RETURN_TO_ZONE / PREDICTIVE_WARNING voice (computed separate voiceGuidance at WFS, kept the on-screen text untouched); FULL verbosity reliably speaks tier-1 zone alerts again (the old 'gradual escalation' assumption broke under oscillating runners). HOME: Polish pass with tonal CTA and rebalanced hierarchy; iteration 2 design cleanup. TRAINING: New segmented Bootcamp / Free Run tab. Various smaller AI-audit fixes."
             }
         }
     }
