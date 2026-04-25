@@ -653,6 +653,7 @@ class WorkoutForegroundService : LifecycleService() {
             // when adaptive guidance text is absent. Must precede any fireEvent call
             // that could emit PREDICTIVE_WARNING below.
             coachingAudioManager?.setHrSlope(adaptiveResult?.hrSlopeBpmPerMin ?: 0f)
+            val warmupGraceSec = workoutConfig.effectiveWarmupGraceSec()
             coachingEventRouter.route(
                 workoutConfig = workoutConfig,
                 connected = tick.connected,
@@ -663,6 +664,7 @@ class WorkoutForegroundService : LifecycleService() {
                 guidance = voiceGuidance,
                 nowMs = nowMs,
                 distanceUnit = sessionDistanceUnit,
+                warmupGraceSec = warmupGraceSec,
                 emitEvent = { event, eventGuidance ->
                     val pace = adaptiveResult?.currentPaceMinPerKm
                     coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
@@ -697,7 +699,9 @@ class WorkoutForegroundService : LifecycleService() {
                 // (pace > 10 min/km sustained 30s). Both gates default off when unset, so they
                 // can be disabled by passing default values instead of the live values here.
                 hrSlopeBpmPerMin = adaptiveResult?.hrSlopeBpmPerMin ?: 0f,
-                currentPaceMinPerKm = adaptiveResult?.currentPaceMinPerKm
+                currentPaceMinPerKm = adaptiveResult?.currentPaceMinPerKm,
+                elapsedSeconds = elapsedSeconds,
+                warmupGraceSec = warmupGraceSec
             )
         }
 

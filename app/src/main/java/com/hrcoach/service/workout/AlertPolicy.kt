@@ -19,6 +19,13 @@ import com.hrcoach.domain.model.ZoneStatus
  *     WALKING_SUSTAINED_MS, suppress SPEED_UP (but not SLOW_DOWN — above-zone during a walk
  *     is still a real safety signal). Auto-pause may not trigger for brisk walks, so users
  *     doing walk-runs or traffic-light stops would otherwise get nagged to speed up.
+ *  3. **Warmup grace** — if [elapsedSeconds] < [warmupGraceSec], suppress SPEED_UP only
+ *     (above-zone SLOW_DOWN still fires). The runner is naturally below zone for the first
+ *     1–2 minutes as HR climbs from rest; coaching them to "speed up" mid-warmup is
+ *     counterproductive. This gate ALSO holds outOfZoneSince at the warmup boundary so the
+ *     normal alertDelaySec debounce starts ticking from when warmup ends, not from second 0
+ *     (a runner who's still below zone exactly at warmup end shouldn't get an alert on the
+ *     same tick).
  *
  *     **Auto-pause interaction:** AlertPolicy is only reached when `!isAutoPaused` (see
  *     WorkoutForegroundService.processTick). So the walk gate only matters when auto-pause
@@ -59,7 +66,12 @@ class AlertPolicy {
         // Added 2026-04-17. Defaults preserve existing test behavior (no suppression) when
         // callers haven't been updated. Production caller (WFS) threads real values through.
         hrSlopeBpmPerMin: Float = 0f,
-        currentPaceMinPerKm: Float? = null
+        currentPaceMinPerKm: Float? = null,
+        // Added 2026-04-24. Warmup grace gates SPEED_UP only (BELOW_ZONE). Defaults preserve
+        // existing test behavior — elapsedSeconds defaults to a large value so warmup is never
+        // "active" unless callers thread it through.
+        elapsedSeconds: Long = Long.MAX_VALUE,
+        warmupGraceSec: Int = 0
     ) {
         if (status == ZoneStatus.IN_ZONE || status == ZoneStatus.NO_DATA) {
             outOfZoneSince = 0L
@@ -127,6 +139,16 @@ class AlertPolicy {
                 // walking is a genuine safety signal (overheating, cardiac issue, etc.).
                 if (walkingSustained) {
                     lastAlertTime = nowMs  // debounce — see ABOVE branch
+                    return
+                }
+                // Warmup grace: HR climbs from rest naturally; suppress SPEED_UP for the first
+                // [warmupGraceSec] seconds. Hold outOfZoneSince at the warmup boundary so the
+                // normal alertDelaySec debounce starts from when warmup ends, not from second 0.
+                // We do NOT advance lastAlertTime here — there's been no actual alert yet, so
+                // the alertCooldownSec gate has nothing to track.
+                if (elapsedSeconds < warmupGraceSec) {
+                    val warmupEndMs = nowMs + (warmupGraceSec - elapsedSeconds) * 1_000L
+                    if (outOfZoneSince < warmupEndMs) outOfZoneSince = warmupEndMs
                     return
                 }
                 onAlert(CoachingEvent.SPEED_UP, guidanceText)

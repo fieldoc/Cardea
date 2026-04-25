@@ -127,6 +127,10 @@ class CoachingEventRouter {
         guidance: String?,
         nowMs: Long,
         distanceUnit: DistanceUnit = DistanceUnit.KM,
+        // Added 2026-04-24. Defaults to 90L to preserve the original hardcoded value for
+        // legacy test callers that don't thread the config-derived value through. WFS passes
+        // [WorkoutConfig.effectiveWarmupGraceSec].
+        warmupGraceSec: Int = 90,
         emitEvent: (CoachingEvent, String?) -> Unit
     ) {
         if (wasHrConnected && !connected) {
@@ -195,9 +199,11 @@ class CoachingEventRouter {
         val projectedAbove = adaptiveResult?.projectedZoneStatus == ZoneStatus.ABOVE_ZONE
         val projectedBelow = adaptiveResult?.projectedZoneStatus == ZoneStatus.BELOW_ZONE
         val projectedDrift = projectedAbove || projectedBelow
-        // Suppress predictive coaching during cardiovascular warmup (first 90s) — the slope EMA
-        // reflects the expected HR rise from rest, not a real drift, and would fire false warnings.
-        val warmupComplete = elapsedSeconds >= 90L
+        // Suppress predictive coaching during cardiovascular warmup — the slope EMA reflects
+        // the expected HR rise from rest, not a real drift, and would fire false warnings.
+        // Shares [warmupGraceSec] with AlertPolicy so prescribed warmup, SPEED_UP suppression,
+        // and PREDICTIVE_WARNING suppression all line up on the same boundary.
+        val warmupComplete = elapsedSeconds >= warmupGraceSec
 
         // Slope must reflect motion toward the projected boundary. If HR is stable at an offset
         // (|slope| near zero), that's a present-tense condition for AlertPolicy, not a prediction.

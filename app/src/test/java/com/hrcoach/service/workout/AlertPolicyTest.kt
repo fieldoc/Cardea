@@ -15,7 +15,9 @@ class AlertPolicyTest {
         alertDelaySec: Int = 15,
         alertCooldownSec: Int = 30,
         hrSlopeBpmPerMin: Float = 0f,
-        currentPaceMinPerKm: Float? = null
+        currentPaceMinPerKm: Float? = null,
+        elapsedSeconds: Long = Long.MAX_VALUE,
+        warmupGraceSec: Int = 0
     ) {
         policy.handle(
             status = status,
@@ -26,7 +28,9 @@ class AlertPolicyTest {
             onResetEscalation = {},
             onAlert = { event, _ -> events += event },
             hrSlopeBpmPerMin = hrSlopeBpmPerMin,
-            currentPaceMinPerKm = currentPaceMinPerKm
+            currentPaceMinPerKm = currentPaceMinPerKm,
+            elapsedSeconds = elapsedSeconds,
+            warmupGraceSec = warmupGraceSec
         )
     }
 
@@ -233,5 +237,66 @@ class AlertPolicyTest {
         // At t=46s, cooldown met, walking was reset at 40s (sustained=6s, not enough) → alert fires.
         handle(policy, ZoneStatus.BELOW_ZONE, 46_000L, events, currentPaceMinPerKm = 7f)
         assertEquals(listOf(CoachingEvent.SPEED_UP, CoachingEvent.SPEED_UP), events)
+    }
+
+    // ── Warmup grace suppression (added 2026-04-24) ───────────────────────
+
+    @Test
+    fun `SPEED_UP suppressed during warmup grace period`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+        // 120s warmup; runner is below zone from second 1.
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events,
+            elapsedSeconds = 1L, warmupGraceSec = 120)
+        // Default delay (15s) would normally fire at t=16s, but we're still in warmup → suppressed.
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events,
+            elapsedSeconds = 16L, warmupGraceSec = 120)
+        // Even at t=119s (still inside the 120s warmup) → still suppressed.
+        handle(policy, ZoneStatus.BELOW_ZONE, 119_000L, events,
+            elapsedSeconds = 119L, warmupGraceSec = 120)
+        assertEquals(emptyList<CoachingEvent>(), events)
+    }
+
+    @Test
+    fun `SPEED_UP fires after warmup plus alertDelaySec`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+        // Below zone throughout. Warmup 120s, delay 15s → first alert ≥ t=135s.
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events,
+            elapsedSeconds = 1L, warmupGraceSec = 120)
+        handle(policy, ZoneStatus.BELOW_ZONE, 119_000L, events,
+            elapsedSeconds = 119L, warmupGraceSec = 120)
+        // At t=130s warmup is over but the post-warmup debounce hasn't elapsed (130-120=10s < 15s).
+        handle(policy, ZoneStatus.BELOW_ZONE, 130_000L, events,
+            elapsedSeconds = 130L, warmupGraceSec = 120)
+        assertEquals(emptyList<CoachingEvent>(), events)
+        // At t=136s: warmup over (16s ago) AND post-warmup debounce of 15s elapsed → fires.
+        handle(policy, ZoneStatus.BELOW_ZONE, 136_000L, events,
+            elapsedSeconds = 136L, warmupGraceSec = 120)
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
+    }
+
+    @Test
+    fun `SLOW_DOWN is NOT suppressed during warmup`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+        // Going too hard early IS a real safety signal — must alert even mid-warmup.
+        handle(policy, ZoneStatus.ABOVE_ZONE, 1_000L, events,
+            elapsedSeconds = 1L, warmupGraceSec = 120)
+        handle(policy, ZoneStatus.ABOVE_ZONE, 16_000L, events,
+            elapsedSeconds = 16L, warmupGraceSec = 120)
+        assertEquals(listOf(CoachingEvent.SLOW_DOWN), events)
+    }
+
+    @Test
+    fun `warmup gate does not interfere with cooldown after alert`() {
+        val policy = AlertPolicy()
+        val events = mutableListOf<CoachingEvent>()
+        // No warmup configured (default = 0) → standard delay/cooldown behavior.
+        handle(policy, ZoneStatus.BELOW_ZONE, 1_000L, events,
+            elapsedSeconds = 1L)
+        handle(policy, ZoneStatus.BELOW_ZONE, 16_000L, events,
+            elapsedSeconds = 16L)
+        assertEquals(listOf(CoachingEvent.SPEED_UP), events)
     }
 }

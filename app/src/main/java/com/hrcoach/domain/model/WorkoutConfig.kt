@@ -7,6 +7,18 @@ data class WorkoutConfig(
     val bufferBpm: Int = 5,
     val alertDelaySec: Int = 15,
     val alertCooldownSec: Int = 30,
+    /**
+     * Seconds from workout start during which BELOW-zone SPEED_UP alerts and adaptive
+     * PREDICTIVE_WARNING cues are suppressed — the runner's HR is naturally rising from rest
+     * and a "speed up" prompt at second 15 is counterproductive. ABOVE-zone SLOW_DOWN is NOT
+     * suppressed (going too hard early is still a real safety signal). Splits, RETURN_TO_ZONE,
+     * IN_ZONE_CONFIRM, and pause/resume tones are also unaffected.
+     *
+     * Default 120s (2 min). When the preset's first segment is labelled "Warm-up" (case-insensitive
+     * substring match) and time-based, [effectiveWarmupGraceSec] auto-derives the grace from that
+     * segment's duration so prescribed warmups and cue gating stay in sync.
+     */
+    val warmupGraceSec: Int = 120,
     val presetId: String? = null,
     /** Planned duration in minutes — for display only (e.g. bootcamp timed sessions). */
     val plannedDurationMinutes: Int? = null,
@@ -85,6 +97,23 @@ data class WorkoutConfig(
      * preamble: they are matched by elapsed time. Once elapsed time exceeds all
      * time-based segments, distance routing takes over.
      */
+    /**
+     * Effective warmup grace in seconds. When the first segment is a time-based "Warm-up"
+     * (label contains "warm", case-insensitive) we use that segment's duration so the cue gate
+     * matches the prescribed warmup exactly. Otherwise the explicit [warmupGraceSec] is used.
+     */
+    fun effectiveWarmupGraceSec(): Int {
+        val first = segments.firstOrNull()
+        if (first != null &&
+            first.durationSeconds != null &&
+            first.distanceMeters == null &&
+            first.label?.contains("warm", ignoreCase = true) == true
+        ) {
+            return first.durationSeconds
+        }
+        return warmupGraceSec
+    }
+
     fun targetHrForMixed(elapsedSeconds: Long, distanceMeters: Float): Int? {
         var cumulativeTime = 0L
         for (seg in segments) {

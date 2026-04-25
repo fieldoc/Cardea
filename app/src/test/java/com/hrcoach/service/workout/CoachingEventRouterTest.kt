@@ -100,6 +100,38 @@ class CoachingEventRouterTest {
     }
 
     @Test
+    fun `predictive warning respects custom warmupGraceSec`() {
+        // Preset with a 600s warm-up segment → router should suppress PW for 600s, not 90s.
+        val router = CoachingEventRouter()
+        val events = mutableListOf<CoachingEvent>()
+        val config = WorkoutConfig(mode = WorkoutMode.STEADY_STATE, steadyStateTargetHr = 140)
+        val adaptiveResult = AdaptivePaceController.TickResult(
+            zoneStatus = ZoneStatus.IN_ZONE,
+            projectedZoneStatus = ZoneStatus.ABOVE_ZONE,
+            predictedHr = 150,
+            currentPaceMinPerKm = 6f,
+            guidance = "ease off",
+            hasProjectionConfidence = true,
+            hrSlopeBpmPerMin = 1.0f
+        )
+
+        // At t=300s with warmupGraceSec=600 → still inside grace window, suppressed.
+        router.route(
+            workoutConfig = config,
+            connected = true,
+            distanceMeters = 1000f,
+            elapsedSeconds = 300L,
+            zoneStatus = ZoneStatus.IN_ZONE,
+            adaptiveResult = adaptiveResult,
+            guidance = "ease off",
+            nowMs = 300_000L,
+            warmupGraceSec = 600,
+            emitEvent = { event, _ -> events += event }
+        )
+        assertFalse(events.contains(CoachingEvent.PREDICTIVE_WARNING))
+    }
+
+    @Test
     fun `suppresses predictive warning during warmup period`() {
         val router = CoachingEventRouter()
         val events = mutableListOf<CoachingEvent>()
