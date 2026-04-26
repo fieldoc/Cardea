@@ -60,9 +60,9 @@ fun StridesPrimer(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(CardeaBgPrimary)
-                .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                 .padding(horizontal = 22.dp, vertical = 22.dp)
         ) {
             Text(
