@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -1566,8 +1567,17 @@ private fun ActiveBootcampDashboard(
                 )
             }
 
-            if (uiState.upcomingWeeks.isNotEmpty()) {
-                ComingUpCard(weeks = uiState.upcomingWeeks)
+            if (uiState.upcomingRuns.isNotEmpty()) {
+                UpcomingRunsCard(
+                    runs = uiState.upcomingRuns,
+                    onRunClick = { sessionId ->
+                        // Reuse the existing reschedule entry point — clicking a row
+                        // opens the reschedule sheet for that session, same as a tap
+                        // on a week-strip pill. Sessions without an id (next-week
+                        // planned, not yet seeded into the DB) are non-tappable.
+                        if (sessionId != null) onReschedule(sessionId)
+                    }
+                )
             }
 
             if (uiState.showGraduationCta) {
@@ -1706,6 +1716,141 @@ private fun PreferredDaysStrip(
             color = CardeaTheme.colors.textTertiary,
             modifier = Modifier.padding(top = 4.dp)
         )
+    }
+}
+
+@Composable
+private fun UpcomingRunsCard(
+    runs: List<UpcomingRunItem>,
+    onRunClick: (Long?) -> Unit
+) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "COMING UP",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.4.sp
+                ),
+                color = CardeaTheme.colors.textSecondary
+            )
+            Text(
+                text = "${runs.size} SESSION${if (runs.size != 1) "S" else ""}",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.2.sp
+                ),
+                color = GradientPink
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        runs.forEachIndexed { index, run ->
+            if (index > 0) {
+                HorizontalDivider(
+                    color = CardeaTheme.colors.glassBorder,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+            UpcomingRunRow(run = run, onClick = { onRunClick(run.sessionId) })
+        }
+    }
+}
+
+@Composable
+private fun UpcomingRunRow(run: UpcomingRunItem, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Day chip — small vertical block (DAY abbrev / dayOfMonth)
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(CardeaTheme.colors.glassHighlight)
+                .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .widthIn(min = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = run.dayLabel,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.8.sp
+                ),
+                color = CardeaTheme.colors.textTertiary
+            )
+            Text(
+                text = run.dayOfMonth.toString(),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                color = CardeaTheme.colors.textPrimary
+            )
+        }
+        // Title + subtitle
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = run.title,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = CardeaTheme.colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = run.subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = CardeaTheme.colors.textTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        // Zone pill on the right
+        if (run.zoneTag != null) {
+            val zoneColor = upcomingZoneColor(run.rawSessionType)
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(zoneColor.copy(alpha = 0.12f))
+                    .border(1.dp, zoneColor.copy(alpha = 0.30f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(zoneColor)
+                )
+                Text(
+                    text = run.zoneTag,
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = zoneColor
+                )
+            }
+        }
+    }
+}
+
+/** Map session type → tint color used by the Coming-Up zone pill. */
+private fun upcomingZoneColor(rawSessionType: String): Color {
+    val type = runCatching { SessionType.valueOf(rawSessionType) }.getOrNull()
+    return when (type) {
+        SessionType.EASY, SessionType.LONG, SessionType.STRIDES -> GradientCyan   // Z2
+        SessionType.TEMPO -> GradientPink                                          // Z3
+        SessionType.INTERVAL -> GradientRed                                        // Z4-5
+        SessionType.RACE_SIM -> GradientRed
+        SessionType.DISCOVERY, SessionType.CHECK_IN, null -> ZoneGreen
     }
 }
 
@@ -2249,9 +2394,13 @@ private fun TodayHeroSection(
                             ?: today.session.type.name
                                 .lowercase()
                                 .replaceFirstChar { it.uppercase() }
-                        val badge = ZoneEducationProvider.forSessionType(
-                            today.session.type.name, ContentDensity.BADGE, dayEpoch = dayEpoch
-                        )
+                        // Compact zone label ("Base" / "Threshold" / "VO₂") drives both
+                        // the ZONE meta col and the subtitle so the long "Aerobic Base"
+                        // never reaches a width-constrained surface.
+                        val badge = ZoneEducationProvider.shortBadge(today.session.type.name)
+                            ?: ZoneEducationProvider.forSessionType(
+                                today.session.type.name, ContentDensity.BADGE, dayEpoch = dayEpoch
+                            )
                         val oneLiner = ZoneEducationProvider.forSessionType(
                             today.session.type.name, ContentDensity.ONE_LINER, dayEpoch = dayEpoch
                         )

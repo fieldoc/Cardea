@@ -25,8 +25,10 @@ import com.hrcoach.domain.bootcamp.PlannedSession
 import com.hrcoach.domain.bootcamp.CoachingCopyGenerator
 import com.hrcoach.domain.bootcamp.RescheduleRequest
 import com.hrcoach.domain.bootcamp.RescheduleResult
+import com.hrcoach.domain.bootcamp.SessionDayAssigner
 import com.hrcoach.domain.bootcamp.SessionRescheduler
 import com.hrcoach.domain.bootcamp.SessionType
+import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.bootcamp.DurationScaler
 import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.TierCtlRanges
@@ -332,6 +334,76 @@ class BootcampViewModel @Inject constructor(
             )
         }
 
+        // ── Upcoming runs list (next ~4 future sessions, rest days excluded) ──
+        // Combines this week's remaining scheduled sessions (which already have a day
+        // from the DB) with next week's planned sessions (assigned to days via
+        // SessionDayAssigner using the user's preferred days).
+        val upcomingRuns: List<UpcomingRunItem> = run {
+            val limit = 4
+            val out = mutableListOf<UpcomingRunItem>()
+
+            // 1) This week's remaining scheduled sessions
+            scheduledSessions
+                .filter { it.dayOfWeek > today && it.status == BootcampSessionEntity.STATUS_SCHEDULED }
+                .sortedBy { it.dayOfWeek }
+                .forEach { s ->
+                    if (out.size >= limit) return@forEach
+                    val date = weekStart.plusDays((s.dayOfWeek - 1).toLong())
+                    out.add(
+                        UpcomingRunItem(
+                            sessionId = s.id,
+                            dayLabel = DayOfWeek.of(s.dayOfWeek)
+                                .getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                                .uppercase(Locale.getDefault()),
+                            dayOfMonth = date.dayOfMonth,
+                            title = sessionTypeDisplayName(s.sessionType, s.presetId),
+                            subtitle = buildUpcomingSubtitle(s.targetMinutes, s.sessionType),
+                            zoneTag = ZoneEducationProvider.zoneTag(s.sessionType),
+                            rawSessionType = s.sessionType
+                        )
+                    )
+                }
+
+            // 2) Next week's planned sessions (assigned days via the same heuristic the
+            //    real scheduler uses — preferred days + hard-effort spacing)
+            if (out.size < limit && upcomingWeeks.isNotEmpty()) {
+                val nextLookahead = engine.lookaheadWeeks(
+                    count = 1,
+                    tierIndex = enrollment.tierIndex,
+                    tuningDirection = fitnessSignals.tuningDirection,
+                    lastTierChangeWeek = enrollment.lastTierChangeWeek
+                ).firstOrNull()
+                if (nextLookahead != null) {
+                    val availableDays = activePreferredDays.map { it.day }
+                    val longBias = preferredDays.firstOrNull { it.level == DaySelectionLevel.LONG_RUN_BIAS }?.day
+                    val assignments = SessionDayAssigner.assign(
+                        sessions = nextLookahead.sessions,
+                        availableDays = availableDays,
+                        longRunBiasDay = longBias
+                    ).sortedBy { it.second }
+                    val nextWeekStart = weekStart.plusDays(7)
+                    assignments.forEach { (planned, dow) ->
+                        if (out.size >= limit) return@forEach
+                        val date = nextWeekStart.plusDays((dow - 1).toLong())
+                        out.add(
+                            UpcomingRunItem(
+                                sessionId = null,
+                                dayLabel = DayOfWeek.of(dow)
+                                    .getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                                    .uppercase(Locale.getDefault()),
+                                dayOfMonth = date.dayOfMonth,
+                                title = sessionTypeDisplayName(planned.type.name, planned.presetId),
+                                subtitle = buildUpcomingSubtitle(planned.minutes, planned.type.name),
+                                zoneTag = ZoneEducationProvider.zoneTag(planned.type.name),
+                                rawSessionType = planned.type.name
+                            )
+                        )
+                    }
+                }
+            }
+            out
+        }
+
         val progressPercentage = if (engine.totalWeeks > 0) {
             (engine.absoluteWeek.toFloat() / engine.totalWeeks * 100).toInt().coerceIn(0, 100)
         } else 0
@@ -371,6 +443,7 @@ class BootcampViewModel @Inject constructor(
             todayState = todayState,
             activePreferredDays = activePreferredDays,
             upcomingWeeks = upcomingWeeks,
+            upcomingRuns = upcomingRuns,
             welcomeBackMessage = if (welcomeBackDismissed) null
                 else _pendingTierDemotedMessage ?: gapAction.welcomeMessage,
             needsCalibration = gapAction.requiresCalibration,
@@ -1189,6 +1262,12 @@ class BootcampViewModel @Inject constructor(
 
     private fun dayLabelFor(dayOfWeek: Int): String =
         DayOfWeek.of(dayOfWeek.coerceIn(1, 7)).getDisplayName(TextStyle.SHORT, Locale.getDefault())
+
+    /** "54 min · Base" / "35 min · Threshold" — minutes + short zone for the Coming-Up list. */
+    private fun buildUpcomingSubtitle(minutes: Int, rawSessionType: String): String {
+        val zone = ZoneEducationProvider.shortBadge(rawSessionType)
+        return if (zone != null) "$minutes min · $zone" else "$minutes min"
+    }
 
     private fun sessionTypeDisplayName(rawType: String, presetId: String? = null): String {
         val presetLabel = SessionType.displayLabelForPreset(presetId)

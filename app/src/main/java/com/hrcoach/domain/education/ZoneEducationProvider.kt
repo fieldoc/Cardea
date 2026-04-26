@@ -578,6 +578,35 @@ object ZoneEducationProvider {
     }
 
     /**
+     * Short zone badge (e.g. "Base", "Threshold", "VO\u2082") for compact UI surfaces
+     * where the full badge ("Aerobic Base", "VO\u2082max") wraps or overflows.
+     */
+    fun shortBadge(rawSessionType: String): String? {
+        val type = runCatching { SessionType.valueOf(rawSessionType) }.getOrNull() ?: return null
+        return when (zoneForSessionType(type)) {
+            ZoneId.ZONE_2 -> "Base"
+            ZoneId.ZONE_3 -> "Threshold"
+            ZoneId.ZONE_4_5 -> "VO\u2082"
+            ZoneId.RECOVERY -> "Recovery"
+            ZoneId.RACE_PACE -> "Race"
+        }
+    }
+
+    /**
+     * Compact zone tag (e.g. "Z2", "Z3", "Z4") for chips/pills.
+     */
+    fun zoneTag(rawSessionType: String): String? {
+        val type = runCatching { SessionType.valueOf(rawSessionType) }.getOrNull() ?: return null
+        return when (zoneForSessionType(type)) {
+            ZoneId.ZONE_2 -> "Z2"
+            ZoneId.ZONE_3 -> "Z3"
+            ZoneId.ZONE_4_5 -> "Z4"
+            ZoneId.RECOVERY -> "Recovery"
+            ZoneId.RACE_PACE -> "Race"
+        }
+    }
+
+    /**
      * Numeric BPM range for a session type (e.g. "168\u2013176"), no unit suffix.
      * Returns null when maxHr is unknown. UI surface adds the "bpm" label itself.
      */

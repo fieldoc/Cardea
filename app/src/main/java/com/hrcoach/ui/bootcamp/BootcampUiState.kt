@@ -60,6 +60,7 @@ data class BootcampUiState(
     val todayState: TodayState = TodayState.RestDay(null, null, null),
     val activePreferredDays: List<DayPreference> = emptyList(),
     val upcomingWeeks: List<UpcomingWeekItem> = emptyList(),
+    val upcomingRuns: List<UpcomingRunItem> = emptyList(),
     val swapRestMessage: String? = null,
     // Onboarding
     val showCarousel: Boolean = false,
@@ -154,4 +155,19 @@ data class UpcomingWeekItem(
     val weekNumber: Int,
     val isRecoveryWeek: Boolean,
     val sessions: List<SessionUiItem>
+)
+
+/**
+ * One row in the "Coming up" list — a future scheduled session, rest days excluded.
+ * Drives the per-session list view in the bootcamp dashboard (mirrors the design's
+ * SUN 17 / Long run / Z2 chip pattern).
+ */
+data class UpcomingRunItem(
+    val sessionId: Long?,
+    val dayLabel: String,        // "SUN", "TUE" — uppercase 3-letter
+    val dayOfMonth: Int,         // 17
+    val title: String,           // "Long" / "Tempo (Z3)" / "Strides"
+    val subtitle: String,        // "54 min · Base" — minutes + short zone
+    val zoneTag: String?,        // "Z2" / "Z3" / "Z4" / "Recovery" / "Race"
+    val rawSessionType: String   // for caller-side coloring decisions
 )
