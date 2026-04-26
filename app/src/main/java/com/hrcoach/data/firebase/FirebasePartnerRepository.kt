@@ -22,7 +22,7 @@ import javax.inject.Singleton
 class PartnerLimitException(message: String) : Exception(message)
 class ExpiredInviteException(message: String) : Exception(message)
 
-private const val MAX_PARTNERS = 3
+private const val MAX_PARTNERS = 10
 
 @Singleton
 class FirebasePartnerRepository @Inject constructor(

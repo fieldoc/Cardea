@@ -109,7 +109,7 @@ fun PartnerSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Partners ${partnerCount} of 3",
+            text = "Partners · ${partnerCount}",
             style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.08.sp,
@@ -118,7 +118,7 @@ fun PartnerSection(
             color = CardeaTheme.colors.textTertiary
         )
         // Gradient "+ Add" button — disabled at 3/3
-        val isFull = partnerCount >= 3
+        val isFull = partnerCount >= 10
         val addButtonGradient = if (isFull)
             Brush.linearGradient(listOf(
                 CardeaTheme.colors.textTertiary.copy(alpha = 0.25f),
@@ -140,7 +140,7 @@ fun PartnerSection(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = if (isFull) "Full (3/3)" else "+ Add",
+                text = if (isFull) "Full" else "+ Add",
                 style = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
                     fontWeight = FontWeight.Bold
                 ),
