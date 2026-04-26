@@ -73,7 +73,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -2261,6 +2260,15 @@ private fun TodayHeroSection(
                             maxHr = uiState.maxHr,
                             restHr = null
                         )
+                        // Ring shows runs-done-this-week (e.g. 3/4 = 75%), matching the
+                        // local "you're 3/4 through this week" mental model. Program-week
+                        // progress is already rendered as the linear PLAN PROGRESS bar
+                        // in non-RunUpcoming states and the Wk 3/12 pill above.
+                        val plannedThisWeek = uiState.currentWeekDays.count { it.session != null }
+                        val doneThisWeek = uiState.currentWeekDays.count { it.session?.isCompleted == true }
+                        val weekProgress = if (plannedThisWeek > 0)
+                            doneThisWeek.toFloat() / plannedThisWeek.toFloat()
+                        else 0f
                         TodayCard(
                             sessionTypeName = today.session.type.name,
                             sessionLabel = sessionLabel,
@@ -2268,7 +2276,8 @@ private fun TodayHeroSection(
                             badge = badge,
                             targetHrRange = targetHr,
                             oneLiner = oneLiner,
-                            programProgress = programProgress,
+                            ringProgress = weekProgress,
+                            ringCaption = "$doneThisWeek/$plannedThisWeek",
                             ctaScale = ctaScale,
                             onStartRun = { onRequestSession(today.session) }
                         )
@@ -2470,11 +2479,11 @@ private fun TodayCard(
     badge: String?,
     targetHrRange: String?,
     oneLiner: String?,
-    programProgress: Float,
+    ringProgress: Float,
+    ringCaption: String,
     ctaScale: Float,
     onStartRun: () -> Unit
 ) {
-    val ringPercent = (programProgress.coerceIn(0f, 1f) * 100).roundToInt()
     val ringStroke = 4.dp
     Box(
         modifier = Modifier
@@ -2537,7 +2546,7 @@ private fun TodayCard(
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    // Progress ring (program week %)
+                    // Progress ring — runs done this week (e.g. "3/4")
                     Box(
                         modifier = Modifier.size(56.dp),
                         contentAlignment = Alignment.Center
@@ -2558,7 +2567,7 @@ private fun TodayCard(
                             drawArc(
                                 brush = CardeaCtaGradient,
                                 startAngle = -90f,
-                                sweepAngle = 360f * programProgress.coerceIn(0f, 1f),
+                                sweepAngle = 360f * ringProgress.coerceIn(0f, 1f),
                                 useCenter = false,
                                 topLeft = Offset(stroke / 2, stroke / 2),
                                 size = Size(size.width - stroke, size.height - stroke),
@@ -2566,7 +2575,7 @@ private fun TodayCard(
                             )
                         }
                         Text(
-                            text = "${ringPercent}%",
+                            text = ringCaption,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold
                             ),
