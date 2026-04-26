@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -65,12 +66,11 @@ import com.hrcoach.domain.bootcamp.TierInfo
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.BootcampGoal
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaCtaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientPink
-import com.hrcoach.ui.theme.GradientRed
 import com.hrcoach.ui.theme.ZoneRed
 import java.time.Instant
 import java.time.ZoneId
@@ -94,7 +94,7 @@ fun BootcampSettingsScreen(
         AlertDialog(
             onDismissRequest = { showDestructiveConfirm = false },
             containerColor = CardeaTheme.colors.bgPrimary,
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(16.dp),
             tonalElevation = 0.dp,
             title = {
                 Text(
@@ -124,22 +124,14 @@ fun BootcampSettingsScreen(
                 }
             },
             confirmButton = {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CardeaCtaGradient)
-                        .clickable {
-                            showDestructiveConfirm = false
-                            viewModel.saveSettings(onDone = onBack)
-                        }
-                        .padding(horizontal = 18.dp, vertical = 9.dp)
-                ) {
-                    Text(
-                        text = "Save anyway",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = CardeaTheme.colors.onGradient
-                    )
-                }
+                CardeaButton(
+                    text = "Save anyway",
+                    onClick = {
+                        showDestructiveConfirm = false
+                        viewModel.saveSettings(onDone = onBack)
+                    },
+                    innerPadding = PaddingValues(horizontal = 18.dp, vertical = 9.dp)
+                )
             },
             dismissButton = {
                 TextButton(onClick = { showDestructiveConfirm = false }) {
@@ -243,8 +235,8 @@ fun BootcampSettingsScreen(
                         steps = 14,
                         modifier = Modifier.fillMaxWidth(),
                         colors = SliderDefaults.colors(
-                            thumbColor = CardeaTheme.colors.onGradient,
-                            activeTrackColor = Color.White,
+                            thumbColor = GradientPink,
+                            activeTrackColor = GradientPink,
                             inactiveTrackColor = CardeaTheme.colors.glassHighlight
                         )
                     )
@@ -283,7 +275,7 @@ fun BootcampSettingsScreen(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(40.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(12.dp))
                                     .then(
                                         if (isSelected) Modifier.background(CardeaCtaGradient)
                                         else Modifier.background(CardeaTheme.colors.glassHighlight)
@@ -473,15 +465,15 @@ fun BootcampSettingsScreen(
 private fun ChangeChip(text: String) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0x15FF4D5A))
-            .border(1.dp, Color(0x35FF4D5A), RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(ZoneRed.copy(alpha = 0.12f))
+            .border(1.dp, ZoneRed.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-            color = GradientRed
+            color = ZoneRed
         )
     }
 }
@@ -519,7 +511,7 @@ private fun GoalSelector(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .then(if (isSelected) Modifier.background(CardeaCtaGradient) else Modifier.background(CardeaTheme.colors.glassHighlight))
                     .clickable { onGoalSelected(goal) }
                     .padding(horizontal = 12.dp, vertical = 10.dp)
@@ -800,7 +792,7 @@ private fun DayLegendChip(label: String, level: DaySelectionLevel) {
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                style = MaterialTheme.typography.labelSmall,
                 color = if (isBlackout) CardeaTheme.colors.blackoutText else CardeaTheme.colors.textPrimary
             )
             if (isLongRun)  Icon(Icons.Default.Star,  null, tint = CardeaTheme.colors.onGradient, modifier = Modifier.size(7.dp))
