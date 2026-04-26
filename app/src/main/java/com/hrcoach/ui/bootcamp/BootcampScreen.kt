@@ -705,9 +705,9 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
                 modifier = Modifier
                     .size(30.dp)
                     .scale(todayPulse)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(dotBackground)
-                    .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(10.dp)) else Modifier),
+                    .then(if (dotBorder != Color.Transparent) Modifier.border(1.dp, dotBorder, RoundedCornerShape(12.dp)) else Modifier),
                 contentAlignment = Alignment.Center
             ) {
                 dotContent()
@@ -723,8 +723,7 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
         if (typeLabel.isNotEmpty()) {
             Text(
                 text = typeLabel,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 9.sp,
+                style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.3.sp
                 ),
@@ -1520,8 +1519,8 @@ private fun ActiveBootcampDashboard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .padding(top = 14.dp, bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(top = 16.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             WeekStripCard(
                 days = uiState.currentWeekDays,
@@ -1601,7 +1600,7 @@ private fun MissedSessionCard(
     onDismiss: () -> Unit,
     onReschedule: () -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(16.dp)), borderColor = Color.Transparent) {
         Box(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.fillMaxWidth().padding(end = 32.dp)) {
                 Text(
@@ -1778,7 +1777,7 @@ private fun ComingUpCard(weeks: List<UpcomingWeekItem>) {
 
 @Composable
 private fun GraduationCard(onGraduateGoal: () -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneGreen.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneGreen.copy(alpha = 0.15f), RoundedCornerShape(16.dp)), borderColor = Color.Transparent) {
         Text(
             text = "You finished!",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
@@ -1868,7 +1867,7 @@ private fun SessionDetailSheet(
                     session.isCompleted -> {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(ZoneGreen.copy(alpha = 0.1f))
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
@@ -1882,7 +1881,7 @@ private fun SessionDetailSheet(
                     session.isDeferred -> {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(ZoneAmber.copy(alpha = 0.1f))
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
@@ -1896,7 +1895,7 @@ private fun SessionDetailSheet(
                     session.isPast -> {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(ZoneRed.copy(alpha = 0.08f))
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
@@ -1927,7 +1926,8 @@ private fun SessionDetailSheet(
 
             // ── Contextual action buttons ────────────────────────────
             if (showStartRun) {
-                androidx.compose.material3.Button(
+                CardeaButton(
+                    text = "Start run",
                     onClick = {
                         onStartRun!!.invoke(
                             PlannedSession(
@@ -1939,26 +1939,8 @@ private fun SessionDetailSheet(
                         )
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color.Transparent
-                    ),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CardeaCtaGradient),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Start run",
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = CardeaTheme.colors.onGradient
-                        )
-                    }
-                }
+                    innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                )
             }
 
             if (showReschedule || showSkip || showRestToday) {
@@ -2087,7 +2069,7 @@ private fun TodayHeroSection(
                 )
             )
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
 
             // ── Compact header: title + goal + progress + menu ──────────────
             Row(
@@ -2114,7 +2096,7 @@ private fun TodayHeroSection(
                         Text(
                             text = goalDisplayName(goal),
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                            color = GradientPink,
+                            color = CardeaTheme.colors.textSecondary,
                             modifier = Modifier.clickable(onClick = onGoalClick)
                         )
                     }
@@ -2179,9 +2161,9 @@ private fun TodayHeroSection(
                     "Wk ${uiState.absoluteWeek}/${uiState.totalWeeks}"
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(CardeaTheme.colors.glassHighlight)
-                        .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
+                        .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -2193,9 +2175,9 @@ private fun TodayHeroSection(
                 // Tier pill — tappable to open TierDetailSheet
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(GradientPink.copy(alpha = 0.12f))
-                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                         .clickable(onClick = onTierClick)
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
@@ -2208,9 +2190,9 @@ private fun TodayHeroSection(
                 if (uiState.isRecoveryWeek) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(ZoneGreen.copy(alpha = 0.12f))
-                            .border(1.dp, ZoneGreen.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                            .border(1.dp, ZoneGreen.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
@@ -2223,9 +2205,9 @@ private fun TodayHeroSection(
                 if (uiState.fitnessLevel != FitnessLevel.UNKNOWN) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(CardeaTheme.colors.glassHighlight)
-                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
+                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
@@ -2327,7 +2309,7 @@ private fun TodayHeroSection(
                             )?.let { oneLiner ->
                                 Text(
                                     text = oneLiner,
-                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = CardeaTheme.colors.textTertiary,
                                     maxLines = if (oneLinerExpanded) Int.MAX_VALUE else 2,
                                     overflow = TextOverflow.Ellipsis,
@@ -2337,36 +2319,17 @@ private fun TodayHeroSection(
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         // ctaBreathe / ctaScale hoisted to TodayHeroSection top (rules of hooks)
-                        androidx.compose.material3.Button(
-                            onClick = {
-                                onRequestSession(today.session)
-                            },
+                        CardeaButton(
+                            text = "Start run",
+                            onClick = { onRequestSession(today.session) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
                                 .scale(ctaScale),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent
-                            ),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(CardeaCtaGradient),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Start run",
-                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = CardeaTheme.colors.onGradient
-                                )
-                            }
-                        }
+                            innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
@@ -2505,9 +2468,9 @@ private fun TodayHeroSection(
 private fun MetaChip(text: String) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CardeaTheme.colors.glassHighlight)
-            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
         Text(
@@ -2540,7 +2503,7 @@ private fun TierPromptCard(
     GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .border(1.dp, borderColor, RoundedCornerShape(18.dp)),
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp)),
         borderColor = Color.Transparent
     ) {
         Text(
@@ -2558,9 +2521,9 @@ private fun TierPromptCard(
             // Current tier pill
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(CardeaTheme.colors.glassHighlight)
-                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(20.dp))
+                    .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
@@ -2578,12 +2541,12 @@ private fun TierPromptCard(
             // Proposed tier pill
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .then(
                         if (isUp) Modifier.background(GradientPink.copy(alpha = 0.12f))
-                            .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                            .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                         else Modifier.background(ZoneAmber.copy(alpha = 0.12f))
-                            .border(1.dp, ZoneAmber.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                            .border(1.dp, ZoneAmber.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                     )
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
@@ -2636,7 +2599,7 @@ private fun IllnessPromptCard(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(18.dp)), borderColor = Color.Transparent) {
+    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(16.dp)), borderColor = Color.Transparent) {
         Text(
             text = "Check in with your body",
             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
@@ -3000,7 +2963,7 @@ private fun WelcomeBackDialog(
             }
         },
         containerColor = CardeaTheme.colors.bgPrimary,
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
@@ -3344,7 +3307,7 @@ private fun DeleteConfirmDialog(
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete bootcamp", color = GradientRed)
+                Text("Delete bootcamp", color = ZoneRed)
             }
         },
         dismissButton = {
@@ -3353,7 +3316,7 @@ private fun DeleteConfirmDialog(
             }
         },
         containerColor = CardeaTheme.colors.bgPrimary,
-        shape = RoundedCornerShape(18.dp)
+        shape = RoundedCornerShape(16.dp)
     )
 }
 
