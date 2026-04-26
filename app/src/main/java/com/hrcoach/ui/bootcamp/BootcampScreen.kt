@@ -2595,7 +2595,8 @@ private fun TodayCard(
                         MetaCol(label = "ZONE", value = badge, unit = null, modifier = Modifier.weight(1f))
                     }
                     if (targetHrRange != null) {
-                        MetaCol(label = "TARGET HR", value = targetHrRange, unit = "bpm", modifier = Modifier.weight(1f))
+                        // Unit suffix dropped — "TARGET HR" col label already implies bpm.
+                        MetaCol(label = "TARGET HR", value = targetHrRange, unit = null, modifier = Modifier.weight(1f))
                     }
                 }
 
@@ -2634,17 +2635,20 @@ private fun MetaCol(
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleMedium.copy(
+                style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.SemiBold
                 ),
-                color = CardeaTheme.colors.textPrimary
+                color = CardeaTheme.colors.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
             )
             if (unit != null) {
                 Text(
                     text = unit,
                     style = MaterialTheme.typography.labelSmall,
                     color = CardeaTheme.colors.textSecondary,
-                    modifier = Modifier.padding(start = 3.dp, bottom = 2.dp)
+                    modifier = Modifier.padding(start = 3.dp, bottom = 1.dp)
                 )
             }
         }
