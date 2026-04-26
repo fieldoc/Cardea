@@ -2896,15 +2896,30 @@ private fun RescheduleBottomSheet(
             
             Spacer(modifier = Modifier.height(24.dp))
 
-            TextButton(
-                onClick = onDefer,
-                modifier = Modifier.fillMaxWidth()
+            // Two distinct outs:
+            //  • Cancel (no-op) — backs out without changing the schedule
+            //  • Defer this session — deliberately marks the session as needing reschedule later
+            // Previously a single "I'm not sure yet" button triggered the destructive defer write,
+            // which read as a soft dismiss and silently changed schedule state.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "I'm not sure yet",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTheme.colors.textTertiary
-                )
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                }
+                TextButton(onClick = onDefer) {
+                    Text(
+                        text = "Defer this session",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                }
             }
         }
     }

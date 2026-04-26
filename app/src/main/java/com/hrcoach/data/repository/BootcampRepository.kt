@@ -105,7 +105,15 @@ class BootcampRepository @Inject constructor(
 
     suspend fun rescheduleSession(sessionId: Long, newDayOfWeek: Int) {
         val session = bootcampDao.getSessionById(sessionId) ?: return
-        bootcampDao.updateSession(session.copy(dayOfWeek = newDayOfWeek))
+        // Rescheduling clears the DEFERRED "needs your attention" flag — it has a day again.
+        // Other terminal statuses (COMPLETED/SKIPPED) are preserved so we don't resurrect a
+        // finished session by moving it.
+        val newStatus =
+            if (session.status == BootcampSessionEntity.STATUS_DEFERRED)
+                BootcampSessionEntity.STATUS_SCHEDULED
+            else
+                session.status
+        bootcampDao.updateSession(session.copy(dayOfWeek = newDayOfWeek, status = newStatus))
     }
 
     suspend fun deferSession(sessionId: Long) {
