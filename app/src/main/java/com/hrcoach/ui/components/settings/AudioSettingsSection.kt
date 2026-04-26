@@ -87,6 +87,9 @@ sealed class AudioSettingsEvent {
 
     /** In-zone confirmation cue toggle flipped. */
     data class InZoneConfirmToggled(val enabled: Boolean) : AudioSettingsEvent()
+
+    /** Strides per-rep timer chimes (Go / Ease / Set Complete) toggle flipped. */
+    data class StridesTimerEarconsToggled(val enabled: Boolean) : AudioSettingsEvent()
 }
 
 /**
@@ -250,6 +253,13 @@ fun AudioSettingsSection(
                     checked = inZoneConfirmOn,
                     enabled = cuesEnabled
                 ) { onEvent(AudioSettingsEvent.InZoneConfirmToggled(it)) }
+                // Strides timer chimes are gated on shouldPlayEarcon(verbosity) like other
+                // info cues, so the same `cuesEnabled` gate applies.
+                InfoCueToggle(
+                    label = "Strides timer chimes",
+                    checked = state.stridesTimerEarcons,
+                    enabled = cuesEnabled
+                ) { onEvent(AudioSettingsEvent.StridesTimerEarconsToggled(it)) }
             }
         }
     }

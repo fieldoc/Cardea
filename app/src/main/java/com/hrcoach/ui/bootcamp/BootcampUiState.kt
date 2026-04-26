@@ -123,7 +123,18 @@ data class BootcampUiState(
     val bleLastKnownDeviceName: String? = null,
     val bleLastKnownDeviceAddress: String? = null,
     /** True when the one-time audio primer dialog should be rendered. */
-    val showAudioPrimer: Boolean = false
+    val showAudioPrimer: Boolean = false,
+    /**
+     * True when the one-time strides bootcamp primer dialog should be rendered. Gated
+     * on the next bootcamp session being a strides session AND the user not having
+     * dismissed the primer before. See [BootcampViewModel.dismissStridesPrimer].
+     */
+    val showStridesPrimer: Boolean = false,
+    /**
+     * Reps in the upcoming strides session. Derived from session duration
+     * (20→4, 22→6, 24→8, 26→10, else 5). Surfaced for the primer copy.
+     */
+    val stridesPrimerTotalReps: Int = 5
 )
 
 data class SessionUiItem(

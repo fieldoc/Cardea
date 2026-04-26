@@ -244,6 +244,12 @@ class CloudRestoreManager @Inject constructor(
                 // Added 2026-04-19 for audio primer. Missing field on older backups defaults to false,
                 // which will re-show the primer on next workout — acceptable, non-destructive.
                 audioPrimerShown      = snap.child("audioPrimerShown").getValue(Boolean::class.java) ?: false,
+                // Added 2026-04-25 for strides timer per-rep chimes. Default true on missing
+                // (older backups) — the chimes are opt-out, matching the local default.
+                stridesTimerEarcons   = snap.child("stridesTimerEarcons").getValue(Boolean::class.java) ?: true,
+                // Added 2026-04-25 for strides bootcamp primer. Default false on missing
+                // (older backups) — re-shows the primer once on a restored device, harmless.
+                stridesPrimerSeen     = snap.child("stridesPrimerSeen").getValue(Boolean::class.java) ?: false,
             )
             audioSettingsRepo.saveAudioSettings(audio)
         }.onFailure { Log.w(TAG, "restoreSettings: audio failed", it) }

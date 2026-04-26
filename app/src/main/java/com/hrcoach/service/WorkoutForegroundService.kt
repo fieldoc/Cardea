@@ -28,6 +28,8 @@ import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.engine.HrArtifactDetector
 import com.hrcoach.domain.engine.HrCalibrator
 import com.hrcoach.domain.engine.MetricsCalculator
+import com.hrcoach.domain.engine.StridesController
+import com.hrcoach.domain.engine.StridesEvent
 import com.hrcoach.domain.engine.ZoneEngine
 import com.hrcoach.domain.model.WorkoutConfig
 import com.hrcoach.domain.model.WorkoutMode
@@ -87,6 +89,10 @@ class WorkoutForegroundService : LifecycleService() {
         private const val CHANNEL_ID = "workout_media_v2"
         private const val TRACK_POINT_INTERVAL_MS = 5_000L
         private const val AUTO_PAUSE_GRACE_MS = 20_000L
+        // How long the "Strides complete — finish easy" on-screen text lingers
+        // after the final SetComplete event before the normal zone-status
+        // guidance can resume. Matches StridesController's COOLDOWN_BUFFER_SEC.
+        private const val STRIDES_COMPLETE_DISPLAY_SEC = 30L
     }
 
     @Inject
@@ -137,6 +143,14 @@ class WorkoutForegroundService : LifecycleService() {
     private var coachingAudioManager: CoachingAudioManager? = null
     private var zoneEngine: ZoneEngine? = null
     private var adaptiveController: AdaptivePaceController? = null
+    private var stridesController: StridesController? = null
+    // Phase-aware on-screen text driven by StridesController events. Updated on
+    // each event in processTick BEFORE WorkoutState.update so the displayed
+    // guidanceText reflects the current strides phase. Cleared a short cooldown
+    // window after SetComplete so the normal zone-status guidance can resume
+    // for the rest of the run (vs. lingering on "Strides complete" indefinitely).
+    private var stridesGuidanceText: String? = null
+    private var stridesCompleteAtSec: Long? = null
 
     private val alertPolicy = AlertPolicy()
     private val coachingEventRouter = CoachingEventRouter()
@@ -344,6 +358,15 @@ class WorkoutForegroundService : LifecycleService() {
             config = workoutConfig,
             initialProfile = adaptiveProfileRepository.getProfile()
         )
+        stridesController = if (workoutConfig.guidanceTag == "strides" && workoutTotalSeconds >= 60L) {
+            // Total workout duration in minutes drives rep count
+            // (20→4, 22→6, 24→8, 26→10, else 5). See StridesController.repsForDuration.
+            // Sub-1-min sessions can't fit a strides block; skip rather than
+            // construct a degenerate controller (which now also requires() > 0).
+            StridesController(durationMin = (workoutTotalSeconds / 60L).toInt())
+        } else null
+        stridesGuidanceText = null
+        stridesCompleteAtSec = null
 
         startupJob?.cancel()
         startupJob = lifecycleScope.launch(Dispatchers.IO) {
@@ -601,15 +624,47 @@ class WorkoutForegroundService : LifecycleService() {
         // string is safe to speak. Preset overrides are long, static motivational quips meant
         // for on-screen display only — speaking them every zone re-entry (RETURN_TO_ZONE) or
         // every projected-drift (PREDICTIVE_WARNING) reads as nagging. See router docstring.
+        // Strides timer state machine: on each tick (when not auto-paused), advance the
+        // controller and capture any phase-transition events. Events are dispatched to
+        // audio AFTER WorkoutState.update {} below to honor the same-tick race rule;
+        // here we only update on-screen text synchronously.
+        val stridesEvents: List<StridesEvent> = if (!isAutoPaused) {
+            stridesController?.evaluateTick(elapsedSeconds, zoneStatus).orEmpty()
+        } else emptyList()
+        for (ev in stridesEvents) {
+            stridesGuidanceText = when (ev) {
+                is StridesEvent.Announce -> "Strides time \u2014 ${ev.totalReps} pickups, smooth & relaxed"
+                is StridesEvent.RepStart -> "Pickup ${ev.repIndex} of ${ev.totalReps} \u2014 smooth & relaxed"
+                is StridesEvent.RepEnd   -> "Easy jog \u2014 recover"
+                is StridesEvent.SetComplete -> "Strides complete \u2014 finish easy"
+            }
+            if (ev is StridesEvent.SetComplete) stridesCompleteAtSec = elapsedSeconds
+        }
+        // Clear the lingering "Strides complete \u2014 finish easy" text after a brief
+        // cooldown window. Without this, the strides text stays locked on screen
+        // for the rest of the run (the strides presets are STEADY_STATE with no
+        // auto-stop), suppressing normal zone guidance like SLOW DOWN / SPEED UP.
+        val completedAt = stridesCompleteAtSec
+        if (completedAt != null && elapsedSeconds - completedAt >= STRIDES_COMPLETE_DISPLAY_SEC) {
+            stridesGuidanceText = null
+            stridesCompleteAtSec = null
+        }
+
+        // Strides phase text is also a "preset quip" for voice-leak purposes \u2014 the per-rep
+        // text would otherwise leak through RETURN_TO_ZONE / PREDICTIVE_WARNING fallbacks.
+        // Gate on guidanceText presence (not controller.isActive) so the SetComplete text
+        // ("Strides complete \u2014 finish easy") still renders after the controller has
+        // transitioned to Done. stridesGuidanceText starts null and only flips non-null
+        // once the first event fires, so this doesn't disturb pre-strides ticks.
+        val isStridesPhaseText = workoutConfig.guidanceTag == "strides" && stridesGuidanceText != null
         val isPresetQuip =
-            (workoutConfig.guidanceTag == "strides" && elapsedSeconds >= 1200 && zoneStatus == ZoneStatus.IN_ZONE) ||
+            isStridesPhaseText ||
             (zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides"))
 
         val guidance = when {
             isAutoPaused -> "STOPPED \u2022 ALERTS PAUSED"
-            // Preset-specific overrides take priority over adaptive guidance
-            workoutConfig.guidanceTag == "strides" && elapsedSeconds >= 1200 && zoneStatus == ZoneStatus.IN_ZONE ->
-                "Time for strides! 4\u20136 \u00d7 20s fast & smooth, jog easy 60\u201390s between"
+            // Strides timer phase text takes priority over the zone2 quip when present
+            isStridesPhaseText -> stridesGuidanceText!!
             zoneStatus == ZoneStatus.IN_ZONE && (workoutConfig.presetId == "zone2_base" || workoutConfig.presetId == "zone2_with_strides") ->
                 "Easy pace builds your aerobic engine. Hold a conversation."
             adaptiveResult != null -> adaptiveResult.guidance
@@ -648,6 +703,19 @@ class WorkoutForegroundService : LifecycleService() {
         }
 
         if (!isAutoPaused) {
+            // Dispatch strides audio events captured before the state update. Announce is
+            // a one-shot voice line (verbosity-gated, NOT gated on stridesTimerEarcons).
+            // Per-rep chimes are gated on BOTH verbosity and the stridesTimerEarcons
+            // toggle in CoachingAudioManager.playStrides*. Done here AFTER the state
+            // update to honor the same-tick race rule (no audio mid-update block).
+            for (ev in stridesEvents) {
+                when (ev) {
+                    is StridesEvent.Announce -> coachingAudioManager?.playStridesAnnouncement(ev.totalReps)
+                    is StridesEvent.RepStart -> coachingAudioManager?.playStridesGo()
+                    is StridesEvent.RepEnd   -> coachingAudioManager?.playStridesEase()
+                    is StridesEvent.SetComplete -> coachingAudioManager?.playStridesSetComplete()
+                }
+            }
             // Publish current HR slope to the audio manager so the PREDICTIVE_WARNING
             // fallback can pick direction-aware phrasing ("ease off" vs "pick it up")
             // when adaptive guidance text is absent. Must precede any fireEvent call
@@ -1194,6 +1262,9 @@ class WorkoutForegroundService : LifecycleService() {
         coachingAudioManager = null
         zoneEngine = null
         adaptiveController = null
+        stridesController = null
+        stridesGuidanceText = null
+        stridesCompleteAtSec = null
         autoPauseDetector?.reset()
         autoPauseDetector = null
         autoPauseStartMs = 0L

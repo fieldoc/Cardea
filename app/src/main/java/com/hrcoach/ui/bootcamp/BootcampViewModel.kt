@@ -32,6 +32,7 @@ import com.hrcoach.domain.bootcamp.FinishingTimeTierMapper
 import com.hrcoach.domain.bootcamp.TierCtlRanges
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.domain.engine.FitnessSignalEvaluator
+import com.hrcoach.domain.engine.StridesController
 import com.hrcoach.domain.engine.TierPromptDirection
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.BootcampGoal
@@ -335,6 +336,23 @@ class BootcampViewModel @Inject constructor(
             (engine.absoluteWeek.toFloat() / engine.totalWeeks * 100).toInt().coerceIn(0, 100)
         } else 0
 
+        // ── Strides primer gating ────────────────────────────────────────────
+        // Show the primer only once, on the first time the user lands on a
+        // bootcamp screen where the next scheduled session is a strides
+        // session. Resolves the "next" session as: today's session if there
+        // is one upcoming today, otherwise the next future scheduled session.
+        val upcomingSession: BootcampSessionEntity? = when (todayState) {
+            is TodayState.RunUpcoming ->
+                scheduledSessions.firstOrNull { it.dayOfWeek == today }
+            else -> nextScheduledSession
+        }
+        val isStridesUpcoming = upcomingSession?.isStridesSession() == true
+        val stridesPrimerSeen = audioSettingsRepository.getAudioSettings().stridesPrimerSeen
+        val showStridesPrimer = isStridesUpcoming && !stridesPrimerSeen
+        val stridesPrimerTotalReps = upcomingSession
+            ?.let { StridesController.repsForDuration(it.targetMinutes) }
+            ?: 5
+
         _uiState.value = BootcampUiState(
             isLoading = false,
             loadError = null,
@@ -367,7 +385,9 @@ class BootcampViewModel @Inject constructor(
             missedSessionIds = missedSessionIds,
             swapRestMessage = null,
             goalProgressPercentage = progressPercentage,
-            maxHr = userProfileRepository.getMaxHr()
+            maxHr = userProfileRepository.getMaxHr(),
+            showStridesPrimer = showStridesPrimer,
+            stridesPrimerTotalReps = stridesPrimerTotalReps
         )
         _pendingTierDemotedMessage = null  // I2: consumed; clear so it doesn't persist across refreshes
     }
@@ -1400,6 +1420,24 @@ class BootcampViewModel @Inject constructor(
         _uiState.update { it.copy(showAudioPrimer = false) }
     }
 
+    // ── Strides primer gating ────────────────────────────────────────────────
+    //
+    // First-time educational modal shown when the user's next bootcamp session
+    // is a strides session. Mirrors the [dismissPrimerThenProceed] /
+    // [dismissPrimerNoProceed] pattern above but persists into a separate
+    // SharedPreferences-backed field [AudioSettings.stridesPrimerSeen] so the
+    // two primers are independently dismissible.
+
+    /**
+     * Called from the strides primer's "Got it" button. Persists the
+     * primer-seen flag and hides the dialog. Does not start a workout — the
+     * primer is purely educational.
+     */
+    fun dismissStridesPrimer() {
+        audioSettingsRepository.setStridesPrimerSeen(true)
+        _uiState.update { it.copy(showStridesPrimer = false) }
+    }
+
     private fun startBleCollectors() {
         bleCollectJob?.cancel()
         bleCollectJob = viewModelScope.launch {
@@ -1526,3 +1564,15 @@ class BootcampViewModel @Inject constructor(
     }
 
 }
+
+/**
+ * Strides session detection. Mirrors the gating used by the audio pipeline
+ * (`WorkoutConfig.guidanceTag == "strides"` OR a strides-flavored preset id).
+ * The DB row carries `presetId` only — `guidanceTag` lives on `WorkoutConfig`
+ * which is constructed at workout start — so we match on `presetId` here.
+ */
+private fun BootcampSessionEntity.isStridesSession(): Boolean {
+    val pid = presetId
+    return pid == "strides_20s" || pid == "zone2_with_strides"
+}
+

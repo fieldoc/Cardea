@@ -84,6 +84,10 @@ class ActiveRunSettingsViewModel @Inject constructor(
                 _audioSettings.value = current.copy(enableInZoneConfirm = event.enabled)
                 save()
             }
+            is AudioSettingsEvent.StridesTimerEarconsToggled -> {
+                _audioSettings.value = current.copy(stridesTimerEarcons = event.enabled)
+                save()
+            }
         }
     }
 

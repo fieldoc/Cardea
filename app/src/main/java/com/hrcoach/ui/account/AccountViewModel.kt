@@ -52,6 +52,7 @@ data class AccountUiState(
     val enableKmSplits: Boolean = true,
     val enableWorkoutComplete: Boolean = true,
     val enableInZoneConfirm: Boolean = true,
+    val stridesTimerEarcons: Boolean = true,
     val maxHr: Int? = null,
     val maxHrInput: String = "",
     val maxHrSaved: Boolean = false,
@@ -102,6 +103,7 @@ class AccountViewModel @Inject constructor(
     private val _kmSplits          = MutableStateFlow(true)
     private val _workoutComplete   = MutableStateFlow(true)
     private val _inZoneConfirm     = MutableStateFlow(true)
+    private val _stridesTimerEarcons = MutableStateFlow(true)
 
     private val _maxHr              = MutableStateFlow<Int?>(null)
     private val _maxHrInput         = MutableStateFlow("")
@@ -140,6 +142,7 @@ class AccountViewModel @Inject constructor(
             _kmSplits.value = settings.enableKmSplits != false
             _workoutComplete.value = settings.enableWorkoutComplete != false
             _inZoneConfirm.value = settings.enableInZoneConfirm != false
+            _stridesTimerEarcons.value = settings.stridesTimerEarcons
             _autoPauseEnabled.value = autoPauseRepo.isAutoPauseEnabled()
             _distanceUnit.value = DistanceUnit.fromString(userProfileRepo.getDistanceUnit())
             _displayName.value = userProfileRepo.getDisplayName()
@@ -175,15 +178,16 @@ class AccountViewModel @Inject constructor(
     }.combine(_vibration) { base, vib ->
         base.copy(enableVibration = vib)
     }.combine(
-        combine(_halfwayReminder, _kmSplits, _workoutComplete, _inZoneConfirm) { hw, km, wc, iz ->
-            listOf(hw, km, wc, iz)
+        combine(_halfwayReminder, _kmSplits, _workoutComplete, _inZoneConfirm, _stridesTimerEarcons) { hw, km, wc, iz, st ->
+            listOf(hw, km, wc, iz, st)
         }
     ) { base, cues ->
         base.copy(
             enableHalfwayReminder = cues[0],
             enableKmSplits = cues[1],
             enableWorkoutComplete = cues[2],
-            enableInZoneConfirm = cues[3]
+            enableInZoneConfirm = cues[3],
+            stridesTimerEarcons = cues[4]
         )
     }.combine(
         combine(_maxHr, _maxHrInput, _maxHrSaved, _maxHrError) { hr, hrInput, hrSaved, hrError ->
@@ -251,6 +255,7 @@ class AccountViewModel @Inject constructor(
     fun setEnableKmSplits(v: Boolean) { _kmSplits.value = v; saveAudioSettings() }
     fun setEnableWorkoutComplete(v: Boolean) { _workoutComplete.value = v; saveAudioSettings() }
     fun setEnableInZoneConfirm(v: Boolean) { _inZoneConfirm.value = v; saveAudioSettings() }
+    fun setStridesTimerEarcons(v: Boolean) { _stridesTimerEarcons.value = v; saveAudioSettings() }
 
     fun setDistanceUnit(unit: DistanceUnit) {
         _distanceUnit.value = unit
@@ -266,8 +271,13 @@ class AccountViewModel @Inject constructor(
 
     fun saveAudioSettings() {
         viewModelScope.launch {
+            // Use copy() against the current persisted settings so untracked fields
+            // (audioPrimerShown, minimalTierOneVoice, inZoneConfirmCadence,
+            // stridesPrimerSeen) survive every toggle. Constructing AudioSettings()
+            // from scratch was resetting these to data-class defaults on every save.
+            val current = audioRepo.getAudioSettings()
             audioRepo.saveAudioSettings(
-                AudioSettings(
+                current.copy(
                     earconVolume    = _volume.value,
                     voiceVolume     = _voiceVolume.value,
                     voiceVerbosity  = _verbosity.value,
@@ -276,6 +286,7 @@ class AccountViewModel @Inject constructor(
                     enableKmSplits = _kmSplits.value,
                     enableWorkoutComplete = _workoutComplete.value,
                     enableInZoneConfirm = _inZoneConfirm.value,
+                    stridesTimerEarcons = _stridesTimerEarcons.value,
                 )
             )
             // Notify the running workout service so settings take effect immediately.

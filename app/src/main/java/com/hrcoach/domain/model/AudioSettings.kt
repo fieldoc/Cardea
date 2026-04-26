@@ -20,7 +20,17 @@ data class AudioSettings(
     val minimalTierOneVoice: Boolean = true,
     // True after the user sees the first-workout audio primer. Default false for
     // fresh installs. See AudioPrimerDialog / SetupViewModel for gating logic.
-    val audioPrimerShown: Boolean = false
+    val audioPrimerShown: Boolean = false,
+    // Per-rep strides timer chimes (Go / Ease / Set-Complete). Default true. Gated in
+    // CoachingAudioManager.playStrides* on top of the standard verbosity earcon gate.
+    // The one-shot voice announcement at strides start is NOT gated by this flag.
+    val stridesTimerEarcons: Boolean = true,
+    // True after the user sees the first-strides bootcamp primer. Default false for
+    // fresh installs. See StridesPrimer / BootcampViewModel for gating logic.
+    // Persisted under key "bootcamp_strides_primer_seen" semantically (the field
+    // lives inside the AudioSettings JSON; the SharedPreferences key namespace is
+    // owned by AudioSettingsRepository).
+    val stridesPrimerSeen: Boolean = false
 )
 
 enum class VoiceVerbosity {

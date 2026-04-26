@@ -397,6 +397,50 @@ class CoachingAudioManager(
         voicePlayer.speakAnnouncement(text)
     }
 
+    // ── Strides timer audio ────────────────────────────────────────────────
+    // Per-rep chimes are gated on BOTH the standard verbosity earcon gate AND the
+    // user-controlled stridesTimerEarcons toggle. The announcement (one-shot at the
+    // start of the strides block) is NOT gated by stridesTimerEarcons — that toggle
+    // is only for the per-rep beeps. Verbosity OFF still silences the announcement.
+
+    fun playStridesGo() {
+        if (!shouldPlayEarcon(currentSettings.voiceVerbosity)) return
+        if (!currentSettings.stridesTimerEarcons) return
+        earconPlayer.playStridesEvent(StridesEarcon.GO)
+    }
+
+    fun playStridesEase() {
+        if (!shouldPlayEarcon(currentSettings.voiceVerbosity)) return
+        if (!currentSettings.stridesTimerEarcons) return
+        earconPlayer.playStridesEvent(StridesEarcon.EASE)
+    }
+
+    fun playStridesSetComplete() {
+        if (!shouldPlayEarcon(currentSettings.voiceVerbosity)) return
+        if (!currentSettings.stridesTimerEarcons) return
+        earconPlayer.playStridesEvent(StridesEarcon.SET_COMPLETE)
+    }
+
+    /**
+     * Speaks the one-shot strides-timer announcement at the start of the strides block.
+     * Respects voice verbosity (OFF = silent) but is NOT gated by stridesTimerEarcons —
+     * that toggle is for the per-rep chimes only.
+     */
+    fun playStridesAnnouncement(totalReps: Int) {
+        val word = when (totalReps) {
+            4 -> "four"
+            5 -> "five"
+            6 -> "six"
+            7 -> "seven"
+            8 -> "eight"
+            9 -> "nine"
+            10 -> "ten"
+            else -> totalReps.toString()
+        }
+        val text = "Strides time. $word pickups, twenty seconds smooth and relaxed. Jog one minute between each."
+        voicePlayer.speakAnnouncement(text)
+    }
+
     fun destroy() {
         scope.cancel()
         earconPlayer.destroy()

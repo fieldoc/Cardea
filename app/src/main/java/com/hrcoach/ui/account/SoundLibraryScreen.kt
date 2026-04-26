@@ -16,7 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.PauseCircleOutline
+import androidx.compose.material.icons.filled.SportsScore
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,9 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.hrcoach.domain.model.CoachingEvent
+import com.hrcoach.service.audio.CueBannerKind
 import com.hrcoach.service.audio.CueCopy
 import com.hrcoach.service.audio.EarconPlayer
+import com.hrcoach.service.audio.StridesEarcon
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.workout.cueBannerBorderColor
@@ -95,7 +102,95 @@ fun SoundLibraryScreen(onBack: () -> Unit) {
                     SoundRow(event = event, onPreview = { player.play(event) })
                 }
             }
+            // Strides timer chimes are a separate audio category (not routed
+            // through CoachingEventRouter) so they live outside CueCopy.sections.
+            // Render them as their own section here so users can audition the
+            // three chimes before their first strides session.
+            item(key = "h-strides") {
+                Column(modifier = Modifier.padding(top = 4.dp)) {
+                    Text(
+                        text = "STRIDES TIMER",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = CardeaTheme.colors.textSecondary,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                    Text(
+                        text = "Chimes that drive the 20s-on / 60s-off rep timer during a strides session.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                }
+            }
+            items(stridesEntries, key = { "stride-${it.kind.name}" }) { entry ->
+                StridesSoundRow(entry = entry, onPreview = { player.playStridesEvent(entry.kind) })
+            }
             item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+}
+
+private data class StridesEntry(
+    val kind: StridesEarcon,
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector
+)
+
+private val stridesEntries: List<StridesEntry> = listOf(
+    StridesEntry(
+        kind = StridesEarcon.GO,
+        title = "Strides go",
+        subtitle = "Start of each 20-second pickup. Smooth, not sprint.",
+        icon = Icons.Default.PlayCircleOutline
+    ),
+    StridesEntry(
+        kind = StridesEarcon.EASE,
+        title = "Strides ease",
+        subtitle = "End of the pickup — ease into a 60-second easy jog.",
+        icon = Icons.Default.PauseCircleOutline
+    ),
+    StridesEntry(
+        kind = StridesEarcon.SET_COMPLETE,
+        title = "Strides complete",
+        subtitle = "Final rep done. Finish your run easy.",
+        icon = Icons.Default.SportsScore
+    )
+)
+
+@Composable
+private fun StridesSoundRow(entry: StridesEntry, onPreview: () -> Unit) {
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(12.dp),
+        borderColor = cueBannerBorderColor(CueBannerKind.GUIDANCE, alpha = 0.4f)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = entry.icon,
+                contentDescription = null,
+                tint = CardeaTheme.colors.textPrimary,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = entry.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Text(
+                    text = entry.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CardeaTheme.colors.textSecondary
+                )
+            }
+            IconButton(onClick = onPreview) {
+                Icon(
+                    imageVector = Icons.Default.VolumeUp,
+                    contentDescription = "Preview ${entry.title}",
+                    tint = CardeaTheme.colors.textPrimary
+                )
+            }
         }
     }
 }
