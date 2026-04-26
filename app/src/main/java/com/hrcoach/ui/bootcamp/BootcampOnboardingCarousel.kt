@@ -37,9 +37,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hrcoach.ui.components.CardeaLogo
+import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaCtaGradient
-import com.hrcoach.ui.theme.CardeaGradient
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
@@ -295,9 +295,9 @@ private fun PhaseDescriptionRow(color: Color, label: String, description: String
 private fun PhaseBlock(label: String, color: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(color.copy(alpha = 0.12f))
-            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -387,7 +387,7 @@ private fun WatchItem(title: String, description: String) {
             // Gradient ring indicator
             Canvas(modifier = Modifier.size(10.dp)) {
                 drawCircle(
-                    brush = CardeaGradient,
+                    color = GradientPink.copy(alpha = 0.5f),
                     style = Stroke(width = 2.5f)
                 )
             }
@@ -438,27 +438,12 @@ private fun CarouselPageCta(onStartSetup: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(40.dp))
 
-        // Gradient CTA button
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(CardeaCtaGradient)
-                .fillMaxWidth()
-                .height(56.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            TextButton(
-                onClick = onStartSetup,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                Text(
-                    text = "Start Setup",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = CardeaTheme.colors.onGradient
-                )
-            }
-        }
+        CardeaButton(
+            text = "Start Setup",
+            onClick = onStartSetup,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+        )
     }
 }
 
