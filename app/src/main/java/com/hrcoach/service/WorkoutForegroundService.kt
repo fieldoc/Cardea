@@ -89,6 +89,10 @@ class WorkoutForegroundService : LifecycleService() {
         private const val CHANNEL_ID = "workout_media_v2"
         private const val TRACK_POINT_INTERVAL_MS = 5_000L
         private const val AUTO_PAUSE_GRACE_MS = 20_000L
+        // How long the "Strides complete — finish easy" on-screen text lingers
+        // after the final SetComplete event before the normal zone-status
+        // guidance can resume. Matches StridesController's COOLDOWN_BUFFER_SEC.
+        private const val STRIDES_COMPLETE_DISPLAY_SEC = 30L
     }
 
     @Inject
@@ -142,9 +146,11 @@ class WorkoutForegroundService : LifecycleService() {
     private var stridesController: StridesController? = null
     // Phase-aware on-screen text driven by StridesController events. Updated on
     // each event in processTick BEFORE WorkoutState.update so the displayed
-    // guidanceText reflects the current strides phase. Null when controller
-    // is null/Idle/Done — falls through to default zone-status guidance.
+    // guidanceText reflects the current strides phase. Cleared a short cooldown
+    // window after SetComplete so the normal zone-status guidance can resume
+    // for the rest of the run (vs. lingering on "Strides complete" indefinitely).
     private var stridesGuidanceText: String? = null
+    private var stridesCompleteAtSec: Long? = null
 
     private val alertPolicy = AlertPolicy()
     private val coachingEventRouter = CoachingEventRouter()
@@ -352,12 +358,15 @@ class WorkoutForegroundService : LifecycleService() {
             config = workoutConfig,
             initialProfile = adaptiveProfileRepository.getProfile()
         )
-        stridesController = if (workoutConfig.guidanceTag == "strides") {
+        stridesController = if (workoutConfig.guidanceTag == "strides" && workoutTotalSeconds >= 60L) {
             // Total workout duration in minutes drives rep count
             // (20→4, 22→6, 24→8, 26→10, else 5). See StridesController.repsForDuration.
+            // Sub-1-min sessions can't fit a strides block; skip rather than
+            // construct a degenerate controller (which now also requires() > 0).
             StridesController(durationMin = (workoutTotalSeconds / 60L).toInt())
         } else null
         stridesGuidanceText = null
+        stridesCompleteAtSec = null
 
         startupJob?.cancel()
         startupJob = lifecycleScope.launch(Dispatchers.IO) {
@@ -629,6 +638,16 @@ class WorkoutForegroundService : LifecycleService() {
                 is StridesEvent.RepEnd   -> "Easy jog \u2014 recover"
                 is StridesEvent.SetComplete -> "Strides complete \u2014 finish easy"
             }
+            if (ev is StridesEvent.SetComplete) stridesCompleteAtSec = elapsedSeconds
+        }
+        // Clear the lingering "Strides complete \u2014 finish easy" text after a brief
+        // cooldown window. Without this, the strides text stays locked on screen
+        // for the rest of the run (the strides presets are STEADY_STATE with no
+        // auto-stop), suppressing normal zone guidance like SLOW DOWN / SPEED UP.
+        val completedAt = stridesCompleteAtSec
+        if (completedAt != null && elapsedSeconds - completedAt >= STRIDES_COMPLETE_DISPLAY_SEC) {
+            stridesGuidanceText = null
+            stridesCompleteAtSec = null
         }
 
         // Strides phase text is also a "preset quip" for voice-leak purposes \u2014 the per-rep
@@ -1245,6 +1264,7 @@ class WorkoutForegroundService : LifecycleService() {
         adaptiveController = null
         stridesController = null
         stridesGuidanceText = null
+        stridesCompleteAtSec = null
         autoPauseDetector?.reset()
         autoPauseDetector = null
         autoPauseStartMs = 0L

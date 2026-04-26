@@ -25,6 +25,14 @@ import com.hrcoach.domain.model.ZoneStatus
  */
 class StridesController(durationMin: Int) {
 
+    init {
+        // Strides only make sense for a session of meaningful length. Without
+        // this guard, durationMin = 0 (free-run / mis-routed launch) yields
+        // triggerAtSec = 0, firing the announcement on the first tick before
+        // the user has even started running.
+        require(durationMin > 0) { "durationMin must be > 0; got $durationMin" }
+    }
+
     sealed class Phase {
         object Idle : Phase()
         object Work : Phase()

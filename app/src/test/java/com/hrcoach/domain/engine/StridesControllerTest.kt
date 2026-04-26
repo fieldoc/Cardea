@@ -39,6 +39,16 @@ class StridesControllerTest {
         assertEquals(0L, StridesController.triggerAtSec(0))
     }
 
+    @Test(expected = IllegalArgumentException::class)
+    fun `controller rejects zero durationMin`() {
+        StridesController(durationMin = 0)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `controller rejects negative durationMin`() {
+        StridesController(durationMin = -1)
+    }
+
     @Test
     fun `idle stays idle when elapsedSec is below trigger`() {
         val c = StridesController(durationMin = 24)  // trigger = 770
