@@ -1,5 +1,6 @@
 package com.hrcoach.ui.bootcamp
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,6 +54,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -725,7 +727,7 @@ private fun WeekDayPill(day: WeekDayItem, onClick: (() -> Unit)? = null) {
                 text = typeLabel,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.3.sp
+                    letterSpacing = 0.4.sp
                 ),
                 color = if (day.isToday) GradientPink else CardeaTheme.colors.textTertiary,
                 maxLines = 1
@@ -2140,7 +2142,7 @@ private fun TodayHeroSection(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("Delete bootcamp...", color = GradientRed) },
+                            text = { Text("Delete bootcamp...", color = ZoneRed) },
                             onClick = { menuExpanded = false; onEndProgram() }
                         )
                     }
@@ -2172,51 +2174,21 @@ private fun TodayHeroSection(
                         color = CardeaTheme.colors.textSecondary
                     )
                 }
-                // Tier pill — tappable to open TierDetailSheet
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(GradientPink.copy(alpha = 0.12f))
-                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                        .clickable(onClick = onTierClick)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = TierInfo.displayName(uiState.tierIndex),
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = GradientPink
-                    )
-                }
+                // Tier pill — neutral glass + pink dot (one Tier-1 accent rule)
+                HeroPill(
+                    text = TierInfo.displayName(uiState.tierIndex),
+                    dotColor = GradientPink,
+                    onClick = onTierClick
+                )
                 if (uiState.isRecoveryWeek) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(ZoneGreen.copy(alpha = 0.12f))
-                            .border(1.dp, ZoneGreen.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "Recovery",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = ZoneGreen
-                        )
-                    }
+                    HeroPill(text = "Recovery", dotColor = ZoneGreen)
                 }
                 if (uiState.fitnessLevel != FitnessLevel.UNKNOWN) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CardeaTheme.colors.glassHighlight)
-                            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = uiState.fitnessLevel.name.lowercase()
-                                .replaceFirstChar { it.uppercase() },
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
-                            color = CardeaTheme.colors.textSecondary
-                        )
-                    }
+                    HeroPill(
+                        text = uiState.fitnessLevel.name.lowercase()
+                            .replaceFirstChar { it.uppercase() },
+                        dotColor = GradientCyan
+                    )
                 }
             }
 
@@ -2473,6 +2445,36 @@ private fun MetaChip(text: String) {
             .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
+            color = CardeaTheme.colors.textSecondary
+        )
+    }
+}
+
+@Composable
+private fun HeroPill(
+    text: String,
+    dotColor: Color,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(12.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(RoundedCornerShape(50))
+                .background(dotColor)
+        )
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
@@ -3306,8 +3308,18 @@ private fun DeleteConfirmDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Delete bootcamp", color = ZoneRed)
+            OutlinedButton(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, ZoneRed.copy(alpha = 0.4f)),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                    contentColor = ZoneRed
+                )
+            ) {
+                Text(
+                    "Delete bootcamp",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+                )
             }
         },
         dismissButton = {

@@ -364,7 +364,13 @@ private fun CarouselPageWatches() {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        GradientDivider()
+        // Neutral divider — pink dots on the WatchItems above are the only Tier-1 accent on this page.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.4f)
+                .height(1.dp)
+                .background(CardeaTheme.colors.glassBorder)
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
         Text(
