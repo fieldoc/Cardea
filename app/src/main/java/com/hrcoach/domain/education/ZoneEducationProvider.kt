@@ -577,6 +577,26 @@ object ZoneEducationProvider {
         return "${targetLow - bufferBpm}\u2013${targetHigh + bufferBpm} BPM"
     }
 
+    /**
+     * Numeric BPM range for a session type (e.g. "168\u2013176"), no unit suffix.
+     * Returns null when maxHr is unknown. UI surface adds the "bpm" label itself.
+     */
+    fun targetHrRange(
+        rawSessionType: String,
+        maxHr: Int?,
+        restHr: Int?,
+        bufferBpm: Int = 5
+    ): String? {
+        if (maxHr == null) return null
+        val type = runCatching { SessionType.valueOf(rawSessionType) }.getOrNull() ?: return null
+        val zoneId = zoneForSessionType(type)
+        val (lowPct, highPct) = zonePercentages(zoneId)
+        val rest = restHr ?: 0
+        val targetLow = (rest + (maxHr - rest) * lowPct).roundToInt()
+        val targetHigh = (rest + (maxHr - rest) * highPct).roundToInt()
+        return "${targetLow - bufferBpm}\u2013${targetHigh + bufferBpm}"
+    }
+
     private fun zonePercentages(zoneId: ZoneId): Pair<Float, Float> = when (zoneId) {
         ZoneId.ZONE_2 -> 0.60f to 0.70f
         ZoneId.ZONE_3 -> 0.75f to 0.85f

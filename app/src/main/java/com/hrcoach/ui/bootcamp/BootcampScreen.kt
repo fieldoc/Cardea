@@ -72,6 +72,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -2192,33 +2194,36 @@ private fun TodayHeroSection(
                 }
             }
 
-            // ── Program progress bar ────────────────────────────────────────
-            Spacer(modifier = Modifier.height(10.dp))
-            if (uiState.totalWeeks > 0) {
-                val progress = uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
-                val trackColor = CardeaTheme.colors.glassBorder
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp))
-                        .clickable(onClick = onProgressClick)
-                ) {
-                    // Track background
-                    drawRoundRect(
-                        color = trackColor,
-                        size = size,
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
-                    )
-                    // Filled progress
-                    drawRoundRect(
-                        brush = CardeaCtaGradient,
-                        size = size.copy(width = size.width * progress),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
-                    )
+            // ── Program progress bar (skipped on workout days — TodayCard's ring carries it) ──
+            val programProgress = if (uiState.totalWeeks > 0)
+                uiState.absoluteWeek.toFloat() / uiState.totalWeeks.toFloat()
+            else 0f
+            val showLinearBar = uiState.todayState !is TodayState.RunUpcoming
+            if (showLinearBar) {
+                Spacer(modifier = Modifier.height(10.dp))
+                if (uiState.totalWeeks > 0) {
+                    val trackColor = CardeaTheme.colors.glassBorder
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .clickable(onClick = onProgressClick)
+                    ) {
+                        drawRoundRect(
+                            color = trackColor,
+                            size = size,
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+                        )
+                        drawRoundRect(
+                            brush = CardeaCtaGradient,
+                            size = size.copy(width = size.width * programProgress),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(if (showLinearBar) 10.dp else 14.dp))
 
             // ── State-dependent hero content ───────────────────────────────
             when {
@@ -2245,65 +2250,33 @@ private fun TodayHeroSection(
                             ?: today.session.type.name
                                 .lowercase()
                                 .replaceFirstChar { it.uppercase() }
-                        // Session name + duration on one row
+                        val badge = ZoneEducationProvider.forSessionType(
+                            today.session.type.name, ContentDensity.BADGE, dayEpoch = dayEpoch
+                        )
+                        val oneLiner = ZoneEducationProvider.forSessionType(
+                            today.session.type.name, ContentDensity.ONE_LINER, dayEpoch = dayEpoch
+                        )
+                        val targetHr = ZoneEducationProvider.targetHrRange(
+                            rawSessionType = today.session.type.name,
+                            maxHr = uiState.maxHr,
+                            restHr = null
+                        )
+                        TodayCard(
+                            sessionTypeName = today.session.type.name,
+                            sessionLabel = sessionLabel,
+                            minutes = today.session.minutes,
+                            badge = badge,
+                            targetHrRange = targetHr,
+                            oneLiner = oneLiner,
+                            programProgress = programProgress,
+                            ctaScale = ctaScale,
+                            onStartRun = { onRequestSession(today.session) }
+                        )
+                        // Reschedule / Rest-today affordances stay below the card
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = sessionLabel,
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = (-0.5).sp
-                                ),
-                                color = CardeaTheme.colors.textPrimary
-                            )
-                            Text(
-                                text = "${today.session.minutes} min",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
-                                color = CardeaTheme.colors.textSecondary,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                        }
-                        // Zone badge + one-liner description inline
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            val badge = ZoneEducationProvider.forSessionType(
-                                today.session.type.name, ContentDensity.BADGE, dayEpoch = dayEpoch
-                            )
-                            if (badge != null) MetaChip(badge)
-                            ZoneEducationProvider.forSessionType(
-                                today.session.type.name, ContentDensity.ONE_LINER, dayEpoch = dayEpoch
-                            )?.let { oneLiner ->
-                                Text(
-                                    text = oneLiner,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = CardeaTheme.colors.textTertiary,
-                                    maxLines = if (oneLinerExpanded) Int.MAX_VALUE else 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { oneLinerExpanded = !oneLinerExpanded }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        // ctaBreathe / ctaScale hoisted to TodayHeroSection top (rules of hooks)
-                        CardeaButton(
-                            text = "Start run",
-                            onClick = { onRequestSession(today.session) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(48.dp)
-                                .scale(ctaScale),
-                            innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
+                                .padding(top = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             if (onReschedule != null) {
@@ -2480,6 +2453,192 @@ private fun HeroPill(
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
             color = CardeaTheme.colors.textSecondary
         )
+    }
+}
+
+
+/**
+ * Today-card style hero for the run-upcoming state, inspired by the Bootcamp Ultimate spec:
+ * eyebrow + title + subtitle on the left, progress ring on the right, divider, meta cols, CTA.
+ * Uses only data already in BootcampUiState (no new fields fabricated).
+ */
+@Composable
+private fun TodayCard(
+    sessionTypeName: String,
+    sessionLabel: String,
+    minutes: Int,
+    badge: String?,
+    targetHrRange: String?,
+    oneLiner: String?,
+    programProgress: Float,
+    ctaScale: Float,
+    onStartRun: () -> Unit
+) {
+    val ringPercent = (programProgress.coerceIn(0f, 1f) * 100).roundToInt()
+    val ringStroke = 4.dp
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CardeaTheme.colors.glassHighlight)
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+    ) {
+        // Subtle pink ambient in the top-right corner (matches design's today-card::before)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(GradientPink.copy(alpha = 0.10f), Color.Transparent),
+                        center = Offset(Float.POSITIVE_INFINITY, 0f),
+                        radius = 600f
+                    )
+                )
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // ── Top row: eyebrow + title + subtitle  |  progress ring ──────
+                Row(verticalAlignment = Alignment.Top) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "${sessionTypeName.uppercase()} · $minutes MIN",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 1.6.sp
+                            ),
+                            color = GradientPink
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = sessionLabel,
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.3).sp,
+                                lineHeight = 28.sp
+                            ),
+                            color = CardeaTheme.colors.textPrimary
+                        )
+                        val subtitle = when {
+                            targetHrRange != null && badge != null -> "$badge · $targetHrRange bpm"
+                            targetHrRange != null -> "$targetHrRange bpm"
+                            badge != null && oneLiner != null -> "$badge · $oneLiner"
+                            badge != null -> badge
+                            oneLiner != null -> oneLiner
+                            else -> null
+                        }
+                        if (subtitle != null) {
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CardeaTheme.colors.textSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    // Progress ring (program week %)
+                    Box(
+                        modifier = Modifier.size(56.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val stroke = ringStroke.toPx()
+                            // Track
+                            drawArc(
+                                color = Color.White.copy(alpha = 0.06f),
+                                startAngle = 0f,
+                                sweepAngle = 360f,
+                                useCenter = false,
+                                topLeft = Offset(stroke / 2, stroke / 2),
+                                size = Size(size.width - stroke, size.height - stroke),
+                                style = Stroke(width = stroke, cap = StrokeCap.Round)
+                            )
+                            // Filled arc with the brand gradient
+                            drawArc(
+                                brush = CardeaCtaGradient,
+                                startAngle = -90f,
+                                sweepAngle = 360f * programProgress.coerceIn(0f, 1f),
+                                useCenter = false,
+                                topLeft = Offset(stroke / 2, stroke / 2),
+                                size = Size(size.width - stroke, size.height - stroke),
+                                style = Stroke(width = stroke, cap = StrokeCap.Round)
+                            )
+                        }
+                        Text(
+                            text = "${ringPercent}%",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = CardeaTheme.colors.textPrimary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(thickness = 1.dp, color = CardeaTheme.colors.glassBorder)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // ── Meta columns: DURATION · ZONE · TARGET HR ──────────────────
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    MetaCol(label = "DURATION", value = "$minutes", unit = "min", modifier = Modifier.weight(1f))
+                    if (badge != null) {
+                        MetaCol(label = "ZONE", value = badge, unit = null, modifier = Modifier.weight(1f))
+                    }
+                    if (targetHrRange != null) {
+                        MetaCol(label = "TARGET HR", value = targetHrRange, unit = "bpm", modifier = Modifier.weight(1f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                CardeaButton(
+                    text = "Start run",
+                    onClick = onStartRun,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .scale(ctaScale),
+                    innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetaCol(
+    label: String,
+    value: String,
+    unit: String?,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.2.sp
+            ),
+            color = CardeaTheme.colors.textTertiary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = CardeaTheme.colors.textPrimary
+            )
+            if (unit != null) {
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = CardeaTheme.colors.textSecondary,
+                    modifier = Modifier.padding(start = 3.dp, bottom = 2.dp)
+                )
+            }
+        }
     }
 }
 
