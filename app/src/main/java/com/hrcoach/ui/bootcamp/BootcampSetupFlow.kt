@@ -188,13 +188,13 @@ private fun SectionGoal(
                 val isSelected = goal == selectedGoal
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .then(
                             if (isSelected) Modifier.background(CardeaCtaGradient)
                             else Modifier.border(
                                 1.dp,
                                 CardeaTheme.colors.glassBorder,
-                                RoundedCornerShape(20.dp)
+                                RoundedCornerShape(12.dp)
                             )
                         )
                         .clickable { onGoalSelected(goal) }
@@ -292,9 +292,9 @@ private fun SectionAbility(
                 )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(GradientPink.copy(alpha = 0.12f))
-                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                        .border(1.dp, GradientPink.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -510,9 +510,9 @@ private fun SectionDayPicker(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(CardeaTheme.colors.glassHighlight.copy(alpha = 0.5f))
-                .border(1.dp, CardeaTheme.colors.glassBorder.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                .border(1.dp, CardeaTheme.colors.glassBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -670,7 +670,7 @@ private fun DayPickerLegendItem(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CardeaTheme.colors.glassHighlight.copy(alpha = 0.5f))
             .padding(8.dp)
     ) {
