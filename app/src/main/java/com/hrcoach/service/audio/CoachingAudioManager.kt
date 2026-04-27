@@ -347,6 +347,7 @@ class CoachingAudioManager(
      * Always plays regardless of voice verbosity — tones use earconVolume which is independent.
      */
     fun playPauseFeedback(paused: Boolean) {
+        if (currentSettings.voiceVerbosity == VoiceVerbosity.OFF) return
         debugLogger.logLine("LIFECYCLE action=${if (paused) "PAUSE" else "RESUME"}")
         // Banner for pause/resume — users asked "what was that chime?" during pauses.
         // Reuses IN_ZONE_CONFIRM enum to satisfy the event field; this code path does NOT
