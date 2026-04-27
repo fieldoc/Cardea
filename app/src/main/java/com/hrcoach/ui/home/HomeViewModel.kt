@@ -91,7 +91,6 @@ class HomeViewModel @Inject constructor(
             val now = Instant.now().atZone(zone)
             val weekStart = now.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 .toLocalDate().atStartOfDay(zone).toInstant().toEpochMilli()
-            val thisWeek = workouts.count { it.startTime >= weekStart }
 
             val thisWeekWorkouts = workouts.filter { it.startTime >= weekStart }
             val totalDistanceM = thisWeekWorkouts.sumOf { it.totalDistanceMeters.toDouble() }
@@ -123,8 +122,42 @@ class HomeViewModel @Inject constructor(
                 )
             }
             val bootcampTotalWeeks = phaseEngine?.totalWeeks ?: 12
-            val currentAbsoluteWeek = phaseEngine?.absoluteWeek ?: 1
-            val bootcampPercentComplete = currentAbsoluteWeek.toFloat() / bootcampTotalWeeks
+            // Display week clamp: if the engine has rolled forward but the user hasn't
+            // started any session in the new week yet, keep showing the just-finished
+            // (prior) week. Mirrors BootcampViewModel — keeps Home and Training tile in
+            // lockstep through Sunday → Monday rollover. See BootcampViewModel for the
+            // full rationale.
+            val displayAbsoluteWeek: Int = if (activeEnrollment != null && phaseEngine != null) {
+                val currentWeekSessions = bootcampRepository.getSessionsForWeek(
+                    activeEnrollment.id, phaseEngine.absoluteWeek
+                )
+                val anyCurrentStarted = currentWeekSessions.any {
+                    it.status != BootcampSessionEntity.STATUS_SCHEDULED
+                }
+                val lastDone = bootcampRepository.getLastCompletedSession(activeEnrollment.id)
+                if (!anyCurrentStarted && lastDone != null && lastDone.weekNumber < phaseEngine.absoluteWeek) {
+                    lastDone.weekNumber
+                } else {
+                    phaseEngine.absoluteWeek
+                }
+            } else {
+                phaseEngine?.absoluteWeek ?: 1
+            }
+            val bootcampPercentComplete = displayAbsoluteWeek.toFloat() / bootcampTotalWeeks
+
+            // Weekly run count must match the bootcamp ring (3/4 etc.) when enrolled.
+            // Counting WorkoutEntity rows alone diverges from bootcamp's count whenever a
+            // session was marked SKIPPED (e.g. "Rest today") or when a workout's startTime
+            // straddles the Monday boundary differently from its dayOfWeek slot.
+            val thisWeek: Int = if (activeEnrollment != null) {
+                bootcampRepository.getSessionsForWeek(activeEnrollment.id, displayAbsoluteWeek)
+                    .count {
+                        it.status == BootcampSessionEntity.STATUS_COMPLETED ||
+                        it.status == BootcampSessionEntity.STATUS_SKIPPED
+                    }
+            } else {
+                workouts.count { it.startTime >= weekStart }
+            }
 
             val weeklyDistanceTargetKm = if (activeEnrollment != null) {
                 activeEnrollment.targetMinutesPerRun * activeEnrollment.runsPerWeek * 0.15
@@ -206,7 +239,7 @@ class HomeViewModel @Inject constructor(
                 isSessionRunning = isRunning,
                 hasActiveBootcamp = activeEnrollment != null,
                 nextSession = nextSession,
-                currentWeekNumber = currentAbsoluteWeek,
+                currentWeekNumber = displayAbsoluteWeek,
                 sessionStreak = sessionStreak,
                 isNextSessionToday = isNextSessionToday,
                 nextSessionDayLabel = nextSessionDayLabel,
