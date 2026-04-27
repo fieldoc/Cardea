@@ -17,6 +17,7 @@ Load when touching `BootcampRepository`, `BootcampViewModel`, `BootcampScreen`, 
 ## Recovery cadence
 
 - **`PhaseEngine.isRecoveryWeek()`** accepts optional `TuningDirection`. Cadence: EASE_BACK=2w, HOLD/null=3w, PUSH_HARDER=4w. `weeksUntilNextRecovery()` simulates phase transitions (walks `advancePhase()` boundaries); EVERGREEN → distance to week D of the 4-week cycle. All call sites in `BootcampViewModel` pass `fitnessSignals.tuningDirection`.
+- **`WorkoutConfig.isRecoveryWeek`** — set in `BootcampViewModel.buildWorkoutConfig` via `PhaseEngine.isRecoveryWeek(tuningDirection)`, stamped on both preset and free-run `WorkoutConfig.copy(...)` paths. Default `false` for non-bootcamp launches. Consumed by `WorkoutForegroundService.processTick` to gate below-zone alerts (see `audio-pipeline.md`) and by `BootcampScreen` (`RecoveryWeekDisclosure` chip + briefing audio prefix).
 
 ## Date handling
 
