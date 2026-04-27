@@ -341,11 +341,7 @@ class CoachingAudioManager(
         escalationTracker.reset()
     }
 
-    /**
-     * Plays a short transition tone to confirm pause/resume to the runner.
-     * Pause = two descending tones; Resume = two ascending tones.
-     * Always plays regardless of voice verbosity — tones use earconVolume which is independent.
-     */
+    /** Pause = two descending tones; resume = two ascending. Suppressed when `voiceVerbosity == OFF`. */
     fun playPauseFeedback(paused: Boolean) {
         if (currentSettings.voiceVerbosity == VoiceVerbosity.OFF) return
         debugLogger.logLine("LIFECYCLE action=${if (paused) "PAUSE" else "RESUME"}")

@@ -26,7 +26,7 @@ Load when touching `service/audio/`, `service/workout/AlertPolicy.kt`, `service/
 ## Invariants
 
 - **`CoachingAudioManager.skipNextBriefing`** — `@Volatile` companion flag, one-shot. Set by primer-dismiss handlers in `SetupViewModel.dismissPrimerThenProceed` AND `BootcampViewModel.dismissPrimerThenProceed` so the very next `playStartSequence` skips TTS briefing (primer just explained the audio system — briefing on top feels redundant). Cleared on read. This is the canonical cross-layer signal — do not plumb a parameter through Intent/Service layers to replicate.
-- **Pause/resume tones exempt from verbosity** — `playPauseFeedback()` plays regardless. Safety-critical.
+- **Pause/resume tones honor `voiceVerbosity == OFF`** — `playPauseFeedback()` early-returns when verbosity is OFF; otherwise plays at `earconVolume`.
 - **`AudioSettings`:** `earconVolume` and `voiceVolume` independent (0–100).
 - **Verbosity:** OFF silent; MINIMAL = critical/normal only; FULL = all events including informational.
 - **KM splits:** "Kilometer N" (STEADY_STATE/DISTANCE_PROFILE); "Kilometer N. Pace: X minutes Y." (FREE_RUN).
