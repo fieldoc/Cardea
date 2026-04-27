@@ -237,33 +237,7 @@ class BootcampViewModel @Inject constructor(
         val gapStrategy = GapAdvisor.assess(daysSinceLastRun)
         val gapAction = GapAdvisor.action(gapStrategy, enrollment.currentPhaseIndex, enrollment.currentWeekInPhase)
 
-        // ── Display-week clamp ────────────────────────────────────────────────
-        // Completing the Sunday session advances `currentWeekInPhase` immediately,
-        // which jumps `engine.absoluteWeek` ahead while the calendar week hasn't
-        // ended. The screen would then paint NEXT week's day-of-week slots onto
-        // the visible Mon–Sun strip — completed days look "missed" (red "!") and
-        // the ring resets to 0/4 despite the user just finishing the week.
-        //
-        // Heuristic: if the engine's current week has no sessions started yet,
-        // and the user's last completion was in a prior week, the engine has
-        // rolled forward but the user hasn't started the new week yet — keep
-        // displaying the prior (just-finished) week. Calendar math doesn't work
-        // here because sessions can be backdated/migrated, drifting the engine's
-        // week numbering away from strict calendar weeks.
-        val currentEngineWeekSessions = bootcampRepository
-            .getSessionsForWeek(enrollment.id, engine.absoluteWeek)
-        val anyCurrentEngineWeekStarted = currentEngineWeekSessions.any {
-            it.status != BootcampSessionEntity.STATUS_SCHEDULED
-        }
-        val displayEngine = if (
-            !anyCurrentEngineWeekStarted &&
-            lastSession != null &&
-            lastSession.weekNumber < engine.absoluteWeek
-        ) {
-            engine.atAbsoluteWeek(lastSession.weekNumber)
-        } else {
-            engine
-        }
+        val displayEngine = engine
 
         val today = LocalDate.now().dayOfWeek.value
         val preferredDays = enrollment.preferredDays
@@ -1696,30 +1670,5 @@ class BootcampViewModel @Inject constructor(
 private fun BootcampSessionEntity.isStridesSession(): Boolean {
     val pid = presetId
     return pid == "strides_20s" || pid == "zone2_with_strides"
-}
-
-/**
- * Returns a copy of this engine wound to [target] absoluteWeek, walking phase boundaries
- * via the engine's own advancePhase()/copy semantics. Used to clamp the displayed week
- * to the calendar week when the underlying state has rolled past it (Sunday-rollover).
- *
- * - target == current: returns this.
- * - target < current: walks forward from week 1 until reaching target.
- * - target > current: walks forward from current. Stops if graduation would be required.
- */
-private fun PhaseEngine.atAbsoluteWeek(target: Int): PhaseEngine {
-    if (target == absoluteWeek) return this
-    val start = if (target < absoluteWeek) copy(phaseIndex = 0, weekInPhase = 0) else this
-    var cursor = start
-    var safety = 0
-    while (cursor.absoluteWeek < target && safety < 200) {
-        cursor = if (cursor.shouldAdvancePhase()) {
-            cursor.advancePhase() ?: return cursor
-        } else {
-            cursor.copy(weekInPhase = cursor.weekInPhase + 1)
-        }
-        safety++
-    }
-    return cursor
 }
 

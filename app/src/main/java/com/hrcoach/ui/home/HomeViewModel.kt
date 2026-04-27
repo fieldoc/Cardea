@@ -122,33 +122,11 @@ class HomeViewModel @Inject constructor(
                 )
             }
             val bootcampTotalWeeks = phaseEngine?.totalWeeks ?: 12
-            // Display week clamp: if the engine has rolled forward but the user hasn't
-            // started any session in the new week yet, keep showing the just-finished
-            // (prior) week. Mirrors BootcampViewModel — keeps Home and Training tile in
-            // lockstep through Sunday → Monday rollover. See BootcampViewModel for the
-            // full rationale.
-            val displayAbsoluteWeek: Int = if (activeEnrollment != null && phaseEngine != null) {
-                val currentWeekSessions = bootcampRepository.getSessionsForWeek(
-                    activeEnrollment.id, phaseEngine.absoluteWeek
-                )
-                val anyCurrentStarted = currentWeekSessions.any {
-                    it.status != BootcampSessionEntity.STATUS_SCHEDULED
-                }
-                val lastDone = bootcampRepository.getLastCompletedSession(activeEnrollment.id)
-                if (!anyCurrentStarted && lastDone != null && lastDone.weekNumber < phaseEngine.absoluteWeek) {
-                    lastDone.weekNumber
-                } else {
-                    phaseEngine.absoluteWeek
-                }
-            } else {
-                phaseEngine?.absoluteWeek ?: 1
-            }
+            val displayAbsoluteWeek: Int = phaseEngine?.absoluteWeek ?: 1
             val bootcampPercentComplete = displayAbsoluteWeek.toFloat() / bootcampTotalWeeks
 
-            // Weekly run count must match the bootcamp ring (3/4 etc.) when enrolled.
-            // Counting WorkoutEntity rows alone diverges from bootcamp's count whenever a
-            // session was marked SKIPPED (e.g. "Rest today") or when a workout's startTime
-            // straddles the Monday boundary differently from its dayOfWeek slot.
+            // Weekly run count uses bootcamp_sessions (not WorkoutEntity rows) when
+            // enrolled, so SKIPPED sessions still count toward the week.
             val thisWeek: Int = if (activeEnrollment != null) {
                 bootcampRepository.getSessionsForWeek(activeEnrollment.id, displayAbsoluteWeek)
                     .count {
