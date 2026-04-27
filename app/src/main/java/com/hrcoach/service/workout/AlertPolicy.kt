@@ -10,11 +10,11 @@ import com.hrcoach.domain.model.ZoneStatus
  * [alertCooldownSec] between repeats. Cooldown persists across direction flips (ABOVE→BELOW)
  * to prevent spam at the threshold.
  *
- * Two suppression gates are layered on top:
- *  1. **Self-correction** — if HR is moving back toward zone at a clearly intentional rate
- *     (|slope| ≥ SELF_CORRECTION_THRESHOLD_BPM_PER_MIN), suppress the alert because the runner
- *     is already doing the right thing. Pairing SLOW_DOWN earcon + "HR falling" voice felt
- *     contradictory to runners, which is the original complaint that led to this gate.
+ * Suppression gates layered on top:
+ *  1. **Self-correction** (slope) — if HR is moving back toward zone at a clearly intentional
+ *     rate (|slope| ≥ SELF_CORRECTION_THRESHOLD_BPM_PER_MIN), suppress the alert because the
+ *     runner is already doing the right thing. Pairing SLOW_DOWN earcon + "HR falling" voice
+ *     felt contradictory to runners, which is the original complaint that led to this gate.
  *  2. **Walk break** — if pace exceeds WALKING_PACE_MIN_PER_KM for at least
  *     WALKING_SUSTAINED_MS, suppress SPEED_UP (but not SLOW_DOWN — above-zone during a walk
  *     is still a real safety signal). Auto-pause may not trigger for brisk walks, so users
@@ -36,6 +36,25 @@ import com.hrcoach.domain.model.ZoneStatus
  *
  * Both gates respect the existing cooldown — the alert is fully suppressed for this tick, and
  * AlertPolicy's timer moves on. The next alert window reopens after [alertCooldownSec].
+ *
+ * **SLOW_DOWN-only bypasses (added 2026-04-26):**
+ *  - **First-alert per excursion** — slope-suppression is skipped for the FIRST SLOW_DOWN of
+ *    each excursion. Rationale: the slope gate assumes the runner is correcting *because they
+ *    were told*. Until the first alert, any falling slope is coincidental, not corrective.
+ *    Real-run failure mode that triggered this: 13 minutes above zone, hr 162→173, no SLOW_DOWN
+ *    fired because slope was −2 to −4 the whole time.
+ *  - **Force-fire after 2× cooldown** — if SLOW_DOWN keeps getting slope-suppressed while the
+ *    runner stays above zone, fire one anyway every (FORCE_REALERT_COOLDOWN_FACTOR × cooldown)
+ *    of silence. Sustained out-of-zone shouldn't go silent forever.
+ *  - **IN_ZONE grace (IN_ZONE_GRACE_SEC)** — a brief dip into zone (≤3s) doesn't end the
+ *    excursion; the next ABOVE tick is still the same excursion (preserves the "first alert
+ *    already fired" flag and the audio escalation tier — `onResetEscalation` is held until
+ *    grace fully elapses). Without grace, a 1-tick oscillation would re-arm first-alert
+ *    bypass on every tick and reset audio aggressiveness mid-problem.
+ *
+ * SPEED_UP is intentionally NOT given these bypasses. Above-zone is always a real overshoot;
+ * below-zone during walk or warmup is expected behavior (warmup's purpose is to climb up to
+ * zone). The asymmetry is principled, not an oversight.
  */
 class AlertPolicy {
     private var outOfZoneSince: Long = 0L
@@ -48,11 +67,32 @@ class AlertPolicy {
     // for WALKING_SUSTAINED_MS, so a single slow sample doesn't silence a real alert.
     private var walkingSince: Long = 0L
 
+    // SLOW_DOWN bypass state (added 2026-04-26). All three are SLOW_DOWN-only — SPEED_UP
+    // does not consult them.
+    //
+    // hasAlertedThisExcursion: flips true on the FIRST onAlert(SLOW_DOWN) of an excursion.
+    //   Clears only after IN_ZONE has been sustained for IN_ZONE_GRACE_SEC. While true,
+    //   slope-suppression applies normally; while false, slope-suppression is bypassed.
+    //
+    // inZoneSince: timestamp of the first IN_ZONE/NO_DATA tick of the current grace window;
+    //   0L when out-of-zone or when grace has fully elapsed and state was reset. Out-of-zone
+    //   ticks zero this so a future IN_ZONE entry starts a fresh grace window.
+    //
+    // lastFiredAlertTimeMs: distinct from lastAlertTime — only updated when onAlert is
+    //   actually invoked. Drives the 2×-cooldown force-fire timer; using lastAlertTime would
+    //   reset the window every time slope-suppression debounces, defeating the safety net.
+    private var hasAlertedThisExcursion: Boolean = false
+    private var inZoneSince: Long = 0L
+    private var lastFiredAlertTimeMs: Long = 0L
+
     fun reset() {
         outOfZoneSince = 0L
         lastAlertTime = 0L
         lastOutOfZoneStatus = null
         walkingSince = 0L
+        hasAlertedThisExcursion = false
+        inZoneSince = 0L
+        lastFiredAlertTimeMs = 0L
     }
 
     fun handle(
@@ -71,15 +111,36 @@ class AlertPolicy {
         // existing test behavior — elapsedSeconds defaults to a large value so warmup is never
         // "active" unless callers thread it through.
         elapsedSeconds: Long = Long.MAX_VALUE,
-        warmupGraceSec: Int = 0
+        warmupGraceSec: Int = 0,
+        // Added 2026-04-26. IN_ZONE grace window — see class kdoc. Default matches the
+        // companion constant so callers don't have to thread a value; tests override.
+        inZoneGraceSec: Int = IN_ZONE_GRACE_SEC
     ) {
         if (status == ZoneStatus.IN_ZONE || status == ZoneStatus.NO_DATA) {
-            outOfZoneSince = 0L
-            lastOutOfZoneStatus = null
-            walkingSince = 0L
-            onResetEscalation()
+            // Grace gate: a brief IN_ZONE blip is treated as still-in-excursion. Only after
+            // HR has been IN_ZONE for inZoneGraceSec do we fully reset state (including
+            // hasAlertedThisExcursion, walkingSince, and the audio escalation tier via
+            // onResetEscalation). Pre-2026-04-26 this branch reset everything on the very
+            // first IN_ZONE tick — which let a 1-tick oscillation (a) re-trigger the
+            // first-alert bypass repeatedly and (b) drop audio back to tier-1 mid-problem.
+            if (inZoneSince == 0L) inZoneSince = nowMs
+            val graceMs = inZoneGraceSec * 1_000L
+            if (nowMs - inZoneSince >= graceMs) {
+                outOfZoneSince = 0L
+                lastOutOfZoneStatus = null
+                walkingSince = 0L
+                hasAlertedThisExcursion = false
+                lastFiredAlertTimeMs = 0L
+                inZoneSince = 0L
+                onResetEscalation()
+            }
+            // lastAlertTime intentionally preserved either way — cooldown still carries
+            // across true zone returns, matching the existing direction-flip property.
             return
         }
+        // Out-of-zone tick: any pending grace window is invalidated. The next IN_ZONE entry
+        // starts a fresh grace timer.
+        inZoneSince = 0L
 
         // Walk-break observational tracking — runs on EVERY out-of-zone tick (even the first,
         // before the status-flip early-return, and during the delay/cooldown windows), so the
@@ -115,7 +176,20 @@ class AlertPolicy {
                 // phrasing threshold). The phrasing threshold can be tripped by EMA residual for
                 // 10–15s after a reversal; the alert-suppression threshold is stricter so we only
                 // silence the nag when the runner is unambiguously correcting.
-                if (hrSlopeBpmPerMin <= -SELF_CORRECTION_THRESHOLD_BPM_PER_MIN) {
+                //
+                // Two SLOW_DOWN-only bypasses (2026-04-26) skip slope-suppression:
+                //  (a) FIRST alert of the excursion — runner can't be intentionally correcting
+                //      something they haven't been told about; coincidental falling slope
+                //      shouldn't hide the cue.
+                //  (b) FORCE-FIRE after 2× cooldown of silence — sustained above-zone shouldn't
+                //      go silent indefinitely just because slope keeps trending down.
+                val cooldownMs = alertCooldownSec * 1_000L
+                val firstAlertBypass = !hasAlertedThisExcursion
+                val forceFireBypass = lastFiredAlertTimeMs > 0L &&
+                    (nowMs - lastFiredAlertTimeMs) >= FORCE_REALERT_COOLDOWN_FACTOR * cooldownMs
+                val slopeBypass = firstAlertBypass || forceFireBypass
+
+                if (hrSlopeBpmPerMin <= -SELF_CORRECTION_THRESHOLD_BPM_PER_MIN && !slopeBypass) {
                     // DEBOUNCE: advance lastAlertTime on suppression so the next alert window
                     // reopens after cooldownSec, NOT on the very next tick if slope eases. Without
                     // this, sustained self-correction silenced alerts forever (while slope stayed
@@ -126,9 +200,15 @@ class AlertPolicy {
                     return
                 }
                 onAlert(CoachingEvent.SLOW_DOWN, guidanceText)
+                hasAlertedThisExcursion = true
+                lastFiredAlertTimeMs = nowMs
             }
             ZoneStatus.BELOW_ZONE -> {
                 // Suppress SPEED_UP if HR is already rising fast enough (mirror of ABOVE).
+                // No first-alert bypass and no force-fire here: warmup's purpose is to climb
+                // up to zone, so below-zone during it is the expected/intended state, and a
+                // walk is a deliberate user choice. ABOVE-zone is a genuine overshoot that
+                // SLOW_DOWN already lacks these gates for — the asymmetry is principled.
                 if (hrSlopeBpmPerMin >= SELF_CORRECTION_THRESHOLD_BPM_PER_MIN) {
                     lastAlertTime = nowMs  // debounce — see ABOVE branch
                     return
@@ -152,6 +232,7 @@ class AlertPolicy {
                     return
                 }
                 onAlert(CoachingEvent.SPEED_UP, guidanceText)
+                lastFiredAlertTimeMs = nowMs
             }
             else -> Unit
         }
@@ -175,5 +256,19 @@ class AlertPolicy {
         // below-zone alert. TUNING: 30s matches the default alertDelaySec — a runner who genuinely
         // slows to a walk for 30s has made a choice, not a mistake.
         const val WALKING_SUSTAINED_MS: Long = 30_000L
+
+        // How long HR must remain IN_ZONE / NO_DATA before AlertPolicy considers the excursion
+        // over and resets the per-excursion bypass state. Set short so the system feels
+        // responsive when the runner does genuinely return; long enough to absorb a 1-tick
+        // oscillation around the threshold. TUNING: raise to 5–10s if oscillating runners get
+        // re-triggered too often; drop below 3s only if recoveries feel slow.
+        const val IN_ZONE_GRACE_SEC: Int = 3
+
+        // Multiplier on alertCooldownSec for the SLOW_DOWN duration safety-net. After the first
+        // SLOW_DOWN of an excursion fires, slope-suppression silences subsequent alerts; once
+        // (factor × cooldown) has elapsed since the last fired alert, force-fire one regardless
+        // of slope. TUNING: 2 means a sustained-above runner hears one alert per ~60s instead
+        // of going silent; raise for less interruption, lower for more frequent reminders.
+        const val FORCE_REALERT_COOLDOWN_FACTOR: Int = 2
     }
 }
