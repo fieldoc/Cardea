@@ -510,7 +510,7 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
         // ---- Briefing text builders (carried over from TtsBriefingPlayer) ----
 
         internal fun buildBriefingText(config: WorkoutConfig): String {
-            return when (config.mode) {
+            val body = when (config.mode) {
                 WorkoutMode.STEADY_STATE -> buildSteadyStateBriefing(config)
                 WorkoutMode.DISTANCE_PROFILE -> buildSegmentedBriefing(config)
                 WorkoutMode.FREE_RUN -> {
@@ -521,6 +521,11 @@ class VoicePlayer(context: Context, private val debug: TtsDebugLogger? = null) {
                         "Free run. No heart rate target. Enjoy your run."
                     }
                 }
+            }
+            return if (config.isRecoveryWeek) {
+                "Recovery week. Run at your own pace — I won't ask you to speed up today. $body"
+            } else {
+                body
             }
         }
 

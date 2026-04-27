@@ -2418,6 +2418,13 @@ private fun TodayHeroSection(
                         val weekProgress = if (plannedThisWeek > 0)
                             doneThisWeek.toFloat() / plannedThisWeek.toFloat()
                         else 0f
+                        if (uiState.isRecoveryWeek) {
+                            RecoveryWeekDisclosure(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 10.dp)
+                            )
+                        }
                         TodayCard(
                             sessionTypeName = today.session.type.name,
                             sessionLabel = sessionLabel,
@@ -2610,6 +2617,31 @@ private fun HeroPill(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
             color = CardeaTheme.colors.textSecondary
+        )
+    }
+}
+
+@Composable
+private fun RecoveryWeekDisclosure(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(ZoneGreen.copy(alpha = 0.12f))
+            .border(1.dp, ZoneGreen.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(50))
+                .background(ZoneGreen)
+        )
+        Text(
+            text = "Recovery week · easy run · no speed-up cues",
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+            color = CardeaTheme.colors.textPrimary
         )
     }
 }
