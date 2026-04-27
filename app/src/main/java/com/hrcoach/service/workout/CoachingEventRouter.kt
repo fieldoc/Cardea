@@ -131,6 +131,10 @@ class CoachingEventRouter {
         // legacy test callers that don't thread the config-derived value through. WFS passes
         // [WorkoutConfig.effectiveWarmupGraceSec].
         warmupGraceSec: Int = 90,
+        // Suppress below-direction PREDICTIVE_WARNING in cool-down / recovery-week contexts.
+        // Above-direction predictive remains active — overshoot during these contexts is the
+        // genuine risk.
+        suppressBelowPredictive: Boolean = false,
         emitEvent: (CoachingEvent, String?) -> Unit
     ) {
         if (wasHrConnected && !connected) {
@@ -223,12 +227,15 @@ class CoachingEventRouter {
             predictiveArmed = true
         }
 
+        val predictiveDirectionAllowed = !(suppressBelowPredictive && projectedBelow)
+
         if (zoneStatus == ZoneStatus.IN_ZONE &&
             adaptiveResult?.hasProjectionConfidence == true &&
             projectedDrift &&
             slopeMatchesDrift &&
             predictiveArmed &&
             warmupComplete &&
+            predictiveDirectionAllowed &&
             nowMs - lastPredictiveWarningTime >= PREDICTIVE_WARNING_COOLDOWN_MS
         ) {
             emitEvent(CoachingEvent.PREDICTIVE_WARNING, guidance)

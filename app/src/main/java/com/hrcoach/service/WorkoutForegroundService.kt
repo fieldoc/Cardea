@@ -722,6 +722,8 @@ class WorkoutForegroundService : LifecycleService() {
             // that could emit PREDICTIVE_WARNING below.
             coachingAudioManager?.setHrSlope(adaptiveResult?.hrSlopeBpmPerMin ?: 0f)
             val warmupGraceSec = workoutConfig.effectiveWarmupGraceSec()
+            val suppressBelow = workoutConfig.isRecoveryWeek ||
+                workoutConfig.isCooldownAtElapsed(elapsedSeconds)
             coachingEventRouter.route(
                 workoutConfig = workoutConfig,
                 connected = tick.connected,
@@ -733,6 +735,7 @@ class WorkoutForegroundService : LifecycleService() {
                 nowMs = nowMs,
                 distanceUnit = sessionDistanceUnit,
                 warmupGraceSec = warmupGraceSec,
+                suppressBelowPredictive = suppressBelow,
                 emitEvent = { event, eventGuidance ->
                     val pace = adaptiveResult?.currentPaceMinPerKm
                     coachingAudioManager?.fireEvent(event, eventGuidance, paceMinPerKm = pace)
@@ -769,7 +772,8 @@ class WorkoutForegroundService : LifecycleService() {
                 hrSlopeBpmPerMin = adaptiveResult?.hrSlopeBpmPerMin ?: 0f,
                 currentPaceMinPerKm = adaptiveResult?.currentPaceMinPerKm,
                 elapsedSeconds = elapsedSeconds,
-                warmupGraceSec = warmupGraceSec
+                warmupGraceSec = warmupGraceSec,
+                suppressSpeedUp = suppressBelow
             )
         }
 

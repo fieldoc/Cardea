@@ -83,6 +83,8 @@ class BootcampViewModel @Inject constructor(
     private var welcomeBackDismissed = false
     private var illnessPromptSnoozedUntilMs = 0L
     @Volatile private var _pendingTierDemotedMessage: String? = null
+    @Volatile private var currentEnrollment: BootcampEnrollmentEntity? = null
+    @Volatile private var currentTuningDirection: TuningDirection = TuningDirection.HOLD
     private var loadJob: Job? = null
     private var bleCollectJob: Job? = null
     private var scanTimeoutJob: Job? = null
@@ -215,6 +217,8 @@ class BootcampViewModel @Inject constructor(
 
         val fitnessSignals = FitnessSignalEvaluator.evaluate(profile, recentMetrics)
         val fitnessLevel = FitnessEvaluator.assess(profile, recentMetrics)
+        currentEnrollment = enrollment
+        currentTuningDirection = fitnessSignals.tuningDirection
         val illnessFlag = fitnessSignals.illnessFlag && System.currentTimeMillis() >= illnessPromptSnoozedUntilMs
         val tierPrompt = resolveTierPromptDirection(
             goal = goal,
@@ -1408,6 +1412,15 @@ class BootcampViewModel @Inject constructor(
     private fun buildWorkoutConfig(session: PlannedSession, maxHr: Int): String {
         val restHr = adaptiveProfileRepository.getProfile().hrRest?.toInt()
             ?: com.hrcoach.domain.model.defaultRestHr(userProfileRepository.getAge())
+        val recovery = currentEnrollment?.let {
+            PhaseEngine(
+                goal = BootcampGoal.valueOf(it.goalType),
+                phaseIndex = it.currentPhaseIndex,
+                weekInPhase = it.currentWeekInPhase,
+                runsPerWeek = it.runsPerWeek,
+                targetMinutes = it.targetMinutesPerRun
+            ).isRecoveryWeek(currentTuningDirection)
+        } ?: false
         val presetId = session.presetId
         if (presetId != null) {
             val preset = com.hrcoach.domain.preset.PresetLibrary.ALL.firstOrNull { it.id == presetId }
@@ -1419,7 +1432,8 @@ class BootcampViewModel @Inject constructor(
                     sessionLabel = config.sessionLabel
                         ?: com.hrcoach.domain.bootcamp.SessionType.displayLabelForPreset(presetId)
                         ?: session.type.name.lowercase().replaceFirstChar { it.uppercase() },
-                    bootcampWeekNumber = session.weekNumber
+                    bootcampWeekNumber = session.weekNumber,
+                    isRecoveryWeek = recovery
                 )
                 return com.hrcoach.util.JsonCodec.gson.toJson(enriched)
             }
@@ -1431,7 +1445,8 @@ class BootcampViewModel @Inject constructor(
                 mode = com.hrcoach.domain.model.WorkoutMode.FREE_RUN,
                 plannedDurationMinutes = session.minutes,
                 sessionLabel = label,
-                bootcampWeekNumber = session.weekNumber
+                bootcampWeekNumber = session.weekNumber,
+                isRecoveryWeek = recovery
             )
         )
     }

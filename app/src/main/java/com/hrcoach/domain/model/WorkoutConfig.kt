@@ -26,6 +26,8 @@ data class WorkoutConfig(
     val sessionLabel: String? = null,
     /** Bootcamp week number — for display only on the active workout screen. */
     val bootcampWeekNumber: Int? = null,
+    /** True when this is a bootcamp recovery week — alert layer suppresses below-zone cues. */
+    val isRecoveryWeek: Boolean = false,
     /** Tag for special guidance during workout (e.g. "strides" triggers stride protocol text). */
     val guidanceTag: String? = null
 ) {
@@ -112,6 +114,11 @@ data class WorkoutConfig(
             return first.durationSeconds
         }
         return warmupGraceSec
+    }
+
+    fun isCooldownAtElapsed(elapsedSeconds: Long): Boolean {
+        val seg = segmentAtElapsed(elapsedSeconds)?.second ?: return false
+        return seg.label?.contains("cool", ignoreCase = true) == true
     }
 
     fun targetHrForMixed(elapsedSeconds: Long, distanceMeters: Float): Int? {

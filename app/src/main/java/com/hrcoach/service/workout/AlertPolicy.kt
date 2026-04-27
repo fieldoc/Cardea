@@ -114,7 +114,10 @@ class AlertPolicy {
         warmupGraceSec: Int = 0,
         // Added 2026-04-26. IN_ZONE grace window — see class kdoc. Default matches the
         // companion constant so callers don't have to thread a value; tests override.
-        inZoneGraceSec: Int = IN_ZONE_GRACE_SEC
+        inZoneGraceSec: Int = IN_ZONE_GRACE_SEC,
+        // SPEED_UP suppression for contexts where below-zone HR is the goal (cool-down
+        // segment, recovery week). SLOW_DOWN remains active in both contexts.
+        suppressSpeedUp: Boolean = false
     ) {
         if (status == ZoneStatus.IN_ZONE || status == ZoneStatus.NO_DATA) {
             // Grace gate: a brief IN_ZONE blip is treated as still-in-excursion. Only after
@@ -204,6 +207,10 @@ class AlertPolicy {
                 lastFiredAlertTimeMs = nowMs
             }
             ZoneStatus.BELOW_ZONE -> {
+                if (suppressSpeedUp) {
+                    lastAlertTime = nowMs
+                    return
+                }
                 // Suppress SPEED_UP if HR is already rising fast enough (mirror of ABOVE).
                 // No first-alert bypass and no force-fire here: warmup's purpose is to climb
                 // up to zone, so below-zone during it is the expected/intended state, and a
