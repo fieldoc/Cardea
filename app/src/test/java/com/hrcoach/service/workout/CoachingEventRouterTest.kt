@@ -436,7 +436,8 @@ class CoachingEventRouterTest {
         router.reset(workoutStartMs = 1L)  // non-zero baseline so the router's "unset" branch doesn't fire
         val events = mutableListOf<Pair<CoachingEvent, String?>>()
         routeTick(router, ZoneStatus.IN_ZONE, 1L, events = events, adaptiveResult = inZoneTick(slope = 0f))
-        routeTick(router, ZoneStatus.IN_ZONE, 180_001L, events = events, adaptiveResult = inZoneTick(slope = 1.0f))
+        // 2.0 > IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN (1.5) — gate engaged.
+        routeTick(router, ZoneStatus.IN_ZONE, 180_001L, events = events, adaptiveResult = inZoneTick(slope = 2.0f))
         assertEquals(0, events.count { it.first == CoachingEvent.IN_ZONE_CONFIRM })
     }
 

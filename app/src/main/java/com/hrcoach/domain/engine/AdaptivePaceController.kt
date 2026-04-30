@@ -369,10 +369,11 @@ class AdaptivePaceController(
         confidence: ProjectionConfidence
     ): String {
         // Phrasing format: "[current zone state] - [HR trend]" or "[zone] - [action]".
-        // SLOPE_THRESHOLD: |hrSlopeBpmPerMin| >= 0.8 bpm/min (EMA 0.60 prev / 0.40 instant).
-        //   TUNING: 0.8 was chosen as "noticeable drift, not noise." EMA residual persists
-        //   ~10–15 s after HR reverses; phrasing can be briefly stale. Raise to 1.2f to be
-        //   more conservative (fewer trend callouts), lower to 0.5f to surface earlier.
+        // SLOPE_THRESHOLD: |hrSlopeBpmPerMin| >= SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN (1.5).
+        //   See companion-object kdoc for the rationale. Aligned with AlertPolicy's
+        //   SELF_CORRECTION_THRESHOLD_BPM_PER_MIN so phrasing and suppression agree on what
+        //   "HR is correcting" means — eliminates the contradictory "alert + 'HR falling'"
+        //   pairing that was happening in the EMA-residual band (0.8 ≤ |slope| < 1.5).
         // MEDIUM_VS_HIGH: uses distinct verbs (trending/climbing, trending/dropping) rather
         //   than a single-syllable modifier so the runner can actually hear the confidence tier.
         // PACE_TREND_BIAS: historically appended "This pace usually runs high/low" as a
@@ -381,13 +382,13 @@ class AdaptivePaceController(
         //   used for projectedHr computation at the call site (line 167).
         return when (actualZone) {
             ZoneStatus.ABOVE_ZONE -> {
-                if (hrSlopeBpmPerMin <= -0.8f) "Above zone - HR falling"
-                else                           "Above zone - ease off now"
+                if (hrSlopeBpmPerMin <= -SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN) "Above zone - HR falling"
+                else                                                          "Above zone - ease off now"
             }
 
             ZoneStatus.BELOW_ZONE -> {
-                if (hrSlopeBpmPerMin >= 0.8f) "Below zone - HR rising"
-                else                          "Below zone - pick up pace now"
+                if (hrSlopeBpmPerMin >= SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN) "Below zone - HR rising"
+                else                                                         "Below zone - pick up pace now"
             }
 
             ZoneStatus.NO_DATA -> "Searching for HR signal"
@@ -398,8 +399,8 @@ class AdaptivePaceController(
                 // for first-session users who'd otherwise get zero warning ahead of zone exit.
                 if (confidence == ProjectionConfidence.LOW) {
                     when {
-                        hrSlopeBpmPerMin <= -0.8f -> "In zone - HR falling"
-                        hrSlopeBpmPerMin >= 0.8f -> "In zone - HR rising"
+                        hrSlopeBpmPerMin <= -SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN -> "In zone - HR falling"
+                        hrSlopeBpmPerMin >= SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN -> "In zone - HR rising"
                         else -> "Learning your patterns - hold steady"
                     }
                 } else {
@@ -416,8 +417,8 @@ class AdaptivePaceController(
                         }
                         else -> {
                             when {
-                                hrSlopeBpmPerMin <= -0.8f -> "In zone - HR falling"
-                                hrSlopeBpmPerMin >= 0.8f -> "In zone - HR rising"
+                                hrSlopeBpmPerMin <= -SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN -> "In zone - HR falling"
+                                hrSlopeBpmPerMin >= SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN -> "In zone - HR rising"
                                 else -> "Pace looks good - hold steady"
                             }
                         }
@@ -514,5 +515,25 @@ class AdaptivePaceController(
             }
         }
         return merged
+    }
+
+    companion object {
+        // Slope magnitude (bpm/min) at or above which buildGuidance phrases the trend
+        // explicitly ("HR falling" / "HR rising") rather than direction-only ("ease off now"
+        // / "pick up pace now"). Same threshold gates the IN_ZONE_CONFIRM slope skip in
+        // CoachingEventRouter, which references this constant.
+        //
+        // TUNING: 1.5 bpm/min. Aligned intentionally with
+        // AlertPolicy.SELF_CORRECTION_THRESHOLD_BPM_PER_MIN — phrasing and alert-suppression
+        // share one definition of "HR is meaningfully correcting." Below this magnitude,
+        // slope is dominated by EMA residual (60/40 blend; 10–15 s decay after a reversal),
+        // so older 0.8 threshold produced false "HR falling" callouts when HR was actually
+        // steady or climbing — see the 2026-04-28 run log: HR 160→169 over 30 s read as
+        // slope -0.9, triggering "HR falling" while HR was unmistakably rising.
+        //
+        // Raise to 2.0 for stricter trend phrasing (only call out clear movement); lower to
+        // 1.0 to surface earlier — but be aware that anything below 1.5 reintroduces the
+        // alert+phrasing contradiction in the EMA-residual band.
+        const val SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN: Float = 1.5f
     }
 }

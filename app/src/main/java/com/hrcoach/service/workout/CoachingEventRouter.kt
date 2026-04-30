@@ -47,9 +47,12 @@ class CoachingEventRouter {
 
         // IN_ZONE_CONFIRM is skipped when HR is actively moving (|slope| ≥ this), because
         // a reassuring chime + "HR falling" voice reads as a mixed signal. The 3-min timer is
-        // NOT reset — we just skip this tick and reassess next tick. TUNING: 0.8 matches
-        // buildGuidance's phrasing threshold for symmetry.
-        const val IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN: Float = 0.8f
+        // NOT reset — we just skip this tick and reassess next tick. Tied by reference to
+        // AdaptivePaceController.SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN so the gate fires on
+        // exactly the same condition that flips phrasing from "hold steady" to "HR rising/
+        // falling" — preserving the original symmetry intent across the threshold change.
+        const val IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN: Float =
+            AdaptivePaceController.SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN
 
         // PREDICTIVE_WARNING tuning (2026-04-22, after the FULL-verbosity sim exposed 33 PWs in a
         // single 20-min run — same "HR climbing - ease off slightly" every ~60s while HR was held

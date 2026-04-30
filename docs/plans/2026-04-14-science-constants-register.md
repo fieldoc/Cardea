@@ -177,10 +177,10 @@ Valid `Source` values:
 - **File:** `app/src/main/java/com/hrcoach/service/workout/AlertPolicy.kt` (`SELF_CORRECTION_THRESHOLD_BPM_PER_MIN`)
 - **Value:** `1.5f` bpm/min
 - **Source:** internal-rationale
-- **Citation:** Code review 2026-04-17; in-code TUNING comment. Deliberately stricter than the buildGuidance phrasing threshold (0.8 bpm/min) because the phrasing threshold can be tripped by EMA residual for 10–15 s after HR reverses; the alert-suppression threshold must only fire when the runner is unambiguously correcting.
+- **Citation:** Code review 2026-04-17; in-code TUNING comment. As of 2026-04-29, aligned with the buildGuidance phrasing threshold (`AdaptivePaceController.SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN = 1.5`) so phrasing and suppression share one definition of "HR is meaningfully correcting." Below 1.5 the slope is dominated by EMA residual (60/40 blend; 10–15 s decay after a reversal); only fires above this when the runner is unambiguously correcting.
 - **Effect if wrong:** Too low (<1.0): missed SPEED_UP/SLOW_DOWN alerts during EMA residual windows when HR is actually stable or reversing → runner stays drifted, no cue. Too high (>2.5): suppression rarely engages, runner keeps hearing contradictory "slow down" earcons when already slowing → original complaint re-emerges.
 - **Debounce coupling:** when suppression triggers, `lastAlertTime = nowMs` is set, which means the next alert window opens `alertCooldownSec` later. Without that debounce, sustained suppression would either silence alerts for the entire above-zone period or fire back-to-back the instant slope eased.
-- **Last reviewed:** 2026-04-17
+- **Last reviewed:** 2026-04-29
 
 ### AlertPolicy walking-pace threshold
 - **File:** `app/src/main/java/com/hrcoach/service/workout/AlertPolicy.kt` (`WALKING_PACE_MIN_PER_KM`)
@@ -198,13 +198,21 @@ Valid `Source` values:
 - **Effect if wrong:** Too short (<15s): traffic-light stops trigger SPEED_UP suppression that persists into resumed running. Too long (>60s): real walk breaks go unsuppressed for half the walk.
 - **Last reviewed:** 2026-04-17
 
+### buildGuidance phrasing threshold
+- **File:** `app/src/main/java/com/hrcoach/domain/engine/AdaptivePaceController.kt` (`SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN`)
+- **Value:** `1.5f` bpm/min
+- **Source:** internal-rationale
+- **Citation:** 2026-04-29 — raised from 0.8 to 1.5 after a real-run TTS log (run_20260428_181316.log) showed all four SLOW_DOWN alerts phrased "Above zone - HR falling" while HR was actually steady or rising. The 0.8 threshold was tripped by EMA residual for 10–15 s after any brief slowdown, even when HR had already resumed climbing (e.g. HR 160→169 over 30 s read as slope -0.9). Aligned with `AlertPolicy.SELF_CORRECTION_THRESHOLD_BPM_PER_MIN` so phrasing and suppression agree on what "HR is correcting" means; eliminates the contradictory "alert + 'HR falling'" pairing in the 0.8–1.5 EMA-residual band.
+- **Effect if wrong:** Too low (<1.0): "HR falling/rising" phrasing fires during EMA residual when HR is actually steady or reversing — original complaint. Too high (>2.5): trend phrasing only surfaces on dramatic motion, runner loses the early-warning value of "HR rising" while in zone.
+- **Last reviewed:** 2026-04-29
+
 ### IN_ZONE_CONFIRM slope gate
 - **File:** `app/src/main/java/com/hrcoach/service/workout/CoachingEventRouter.kt` (`IN_ZONE_CONFIRM_SLOPE_GATE_BPM_PER_MIN`)
-- **Value:** `0.8f` bpm/min
+- **Value:** references `AdaptivePaceController.SLOPE_PHRASING_THRESHOLD_BPM_PER_MIN` (currently `1.5f` bpm/min)
 - **Source:** internal-rationale
-- **Citation:** Code review 2026-04-17; in-code TUNING comment. Matches the buildGuidance phrasing threshold for symmetry — if guidance would read "In zone - HR rising/falling" (slope ≥ 0.8), don't play the reassurance cue because the earcon "all good" + voice "HR falling" is a mixed signal.
-- **Effect if wrong:** Too low (<0.5): confirms fire less often, runner feels starved for reassurance on noisy HR. Too high (>1.5): confirms routinely pair with active-slope phrasing, reintroducing the mixed-signal problem.
-- **Last reviewed:** 2026-04-17
+- **Citation:** Code review 2026-04-17; in-code TUNING comment. Tied by reference (not a separate literal) to the buildGuidance phrasing threshold so the gate fires on exactly the same condition that flips phrasing from "hold steady" to "HR rising/falling" — preserves the original symmetry intent through the 2026-04-29 threshold raise.
+- **Effect if wrong:** Too low (<1.0): confirms fire less often, runner feels starved for reassurance on noisy HR. Too high (>2.5): confirms routinely pair with active-slope phrasing, reintroducing the mixed-signal problem.
+- **Last reviewed:** 2026-04-29
 
 ### IN_ZONE_CONFIRM adaptive cadence (ConfirmCadence enum)
 - **File:** `app/src/main/java/com/hrcoach/domain/model/AudioSettings.kt` (`ConfirmCadence` enum)
