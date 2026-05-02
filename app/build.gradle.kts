@@ -17,8 +17,8 @@ android {
         applicationId = "com.hrcoach"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.9.1"
+        versionCode = 12
+        versionName = "0.10.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -33,7 +33,7 @@ android {
         debug {
             firebaseAppDistribution {
                 groups = "testers"
-                releaseNotes = "v0.9.1: Audio reliability hardening + UI polish. AUDIO: Two new safeguards in the voice pipeline. (1) speakEvent's watchdog → priority-gate → state-set → speak sequence is now serialized under a single lock — previously two cues landing in the same window after a stalled utterance could both pass the watchdog and silently override each other inside TTS. (2) speakBriefing now has its own 30-second watchdog so a dropped briefing onDone callback can no longer wedge the next workout's startup forever — on timeout we stop TTS, complete the deferred, and let the run begin. Earlier in 0.9.1: zone2 preset 'Easy pace builds your aerobic engine' string no longer leaks into RETURN_TO_ZONE / PREDICTIVE_WARNING voice (computed separate voiceGuidance at WFS, kept the on-screen text untouched); FULL verbosity reliably speaks tier-1 zone alerts again (the old 'gradual escalation' assumption broke under oscillating runners). HOME: Polish pass with tonal CTA and rebalanced hierarchy; iteration 2 design cleanup. TRAINING: New segmented Bootcamp / Free Run tab. Various smaller AI-audit fixes."
+                releaseNotes = "v0.10.0: Home recognizes bootcamp lifecycle. Graduating a race goal now lands on a triumph hero (weeks/sessions/km earned) with a path to Cardio Health (tier-aware — keeps you at your fitness level, no snail's pace) or a fresh race. Pausing shows a Ready when you are card with one-tap resume + reassurance block (no streak penalty, manual runs still log to History). Previously both states reverted Home to the new-user enrollment pitch — a marathon graduate saw the same screen as someone who just installed the app. New users see refreshed intro copy. DESIGN: first feature shipped against the consolidated Cardea Design System handoff (3-tier glass hierarchy, locked gradient stops, polished primitives). DEFENSIVE: Cardio Health/EVERGREEN can't reach Graduated — perpetual program by design."
             }
         }
     }
