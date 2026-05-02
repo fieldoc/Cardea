@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cardea — Design System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    /* — Surfaces — */
+    --bg-primary:   #050505;
+    --bg-secondary: #0D0D0D;
+    --bg-page:      #08080D;
+    --bg-tier-2:    #10111A;
+
+    /* — Glass — */
+    --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+    --glass-fill-strong: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    --glass-border:    rgba(255,255,255,0.08);
+    --glass-border-2:  rgba(255,255,255,0.12);
+    --glass-highlight: rgba(255,255,255,0.03);
+
+    /* — Type — */
+    --text-primary:   #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-tertiary:  #5A6573;
+
+    /* — Brand gradient (locked, do not alter stops) — */
+    --grad-red:  #FF4D5A;
+    --grad-pink: #FF2DA6;
+    --grad-blue: #4D61FF;
+    --grad-cyan: #00E5FF;
+    --cardea-gradient:
+      linear-gradient(135deg, #FF4D5A 0%, #FF2DA6 35%, #4D61FF 65%, #00E5FF 100%);
+    --cta-gradient:
+      linear-gradient(135deg, #FF2DA6 0%, #FF4D5A 50%, #FF2DA6 100%);
+
+    /* — Semantic — */
+    --green: #2ED47A;
+    --amber: #FFB020;
+    --red:   #E5484D;
+    --zone-1: #4D61FF;
+    --zone-2: #00E5FF;
+    --zone-3: #FF2DA6;
+    --zone-4: #FF4D5A;
+    --zone-5: #E5484D;
+
+    /* — Fonts — */
+    --font-display: 'Playfair Display', serif;
+    --font-body:    'DM Sans', system-ui, sans-serif;
+    --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse 1200px 800px at 0% 0%, rgba(255,45,166,0.05), transparent 55%),
+      radial-gradient(ellipse 1000px 700px at 100% 100%, rgba(77,97,255,0.05), transparent 55%),
+      var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 80px 32px 160px; }
+
+  /* ============================================================
+     COVER
+  ============================================================ */
+  .cover { display: grid; grid-template-columns: 1.1fr 1fr; gap: 56px; align-items: center; margin-bottom: 96px; }
+  .cover-left .eyebrow { margin-bottom: 24px; }
+  .cover-left h1 {
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 96px;
+    line-height: 0.92;
+    letter-spacing: -2px;
+    margin-bottom: 6px;
+  }
+  .cover-left h1 em {
+    font-style: italic;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 900;
+  }
+  .cover-left .lede {
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 480px;
+    margin-top: 20px;
+  }
+  .cover-meta {
+    margin-top: 36px;
+    display: flex; gap: 28px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .cover-meta strong { color: var(--text-primary); font-weight: 500; }
+
+  .cover-right {
+    aspect-ratio: 1;
+    border-radius: 32px;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,45,166,0.12), transparent 60%),
+      var(--bg-primary);
+    border: 1px solid var(--glass-border);
+    overflow: hidden;
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+  .cover-right img { width: 75%; height: 75%; object-fit: contain; filter: drop-shadow(0 30px 80px rgba(255,45,166,0.3)); }
+  .cover-right::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 50% 100%, rgba(0,229,255,0.06), transparent 50%);
+  }
+
+  /* ============================================================
+     SECTIONS
+  ============================================================ */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--grad-pink);
+    box-shadow: 0 0 8px var(--grad-pink);
+  }
+
+  section { margin-bottom: 120px; scroll-margin-top: 60px; }
+  .section-head {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 32px;
+    padding-bottom: 28px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--glass-border);
+    align-items: end;
+  }
+  .section-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+  }
+  .section-title-wrap h2 {
+    font-family: var(--font-display);
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .section-title-wrap p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 720px;
+  }
+
+  .sub-head {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 32px 0 16px;
+    padding-left: 12px;
+    border-left: 1px solid var(--glass-border-2);
+  }
+  .sub-head:first-child { margin-top: 0; }
+
+  /* ============================================================
+     PRINCIPLES
+  ============================================================ */
+  .principles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .principle {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 28px;
+    backdrop-filter: blur(20px);
+  }
+  .principle .num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--grad-pink);
+    letter-spacing: 1.5px;
+    margin-bottom: 18px;
+  }
+  .principle h3 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    line-height: 1.15;
+  }
+  .principle p { color: var(--text-secondary); font-size: 13px; line-height: 1.55; }
+  .principle .vs {
+    margin-top: 18px;
+    display: flex; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+  }
+  .principle .vs .no { color: var(--red); text-decoration: line-through; text-decoration-color: rgba(229,72,77,0.5); }
+  .principle .vs .arr { color: var(--text-tertiary); }
+  .principle .vs .yes { color: var(--green); }
+
+  /* ============================================================
+     COLOR
+  ============================================================ */
+  .gradient-hero {
+    height: 220px;
+    border-radius: 24px;
+    background: var(--cardea-gradient);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 28px 32px;
+    box-shadow: 0 40px 100px -30px rgba(255,45,166,0.4);
+  }
+  .gradient-hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 20% 50%, rgba(255,255,255,0.18), transparent 50%),
+      radial-gradient(circle at 80% 30%, rgba(255,255,255,0.10), transparent 40%);
+    mix-blend-mode: overlay;
+  }
+  .gradient-hero .label {
+    position: relative;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(255,255,255,0.8);
+    text-transform: uppercase;
+  }
+  .gradient-hero .name {
+    position: relative;
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    color: white;
+    line-height: 1;
+    margin-top: 4px;
+    letter-spacing: -0.5px;
+  }
+  .gradient-hero .formula {
+    position: relative;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.85);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .gradient-stops { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+  .stop {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .stop .swatch {
+    width: 100%; aspect-ratio: 5/2;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .stop .pos { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); letter-spacing: 1.5px; text-transform: uppercase; }
+  .stop .hex { font-family: var(--font-mono); font-size: 14px; color: var(--text-primary); margin-top: 2px; font-weight: 500; }
+  .stop .role { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.4; }
+
+  .palette-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .swatch-card {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .swatch-card .chip { width: 100%; aspect-ratio: 5/3; }
+  .swatch-card .meta { padding: 12px 14px; }
+  .swatch-card .var { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-secondary); letter-spacing: 0.5px; }
+  .swatch-card .hex { font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); margin-top: 2px; font-weight: 500; }
+  .swatch-card .role { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.4; }
+
+  .swatch-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  /* ============================================================
+     TYPE
+  ============================================================ */
+  .type-stack { display: flex; flex-direction: column; gap: 32px; }
+  .type-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 200px;
+    gap: 32px;
+    padding: 28px 0;
+    border-top: 1px solid var(--glass-border);
+    align-items: baseline;
+  }
+  .type-row:first-child { border-top: none; padding-top: 0; }
+  .type-meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 1.5px; text-transform: uppercase; line-height: 1.6; }
+  .type-meta strong { color: var(--text-primary); font-weight: 500; }
+  .type-spec { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); text-align: right; line-height: 1.7; }
+
+  .type-display {
+    font-family: var(--font-display); font-weight: 900; font-size: 84px; line-height: 0.95; letter-spacing: -1.5px;
+  }
+  .type-display em {
+    font-style: italic;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .type-headline { font-family: var(--font-display); font-weight: 700; font-size: 44px; line-height: 1.05; letter-spacing: -0.8px; }
+  .type-h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; }
+  .type-h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.2px; line-height: 1.2; }
+  .type-body { font-size: 15px; font-weight: 400; line-height: 1.55; color: var(--text-primary); max-width: 560px; }
+  .type-secondary { font-size: 14px; line-height: 1.55; color: var(--text-secondary); max-width: 560px; }
+  .type-eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: 2px; color: var(--text-tertiary); text-transform: uppercase; }
+  .type-data { font-family: var(--font-mono); font-size: 28px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; }
+
+  /* ============================================================
+     SURFACES
+  ============================================================ */
+  .surface-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .surface-card {
+    border-radius: 18px;
+    border: 1px solid var(--glass-border);
+    padding: 24px;
+    min-height: 180px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    backdrop-filter: blur(20px);
+  }
+  .surface-card.tier-1 {
+    background: var(--glass-fill);
+  }
+  .surface-card.tier-2 {
+    background: var(--glass-fill-strong);
+    border-color: var(--glass-border-2);
+  }
+  .surface-card.tier-emphasis {
+    background: linear-gradient(135deg, rgba(255,45,166,0.05), rgba(77,97,255,0.04));
+    border-color: rgba(255,45,166,0.18);
+  }
+  .surface-card .label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; color: var(--text-tertiary); text-transform: uppercase; }
+  .surface-card h4 { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin: 8px 0 12px; }
+  .surface-card p { font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); }
+  .surface-card .specs { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.7; }
+  .surface-card .specs span { color: var(--text-secondary); }
+
+  /* ring border (Tier-1 emphasis) */
+  .gradient-ring {
+    border-radius: 18px;
+    padding: 1px;
+    background: var(--cardea-gradient);
+  }
+  .gradient-ring > .surface-card { border: none; border-radius: 17px; background: var(--bg-primary); }
+
+  /* ============================================================
+     RADII / SPACING / SHADOWS
+  ============================================================ */
+  .radii-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 14px;
+  }
+  .radius-card {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .radius-card .visual {
+    width: 64px; height: 64px;
+    margin: 0 auto 12px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+    border: 1px solid var(--glass-border-2);
+  }
+  .radius-card .px { font-family: var(--font-mono); font-size: 12px; color: var(--text-primary); font-weight: 500; }
+  .radius-card .role { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.4; }
+
+  .spacing-scale {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .space-row { display: grid; grid-template-columns: 80px 60px 1fr; gap: 16px; align-items: center; padding: 6px 0; }
+  .space-row .token { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary); }
+  .space-row .px { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-tertiary); }
+  .space-row .bar { height: 8px; border-radius: 2px; background: linear-gradient(90deg, var(--grad-pink), var(--grad-blue)); opacity: 0.6; }
+
+  /* ============================================================
+     COMPONENTS
+  ============================================================ */
+  .comp-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .comp {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .comp-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .comp-head .name { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 1.5px; color: var(--text-primary); text-transform: uppercase; }
+  .comp-head .id { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); }
+  .comp-stage {
+    padding: 32px 24px;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,255,255,0.015), transparent 70%),
+      var(--bg-primary);
+    display: grid;
+    place-items: center;
+    min-height: 160px;
+  }
+  .comp-stage.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; }
+  .comp-foot {
+    padding: 14px 20px;
+    border-top: 1px solid var(--glass-border);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+    background: rgba(0,0,0,0.2);
+  }
+  .comp-foot span { color: var(--text-secondary); }
+
+  /* — Buttons — */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 56px;
+    padding: 0 28px;
+    border-radius: 14px;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 15px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+  }
+  .btn-primary {
+    background: var(--cta-gradient);
+    box-shadow: 0 8px 30px -10px rgba(255,45,166,0.5);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border-2);
+    color: var(--text-primary);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+  }
+  .btn-sm { height: 36px; padding: 0 16px; font-size: 13px; border-radius: 10px; }
+  .btn svg { width: 18px; height: 18px; }
+
+  /* — Pills — */
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .pill-z1 { background: rgba(77,97,255,0.15); color: #93A0FF; }
+  .pill-z2 { background: rgba(0,229,255,0.15); color: #5BE6FF; }
+  .pill-z3 { background: rgba(255,45,166,0.15); color: #FF7BC8; }
+  .pill-z4 { background: rgba(255,77,90,0.15); color: #FF8B94; }
+  .pill-success { background: rgba(46,212,122,0.15); color: var(--green); }
+  .pill-warn { background: rgba(255,176,32,0.15); color: var(--amber); }
+  .pill-neutral { background: rgba(255,255,255,0.06); color: var(--text-secondary); border: 1px solid var(--glass-border); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 6px currentColor; }
+
+  /* — Efficiency Ring (Home spec) — */
+  .ring-stage { display: flex; gap: 32px; align-items: center; }
+  .eff-ring { position: relative; width: 90px; height: 90px; }
+  .eff-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .eff-ring .num {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-size: 32px; font-weight: 500;
+    font-family: var(--font-body);
+    letter-spacing: -0.5px;
+  }
+  .eff-ring .pct {
+    font-size: 14px; color: var(--text-tertiary); font-weight: 500;
+    margin-left: 1px;
+  }
+  .ring-info .label { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; color: var(--text-tertiary); text-transform: uppercase; margin-bottom: 4px; }
+  .ring-info .name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+  .ring-info .sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* — Stat tile — */
+  .stat-tile {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 16px;
+    min-width: 160px;
+  }
+  .stat-tile .v { font-family: var(--font-mono); font-size: 26px; font-weight: 600; color: var(--text-primary); letter-spacing: -0.3px; line-height: 1; }
+  .stat-tile .v small { font-size: 13px; color: var(--text-secondary); font-weight: 400; margin-left: 2px; }
+  .stat-tile .l { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; color: var(--text-tertiary); margin-top: 8px; text-transform: uppercase; }
+
+  /* — Graph — */
+  .graph-card {
+    width: 100%;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 18px 16px 6px;
+  }
+  .graph-card .top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .graph-card .ttl { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .graph-card .ttl small { font-family: var(--font-mono); color: var(--text-tertiary); font-weight: 400; margin-left: 6px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  .graph-card .delta { font-family: var(--font-mono); font-size: 12px; color: var(--green); font-weight: 500; }
+  .graph-card svg { width: 100%; height: 80px; display: block; }
+
+  /* — List row — */
+  .list-card { width: 100%; background: var(--glass-fill); border: 1px solid var(--glass-border); border-radius: 14px; overflow: hidden; }
+  .list-row { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--glass-border); }
+  .list-row:last-child { border-bottom: none; }
+  .list-row .icon-square { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); color: var(--text-secondary); flex-shrink: 0; }
+  .list-row .body { flex: 1; min-width: 0; }
+  .list-row .body .t { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .list-row .body .s { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .list-row .meta { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.5px; }
+  .list-row .chev { color: var(--text-tertiary); }
+
+  /* — Toggle — */
+  .toggle { width: 44px; height: 26px; border-radius: 100px; background: rgba(255,255,255,0.06); position: relative; border: 1px solid var(--glass-border); }
+  .toggle.on { background: var(--cardea-gradient); border-color: transparent; }
+  .toggle .knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: white; transition: transform .25s ease; }
+  .toggle.on .knob { transform: translateX(18px); }
+
+  /* — Nav bar — */
+  .navbar {
+    width: 100%;
+    height: 72px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--glass-border-2);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-tertiary); }
+  .nav-item .ic { width: 24px; height: 24px; }
+  .nav-item .lbl { font-size: 11px; font-weight: 500; }
+  .nav-item.active { color: white; }
+  .nav-item.active .ic { fill: url(#nav-grad); stroke: url(#nav-grad); color: white; }
+  .nav-item.active .lbl {
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 600;
+  }
+
+  /* — Hero card (Home spec) — */
+  .hero-card {
+    width: 100%;
+    border-radius: 18px;
+    padding: 1px;
+    background: var(--cardea-gradient);
+  }
+  .hero-card .inner {
+    border-radius: 17px;
+    padding: 22px;
+    background:
+      linear-gradient(135deg, rgba(255,77,90,0.10) 0%, rgba(255,45,166,0.06) 35%, rgba(77,97,255,0.04) 65%, rgba(0,229,255,0.04) 100%),
+      var(--bg-primary);
+  }
+  .hero-card .eyebrow-row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .hero-card h3 {
+    font-family: var(--font-display);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.4px;
+  }
+  .hero-card h3 em {
+    font-style: italic;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-card .sub { color: var(--text-secondary); font-size: 13px; margin-top: 6px; line-height: 1.5; }
+
+  /* — Motion — */
+  .motion-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .motion {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 22px;
+  }
+  .motion .name { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1.5px; color: var(--text-tertiary); text-transform: uppercase; }
+  .motion .num { font-family: var(--font-display); font-size: 28px; font-weight: 700; margin: 4px 0 4px; }
+  .motion .desc { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* — Footer — */
+  .doc-foot {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .doc-foot strong { color: var(--text-secondary); font-weight: 500; }
+
+  /* — Helpers — */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+</style>
+</head>
+<body>
+
+<!-- gradient defs reused across SVGs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="cardea-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="35%" stop-color="#FF2DA6"/>
+      <stop offset="65%" stop-color="#4D61FF"/>
+      <stop offset="100%" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="nav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4D5A"/>
+      <stop offset="50%" stop-color="#FF2DA6"/>
+      <stop offset="100%" stop-color="#4D61FF"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <!-- ====== COVER ====== -->
+  <header class="cover">
+    <div class="cover-left">
+      <div class="eyebrow"><span class="dot"></span>CARDEA · DESIGN SYSTEM · v1.1</div>
+      <h1>Calm,<br>precise,<br><em>premium.</em></h1>
+      <p class="lede">A unified visual language for Cardea — consolidated from <code style="font-family:var(--font-mono);font-size:13px;color:var(--text-secondary)">ui_ux_spec.md</code>, the Bootcamp, Account, Post-Run and Home mockups. One system, one source of truth.</p>
+      <div class="cover-meta">
+        <div>VERSION<br><strong>1.1</strong></div>
+        <div>UPDATED<br><strong>MAY 2026</strong></div>
+        <div>SCOPE<br><strong>UI / UX</strong></div>
+        <div>PLATFORM<br><strong>ANDROID</strong></div>
+      </div>
+    </div>
+    <div class="cover-right">
+      <img src="assets/cardea-logo.png" alt="Cardea logo">
+    </div>
+  </header>
+
+  <!-- ====== 01 PRINCIPLES ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <div class="section-title-wrap">
+        <h2>Principles</h2>
+        <p>Every screen should feel calm, precise, premium. Never colorful, busy, or gamified. Accent color must remain rare and meaningful — used only for active recording, the primary CTA, and the brand mark.</p>
+      </div>
+    </div>
+
+    <div class="principles">
+      <div class="principle">
+        <div class="num">01 / PRINCIPLE</div>
+        <h3>Glass over chrome</h3>
+        <p>Information lives inside soft, subtly-lit glass cards — never raw on the background. Borders, not fills, do the structural work.</p>
+        <div class="vs"><span class="no">flat fills</span><span class="arr">→</span><span class="yes">glass + 1px border</span></div>
+      </div>
+      <div class="principle">
+        <div class="num">02 / PRINCIPLE</div>
+        <h3>Gradient is rare</h3>
+        <p>The brand gradient signals identity, primary action, and live data. Reserve it. Re-coloring everything kills the signal.</p>
+        <div class="vs"><span class="no">recolor all</span><span class="arr">→</span><span class="yes">CTA · graphs · ring</span></div>
+      </div>
+      <div class="principle">
+        <div class="num">03 / PRINCIPLE</div>
+        <h3>Data first, motion second</h3>
+        <p>Numbers and lines lead. Animations are 250ms ease-out — fades and positional shifts only. No bounce, no decoration.</p>
+        <div class="vs"><span class="no">spring · bounce</span><span class="arr">→</span><span class="yes">250ms ease-out</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 02 COLOR ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <div class="section-title-wrap">
+        <h2>Color</h2>
+        <p>One identity gradient, four locked stops. A monochrome glass palette for surfaces, three text tints, and a small set of semantic colors for state. Use accents sparingly.</p>
+      </div>
+    </div>
+
+    <div class="sub-head">Brand gradient · locked</div>
+    <div class="gradient-hero">
+      <div>
+        <div class="label">Cardea Core Gradient</div>
+        <div class="name">Identity · CTA · Graphs</div>
+      </div>
+      <div class="formula">
+        linear-gradient(135deg,<br>
+        #FF4D5A 0% → #FF2DA6 35%<br>
+        → #4D61FF 65% → #00E5FF 100%)
+      </div>
+    </div>
+
+    <div class="gradient-stops">
+      <div class="stop">
+        <div class="swatch" style="background:#FF4D5A"></div>
+        <div class="pos">0% · Pulse</div>
+        <div class="hex">#FF4D5A</div>
+        <div class="role">Effort, alarm, recording active</div>
+      </div>
+      <div class="stop">
+        <div class="swatch" style="background:#FF2DA6"></div>
+        <div class="pos">35% · Signal</div>
+        <div class="hex">#FF2DA6</div>
+        <div class="role">Primary brand mark, CTA</div>
+      </div>
+      <div class="stop">
+        <div class="swatch" style="background:#4D61FF"></div>
+        <div class="pos">65% · Steady</div>
+        <div class="hex">#4D61FF</div>
+        <div class="role">Easy zone, calm state</div>
+      </div>
+      <div class="stop">
+        <div class="swatch" style="background:#00E5FF"></div>
+        <div class="pos">100% · Flow</div>
+        <div class="hex">#00E5FF</div>
+        <div class="role">Recovery, achievement</div>
+      </div>
+    </div>
+
+    <div class="sub-head">Surfaces & glass</div>
+    <div class="palette-grid">
+      <div class="swatch-card">
+        <div class="chip" style="background:#050505"></div>
+        <div class="meta"><div class="var">--bg-primary</div><div class="hex">#050505</div><div class="role">App canvas, screen base</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#0D0D0D"></div>
+        <div class="meta"><div class="var">--bg-secondary</div><div class="hex">#0D0D0D</div><div class="role">Elevated surface, modal</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)), #050505"></div>
+        <div class="meta"><div class="var">--glass-fill</div><div class="hex">white α 0.05 → 0.015</div><div class="role">Card body, default tier</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)), #050505"></div>
+        <div class="meta"><div class="var">--glass-fill-strong</div><div class="hex">white α 0.08 → 0.03</div><div class="role">Nav bar, focused tier</div></div>
+      </div>
+    </div>
+
+    <div class="sub-head">Text tints</div>
+    <div class="palette-grid">
+      <div class="swatch-card">
+        <div class="chip" style="background:#FFFFFF; display:grid; place-items:center; color:#050505; font-family:var(--font-mono); font-size:13px; font-weight:600">Aa</div>
+        <div class="meta"><div class="var">--text-primary</div><div class="hex">#FFFFFF</div><div class="role">Headlines, key data</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#9AA4B2; display:grid; place-items:center; color:#050505; font-family:var(--font-mono); font-size:13px; font-weight:600">Aa</div>
+        <div class="meta"><div class="var">--text-secondary</div><div class="hex">#9AA4B2</div><div class="role">Body, supporting copy</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#5A6573; display:grid; place-items:center; color:#FFFFFF; font-family:var(--font-mono); font-size:13px; font-weight:600">Aa</div>
+        <div class="meta"><div class="var">--text-tertiary</div><div class="hex">#5A6573</div><div class="role">Eyebrows, inactive</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background: linear-gradient(135deg, #FF4D5A, #FF2DA6, #4D61FF, #00E5FF); display:grid; place-items:center; color:#FFFFFF; font-family:var(--font-mono); font-size:13px; font-weight:700; mix-blend-mode:normal">Aa</div>
+        <div class="meta"><div class="var">--text-on-gradient</div><div class="hex">Brand on gradient</div><div class="role">Display headlines accent</div></div>
+      </div>
+    </div>
+
+    <div class="sub-head">Semantic & zones</div>
+    <div class="swatch-row">
+      <div class="swatch-card">
+        <div class="chip" style="background:#2ED47A"></div>
+        <div class="meta"><div class="var">--green</div><div class="hex">#2ED47A</div><div class="role">Success, in-zone</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#FFB020"></div>
+        <div class="meta"><div class="var">--amber</div><div class="hex">#FFB020</div><div class="role">Caution, drift</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#E5484D"></div>
+        <div class="meta"><div class="var">--red</div><div class="hex">#E5484D</div><div class="role">Error, alarm</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#4D61FF"></div>
+        <div class="meta"><div class="var">--zone-1</div><div class="hex">#4D61FF</div><div class="role">Easy zone</div></div>
+      </div>
+      <div class="swatch-card">
+        <div class="chip" style="background:#FF4D5A"></div>
+        <div class="meta"><div class="var">--zone-4</div><div class="hex">#FF4D5A</div><div class="role">Threshold</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 03 TYPE ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <div class="section-title-wrap">
+        <h2>Typography</h2>
+        <p>Three families. Playfair Display for moments of voice — section openers, hero numbers, italicized brand accents. DM Sans for all UI. JetBrains Mono for eyebrows, data and labels.</p>
+      </div>
+    </div>
+
+    <div class="sub-head">Families</div>
+    <div class="grid-3" style="margin-bottom: 32px;">
+      <div class="surface-card tier-1">
+        <div>
+          <div class="label">Display</div>
+          <h4 style="font-family: var(--font-display); font-size: 36px; font-weight: 900; letter-spacing: -1px; line-height: 1;">Playfair</h4>
+          <p style="margin-top: 10px;">Headlines, hero numbers, italicized brand accents. Sparing.</p>
+        </div>
+        <div class="specs">700 · 900 · italic</div>
+      </div>
+      <div class="surface-card tier-1">
+        <div>
+          <div class="label">UI / Body</div>
+          <h4 style="font-family: var(--font-body); font-size: 32px; font-weight: 700; letter-spacing: -0.5px; line-height: 1;">DM Sans</h4>
+          <p style="margin-top: 10px;">All UI text — labels, body, list rows, buttons, CTA copy.</p>
+        </div>
+        <div class="specs">400 · 500 · 600 · 700</div>
+      </div>
+      <div class="surface-card tier-1">
+        <div>
+          <div class="label">Data / Mono</div>
+          <h4 style="font-family: var(--font-mono); font-size: 28px; font-weight: 600; letter-spacing: -0.5px; line-height: 1;">JetBrains</h4>
+          <p style="margin-top: 10px;">Eyebrows, metric values, durations, distances, codes.</p>
+        </div>
+        <div class="specs">400 · 500 · 600</div>
+      </div>
+    </div>
+
+    <div class="sub-head">Scale</div>
+    <div class="type-stack">
+      <div class="type-row">
+        <div class="type-meta"><strong>Display</strong><br>Hero opener</div>
+        <div class="type-display">Run <em>steady.</em></div>
+        <div class="type-spec">Playfair 900<br>84 / 95% / -1.5</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Headline</strong><br>Section opener</div>
+        <div class="type-headline">Today's session</div>
+        <div class="type-spec">Playfair 700<br>44 / 105% / -0.8</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Title L</strong><br>Tab title, page title</div>
+        <div class="type-h1">Activity</div>
+        <div class="type-spec">DM Sans 800<br>32 / 110% / -0.5</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Title M</strong><br>Card heading</div>
+        <div class="type-h2">Last 7 days</div>
+        <div class="type-spec">DM Sans 700<br>22 / 120% / -0.2</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Body</strong><br>Default copy</div>
+        <div class="type-body">A 35-minute easy run keeps the cardiovascular system loaded without breaking the recovery you've been building all week.</div>
+        <div class="type-spec">DM Sans 400<br>15 / 155%</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Body 2</strong><br>Secondary copy</div>
+        <div class="type-secondary">Average heart rate held within zone 2 for 31 of 35 minutes — the longest steady block this month.</div>
+        <div class="type-spec">DM Sans 400<br>14 / 155% · secondary</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Eyebrow</strong><br>Section / card label</div>
+        <div class="type-eyebrow">TODAY'S SESSION · WEEK 4</div>
+        <div class="type-spec">JetBrains 500<br>11 / 200% / +2</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><strong>Data</strong><br>Metric value</div>
+        <div class="type-data">04:38 <span style="color: var(--text-tertiary); font-size: 14px;">/km</span></div>
+        <div class="type-spec">JetBrains 600<br>28 / 100% / -0.3</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 04 SURFACES ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">04</div>
+      <div class="section-title-wrap">
+        <h2>Surfaces</h2>
+        <p>Three glass tiers. Default for everything; focused for nav and elevated modals; emphasis for the single most important card on a screen — typically Today's Session.</p>
+      </div>
+    </div>
+
+    <div class="surface-grid">
+      <div class="surface-card tier-1">
+        <div>
+          <div class="label">Tier 1 · Default</div>
+          <h4>Glass card</h4>
+          <p>Every metric, every list, every chart. White α 0.05 → 0.015 fill, 1px α 0.08 border, 16–18px radius.</p>
+        </div>
+        <div class="specs">
+          <span>fill</span> rgba(255,255,255,0.05→0.015)<br>
+          <span>border</span> rgba(255,255,255,0.08)<br>
+          <span>radius</span> 16–18px<br>
+          <span>blur</span> 12–20px
+        </div>
+      </div>
+      <div class="surface-card tier-2">
+        <div>
+          <div class="label">Tier 2 · Focused</div>
+          <h4>Elevated glass</h4>
+          <p>Bottom navigation, modals, sheets. Brighter fill and a slightly more visible border to lift it off the canvas.</p>
+        </div>
+        <div class="specs">
+          <span>fill</span> rgba(255,255,255,0.08→0.03)<br>
+          <span>border</span> rgba(255,255,255,0.12)<br>
+          <span>radius</span> 12–16px<br>
+          <span>blur</span> 16px
+        </div>
+      </div>
+      <div class="gradient-ring">
+        <div class="surface-card tier-emphasis">
+          <div>
+            <div class="label">Tier 3 · Emphasis</div>
+            <h4>Brand-ringed</h4>
+            <p>Reserved for the screen's primary card — Today's Session, post-run summary hero. 1px gradient ring, faint gradient wash inside.</p>
+          </div>
+          <div class="specs">
+            <span>ring</span> --cardea-gradient 1px<br>
+            <span>wash</span> α 0.10 → 0.04 gradient<br>
+            <span>radius</span> 18px
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 05 RADII / SPACING / MOTION ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">05</div>
+      <div class="section-title-wrap">
+        <h2>Form</h2>
+        <p>Corner radii, spacing scale, and motion. The whole system should feel built on the same grid: 4-point spacing, soft but never round corners, 250ms ease-out for everything.</p>
+      </div>
+    </div>
+
+    <div class="sub-head">Corner radii</div>
+    <div class="radii-row" style="margin-bottom: 40px;">
+      <div class="radius-card"><div class="visual" style="border-radius: 6px;"></div><div class="px">6px</div><div class="role">Pills, tags</div></div>
+      <div class="radius-card"><div class="visual" style="border-radius: 10px;"></div><div class="px">10px</div><div class="role">Small buttons, chips</div></div>
+      <div class="radius-card"><div class="visual" style="border-radius: 14px;"></div><div class="px">14px</div><div class="role">Buttons, stat tiles</div></div>
+      <div class="radius-card"><div class="visual" style="border-radius: 16px;"></div><div class="px">16px</div><div class="role">Glass cards default</div></div>
+      <div class="radius-card"><div class="visual" style="border-radius: 18px;"></div><div class="px">18px</div><div class="role">Hero / emphasis</div></div>
+      <div class="radius-card"><div class="visual" style="border-radius: 50%;"></div><div class="px">9999px</div><div class="role">Pills, rings, avatars</div></div>
+    </div>
+
+    <div class="sub-head">Spacing scale · 4pt grid</div>
+    <div class="spacing-scale" style="margin-bottom: 40px;">
+      <div class="space-row"><div class="token">space-1</div><div class="px">4 px</div><div class="bar" style="width: 4px;"></div></div>
+      <div class="space-row"><div class="token">space-2</div><div class="px">8 px</div><div class="bar" style="width: 8px;"></div></div>
+      <div class="space-row"><div class="token">space-3</div><div class="px">12 px</div><div class="bar" style="width: 12px;"></div></div>
+      <div class="space-row"><div class="token">space-4</div><div class="px">16 px</div><div class="bar" style="width: 16px;"></div></div>
+      <div class="space-row"><div class="token">space-5</div><div class="px">20 px</div><div class="bar" style="width: 20px;"></div></div>
+      <div class="space-row"><div class="token">space-6</div><div class="px">24 px</div><div class="bar" style="width: 24px;"></div></div>
+      <div class="space-row"><div class="token">space-8</div><div class="px">32 px</div><div class="bar" style="width: 32px;"></div></div>
+      <div class="space-row"><div class="token">space-12</div><div class="px">48 px</div><div class="bar" style="width: 48px;"></div></div>
+    </div>
+
+    <div class="sub-head">Motion</div>
+    <div class="motion-grid">
+      <div class="motion">
+        <div class="name">Duration</div>
+        <div class="num">250ms</div>
+        <div class="desc">All transitions. Long enough to feel intentional, short enough to feel responsive.</div>
+      </div>
+      <div class="motion">
+        <div class="name">Easing</div>
+        <div class="num">ease-out</div>
+        <div class="desc">Decelerate to rest. No bounce, no spring, no overshoot.</div>
+      </div>
+      <div class="motion">
+        <div class="name">Allowed</div>
+        <div class="num">Fade · Position</div>
+        <div class="desc">Opacity and translate only. Never scale to draw attention; never rotate.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 06 COMPONENTS ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">06</div>
+      <div class="section-title-wrap">
+        <h2>Components</h2>
+        <p>Live, copyable instances of every recurring building block. If a screen needs something that isn't here, it probably belongs here next.</p>
+      </div>
+    </div>
+
+    <div class="sub-head">Buttons</div>
+    <div class="comp-grid">
+      <div class="comp">
+        <div class="comp-head"><div class="name">Primary CTA</div><div class="id">btn-primary · 56h</div></div>
+        <div class="comp-stage row">
+          <button class="btn btn-primary">Start Session</button>
+        </div>
+        <div class="comp-foot><span>use</span> <span>once</span> per screen · gradient is meaningful</div>
+        <div class="comp-foot"><span>radius</span> 14 · <span>height</span> 56 · <span>shadow</span> pink glow 30%</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Secondary · Ghost</div><div class="id">btn-secondary · btn-ghost</div></div>
+        <div class="comp-stage row">
+          <button class="btn btn-secondary">Details</button>
+          <button class="btn btn-ghost">Skip</button>
+        </div>
+        <div class="comp-foot"><span>fill</span> α 0.04 · <span>border</span> α 0.12 · text on glass</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Compact</div><div class="id">btn-sm · 36h</div></div>
+        <div class="comp-stage row">
+          <button class="btn btn-primary btn-sm">Save</button>
+          <button class="btn btn-secondary btn-sm">Edit</button>
+          <button class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
+        <div class="comp-foot"><span>radius</span> 10 · <span>height</span> 36 · settings rows, list actions</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Toggle</div><div class="id">switch · 44 × 26</div></div>
+        <div class="comp-stage row">
+          <div class="toggle on"><div class="knob"></div></div>
+          <div class="toggle"><div class="knob"></div></div>
+        </div>
+        <div class="comp-foot"><span>on</span> uses brand gradient — settings, alerts only</div>
+      </div>
+    </div>
+
+    <div class="sub-head">Pills & status</div>
+    <div class="comp-grid">
+      <div class="comp">
+        <div class="comp-head"><div class="name">Zone pills</div><div class="id">pill · monospace 10.5</div></div>
+        <div class="comp-stage row">
+          <span class="pill pill-z1">Z1 · Easy</span>
+          <span class="pill pill-z2">Z2 · Aerobic</span>
+          <span class="pill pill-z3">Z3 · Tempo</span>
+          <span class="pill pill-z4">Z4 · Threshold</span>
+        </div>
+        <div class="comp-foot"><span>fill</span> α 0.15 of zone color · <span>text</span> light tint</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Semantic pills</div><div class="id">pill · success / warn / neutral</div></div>
+        <div class="comp-stage row">
+          <span class="pill pill-success"><span class="dot"></span>In zone</span>
+          <span class="pill pill-warn"><span class="dot"></span>Drift</span>
+          <span class="pill pill-neutral">35 min · easy</span>
+        </div>
+        <div class="comp-foot"><span>dot</span> with currentColor glow signals live data</div>
+      </div>
+    </div>
+
+    <div class="sub-head">Data displays</div>
+    <div class="comp-grid">
+      <div class="comp">
+        <div class="comp-head"><div class="name">Efficiency ring</div><div class="id">eff-ring · 90 × 90</div></div>
+        <div class="comp-stage">
+          <div class="ring-stage">
+            <div class="eff-ring">
+              <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="6"/>
+                <circle cx="50" cy="50" r="42" fill="none" stroke="url(#cardea-grad)" stroke-width="6" stroke-linecap="round"
+                        stroke-dasharray="264" stroke-dashoffset="66"/>
+              </svg>
+              <div class="num">75<span class="pct">%</span></div>
+            </div>
+            <div class="ring-info">
+              <div class="label">EFFICIENCY</div>
+              <div class="name">Strong week</div>
+              <div class="sub">3 of 4 sessions in zone</div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-foot"><span>track</span> α 0.08 · <span>fill</span> --cardea-gradient · <span>cap</span> round</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Stat tile</div><div class="id">stat-tile</div></div>
+        <div class="comp-stage row">
+          <div class="stat-tile"><div class="v">4.3<small> km</small></div><div class="l">LAST RUN</div></div>
+          <div class="stat-tile"><div class="v">147<small> bpm</small></div><div class="l">AVG HR</div></div>
+          <div class="stat-tile"><div class="v">3<small>/4</small></div><div class="l">WEEK GOAL</div></div>
+        </div>
+        <div class="comp-foot"><span>value</span> JetBrains 26 · <span>label</span> mono 10 / +1.5</div>
+      </div>
+      <div class="comp" style="grid-column: span 2;">
+        <div class="comp-head"><div class="name">Graph card</div><div class="id">graph-card · gradient + glow</div></div>
+        <div class="comp-stage" style="padding: 24px 32px;">
+          <div class="graph-card">
+            <div class="top">
+              <div class="ttl">Resting heart rate <small>· 30 days</small></div>
+              <div class="delta">↓ 4 bpm</div>
+            </div>
+            <svg viewBox="0 0 320 80" preserveAspectRatio="none">
+              <!-- gridlines -->
+              <line x1="0" y1="20" x2="320" y2="20" stroke="rgba(255,255,255,0.04)"/>
+              <line x1="0" y1="40" x2="320" y2="40" stroke="rgba(255,255,255,0.04)"/>
+              <line x1="0" y1="60" x2="320" y2="60" stroke="rgba(255,255,255,0.04)"/>
+              <!-- glow layer -->
+              <path d="M0,52 C30,48 50,55 80,42 C110,30 140,38 170,28 C200,20 230,32 260,22 C290,15 305,20 320,18"
+                    fill="none" stroke="url(#cardea-grad)" stroke-width="6" stroke-linecap="round" filter="blur(6px)" opacity="0.15"/>
+              <!-- core line -->
+              <path d="M0,52 C30,48 50,55 80,42 C110,30 140,38 170,28 C200,20 230,32 260,22 C290,15 305,20 320,18"
+                    fill="none" stroke="url(#cardea-grad)" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="comp-foot"><span>core</span> 2px gradient · <span>glow</span> blur(6) α 0.15 dup · <span>grid</span> α 0.04</div>
+      </div>
+    </div>
+
+    <div class="sub-head">Today's session · hero</div>
+    <div class="comp">
+      <div class="comp-head"><div class="name">Hero card</div><div class="id">hero-card · tier-3 emphasis</div></div>
+      <div class="comp-stage" style="padding: 32px 40px;">
+        <div class="hero-card">
+          <div class="inner">
+            <div class="eyebrow-row">
+              <div class="eyebrow"><span class="dot"></span>TODAY · WEEK 4</div>
+              <span class="pill pill-z1">Z1 · Easy</span>
+            </div>
+            <h3>35 min, <em>easy.</em></h3>
+            <p class="sub">Hold zone 1. Heart rate ceiling 142 bpm. Conversational pace; if breathing breaks rhythm, ease back.</p>
+            <div style="display: flex; gap: 12px; margin-top: 20px; align-items: center;">
+              <button class="btn btn-primary">Start Session</button>
+              <button class="btn btn-secondary">Details</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-foot"><span>ring</span> 1px brand gradient · <span>wash</span> diagonal α 0.10 → 0.04 · only one per screen</div>
+    </div>
+
+    <div class="sub-head">List & navigation</div>
+    <div class="comp-grid">
+      <div class="comp">
+        <div class="comp-head"><div class="name">Settings list</div><div class="id">list-row · 52h</div></div>
+        <div class="comp-stage" style="padding: 24px;">
+          <div class="list-card">
+            <div class="list-row">
+              <div class="icon-square"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+              <div class="body"><div class="t">Workout reminders</div><div class="s">Daily, 7:00 am</div></div>
+              <div class="toggle on"><div class="knob"></div></div>
+            </div>
+            <div class="list-row">
+              <div class="icon-square"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+              <div class="body"><div class="t">Heart rate sensor</div><div class="s">Polar H10 · paired</div></div>
+              <div class="meta">Connected</div>
+            </div>
+            <div class="list-row">
+              <div class="icon-square"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1.1-1.5V3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.1Z"/></svg></div>
+              <div class="body"><div class="t">Privacy</div><div class="s">Manage data sharing</div></div>
+              <div class="chev"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-foot"><span>row</span> 52 · <span>divider</span> α 0.08 · icon square 36 / r10</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Bottom nav</div><div class="id">navbar · tier-2 · 72h</div></div>
+        <div class="comp-stage" style="padding: 24px;">
+          <div class="navbar" style="background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)), #050505;">
+            <div class="nav-item active">
+              <svg class="ic" viewBox="0 0 24 24" fill="none"><path d="M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2v-9z" stroke="url(#nav-grad)" stroke-width="1.6" fill="rgba(255,45,166,0.15)"/></svg>
+              <div class="lbl">Home</div>
+            </div>
+            <div class="nav-item">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+              <div class="lbl">Workout</div>
+            </div>
+            <div class="nav-item">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-7"/></svg>
+              <div class="lbl">Progress</div>
+            </div>
+            <div class="nav-item">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+              <div class="lbl">Account</div>
+            </div>
+          </div>
+        </div>
+        <div class="comp-foot"><span>icon</span> 24 · <span>label</span> 11 · active uses gradient fill, never recolors inactive</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 07 USAGE — DOs / DON'Ts ====== -->
+  <section>
+    <div class="section-head">
+      <div class="section-num">07</div>
+      <div class="section-title-wrap">
+        <h2>Usage</h2>
+        <p>The system holds together when these rules hold. The fastest way to break Cardea's tone is to over-apply the gradient or fill cards instead of bordering them.</p>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="comp">
+        <div class="comp-head"><div class="name">Do</div><div class="id" style="color: var(--green);">✓ canonical</div></div>
+        <div class="comp-stage" style="padding: 20px; flex-direction: column; align-items: stretch; display: flex; gap: 12px;">
+          <div class="hero-card"><div class="inner" style="padding: 16px 18px;">
+            <div class="eyebrow"><span class="dot"></span>TODAY · WEEK 4</div>
+            <h3 style="font-size: 22px; margin-top: 8px;">35 min, <em>easy.</em></h3>
+          </div></div>
+          <div style="display: flex; gap: 8px;">
+            <span class="pill pill-z1">Z1 · Easy</span>
+            <span class="pill pill-success"><span class="dot"></span>In zone</span>
+          </div>
+        </div>
+        <div class="comp-foot" style="color: var(--green);">Gradient on hero ring + CTA only · pills carry zone color · type set in DM Sans + Playfair italic accent</div>
+      </div>
+      <div class="comp">
+        <div class="comp-head"><div class="name">Don't</div><div class="id" style="color: var(--red);">✗ avoid</div></div>
+        <div class="comp-stage" style="padding: 20px; flex-direction: column; align-items: stretch; display: flex; gap: 12px;">
+          <div style="background: var(--cardea-gradient); border-radius: 16px; padding: 16px 18px;">
+            <div style="font-family: var(--font-mono); font-size: 11px; letter-spacing: 2px; color: white; opacity: 0.9;">TODAY · WEEK 4</div>
+            <div style="font-size: 22px; font-weight: 700; margin-top: 8px; color: white;">35 min, easy.</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <span style="padding: 6px 14px; border-radius: 8px; background: var(--cardea-gradient); color: white; font-size: 11px; font-weight: 600;">Zone 1</span>
+            <span style="padding: 6px 14px; border-radius: 8px; background: var(--cta-gradient); color: white; font-size: 11px; font-weight: 600;">In zone</span>
+          </div>
+        </div>
+        <div class="comp-foot" style="color: var(--red);">Gradient flooding the hero · pills competing with the CTA · system reads as gamified, not premium</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- footer -->
+  <div class="doc-foot">
+    <div>CARDEA · DESIGN SYSTEM · <strong>v1.1</strong></div>
+    <div>SOURCE · <strong>UI_UX_SPEC.MD</strong> + MOCKUPS</div>
+    <div>UPDATED · <strong>MAY 2026</strong></div>
+  </div>
+
+</div>
+
+</body>
+</html>

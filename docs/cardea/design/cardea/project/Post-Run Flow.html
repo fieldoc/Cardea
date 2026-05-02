@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea — Post-Run Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #050505;
+    --bg-secondary: #0D0D0D;
+    --bg-page: #08080D;
+    --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+    --glass-border: rgba(255,255,255,0.07);
+    --glass-highlight: rgba(255,255,255,0.03);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-tertiary: #5A6573;
+    --cardea-gradient: linear-gradient(135deg, #FF4D5A 0%, #FF2DA6 35%, #4D61FF 65%, #00E5FF 100%);
+    --zone-1: #4D61FF; /* easy */
+    --zone-2: #00E5FF; /* aerobic */
+    --zone-3: #FF2DA6; /* threshold */
+    --zone-4: #FF4D5A; /* hard */
+    --green: #2ED47A;
+    --amber: #FFB020;
+    --red: #FF4D5A;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at top left, rgba(255,45,166,0.05), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(77,97,255,0.04), transparent 50%),
+      var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 24px 80px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-wrap { max-width: 1200px; width: 100%; }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+  .page-header .eyebrow {
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 34px;
+    font-weight: 900;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .page-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* Phone */
+  .phone-rail {
+    display: flex;
+    gap: 56px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .phone-frame {
+    width: 393px;
+    height: 852px;
+    border-radius: 44px;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.09);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 40px 100px rgba(0,0,0,0.6),
+      0 0 120px rgba(255,45,166,0.03);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .phone-inner {
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at 50% 0%, #10111a 0%, var(--bg-primary) 60%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Status bar */
+  .status-bar {
+    flex: 0 0 44px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; }
+  .status-right svg { width: 16px; height: 16px; }
+
+  /* Nav row */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 16px 10px;
+  }
+  .nav-back {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 12px 8px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 200ms ease-out;
+  }
+  .nav-back:hover { background: rgba(255,255,255,0.04); }
+  .nav-right {
+    display: flex;
+    gap: 8px;
+  }
+  .icon-btn {
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: 200ms ease-out;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.07); color: var(--text-primary); }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  /* Scrollable body */
+  .body-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 16px 100px;
+    scroll-behavior: smooth;
+  }
+  .body-scroll::-webkit-scrollbar { width: 0; }
+
+  /* Section label */
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* ============ HERO ============ */
+  .hero {
+    padding: 4px 4px 20px;
+  }
+  .hero .eyebrow { margin-bottom: 10px; }
+  .hero-date-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 14px;
+  }
+  .hero-date {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .hero-kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    color: var(--text-secondary);
+    background: rgba(77,97,255,0.08);
+    border: 1px solid rgba(77,97,255,0.25);
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+  .hero-kind .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--zone-1);
+    box-shadow: 0 0 10px var(--zone-1);
+  }
+
+  .hero-distance {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .hero-distance .num {
+    font-family: 'Playfair Display', serif;
+    font-size: 88px;
+    line-height: 0.9;
+    font-weight: 900;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -2px;
+  }
+  .hero-distance .unit {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 26px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    letter-spacing: -0.5px;
+  }
+  .hero-caption {
+    font-size: 13px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+  .hero-caption .accent-up { color: var(--green); }
+  .hero-caption .accent-dn { color: var(--amber); }
+
+  /* ============ KEY TRIO ============ */
+  .trio {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 22px 0 16px;
+  }
+  .trio .cell {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 14px 12px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    position: relative;
+    overflow: hidden;
+  }
+  .trio .cell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent 40%);
+    pointer-events: none;
+  }
+  .trio .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .trio .value {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .trio .sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .trio .sub.up { color: var(--green); }
+  .trio .sub.dn { color: var(--amber); }
+  .trio .sub.flat { color: var(--text-tertiary); }
+
+  /* ============ Card ============ */
+  .card {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 18px;
+    backdrop-filter: blur(12px);
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent 30%);
+    pointer-events: none;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+  }
+  .card-action {
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .card-action:hover { color: var(--text-primary); }
+
+  /* ============ ROUTE CARD ============ */
+  .route-wrap {
+    position: relative;
+    height: 220px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #060812;
+    margin: -4px -4px 14px;
+    border: 1px solid var(--glass-border);
+  }
+  .route-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .route-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 6px;
+    background: rgba(5,5,10,0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-secondary);
+    letter-spacing: 0.8px;
+    align-items: center;
+    text-transform: uppercase;
+  }
+  .route-overlay .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  .route-legend {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    background: rgba(5,5,10,0.7);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    align-items: center;
+  }
+  .route-legend .seg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .route-legend .seg .chip { width: 10px; height: 3px; border-radius: 2px; }
+
+  .map-tiles {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    background-position: -1px -1px;
+  }
+  .map-contours {
+    position: absolute;
+    inset: 0;
+    opacity: 0.35;
+  }
+
+  .route-stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .route-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .route-stat .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .route-stat .value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.3px;
+    font-family: 'Playfair Display', serif;
+  }
+
+  /* ============ SPLITS ============ */
+  .splits-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .split-row {
+    display: grid;
+    grid-template-columns: 28px 44px 1fr 60px 56px;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 2px;
+  }
+  .split-row .km {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.5px;
+  }
+  .split-row .pace {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .split-row .bar {
+    height: 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .split-row .bar .fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--cardea-gradient);
+    position: relative;
+  }
+  .split-row .bar .fill::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    background: inherit;
+    filter: blur(6px);
+    opacity: 0.4;
+    border-radius: 6px;
+    z-index: -1;
+  }
+  .split-row .hr {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    text-align: right;
+  }
+  .split-row .zone {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 5px;
+    display: inline-block;
+    justify-self: end;
+    letter-spacing: 0.5px;
+  }
+  .zone-z1 { background: rgba(77,97,255,0.15); color: #7B8BFF; }
+  .zone-z2 { background: rgba(0,229,255,0.12); color: #4EE8FF; }
+  .zone-z3 { background: rgba(255,45,166,0.15); color: #FF66C2; }
+  .zone-z4 { background: rgba(255,77,90,0.18); color: #FF7A85; }
+
+  /* ============ ZONES BAR ============ */
+  .zone-bar-wrap {
+    margin-top: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--glass-border);
+  }
+  .zone-bar {
+    display: flex;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 8px 0 10px;
+  }
+  .zone-bar .seg { height: 100%; }
+  .zone-legend {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .zone-legend .z {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .zone-legend .z .pct {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+  }
+  .zone-legend .z .swatch { width: 14px; height: 3px; border-radius: 2px; }
+
+  /* ============ TRENDS ============ */
+  .trend-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .trend-row {
+    display: grid;
+    grid-template-columns: 1fr 90px;
+    align-items: center;
+    gap: 14px;
+  }
+  .trend-row .name {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .trend-row .big {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .trend-row .delta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-top: 4px;
+  }
+  .trend-row .delta.up { color: var(--green); }
+  .trend-row .delta.dn { color: var(--amber); }
+  .trend-row .spark { height: 40px; width: 100%; }
+
+  /* ============ COACH TAKE ============ */
+  .coach-card {
+    position: relative;
+    background:
+      radial-gradient(ellipse at top right, rgba(255,45,166,0.08), transparent 60%),
+      radial-gradient(ellipse at bottom left, rgba(77,97,255,0.06), transparent 60%),
+      var(--glass-fill);
+    border: 1px solid rgba(255,45,166,0.15);
+  }
+  .coach-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .coach-avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--cardea-gradient);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .coach-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: inherit;
+    filter: blur(6px);
+    opacity: 0.4;
+    z-index: -1;
+  }
+  .coach-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .coach-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+    margin-bottom: 10px;
+  }
+  .coach-body {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin-bottom: 14px;
+  }
+  .coach-body strong { color: var(--text-primary); font-weight: 600; }
+  .coach-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .coach-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+  }
+
+  /* ============ SESSION OVERVIEW ============ */
+  .overview-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .overview-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--glass-border);
+    align-items: center;
+  }
+  .overview-row:last-child { border-bottom: none; }
+  .overview-row .k {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .overview-row .k .hint {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    display: block;
+    margin-top: 2px;
+  }
+  .overview-row .v {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: right;
+    letter-spacing: -0.3px;
+  }
+  .overview-row .v.good { color: var(--green); }
+  .overview-row .v.warn { color: var(--amber); }
+
+  /* ============ PARTNER ACTIVITY ============ */
+  .partner-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--glass-border);
+  }
+  .partner-row:last-child { border-bottom: none; }
+  .partner-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3a3f52, #1a1c28);
+    border: 1px solid var(--glass-border);
+    display: grid;
+    place-items: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .partner-avatar.active {
+    background: var(--cardea-gradient);
+    color: #fff;
+    position: relative;
+  }
+  .partner-avatar.active::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: inherit;
+    filter: blur(8px);
+    opacity: 0.4;
+    z-index: -1;
+  }
+  .partner-info .name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .partner-info .act {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+  }
+  .partner-info .act .dot-sep { color: var(--text-tertiary); margin: 0 4px; }
+  .partner-info .act .status-live { color: var(--green); }
+  .kudos-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    cursor: pointer;
+    transition: 200ms ease-out;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .kudos-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+  .kudos-btn.given {
+    background: rgba(255,45,166,0.1);
+    border-color: rgba(255,45,166,0.3);
+    color: #FF66C2;
+  }
+
+  /* ============ STREAK / CONTEXT ============ */
+  .streak-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .streak-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .streak-col .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .streak-col .val {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.8px;
+    line-height: 1;
+  }
+  .streak-col .val .small { font-size: 14px; color: var(--text-secondary); font-weight: 400; margin-left: 4px; }
+  .streak-col .sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .heatstrip {
+    display: flex;
+    gap: 3px;
+    margin-top: 4px;
+  }
+  .heatstrip .d {
+    flex: 1;
+    height: 16px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.04);
+  }
+  .heatstrip .d.l1 { background: rgba(77,97,255,0.3); }
+  .heatstrip .d.l2 { background: rgba(77,97,255,0.55); }
+  .heatstrip .d.l3 { background: linear-gradient(135deg, #4D61FF, #00E5FF); }
+  .heatstrip .d.today {
+    background: var(--cardea-gradient);
+    box-shadow: 0 0 10px rgba(255,45,166,0.4);
+  }
+
+  /* ============ FOOTER ACTIONS ============ */
+  .footer-actions {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 14px 16px 18px;
+    background: linear-gradient(180deg, transparent, rgba(5,5,5,0.85) 40%, #050505 100%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+  .btn {
+    height: 50px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 200ms ease-out;
+    border: none;
+    flex: 1;
+  }
+  .btn-primary {
+    background: var(--cardea-gradient);
+    color: #fff;
+    flex: 2;
+    position: relative;
+    box-shadow: 0 0 40px rgba(255,45,166,0.2);
+  }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-primary:active { filter: brightness(0.92); }
+  .btn-secondary {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    color: var(--text-primary);
+  }
+  .btn-secondary:hover { background: rgba(255,255,255,0.07); }
+  .btn-secondary svg { width: 16px; height: 16px; }
+
+  /* ============ SCROLL PROGRESS ============ */
+  .scroll-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(255,255,255,0.03);
+    z-index: 20;
+  }
+  .scroll-progress .fill {
+    height: 100%;
+    background: var(--cardea-gradient);
+    width: 0%;
+    transition: width 120ms linear;
+  }
+
+  /* ============ TWEAKS PANEL ============ */
+  .tweaks-panel {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 280px;
+    background: linear-gradient(180deg, #15151a, #0a0a0f);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(20px);
+    z-index: 100;
+    display: none;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .tweaks-panel.on { display: block; }
+  .tweaks-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tweaks-close {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  .tweak {
+    margin-bottom: 14px;
+  }
+  .tweak:last-child { margin-bottom: 0; }
+  .tweak-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .tweak-options {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .tweak-opt {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    transition: 150ms ease-out;
+  }
+  .tweak-opt:hover { color: var(--text-primary); }
+  .tweak-opt.active {
+    background: var(--cardea-gradient);
+    color: #fff;
+    border-color: transparent;
+  }
+  .tweak-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .toggle-sw {
+    width: 36px;
+    height: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    position: relative;
+    cursor: pointer;
+    transition: 200ms ease-out;
+  }
+  .toggle-sw::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: 200ms ease-out;
+  }
+  .toggle-sw.on { background: var(--cardea-gradient); }
+  .toggle-sw.on::after { left: 18px; }
+
+  /* ============ VARIATIONS (hero style) ============ */
+  .phone-frame[data-hero="minimal"] .hero-distance .num {
+    background: none;
+    -webkit-text-fill-color: var(--text-primary);
+    color: var(--text-primary);
+    font-family: 'Playfair Display', serif;
+  }
+  .phone-frame[data-hero="minimal"] .hero-distance .unit {
+    color: var(--text-tertiary);
+  }
+  .phone-frame[data-hero="mono"] .hero-distance .num {
+    font-family: 'JetBrains Mono', monospace;
+    background: none;
+    -webkit-text-fill-color: var(--text-primary);
+    font-size: 72px;
+    font-weight: 600;
+  }
+
+  /* Partner section toggle */
+  .phone-frame[data-partners="off"] .partner-section { display: none; }
+
+  /* Map style variations */
+  .phone-frame[data-map="satellite"] .map-tiles {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(77,97,255,0.15), transparent 30%),
+      radial-gradient(circle at 70% 60%, rgba(0,229,255,0.1), transparent 40%),
+      radial-gradient(circle at 40% 80%, rgba(255,45,166,0.08), transparent 30%);
+    background-size: auto;
+    background-position: 0 0;
+  }
+  .phone-frame[data-map="satellite"] .map-contours {
+    opacity: 0.15;
+  }
+  .phone-frame[data-map="minimal"] .map-tiles { display: none; }
+  .phone-frame[data-map="minimal"] .map-contours { display: none; }
+
+  @media (max-width: 900px) {
+    .phone-rail { gap: 24px; }
+    .page-header { margin-bottom: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div class="page-header">
+    <div class="eyebrow">Cardea · Post-Run Information Flow</div>
+    <h1>4.33 km. Now tell me something I didn't know.</h1>
+    <p>A redesigned run summary: route and splits first, community and context layered on top, and long-form analytics still one tap away — scroll the phone to explore.</p>
+  </div>
+
+  <div class="phone-rail">
+    <div class="phone-frame" id="phone">
+      <div class="phone-inner">
+        <div class="scroll-progress"><div class="fill" id="scrollFill"></div></div>
+
+        <!-- Status bar -->
+        <div class="status-bar">
+          <span>7:13</span>
+          <span class="status-right">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a5 5 0 00-5 5 .5.5 0 001 0 4 4 0 018 0 .5.5 0 001 0 5 5 0 00-5-5zm0 2a3 3 0 00-3 3 .5.5 0 001 0 2 2 0 014 0 .5.5 0 001 0 3 3 0 00-3-3zm0 2.5A1 1 0 108 9 1 1 0 008 7.5z"/></svg>
+            <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="5" width="2" height="6" rx="0.5"/><rect x="4.5" y="3" width="2" height="8" rx="0.5"/><rect x="8" y="1.5" width="2" height="9.5" rx="0.5"/></svg>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="5.5" width="12" height="5" rx="1.3"/><rect x="2.8" y="6.8" width="8" height="2.5" rx="0.5" fill="currentColor"/></svg>
+          </span>
+        </div>
+
+        <!-- Nav -->
+        <div class="nav-row">
+          <div class="nav-back">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+            History
+          </div>
+          <div class="nav-right">
+            <div class="icon-btn" title="Share">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 100-4 2 2 0 000 4zM12 6a2 2 0 100-4 2 2 0 000 4zM12 14a2 2 0 100-4 2 2 0 000 4zM5.7 7L10.3 5M5.7 9L10.3 11"/></svg>
+            </div>
+            <div class="icon-btn" title="Add note">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M13 2l1 1-8 8-2 .5.5-2 8.5-7.5zM3 3h4M3 6h5M3 9h3M3 12h5"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Scroll body -->
+        <div class="body-scroll" id="bodyScroll">
+
+          <!-- HERO -->
+          <div class="hero">
+            <div class="eyebrow">Run Complete</div>
+            <div class="hero-date-row">
+              <div class="hero-date">Mar 15, 2026 · 6:42 pm</div>
+              <div class="hero-kind"><span class="dot"></span>Easy · Zone 1</div>
+            </div>
+            <div class="hero-distance">
+              <span class="num">4.33</span>
+              <span class="unit">km</span>
+            </div>
+            <div class="hero-caption">
+              31:39 · 7:18 /km · <span class="accent-up">↗ +0.4 km</span> vs avg easy run
+            </div>
+          </div>
+
+          <!-- KEY TRIO -->
+          <div class="trio">
+            <div class="cell">
+              <span class="label">Duration</span>
+              <span class="value">31:39</span>
+              <span class="sub flat">—</span>
+            </div>
+            <div class="cell">
+              <span class="label">Avg Pace</span>
+              <span class="value">7:18</span>
+              <span class="sub up">↗ 4s faster</span>
+            </div>
+            <div class="cell">
+              <span class="label">Avg HR</span>
+              <span class="value">159</span>
+              <span class="sub dn">↓ 2 bpm lower</span>
+            </div>
+          </div>
+
+          <!-- ROUTE CARD -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Route</span>
+              <span class="card-action">Open map →</span>
+            </div>
+            <div class="route-wrap">
+              <div class="map-tiles"></div>
+              <svg class="map-contours" viewBox="0 0 360 220" preserveAspectRatio="none">
+                <g fill="none" stroke="rgba(120,130,160,0.25)" stroke-width="0.5">
+                  <path d="M0,40 C80,30 140,60 220,50 C280,42 330,68 360,60"/>
+                  <path d="M0,90 C60,85 130,105 200,100 C270,95 320,115 360,108"/>
+                  <path d="M0,150 C50,140 140,170 230,160 C290,155 340,178 360,170"/>
+                  <path d="M0,200 C80,195 160,210 250,202 C300,198 340,212 360,208"/>
+                </g>
+              </svg>
+              <svg class="route-svg" viewBox="0 0 360 220" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="routeG" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#FF4D5A"/>
+                    <stop offset="35%" stop-color="#FF2DA6"/>
+                    <stop offset="65%" stop-color="#4D61FF"/>
+                    <stop offset="100%" stop-color="#00E5FF"/>
+                  </linearGradient>
+                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4"/>
+                  </filter>
+                </defs>
+                <!-- Glow -->
+                <path d="M60,180 C90,160 70,130 100,110 C140,90 150,60 200,55 C240,50 280,70 295,100 C305,130 280,150 250,155 C210,160 190,140 170,125 C150,115 130,130 110,150 C95,165 75,175 60,180 Z"
+                      stroke="url(#routeG)" stroke-width="7" fill="none" opacity="0.25" filter="url(#glow)"/>
+                <!-- Main route -->
+                <path d="M60,180 C90,160 70,130 100,110 C140,90 150,60 200,55 C240,50 280,70 295,100 C305,130 280,150 250,155 C210,160 190,140 170,125 C150,115 130,130 110,150 C95,165 75,175 60,180 Z"
+                      stroke="url(#routeG)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Km markers -->
+                <g font-family="JetBrains Mono, monospace" font-size="8" fill="#fff">
+                  <circle cx="60" cy="180" r="5" fill="#2ED47A"/>
+                  <circle cx="100" cy="110" r="2.5" fill="#fff" opacity="0.7"/>
+                  <circle cx="200" cy="55" r="2.5" fill="#fff" opacity="0.7"/>
+                  <circle cx="295" cy="100" r="2.5" fill="#fff" opacity="0.7"/>
+                  <circle cx="250" cy="155" r="2.5" fill="#fff" opacity="0.7"/>
+                  <circle cx="60" cy="180" r="2.5" fill="#FF4D5A"/>
+                </g>
+              </svg>
+              <div class="route-overlay"><span class="dot"></span>GPS · 94% signal</div>
+              <div class="route-legend">
+                <span class="seg"><span class="chip" style="background:var(--zone-1)"></span>Z1 72%</span>
+                <span class="seg"><span class="chip" style="background:var(--zone-2)"></span>Z2 21%</span>
+                <span class="seg"><span class="chip" style="background:var(--zone-3)"></span>Z3 6%</span>
+                <span class="seg"><span class="chip" style="background:var(--zone-4)"></span>Z4 1%</span>
+              </div>
+            </div>
+
+            <div class="route-stats-row">
+              <div class="route-stat">
+                <span class="label">Elevation ↑</span>
+                <span class="value">42 m</span>
+              </div>
+              <div class="route-stat">
+                <span class="label">Surface</span>
+                <span class="value">Road</span>
+              </div>
+              <div class="route-stat">
+                <span class="label">Loop</span>
+                <span class="value">Closed</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- COACH TAKE -->
+          <div class="card coach-card">
+            <div class="coach-title-row">
+              <div class="coach-avatar"></div>
+              <span class="coach-label">Coach's Take</span>
+            </div>
+            <div class="coach-headline">Endurance drifted in the back half — not a problem for an easy run.</div>
+            <div class="coach-body">
+              Your efficiency split went <strong>0.97 → 0.83</strong>, which reads as late-run cardiac drift.
+              Aerobic decoupling at <strong>15.2%</strong> confirms it. For a Zone 1 session this is acceptable;
+              we'd watch it on your next steady-state. Adaptive trim nudged up <strong>+0.7 bpm</strong>.
+            </div>
+            <div class="coach-tags">
+              <span class="coach-tag">EF 0.89</span>
+              <span class="coach-tag">Decoupling 15.2%</span>
+              <span class="coach-tag">Recovery lag 45s</span>
+            </div>
+          </div>
+
+          <!-- SPLITS -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Splits &amp; HR zones</span>
+              <span class="card-action">By km ▾</span>
+            </div>
+            <div class="splits-grid">
+              <div class="split-row">
+                <span class="km">01</span>
+                <span class="pace">7:22</span>
+                <div class="bar"><div class="fill" style="width:88%"></div></div>
+                <span class="hr">154 bpm</span>
+                <span class="zone zone-z1">Z1</span>
+              </div>
+              <div class="split-row">
+                <span class="km">02</span>
+                <span class="pace">7:14</span>
+                <div class="bar"><div class="fill" style="width:94%"></div></div>
+                <span class="hr">158 bpm</span>
+                <span class="zone zone-z1">Z1</span>
+              </div>
+              <div class="split-row">
+                <span class="km">03</span>
+                <span class="pace">7:11</span>
+                <div class="bar"><div class="fill" style="width:97%"></div></div>
+                <span class="hr">161 bpm</span>
+                <span class="zone zone-z2">Z2</span>
+              </div>
+              <div class="split-row">
+                <span class="km">04</span>
+                <span class="pace">7:26</span>
+                <div class="bar"><div class="fill" style="width:82%"></div></div>
+                <span class="hr">164 bpm</span>
+                <span class="zone zone-z2">Z2</span>
+              </div>
+              <div class="split-row">
+                <span class="km">0.33</span>
+                <span class="pace">7:05</span>
+                <div class="bar"><div class="fill" style="width:74%; background: linear-gradient(90deg,#FF2DA6,#FF4D5A);"></div></div>
+                <span class="hr">168 bpm</span>
+                <span class="zone zone-z3">Z3</span>
+              </div>
+            </div>
+
+            <div class="zone-bar-wrap">
+              <div class="eyebrow">Time in zone</div>
+              <div class="zone-bar">
+                <div class="seg" style="width:72%; background:var(--zone-1);"></div>
+                <div class="seg" style="width:21%; background:var(--zone-2);"></div>
+                <div class="seg" style="width:6%; background:var(--zone-3);"></div>
+                <div class="seg" style="width:1%; background:var(--zone-4);"></div>
+              </div>
+              <div class="zone-legend">
+                <div class="z">
+                  <span class="swatch" style="background:var(--zone-1)"></span>
+                  <span class="pct">72%</span>
+                  <span>Z1 · Easy</span>
+                </div>
+                <div class="z">
+                  <span class="swatch" style="background:var(--zone-2)"></span>
+                  <span class="pct">21%</span>
+                  <span>Z2 · Aerobic</span>
+                </div>
+                <div class="z">
+                  <span class="swatch" style="background:var(--zone-3)"></span>
+                  <span class="pct">6%</span>
+                  <span>Z3 · Thresh</span>
+                </div>
+                <div class="z">
+                  <span class="swatch" style="background:var(--zone-4)"></span>
+                  <span class="pct">1%</span>
+                  <span>Z4 · Hard</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRENDS -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Trends · vs last 4 easy runs</span>
+              <span class="card-action">All →</span>
+            </div>
+            <div class="trend-rows">
+              <div class="trend-row">
+                <div>
+                  <div class="name">Efficiency factor</div>
+                  <div class="big">0.89 <span class="delta up">↗ +0.03</span></div>
+                </div>
+                <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="spark1" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0%" stop-color="#4D61FF"/>
+                      <stop offset="100%" stop-color="#00E5FF"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,28 L20,24 L40,26 L60,22 L80,18 L100,12" stroke="url(#spark1)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                  <path d="M0,28 L20,24 L40,26 L60,22 L80,18 L100,12" stroke="url(#spark1)" stroke-width="4" fill="none" opacity="0.25" filter="blur(3px)"/>
+                  <circle cx="100" cy="12" r="2.5" fill="#00E5FF"/>
+                </svg>
+              </div>
+              <div class="trend-row">
+                <div>
+                  <div class="name">Heartbeats / km</div>
+                  <div class="big">1,119 <span class="delta up">↘ −22</span></div>
+                </div>
+                <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+                  <path d="M0,14 L20,18 L40,16 L60,22 L80,24 L100,28" stroke="url(#spark1)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                  <circle cx="100" cy="28" r="2.5" fill="#00E5FF"/>
+                </svg>
+              </div>
+              <div class="trend-row">
+                <div>
+                  <div class="name">Aerobic decoupling</div>
+                  <div class="big">15.2% <span class="delta dn">↗ +1.8</span></div>
+                </div>
+                <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="spark2" x1="0" x2="1" y1="0" y2="0">
+                      <stop offset="0%" stop-color="#FF2DA6"/>
+                      <stop offset="100%" stop-color="#FFB020"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,30 L20,26 L40,22 L60,24 L80,18 L100,14" stroke="url(#spark2)" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+                  <circle cx="100" cy="14" r="2.5" fill="#FFB020"/>
+                </svg>
+              </div>
+              <div class="trend-row">
+                <div>
+                  <div class="name">Volume this week</div>
+                  <div class="big">18.4 <span class="delta up">↗ +4.1 km</span></div>
+                </div>
+                <svg class="spark" viewBox="0 0 100 40" preserveAspectRatio="none">
+                  <g fill="url(#spark1)">
+                    <rect x="4" y="28" width="10" height="12" rx="1"/>
+                    <rect x="22" y="22" width="10" height="18" rx="1"/>
+                    <rect x="40" y="26" width="10" height="14" rx="1"/>
+                    <rect x="58" y="18" width="10" height="22" rx="1"/>
+                    <rect x="76" y="14" width="10" height="26" rx="1"/>
+                    <rect x="94" y="8"  width="6"  height="32" rx="1"/>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- STREAK / WEEK CONTEXT -->
+          <div class="card">
+            <div class="streak-card">
+              <div class="streak-col">
+                <span class="label">Week 12 · Base</span>
+                <span class="val">4<span class="small">/ 5 sessions</span></span>
+                <span class="sub">One more run before Sunday.</span>
+                <div class="heatstrip">
+                  <div class="d l2" title="Mon"></div>
+                  <div class="d" title="Tue"></div>
+                  <div class="d l3" title="Wed"></div>
+                  <div class="d" title="Thu"></div>
+                  <div class="d l1" title="Fri"></div>
+                  <div class="d today" title="Sat"></div>
+                  <div class="d" title="Sun"></div>
+                </div>
+              </div>
+              <div class="streak-col">
+                <span class="label">Streak</span>
+                <span class="val">12<span class="small"> days</span></span>
+                <span class="sub">Longest this year · sleep avg 7h 24m</span>
+                <div class="heatstrip">
+                  <div class="d l1"></div>
+                  <div class="d l2"></div>
+                  <div class="d l2"></div>
+                  <div class="d l3"></div>
+                  <div class="d l2"></div>
+                  <div class="d l3"></div>
+                  <div class="d today"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PARTNER ACTIVITY -->
+          <div class="card partner-section">
+            <div class="card-header">
+              <span class="card-title">Running with you today</span>
+              <span class="card-action">All →</span>
+            </div>
+            <div class="partner-row">
+              <div class="partner-avatar active">M</div>
+              <div class="partner-info">
+                <div class="name">Maya Osei</div>
+                <div class="act"><span class="status-live">● LIVE</span><span class="dot-sep">·</span>3.1 km in · 6:42 /km</div>
+              </div>
+              <button class="kudos-btn">✦ Cheer</button>
+            </div>
+            <div class="partner-row">
+              <div class="partner-avatar">J</div>
+              <div class="partner-info">
+                <div class="name">Jordan Park</div>
+                <div class="act">Intervals · 8×400m · 2h ago</div>
+              </div>
+              <button class="kudos-btn given">✦ Kudos</button>
+            </div>
+            <div class="partner-row">
+              <div class="partner-avatar">E</div>
+              <div class="partner-info">
+                <div class="name">Elena R.</div>
+                <div class="act">Long run · 16.2 km · this morning</div>
+              </div>
+              <button class="kudos-btn">✦ Kudos</button>
+            </div>
+            <div class="partner-row">
+              <div class="partner-avatar">+</div>
+              <div class="partner-info">
+                <div class="name" style="color:var(--text-secondary)">4 others trained today</div>
+                <div class="act">Sam, Riko, Priya, Leo</div>
+              </div>
+              <button class="kudos-btn">View</button>
+            </div>
+          </div>
+
+          <!-- SESSION OVERVIEW (advanced, collapsed feel) -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Session analytics</span>
+              <span class="card-action">Hide</span>
+            </div>
+            <div class="overview-list">
+              <div class="overview-row">
+                <div class="k">HR @ 6:00 /km
+                  <span class="hint">Heart rate at your goal pace</span>
+                </div>
+                <div class="v">161 bpm</div>
+              </div>
+              <div class="overview-row">
+                <div class="k">Efficiency factor</div>
+                <div class="v good">0.89</div>
+              </div>
+              <div class="overview-row">
+                <div class="k">Aerobic decoupling
+                  <span class="hint">Can improve with more volume</span>
+                </div>
+                <div class="v warn">15.2%</div>
+              </div>
+              <div class="overview-row">
+                <div class="k">Recovery lag
+                  <span class="hint">Pace change → HR response delay</span>
+                </div>
+                <div class="v">45 s</div>
+              </div>
+              <div class="overview-row">
+                <div class="k">Adaptive trim
+                  <span class="hint">Long-term offset applied to projections</span>
+                </div>
+                <div class="v">+0.7 bpm</div>
+              </div>
+              <div class="overview-row">
+                <div class="k">Efficiency split
+                  <span class="hint">First half → second half</span>
+                </div>
+                <div class="v">0.97 → 0.83</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height: 12px"></div>
+        </div>
+
+        <!-- Footer actions -->
+        <div class="footer-actions">
+          <button class="btn btn-secondary" title="View progress">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13L6 9l3 3 5-6M10 6h4v4"/></svg>
+          </button>
+          <button class="btn btn-primary">Done</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Design notes column -->
+    <div style="max-width: 340px; padding-top: 8px; color: var(--text-secondary); font-size: 13px; line-height: 1.6;">
+      <div class="eyebrow" style="margin-bottom: 12px;">Design notes</div>
+      <p style="margin-bottom: 14px;">
+        <strong style="color:var(--text-primary)">The old screen</strong> told you what you already knew
+        (distance, time, HR) and then dumped six advanced metrics in a plain list. No route.
+        No context. No reason to come back.
+      </p>
+      <p style="margin-bottom: 14px;">
+        <strong style="color:var(--text-primary)">This version</strong> reorders the information so
+        the most human parts land first: route, delta-from-normal, coach's interpretation of your
+        analytics. Raw numbers live further down — still one scroll away.
+      </p>
+      <div style="border-top:1px solid var(--glass-border); padding-top: 14px; margin-top: 14px;">
+        <div class="eyebrow" style="margin-bottom:10px;">Flow</div>
+        <ol style="padding-left: 18px; color: var(--text-secondary);">
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Hero</strong> — distance + delta vs your own baseline</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Trio</strong> — duration, pace, HR with deltas</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Route</strong> — gradient-stroked path, elevation, loop</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Coach</strong> — plain-English read of the analytics</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Splits + zones</strong> — per-km bars and zone distribution</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Trends</strong> — sparklines vs last 4 easy runs</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Week</strong> — session count + streak heat</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Partners</strong> — who's training today, live + recent</li>
+          <li style="margin-bottom:6px;"><strong style="color:var(--text-primary)">Analytics</strong> — the advanced numbers, collapsible</li>
+        </ol>
+      </div>
+      <div style="border-top:1px solid var(--glass-border); padding-top: 14px; margin-top: 14px; font-size: 12px; color: var(--text-tertiary);">
+        Toggle <strong style="color:var(--text-secondary)">Tweaks</strong> to try hero variants,
+        toggle partner activity, and switch the map style.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tweaks panel -->
+<div class="tweaks-panel" id="tweaksPanel">
+  <div class="tweaks-title">
+    Tweaks
+    <span class="tweaks-close" id="tweaksClose">✕</span>
+  </div>
+  <div class="tweak">
+    <div class="tweak-label">Hero distance style</div>
+    <div class="tweak-options" data-key="hero">
+      <div class="tweak-opt active" data-val="gradient">Gradient</div>
+      <div class="tweak-opt" data-val="minimal">Minimal</div>
+      <div class="tweak-opt" data-val="mono">Mono</div>
+    </div>
+  </div>
+  <div class="tweak">
+    <div class="tweak-label">Map style</div>
+    <div class="tweak-options" data-key="map">
+      <div class="tweak-opt active" data-val="grid">Grid</div>
+      <div class="tweak-opt" data-val="satellite">Satellite</div>
+      <div class="tweak-opt" data-val="minimal">Minimal</div>
+    </div>
+  </div>
+  <div class="tweak">
+    <div class="tweak-toggle">
+      <span class="tweak-label" style="margin-bottom:0">Partner activity</span>
+      <div class="toggle-sw on" id="partnerToggle"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== TWEAKS =====
+  const TWEAKS = /*EDITMODE-BEGIN*/{
+    "hero": "gradient",
+    "map": "grid",
+    "partners": "on"
+  }/*EDITMODE-END*/;
+
+  const phone = document.getElementById('phone');
+  const panel = document.getElementById('tweaksPanel');
+
+  function applyTweaks(t) {
+    phone.setAttribute('data-hero', t.hero);
+    phone.setAttribute('data-map', t.map);
+    phone.setAttribute('data-partners', t.partners);
+    // sync UI
+    panel.querySelectorAll('[data-key]').forEach(group => {
+      const k = group.dataset.key;
+      group.querySelectorAll('.tweak-opt').forEach(o => {
+        o.classList.toggle('active', o.dataset.val === t[k]);
+      });
+    });
+    document.getElementById('partnerToggle').classList.toggle('on', t.partners === 'on');
+  }
+  applyTweaks(TWEAKS);
+
+  panel.querySelectorAll('[data-key]').forEach(group => {
+    const k = group.dataset.key;
+    group.querySelectorAll('.tweak-opt').forEach(opt => {
+      opt.addEventListener('click', () => {
+        TWEAKS[k] = opt.dataset.val;
+        applyTweaks(TWEAKS);
+        persist({[k]: opt.dataset.val});
+      });
+    });
+  });
+  document.getElementById('partnerToggle').addEventListener('click', () => {
+    TWEAKS.partners = TWEAKS.partners === 'on' ? 'off' : 'on';
+    applyTweaks(TWEAKS);
+    persist({partners: TWEAKS.partners});
+  });
+  document.getElementById('tweaksClose').addEventListener('click', () => {
+    panel.classList.remove('on');
+    window.parent.postMessage({type: '__deactivate_edit_mode'}, '*');
+  });
+
+  function persist(edits) {
+    try { window.parent.postMessage({type: '__edit_mode_set_keys', edits}, '*'); } catch (e) {}
+  }
+
+  // Edit mode wiring
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.type === '__activate_edit_mode') panel.classList.add('on');
+    if (e.data.type === '__deactivate_edit_mode') panel.classList.remove('on');
+  });
+  try { window.parent.postMessage({type: '__edit_mode_available'}, '*'); } catch (e) {}
+
+  // ===== SCROLL PROGRESS =====
+  const scroll = document.getElementById('bodyScroll');
+  const fill = document.getElementById('scrollFill');
+  scroll.addEventListener('scroll', () => {
+    const max = scroll.scrollHeight - scroll.clientHeight;
+    const pct = max > 0 ? (scroll.scrollTop / max) * 100 : 0;
+    fill.style.width = pct + '%';
+  });
+</script>
+</body>
+</html>

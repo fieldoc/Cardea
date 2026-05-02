@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea — Home Hero States</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #050505;
+    --bg-secondary: #0D0D0D;
+    --bg-page: #08080D;
+    --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+    --glass-fill-strong: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025));
+    --glass-border: rgba(255,255,255,0.08);
+    --glass-border-strong: rgba(255,255,255,0.14);
+    --glass-highlight: rgba(255,255,255,0.03);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-tertiary: #5A6573;
+    --text-quaternary: #3A424E;
+    --cardea-gradient: linear-gradient(135deg, #FF4D5A 0%, #FF2DA6 35%, #4D61FF 65%, #00E5FF 100%);
+    --cta-gradient: linear-gradient(135deg, #FF2DA6 0%, #FF4D5A 50%, #FF2DA6 100%);
+    --gradient-pink: #FF2DA6;
+    --gradient-red: #FF4D5A;
+    --gradient-blue: #4D61FF;
+    --gradient-cyan: #00E5FF;
+    --zone-red: #E5484D;
+    --green: #2ED47A;
+    --amber: #FFB020;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at 18% 8%, rgba(255,45,166,0.06), transparent 45%),
+      radial-gradient(ellipse at 82% 90%, rgba(77,97,255,0.05), transparent 50%),
+      var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    padding: 56px 24px 96px;
+  }
+
+  .page-wrap { max-width: 1480px; margin: 0 auto; }
+
+  /* ── PAGE HEADER ───────────────────────────── */
+  .page-header { text-align: center; margin-bottom: 56px; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2.4px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gradient-cyan);
+    box-shadow: 0 0 10px var(--gradient-cyan);
+  }
+  .page-header .eyebrow { margin-bottom: 14px; }
+  .page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    line-height: 1.05;
+    font-weight: 900;
+    letter-spacing: -0.6px;
+    margin-bottom: 14px;
+  }
+  .page-header h1 .grad {
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .page-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    max-width: 680px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ── STATE PILL NAV ───────────────────────── */
+  .state-nav {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .state-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: all 160ms ease;
+  }
+  .state-nav a:hover { color: var(--text-primary); border-color: var(--glass-border-strong); }
+  .state-nav a .num { color: var(--text-tertiary); }
+  .state-nav a.tier1 { border-color: rgba(255,45,166,0.35); color: #FFB6DC; }
+  .state-nav a.tier1 .num { color: var(--gradient-pink); }
+
+  /* ── STAGE — three columns ─────────────────── */
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 393px 1fr;
+    gap: 32px;
+    align-items: start;
+    margin-bottom: 80px;
+  }
+
+  .annot-col { position: relative; padding-top: 32px; }
+  .annot-col.left { padding-right: 8px; }
+  .annot-col.right { padding-left: 8px; }
+
+  .annot {
+    position: relative;
+    margin-bottom: 24px;
+    padding: 14px 16px;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    backdrop-filter: blur(20px);
+  }
+  .annot .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    color: var(--gradient-pink);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .annot.tier1 .tag { color: var(--gradient-pink); }
+  .annot.tier2 .tag { color: var(--gradient-cyan); }
+  .annot.tier3 .tag { color: var(--text-secondary); }
+  .annot .tag .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .annot h4 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .annot p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+  .annot p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text-primary);
+  }
+
+  /* ── STATE HEADER (above each phone) ──────── */
+  .state-header {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .state-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    color: var(--text-tertiary);
+    margin-bottom: 8px;
+  }
+  .state-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    margin-bottom: 4px;
+  }
+  .state-title.t1 .grad {
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .state-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .state-sub .trigger {
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.05);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* ── PHONE FRAME ──────────────────────────── */
+  .phone-frame {
+    width: 393px;
+    height: 852px;
+    border-radius: 44px;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.09);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 40px 100px rgba(0,0,0,0.65),
+      0 0 120px rgba(255,45,166,0.04);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone-frame.tier1 {
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 40px 100px rgba(0,0,0,0.65),
+      0 0 140px rgba(255,45,166,0.10),
+      0 0 80px rgba(0,229,255,0.06);
+  }
+  .phone-inner {
+    width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 0%, #10111a 0%, var(--bg-primary) 60%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* status bar */
+  .status-bar {
+    flex: 0 0 44px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; }
+  .status-right svg { width: 16px; height: 16px; }
+
+  /* greeting row */
+  .greeting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 20px 10px;
+  }
+  .greeting-row .greeting {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+  }
+  .greeting-icons { display: flex; gap: 10px; }
+  .icon-32 {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--glass-border);
+    display: grid; place-items: center;
+    color: var(--text-tertiary);
+  }
+  .icon-32 svg { width: 14px; height: 14px; }
+  .icon-32.live { color: var(--green); }
+
+  .body-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 16px 110px;
+  }
+  .body-scroll::-webkit-scrollbar { width: 0; }
+
+  /* ── PULSE LABEL (eyebrow + cyan dot) ─────── */
+  .pulse-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .pulse-label::before {
+    content: '';
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--gradient-cyan);
+  }
+  .pulse-label.warm::before { background: var(--amber); }
+  .pulse-label.warm { color: #C8A465; }
+  .pulse-label.bright { color: var(--gradient-pink); }
+  .pulse-label.bright::before { background: var(--gradient-pink); box-shadow: 0 0 6px var(--gradient-pink); }
+
+  /* ═════════════════════════════════════════════
+     STATE 1 — GRADUATE HERO (TRIUMPHANT)
+     ═════════════════════════════════════════════ */
+  .grad-hero {
+    position: relative;
+    margin-top: 8px;
+    padding: 24px 22px 22px;
+    border-radius: 24px;
+    border: 1px solid var(--glass-border-strong);
+    background:
+      radial-gradient(ellipse at 80% -10%, rgba(255,45,166,0.18), transparent 50%),
+      radial-gradient(ellipse at 0% 100%, rgba(0,229,255,0.10), transparent 55%),
+      linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+    overflow: hidden;
+  }
+
+  /* Confetti spark layer — small dots that read as "subtle celebration"
+     not "party app". All within the card. */
+  .grad-spark {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .grad-spark.s1 { top: 14px; left: 26px; width: 4px; height: 4px; background: var(--gradient-pink); box-shadow: 0 0 8px var(--gradient-pink); }
+  .grad-spark.s2 { top: 32px; right: 38px; width: 3px; height: 3px; background: var(--gradient-cyan); box-shadow: 0 0 6px var(--gradient-cyan); }
+  .grad-spark.s3 { top: 64px; right: 18px; width: 5px; height: 5px; background: var(--gradient-red); box-shadow: 0 0 10px var(--gradient-red); opacity: 0.8; }
+  .grad-spark.s4 { top: 100px; left: 14px; width: 3px; height: 3px; background: var(--gradient-blue); box-shadow: 0 0 6px var(--gradient-blue); }
+  .grad-spark.s5 { top: 130px; right: 80px; width: 2px; height: 2px; background: var(--gradient-cyan); }
+
+  /* Laurel arc — drawn with two thin SVG quarters at top */
+  .grad-laurel {
+    position: absolute;
+    top: 18px; left: 50%; transform: translateX(-50%);
+    width: 220px; height: 28px;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .grad-eyebrow-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .grad-trophy-pip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px 4px 7px;
+    border-radius: 999px;
+    background: rgba(255,176,32,0.10);
+    border: 1px solid rgba(255,176,32,0.28);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .grad-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    line-height: 1.0;
+    font-weight: 900;
+    letter-spacing: -1.2px;
+    margin-bottom: 4px;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .grad-headline .punctuation {
+    -webkit-text-fill-color: var(--gradient-pink);
+  }
+  .grad-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    margin-bottom: 22px;
+    margin-top: 8px;
+  }
+
+  /* Stats trio — glass + white, NOT gradient (rule of three) */
+  .grad-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .grad-stat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 14px 10px 12px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Subtle inner shine — earned, not flashy */
+  .grad-stat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  }
+  .grad-stat .num {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.8px;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 4px;
+  }
+  .grad-stat .unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
+
+  /* "Choose your next program" section */
+  .grad-next-label {
+    margin-bottom: 10px;
+  }
+
+  .grad-cta-primary {
+    width: 100%;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--glass-border-strong);
+    padding: 14px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 160ms ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .grad-cta-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,229,255,0.06), transparent 60%);
+    pointer-events: none;
+  }
+  .grad-cta-primary:hover { border-color: rgba(0,229,255,0.4); }
+  .cta-icon-square {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    background: rgba(0,229,255,0.10);
+    border: 1px solid rgba(0,229,255,0.28);
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    color: var(--gradient-cyan);
+  }
+  .cta-icon-square svg { width: 18px; height: 18px; }
+  .grad-cta-primary .cta-text { flex: 1; min-width: 0; }
+  .grad-cta-primary .cta-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .grad-cta-primary .cta-title .pip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    background: rgba(0,229,255,0.12);
+    color: var(--gradient-cyan);
+    border: 1px solid rgba(0,229,255,0.3);
+    padding: 1px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .grad-cta-primary .cta-desc {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+  .grad-cta-primary .cta-chev {
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+
+  .grad-race-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0 2px;
+  }
+  .grad-race-row .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    margin-right: 2px;
+    flex-shrink: 0;
+  }
+  .race-chip {
+    flex: 1;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.025);
+    border-radius: 10px;
+    padding: 7px 0;
+    text-align: center;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 140ms ease;
+  }
+  .race-chip:hover { color: var(--text-primary); border-color: var(--glass-border-strong); }
+
+  .grad-tertiary {
+    text-align: center;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .grad-tertiary a {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    text-decoration: none;
+    letter-spacing: 0.1px;
+  }
+  .grad-tertiary a:hover { color: var(--text-secondary); }
+  .grad-tertiary a .arr { color: var(--text-quaternary); margin-left: 4px; }
+
+  /* ═════════════════════════════════════════════
+     STATE 2 — RESUME CARD (QUIET)
+     ═════════════════════════════════════════════ */
+  .resume-card {
+    margin-top: 8px;
+    padding: 22px 22px 18px;
+    border-radius: 24px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-fill);
+    position: relative;
+    overflow: hidden;
+  }
+  /* Pause glyph rendered subtly in the corner — two soft glass rectangles */
+  .resume-glyph {
+    position: absolute;
+    top: 22px; right: 22px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    display: grid; place-items: center;
+  }
+  .resume-glyph .pause-bars {
+    display: flex; gap: 4px;
+  }
+  .resume-glyph .pause-bars span {
+    width: 3px; height: 12px; border-radius: 2px;
+    background: var(--text-secondary);
+  }
+
+  .resume-eyebrow-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .resume-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    max-width: 280px;
+  }
+  .resume-body {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin-bottom: 22px;
+  }
+  .resume-body .em { color: var(--text-primary); font-weight: 600; }
+
+  /* Progress thread — quiet, white-on-glass */
+  .resume-progress {
+    margin-bottom: 22px;
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--glass-border);
+  }
+  .resume-progress-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .resume-progress-head .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .resume-progress-head .val {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .resume-progress-head .val .em { color: var(--text-primary); font-weight: 600; }
+  .resume-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+    position: relative;
+  }
+  .resume-bar-fill {
+    height: 100%;
+    width: 58%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.55), rgba(255,255,255,0.85));
+    border-radius: 2px;
+    position: relative;
+  }
+  .resume-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: -2px; bottom: -2px; right: -1px;
+    width: 8px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 2px;
+  }
+
+  /* Primary CTA — solid gradient (this is the action pivot) */
+  .resume-cta-primary {
+    width: 100%;
+    height: 50px;
+    border: none;
+    border-radius: 16px;
+    background: var(--cta-gradient);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(255,45,166,0.22);
+    margin-bottom: 10px;
+  }
+  .resume-cta-primary svg { width: 16px; height: 16px; }
+
+  .resume-cta-secondary {
+    width: 100%;
+    height: 44px;
+    border: 1px solid var(--glass-border-strong);
+    background: transparent;
+    border-radius: 14px;
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .resume-tertiary {
+    text-align: center;
+    margin-top: 14px;
+  }
+  .resume-tertiary a {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    text-decoration: none;
+  }
+  .resume-tertiary a .arr { margin-left: 4px; color: var(--text-quaternary); }
+
+  /* ═════════════════════════════════════════════
+     STATE 3 — NO BOOTCAMP (REFRESHED)
+     ═════════════════════════════════════════════ */
+  .no-bc-card {
+    margin-top: 8px;
+    padding: 24px 22px 22px;
+    border-radius: 24px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-fill);
+    position: relative;
+    overflow: hidden;
+  }
+  .no-bc-eyebrow-row {
+    margin-bottom: 14px;
+  }
+  .no-bc-headline {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    line-height: 1.0;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+    margin-bottom: 8px;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .no-bc-sub {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    margin-bottom: 22px;
+    max-width: 320px;
+  }
+
+  .feature-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 22px;
+    padding: 16px 14px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--glass-border);
+  }
+  .feature-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .feature-icon {
+    width: 38px; height: 38px;
+    border-radius: 12px;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+  }
+  .feature-icon.red { background: rgba(255,77,90,0.12); color: var(--gradient-red); }
+  .feature-icon.cyan { background: rgba(0,229,255,0.12); color: var(--gradient-cyan); }
+  .feature-icon.blue { background: rgba(77,97,255,0.12); color: var(--gradient-blue); }
+  .feature-icon svg { width: 18px; height: 18px; }
+  .feature-text { flex: 1; min-width: 0; }
+  .feature-text .title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1px;
+  }
+  .feature-text .desc {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .no-bc-cta {
+    width: 100%;
+    height: 50px;
+    border: none;
+    border-radius: 16px;
+    background: var(--cta-gradient);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(255,45,166,0.22);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .no-bc-cta svg { width: 16px; height: 16px; }
+
+  /* ── BOTTOM TAB BAR (consistent across states) ── */
+  .tab-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 84px;
+    background: linear-gradient(180deg, rgba(5,5,5,0) 0%, rgba(5,5,5,0.85) 30%, rgba(5,5,5,0.95) 100%);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    justify-content: space-around;
+    padding: 14px 24px 24px;
+  }
+  .tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    color: var(--text-tertiary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .tab-item svg { width: 22px; height: 22px; }
+  .tab-item.active { color: var(--text-primary); }
+  .tab-item.active svg path,
+  .tab-item.active svg circle {
+    stroke: url(#nav-grad);
+  }
+
+  /* ── COMPOSE CODE BLOCKS ──────────────────── */
+  .code-section {
+    max-width: 1480px;
+    margin: 0 auto 64px;
+    padding: 0 4px;
+  }
+  .code-section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 10px;
+    display: flex; align-items: baseline; gap: 12px;
+  }
+  .code-section h2 .pip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+  .code-section .lede {
+    color: var(--text-secondary);
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-bottom: 18px;
+    max-width: 760px;
+  }
+
+  .copy-variants {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .copy-variant {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.025);
+  }
+  .copy-variant .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+    display: flex; justify-content: space-between;
+  }
+  .copy-variant .label .pick { color: var(--gradient-pink); }
+  .copy-variant .text {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+  }
+  .copy-variant.body .text {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  pre {
+    background: #07070C;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 22px 24px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    color: #C9CDD6;
+  }
+  pre::-webkit-scrollbar { height: 8px; }
+  pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+  .k-keyword { color: #FF7DB1; }
+  .k-fun     { color: #6DE8FF; }
+  .k-type    { color: #FFB6DC; }
+  .k-string  { color: #B6FFB0; }
+  .k-comment { color: #5A6573; font-style: italic; }
+  .k-num     { color: #FFB020; }
+  .k-anno    { color: #C8A465; }
+
+  /* ── DIVIDER ───────────────────────────────── */
+  .section-divider {
+    max-width: 1480px;
+    margin: 64px auto;
+    padding: 0 4px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .section-divider .line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+  }
+  .section-divider .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+  }
+
+  /* ── HIERARCHY MAP ─────────────────────────── */
+  .hierarchy-map {
+    max-width: 1480px;
+    margin: 0 auto 64px;
+    padding: 28px;
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-fill);
+  }
+  .hierarchy-map h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 18px;
+  }
+  .hier-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .hier-cell {
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.02);
+  }
+  .hier-cell.t1 { border-color: rgba(255,45,166,0.3); background: linear-gradient(180deg, rgba(255,45,166,0.05), rgba(255,255,255,0.02)); }
+  .hier-cell .tier-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hier-cell.t1 .tier-tag { color: var(--gradient-pink); }
+  .hier-cell.t2 .tier-tag { color: var(--gradient-cyan); }
+  .hier-cell.t3 .tier-tag { color: var(--text-secondary); }
+  .hier-cell .tier-tag::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .hier-cell h4 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+  }
+  .hier-cell p {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .hier-cell .applies {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--glass-border);
+    letter-spacing: 0.6px;
+  }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="nav-grad" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#4D61FF"/>
+      <stop offset="1" stop-color="#00E5FF"/>
+    </linearGradient>
+    <linearGradient id="cardea-grad" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#FF4D5A"/>
+      <stop offset="0.35" stop-color="#FF2DA6"/>
+      <stop offset="0.65" stop-color="#4D61FF"/>
+      <stop offset="1" stop-color="#00E5FF"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="page-wrap">
+
+  <!-- ╔══════════════════════════════════════════════ -->
+  <!-- ║  PAGE HEADER                                  -->
+  <!-- ╚══════════════════════════════════════════════ -->
+  <header class="page-header">
+    <div class="eyebrow">CARDEA · HOME · HERO STATES</div>
+    <h1>Three states the <span class="grad">Home hero</span> needs to know.</h1>
+    <p>Today, Home only renders <em>active</em> bootcamp + new-user pitch. A marathon graduate sees the same screen as a fresh install. These three composables fix that — each tuned to a different emotional moment in the bootcamp lifecycle, all sharing one gradient hierarchy so they feel like the same product.</p>
+    <div class="state-nav">
+      <a href="#graduate" class="tier1"><span class="num">01 ·</span> GraduateHero</a>
+      <a href="#resume"><span class="num">02 ·</span> ResumeCard</a>
+      <a href="#nobootcamp"><span class="num">03 ·</span> NoBootcampCard</a>
+    </div>
+  </header>
+
+  <!-- ── GRADIENT HIERARCHY MAP ─────────────────── -->
+  <div class="hierarchy-map">
+    <h2>The three-gradient rule, applied to these heroes.</h2>
+    <div class="hier-grid">
+      <div class="hier-cell t1">
+        <div class="tier-tag">Tier 1 · Gradient</div>
+        <h4>Triumph + identity</h4>
+        <p>4-stop CardeaGradient on text only. One element per screen. Reserved for the moment that defines the screen.</p>
+        <div class="applies">→ GraduateHero headline · NoBootcampCard headline (existing) · PulseHero (active)</div>
+      </div>
+      <div class="hier-cell t2">
+        <div class="tier-tag">Tier 2 · Glass + White</div>
+        <h4>Earned facts</h4>
+        <p>White text on glass surface. Stats, progress, supporting metrics. No gradient — these are evidence, not the story.</p>
+        <div class="applies">→ Stats trio · Progress thread · Primary CTAs</div>
+      </div>
+      <div class="hier-cell t3">
+        <div class="tier-tag">Tier 3 · Glass + Secondary</div>
+        <h4>Ambient context</h4>
+        <p>Secondary or tertiary text on glass. Eyebrows, body copy, tertiary links. The quiet layer that lets Tier 1 breathe.</p>
+        <div class="applies">→ Pulse labels · Race chips · Freestyle / Manual-run links</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ╔══════════════════════════════════════════════ -->
+  <!-- ║  STATE 1 — GRADUATE HERO                      -->
+  <!-- ╚══════════════════════════════════════════════ -->
+  <a id="graduate"></a>
+  <div class="stage">
+
+    <!-- LEFT ANNOTATIONS -->
+    <div class="annot-col left">
+      <div class="annot tier1">
+        <div class="tag"><span class="dot"></span>Tier 1 · The triumph headline</div>
+        <h4>Gradient text earns its keep</h4>
+        <p>This is the <em>only</em> Home hero where the 4-stop <code>CardeaGradient</code> describes a moment, not a marketing line. Same <code>BlendMode.SrcIn</code> trick as <code>NoBootcampCard:970</code>. Italic period in <code>GradientPink</code> — small, but it lands like a stamp.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Eyebrow · earned tag</div>
+        <h4>"GRADUATED · MARATHON"</h4>
+        <p>Pulled from <code>enrollment.goalType</code>. Tertiary text + cyan pulse dot — same eyebrow primitive used everywhere else on Home. Right side carries a small <em>amber</em> trophy chip — the <em>only</em> warm pip on the screen, anchoring the laurel arc above.</p>
+      </div>
+      <div class="annot tier2">
+        <div class="tag"><span class="dot"></span>Stats trio · earned, not flashy</div>
+        <h4>Numbers in 30sp ExtraBold</h4>
+        <p>Three glass tiles, monospace units in caps. Inner top-edge highlight (1px, 18% white) gives them a "minted" feel. Critically: <strong>no gradient</strong> — gradient on stats would steal from the headline and break Tier 2.</p>
+      </div>
+    </div>
+
+    <!-- PHONE -->
+    <div>
+      <div class="state-header">
+        <div class="state-num">01 · STATE</div>
+        <div class="state-title t1"><span class="grad">GraduateHero</span></div>
+        <div class="state-sub">trigger · <span class="trigger">enrollment.status == GRADUATED</span></div>
+      </div>
+
+      <div class="phone-frame tier1">
+        <div class="phone-inner">
+          <!-- status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-right">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M1 11h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z" fill="white"/></svg>
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 12.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-3.5-3.7C5.5 8.2 6.7 7.7 8 7.7s2.5.5 3.5 1.1l1.4-1.4C11.5 6.5 9.8 5.7 8 5.7s-3.5.8-4.9 1.7l1.4 1.4z" fill="white"/></svg>
+              <svg viewBox="0 0 24 16" fill="none"><rect x="0.5" y="0.5" width="20" height="13" rx="3" stroke="white" opacity="0.4"/><rect x="2" y="2" width="17" height="10" rx="1.5" fill="white"/><rect x="21" y="5" width="2" height="5" rx="1" fill="white" opacity="0.4"/></svg>
+            </div>
+          </div>
+
+          <!-- greeting -->
+          <div class="greeting-row">
+            <span class="greeting">Sunday evening</span>
+            <div class="greeting-icons">
+              <div class="icon-32 live">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.4-5-7.5C3 4.5 4.5 3 6.5 3c1 0 2 .5 1.5 1.5C9.5 3.5 10.5 3 11.5 3 13.5 3 15 4.5 15 6.5 15 10.6 8 14 8 14z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+              </div>
+              <div class="icon-32">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 13c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body-scroll">
+
+            <!-- ── GRADUATE HERO ── -->
+            <div class="grad-hero">
+              <!-- decorative laurel arc -->
+              <svg class="grad-laurel" viewBox="0 0 220 28" fill="none">
+                <path d="M20 24 C 50 4, 80 2, 110 4" stroke="url(#cardea-grad)" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.8"/>
+                <path d="M200 24 C 170 4, 140 2, 110 4" stroke="url(#cardea-grad)" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.8"/>
+                <!-- leaf ticks -->
+                <path d="M30 22 l-3 -4 M40 18 l-3 -4 M52 13 l-2 -4 M68 8 l-2 -4 M86 6 l-1.5 -3.5" stroke="#FF2DA6" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+                <path d="M190 22 l3 -4 M180 18 l3 -4 M168 13 l2 -4 M152 8 l2 -4 M134 6 l1.5 -3.5" stroke="#00E5FF" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+                <circle cx="110" cy="4" r="2" fill="#FFB020" opacity="0.95"/>
+              </svg>
+
+              <span class="grad-spark s1"></span>
+              <span class="grad-spark s2"></span>
+              <span class="grad-spark s3"></span>
+              <span class="grad-spark s4"></span>
+              <span class="grad-spark s5"></span>
+
+              <div class="grad-eyebrow-row">
+                <div class="pulse-label">GRADUATED · MARATHON</div>
+                <div class="grad-trophy-pip">
+                  <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M2 1h5v2.5a2.5 2.5 0 0 1-5 0V1zM4 6v1.5h-1V8h3v-.5h-1V6" stroke="currentColor" stroke-width="0.8" fill="none"/></svg>
+                  18 WEEKS
+                </div>
+              </div>
+
+              <h1 class="grad-headline">Race-tier<br/>fitness, locked&nbsp;<span class="punctuation">in.</span></h1>
+
+              <div class="grad-sub">You finished your first marathon prep cycle. Every pace zone, every long run, banked. Here's where to take it next.</div>
+
+              <!-- Stats trio -->
+              <div class="grad-stats">
+                <div class="grad-stat">
+                  <div class="num">18</div>
+                  <div class="unit">WEEKS</div>
+                </div>
+                <div class="grad-stat">
+                  <div class="num">62</div>
+                  <div class="unit">SESSIONS</div>
+                </div>
+                <div class="grad-stat">
+                  <div class="num">487</div>
+                  <div class="unit">KM</div>
+                </div>
+              </div>
+
+              <!-- "Choose your next program" -->
+              <div class="grad-next-label">
+                <div class="pulse-label">CHOOSE YOUR NEXT PROGRAM</div>
+              </div>
+
+              <button class="grad-cta-primary">
+                <div class="cta-icon-square">
+                  <svg viewBox="0 0 18 18" fill="none">
+                    <path d="M2 9h2.5l1.5 -4 3 8 1.5 -3h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <div class="cta-text">
+                  <div class="cta-title">
+                    Cardio Health <span class="pip">EVERGREEN</span>
+                  </div>
+                  <div class="cta-desc">Maintain race fitness. Tier-aware — keeps you at your level.</div>
+                </div>
+                <div class="cta-chev">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+              </button>
+
+              <div class="grad-race-row">
+                <div class="label">NEW RACE</div>
+                <button class="race-chip">5K</button>
+                <button class="race-chip">10K</button>
+                <button class="race-chip">Half</button>
+                <button class="race-chip">Full</button>
+              </div>
+
+              <div class="grad-tertiary">
+                <a href="#">Just freestyle today<span class="arr">→</span></a>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- TAB BAR -->
+          <div class="tab-bar">
+            <div class="tab-item active">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-4v-6h-8v6H4a1 1 0 0 1-1-1v-9z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Home
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h2l2-5 4 10 2-5h4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Workout
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              History
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="9" r="3.5" stroke-width="1.6"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Account
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT ANNOTATIONS -->
+    <div class="annot-col right">
+      <div class="annot tier2">
+        <div class="tag"><span class="dot"></span>Primary CTA · Cardio Health</div>
+        <h4>Wide row, not a button</h4>
+        <p>Cardio Health is a <em>destination</em>, not an action — so it gets a row treatment with icon, title, and the "tier-aware" reassurance inline. <code>EVERGREEN</code> pip in cyan reinforces this is the calm-after-the-storm path. Hover-tints to cyan so it stands distinct from the warm-pink CTA gradient.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Race chips · secondary path</div>
+        <h4>Four equal weights, no winner</h4>
+        <p>Most graduates take Cardio Health (data point: most do). Race chips are quieter, equal-width — "if you want a new goal, here are the four shapes" — without bullying anyone toward another marathon block.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Freestyle escape hatch</div>
+        <h4>Not "Manual Run" here</h4>
+        <p>The wording matters. After graduation, "Just freestyle today" feels like a gift; "Manual Run" feels like a settings menu. Same destination as elsewhere — different door.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPOSE — GraduateHero -->
+  <section class="code-section" id="grad-code">
+    <h2>GraduateHero <span class="pip">composable · ~110 lines</span></h2>
+    <p class="lede">Mirrors the signature style of <code>PulseHero</code>: <code>private fun</code>, takes state + callbacks, returns Unit. Reuses <code>PulseLabel</code>, <code>FeatureItem</code>'s glass-tile pattern, and the <code>BlendMode.SrcIn</code> gradient-text trick exactly as <code>NoBootcampCard:970-980</code>.</p>
+
+    <h3 style="font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-tertiary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Headline copy variants</h3>
+    <div class="copy-variants">
+      <div class="copy-variant">
+        <div class="label"><span>Variant A · Recommended</span><span class="pick">★ shipping</span></div>
+        <div class="text">Race-tier fitness,<br/>locked in.</div>
+      </div>
+      <div class="copy-variant">
+        <div class="label"><span>Variant B · Plainspoken</span></div>
+        <div class="text">You did it.</div>
+      </div>
+      <div class="copy-variant">
+        <div class="label"><span>Variant C · Goal-named</span></div>
+        <div class="text">Marathon ready.</div>
+      </div>
+    </div>
+
+<pre><span class="k-comment">// ─────────────────────────────────────────────────────────────────────────────
+// GraduateHero — Triumphant. The ONLY Home hero where the 4-stop gradient
+// describes a moment ("Race-tier fitness, locked in") rather than a pitch.
+// Tier-2 stats trio is glass + white, NOT gradient — earned numbers should
+// read as evidence, not marketing. Trophy chip + amber laurel = the single
+// warm beat that lifts gradient pink/cyan into "celebration" territory.
+// ─────────────────────────────────────────────────────────────────────────────</span>
+<span class="k-anno">@Composable</span>
+<span class="k-keyword">private fun</span> <span class="k-fun">GraduateHero</span>(
+    enrollment: <span class="k-type">BootcampEnrollmentEntity</span>,
+    weeksCompleted: <span class="k-type">Int</span>,
+    sessionsCompleted: <span class="k-type">Int</span>,
+    totalKm: <span class="k-type">Double</span>,
+    onChooseEvergreen: () -> <span class="k-type">Unit</span>,
+    onChooseRace: (<span class="k-type">RaceGoal</span>) -> <span class="k-type">Unit</span>,
+    onFreestyle: () -> <span class="k-type">Unit</span>,
+    modifier: <span class="k-type">Modifier</span> = <span class="k-type">Modifier</span>,
+) {
+    <span class="k-keyword">val</span> heroGradient = <span class="k-type">CardeaTheme</span>.colors.gradient
+    <span class="k-keyword">val</span> goalLabel = <span class="k-fun">remember</span>(enrollment.goalType) {
+        enrollment.goalType.name.<span class="k-fun">replace</span>(<span class="k-string">"_"</span>, <span class="k-string">" "</span>)
+    }
+
+    <span class="k-type">Box</span>(
+        modifier = modifier
+            .<span class="k-fun">fillMaxWidth</span>()
+            .<span class="k-fun">padding</span>(horizontal = <span class="k-type">HomeGutter</span>)
+            .<span class="k-fun">clip</span>(<span class="k-type">HomeCardRadius</span>)                                <span class="k-comment">// .clip BEFORE .background — children obey radius</span>
+            .<span class="k-fun">border</span>(<span class="k-num">1</span>.dp, <span class="k-type">CardeaTheme</span>.colors.glassBorder, <span class="k-type">HomeCardRadius</span>)
+            .<span class="k-fun">background</span>(
+                <span class="k-type">Brush</span>.<span class="k-fun">verticalGradient</span>(
+                    colorStops = <span class="k-fun">arrayOf</span>(
+                        <span class="k-num">0f</span> to <span class="k-type">GradientPink</span>.<span class="k-fun">copy</span>(alpha = <span class="k-num">0.10f</span>),
+                        <span class="k-num">0.55f</span> to <span class="k-type">GradientBlue</span>.<span class="k-fun">copy</span>(alpha = <span class="k-num">0.04f</span>),
+                        <span class="k-num">1f</span> to <span class="k-type">CardeaTheme</span>.colors.glassHighlight,
+                    ),
+                ),
+            )
+            .<span class="k-fun">padding</span>(<span class="k-type">HomeCardPadding</span> + <span class="k-num">4</span>.dp),
+    ) {
+        <span class="k-type">Column</span>(modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>()) {
+
+            <span class="k-comment">// Eyebrow + amber trophy chip ─ the single warm pip on screen.</span>
+            <span class="k-type">Row</span>(
+                modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>(),
+                horizontalArrangement = <span class="k-type">Arrangement</span>.SpaceBetween,
+                verticalAlignment = <span class="k-type">Alignment</span>.CenterVertically,
+            ) {
+                <span class="k-fun">PulseLabel</span>(text = <span class="k-string">"GRADUATED · $goalLabel"</span>)
+                <span class="k-fun">TrophyChip</span>(weeks = weeksCompleted)
+            }
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">12</span>.dp))
+
+            <span class="k-comment">// TIER 1 — gradient triumph headline.
+            // Same compositingStrategy + drawWithContent + BlendMode.SrcIn
+            // pattern used in NoBootcampCard:970-980. Do not reinvent.</span>
+            <span class="k-type">Text</span>(
+                text = <span class="k-string">"Race-tier fitness,\nlocked in."</span>,
+                style = <span class="k-type">MaterialTheme</span>.typography.displaySmall.<span class="k-fun">copy</span>(
+                    fontWeight = <span class="k-type">FontWeight</span>.Black,
+                    fontSize = <span class="k-num">38</span>.sp,
+                    lineHeight = <span class="k-num">40</span>.sp,
+                    letterSpacing = (-<span class="k-num">1.2</span>).sp,
+                ),
+                color = <span class="k-type">CardeaTheme</span>.colors.textPrimary,
+                modifier = <span class="k-type">Modifier</span>
+                    .<span class="k-fun">graphicsLayer</span> { compositingStrategy = <span class="k-type">CompositingStrategy</span>.Offscreen }
+                    .<span class="k-fun">drawWithContent</span> {
+                        <span class="k-fun">drawContent</span>()
+                        <span class="k-fun">drawRect</span>(brush = heroGradient, blendMode = <span class="k-type">BlendMode</span>.SrcIn)
+                    },
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">8</span>.dp))
+
+            <span class="k-type">Text</span>(
+                text = <span class="k-string">"You finished your first marathon prep cycle. Every pace " +
+                       "zone, every long run, banked. Here's where to take it next."</span>,
+                style = <span class="k-type">MaterialTheme</span>.typography.bodyMedium.<span class="k-fun">copy</span>(fontSize = <span class="k-num">13.5</span>.sp, lineHeight = <span class="k-num">19</span>.sp),
+                color = <span class="k-type">CardeaTheme</span>.colors.textSecondary,
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">22</span>.dp))
+
+            <span class="k-comment">// TIER 2 — stats trio. Glass + white. NO gradient.</span>
+            <span class="k-type">Row</span>(
+                modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>(),
+                horizontalArrangement = <span class="k-type">Arrangement</span>.<span class="k-fun">spacedBy</span>(<span class="k-num">8</span>.dp),
+            ) {
+                <span class="k-fun">StatTile</span>(value = weeksCompleted.<span class="k-fun">toString</span>(), unit = <span class="k-string">"WEEKS"</span>, modifier = <span class="k-type">Modifier</span>.<span class="k-fun">weight</span>(<span class="k-num">1f</span>))
+                <span class="k-fun">StatTile</span>(value = sessionsCompleted.<span class="k-fun">toString</span>(), unit = <span class="k-string">"SESSIONS"</span>, modifier = <span class="k-type">Modifier</span>.<span class="k-fun">weight</span>(<span class="k-num">1f</span>))
+                <span class="k-fun">StatTile</span>(value = totalKm.<span class="k-fun">toInt</span>().<span class="k-fun">toString</span>(), unit = <span class="k-string">"KM"</span>, modifier = <span class="k-type">Modifier</span>.<span class="k-fun">weight</span>(<span class="k-num">1f</span>))
+            }
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">22</span>.dp))
+
+            <span class="k-fun">PulseLabel</span>(text = <span class="k-string">"CHOOSE YOUR NEXT PROGRAM"</span>)
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">10</span>.dp))
+
+            <span class="k-comment">// Primary path — Cardio Health (evergreen).</span>
+            <span class="k-fun">EvergreenChoiceRow</span>(onClick = onChooseEvergreen)
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">10</span>.dp))
+
+            <span class="k-comment">// Secondary path — pick a new race goal.</span>
+            <span class="k-type">Row</span>(
+                modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>(),
+                horizontalArrangement = <span class="k-type">Arrangement</span>.<span class="k-fun">spacedBy</span>(<span class="k-num">8</span>.dp),
+                verticalAlignment = <span class="k-type">Alignment</span>.CenterVertically,
+            ) {
+                <span class="k-fun">PulseLabel</span>(text = <span class="k-string">"NEW RACE"</span>)
+                <span class="k-type">RaceGoal</span>.entries.<span class="k-fun">forEach</span> { goal ->
+                    <span class="k-fun">RaceChip</span>(label = goal.shortLabel, onClick = { <span class="k-fun">onChooseRace</span>(goal) }, modifier = <span class="k-type">Modifier</span>.<span class="k-fun">weight</span>(<span class="k-num">1f</span>))
+                }
+            }
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">18</span>.dp))
+
+            <span class="k-comment">// Tertiary — freestyle escape hatch. Tertiary text, centered.</span>
+            <span class="k-type">TextButton</span>(onClick = onFreestyle, modifier = <span class="k-type">Modifier</span>.<span class="k-fun">align</span>(<span class="k-type">Alignment</span>.CenterHorizontally)) {
+                <span class="k-type">Text</span>(
+                    <span class="k-string">"Just freestyle today →"</span>,
+                    color = <span class="k-type">CardeaTheme</span>.colors.textTertiary,
+                    style = <span class="k-type">MaterialTheme</span>.typography.bodySmall,
+                )
+            }
+        }
+    }
+}</pre>
+  </section>
+
+  <div class="section-divider"><div class="line"></div><div class="label">02 · paused — quiet, no shame</div><div class="line"></div></div>
+
+  <!-- ╔══════════════════════════════════════════════ -->
+  <!-- ║  STATE 2 — RESUME CARD                        -->
+  <!-- ╚══════════════════════════════════════════════ -->
+  <a id="resume"></a>
+  <div class="stage">
+
+    <!-- LEFT ANNOTATIONS -->
+    <div class="annot-col left">
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>No gradient title here</div>
+        <h4>Plain serif headline</h4>
+        <p>The pause was deliberate. A gradient would shout, and shouting is exactly the wrong tone for "you stepped away on purpose." Headline is Playfair white on glass — friendly, calm, unambiguously not a graduation moment.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Eyebrow · "PAUSED · WEEK 7"</div>
+        <h4>Where, not why</h4>
+        <p>Tells the user where they paused (week N), not why (we don't know, and shouldn't pretend). No red, no warning chrome — pause is a neutral state. <code>cyan</code> dot stays consistent with active and graduated cards.</p>
+      </div>
+      <div class="annot tier2">
+        <div class="tag"><span class="dot"></span>Progress thread · breadcrumb</div>
+        <h4>"15 of 26 sessions"</h4>
+        <p>One quiet stat. White-on-glass progress bar (no gradient — that's reserved). The right edge sits where they paused. Reads as a bookmark, not a debt: "your place is held."</p>
+      </div>
+    </div>
+
+    <!-- PHONE -->
+    <div>
+      <div class="state-header">
+        <div class="state-num">02 · STATE</div>
+        <div class="state-title">ResumeCard</div>
+        <div class="state-sub">trigger · <span class="trigger">enrollment.status == PAUSED</span></div>
+      </div>
+
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <!-- status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-right">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M1 11h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z" fill="white"/></svg>
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 12.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-3.5-3.7C5.5 8.2 6.7 7.7 8 7.7s2.5.5 3.5 1.1l1.4-1.4C11.5 6.5 9.8 5.7 8 5.7s-3.5.8-4.9 1.7l1.4 1.4z" fill="white"/></svg>
+              <svg viewBox="0 0 24 16" fill="none"><rect x="0.5" y="0.5" width="20" height="13" rx="3" stroke="white" opacity="0.4"/><rect x="2" y="2" width="14" height="10" rx="1.5" fill="white"/><rect x="21" y="5" width="2" height="5" rx="1" fill="white" opacity="0.4"/></svg>
+            </div>
+          </div>
+
+          <!-- greeting -->
+          <div class="greeting-row">
+            <span class="greeting">Tuesday morning</span>
+            <div class="greeting-icons">
+              <div class="icon-32">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.4-5-7.5C3 4.5 4.5 3 6.5 3c1 0 2 .5 1.5 1.5C9.5 3.5 10.5 3 11.5 3 13.5 3 15 4.5 15 6.5 15 10.6 8 14 8 14z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+              </div>
+              <div class="icon-32">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 13c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body-scroll">
+
+            <div class="resume-card">
+              <div class="resume-glyph">
+                <div class="pause-bars">
+                  <span></span><span></span>
+                </div>
+              </div>
+
+              <div class="resume-eyebrow-row">
+                <div class="pulse-label">PAUSED · WEEK 7</div>
+              </div>
+
+              <h2 class="resume-headline">Ready when<br/>you are.</h2>
+
+              <p class="resume-body">You had <span class="em">15 of 26</span> sessions complete in the <span class="em">half-marathon</span> program. Your place is held — pick up exactly where you left off.</p>
+
+              <!-- progress thread -->
+              <div class="resume-progress">
+                <div class="resume-progress-head">
+                  <div class="lbl">PROGRESS</div>
+                  <div class="val"><span class="em">15</span>&nbsp;/&nbsp;26 sessions · week 7 of 12</div>
+                </div>
+                <div class="resume-bar">
+                  <div class="resume-bar-fill"></div>
+                </div>
+              </div>
+
+              <button class="resume-cta-primary">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M5 3l8 5-8 5V3z" fill="white"/></svg>
+                Resume training
+              </button>
+
+              <button class="resume-cta-secondary">Start a different program</button>
+
+              <div class="resume-tertiary">
+                <a href="#">Manual run<span class="arr">→</span></a>
+              </div>
+            </div>
+
+            <!-- Below-fold breathing room — "Pause is a real state" reassurance, optional -->
+            <div style="margin-top:18px;padding:14px 16px;border:1px solid var(--glass-border);border-radius:14px;background:rgba(255,255,255,0.015);">
+              <div class="pulse-label" style="margin-bottom:8px;">WHILE YOU'RE PAUSED</div>
+              <p style="font-size:12.5px;color:var(--text-secondary);line-height:1.55;">No streak penalty. No nagging. Manual runs still log to History — they just don't count toward this program until you resume.</p>
+            </div>
+
+          </div>
+
+          <!-- TAB BAR -->
+          <div class="tab-bar">
+            <div class="tab-item active">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-4v-6h-8v6H4a1 1 0 0 1-1-1v-9z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Home
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h2l2-5 4 10 2-5h4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Workout
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              History
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="9" r="3.5" stroke-width="1.6"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Account
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT ANNOTATIONS -->
+    <div class="annot-col right">
+      <div class="annot tier1">
+        <div class="tag"><span class="dot"></span>The single CTA gets the gradient</div>
+        <h4>Resume training is THE action</h4>
+        <p>One Tier-1 element on the card — and on a quiet card, that goes to the action, not the headline. <code>CardeaCtaGradient</code> (red→pink, the buttons-only gradient — never the 4-stop). Glow at <code>0.22α</code>, dialed back from active-run's <code>0.25α</code>; we want "warm invitation" not "fire alarm."</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Secondary · outlined, not muted</div>
+        <h4>"Start a different program"</h4>
+        <p>Outlined glass button with strong border. Same visual weight as the resume CTA's container, just without fill — preserves dignity for users who paused because the goal was wrong, not because life got busy.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>"While you're paused" footnote</div>
+        <h4>Quiet reassurance</h4>
+        <p>One sentence below the card: no streak penalty, manual runs still log. This is what users actually worry about when they pause. Surface it once, then shut up.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPOSE — ResumeCard -->
+  <section class="code-section">
+    <h2>ResumeCard <span class="pip">composable · ~75 lines</span></h2>
+    <p class="lede">Quietest of the three. No gradient title. The single Tier-1 moment is the CTA gradient. Wires straight into <code>BootcampViewModel.resumeBootcamp()</code>.</p>
+
+    <h3 style="font-size:13px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-tertiary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">Headline + body copy variants</h3>
+    <div class="copy-variants">
+      <div class="copy-variant">
+        <div class="label"><span>Headline A</span><span class="pick">★ shipping</span></div>
+        <div class="text">Ready when<br/>you are.</div>
+      </div>
+      <div class="copy-variant">
+        <div class="label"><span>Headline B</span></div>
+        <div class="text">Pick it back up.</div>
+      </div>
+      <div class="copy-variant">
+        <div class="label"><span>Headline C</span></div>
+        <div class="text">Your place is held.</div>
+      </div>
+      <div class="copy-variant body">
+        <div class="label"><span>Body · template</span></div>
+        <div class="text">You had {n} of {total} sessions complete in the {goal} program. Your place is held — pick up exactly where you left off.</div>
+      </div>
+    </div>
+
+<pre><span class="k-comment">// ─────────────────────────────────────────────────────────────────────────────
+// ResumeCard — Warm, not nagging. Pause is neutral, never a problem.
+// No gradient title — gradient ink would feel like marketing trying to win
+// the user back. The single Tier-1 element is the CTA gradient itself.
+// Outlined "Start different program" preserves dignity for users who paused
+// because the goal was wrong (not because life got busy).
+// ─────────────────────────────────────────────────────────────────────────────</span>
+<span class="k-anno">@Composable</span>
+<span class="k-keyword">private fun</span> <span class="k-fun">ResumeCard</span>(
+    enrollment: <span class="k-type">BootcampEnrollmentEntity</span>,
+    sessionsDone: <span class="k-type">Int</span>,
+    sessionsTotal: <span class="k-type">Int</span>,
+    pausedAtWeek: <span class="k-type">Int</span>,
+    totalWeeks: <span class="k-type">Int</span>,
+    onResume: () -> <span class="k-type">Unit</span>,
+    onSwitchProgram: () -> <span class="k-type">Unit</span>,
+    onManualRun: () -> <span class="k-type">Unit</span>,
+    modifier: <span class="k-type">Modifier</span> = <span class="k-type">Modifier</span>,
+) {
+    <span class="k-keyword">val</span> goalLabel = <span class="k-fun">remember</span>(enrollment.goalType) {
+        enrollment.goalType.name.<span class="k-fun">replace</span>(<span class="k-string">"_"</span>, <span class="k-string">" "</span>).<span class="k-fun">lowercase</span>()
+    }
+
+    <span class="k-type">Box</span>(
+        modifier = modifier
+            .<span class="k-fun">fillMaxWidth</span>()
+            .<span class="k-fun">padding</span>(horizontal = <span class="k-type">HomeGutter</span>)
+            .<span class="k-fun">clip</span>(<span class="k-type">HomeCardRadius</span>)
+            .<span class="k-fun">border</span>(<span class="k-num">1</span>.dp, <span class="k-type">CardeaTheme</span>.colors.glassBorder, <span class="k-type">HomeCardRadius</span>)
+            .<span class="k-fun">background</span>(<span class="k-type">CardeaTheme</span>.colors.glassHighlight, <span class="k-type">HomeCardRadius</span>)
+            .<span class="k-fun">padding</span>(<span class="k-type">HomeCardPadding</span>),
+    ) {
+        <span class="k-comment">// Pause glyph — tiny, top-right. Two glass bars. No more.</span>
+        <span class="k-fun">PauseGlyph</span>(modifier = <span class="k-type">Modifier</span>.<span class="k-fun">align</span>(<span class="k-type">Alignment</span>.TopEnd))
+
+        <span class="k-type">Column</span>(modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>()) {
+            <span class="k-fun">PulseLabel</span>(text = <span class="k-string">"PAUSED · WEEK $pausedAtWeek"</span>)
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">12</span>.dp))
+
+            <span class="k-comment">// NO gradient. Plain serif white-on-glass.</span>
+            <span class="k-type">Text</span>(
+                text = <span class="k-string">"Ready when\nyou are."</span>,
+                style = <span class="k-type">MaterialTheme</span>.typography.headlineLarge.<span class="k-fun">copy</span>(
+                    fontWeight = <span class="k-type">FontWeight</span>.SemiBold,
+                    fontSize = <span class="k-num">30</span>.sp,
+                    lineHeight = <span class="k-num">32</span>.sp,
+                    letterSpacing = (-<span class="k-num">0.5</span>).sp,
+                ),
+                color = <span class="k-type">CardeaTheme</span>.colors.textPrimary,
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">8</span>.dp))
+
+            <span class="k-type">Text</span>(
+                text = <span class="k-fun">buildAnnotatedString</span> {
+                    <span class="k-fun">append</span>(<span class="k-string">"You had "</span>)
+                    <span class="k-fun">withStyle</span>(<span class="k-type">SpanStyle</span>(color = <span class="k-type">CardeaTheme</span>.colors.textPrimary, fontWeight = <span class="k-type">FontWeight</span>.SemiBold)) {
+                        <span class="k-fun">append</span>(<span class="k-string">"$sessionsDone of $sessionsTotal"</span>)
+                    }
+                    <span class="k-fun">append</span>(<span class="k-string">" sessions complete in the "</span>)
+                    <span class="k-fun">withStyle</span>(<span class="k-type">SpanStyle</span>(color = <span class="k-type">CardeaTheme</span>.colors.textPrimary, fontWeight = <span class="k-type">FontWeight</span>.SemiBold)) {
+                        <span class="k-fun">append</span>(goalLabel)
+                    }
+                    <span class="k-fun">append</span>(<span class="k-string">" program. Your place is held — pick up exactly where you left off."</span>)
+                },
+                style = <span class="k-type">MaterialTheme</span>.typography.bodyMedium.<span class="k-fun">copy</span>(fontSize = <span class="k-num">13.5</span>.sp, lineHeight = <span class="k-num">19</span>.sp),
+                color = <span class="k-type">CardeaTheme</span>.colors.textSecondary,
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">22</span>.dp))
+
+            <span class="k-fun">ProgressThread</span>(
+                sessionsDone = sessionsDone,
+                sessionsTotal = sessionsTotal,
+                pausedAtWeek = pausedAtWeek,
+                totalWeeks = totalWeeks,
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">22</span>.dp))
+
+            <span class="k-comment">// TIER 1 — the only gradient on this card. Buttons-only CTA gradient.</span>
+            <span class="k-fun">CardeaButton</span>(
+                text = <span class="k-string">"Resume training"</span>,
+                onClick = onResume,
+                leadingIcon = <span class="k-type">Icons</span>.Default.PlayArrow,
+                innerPadding = <span class="k-type">PaddingValues</span>(horizontal = <span class="k-num">24</span>.dp, vertical = <span class="k-num">14</span>.dp),
+                modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>(),
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">10</span>.dp))
+
+            <span class="k-type">OutlinedButton</span>(
+                onClick = onSwitchProgram,
+                modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>().<span class="k-fun">height</span>(<span class="k-num">44</span>.dp),
+                shape = <span class="k-type">RoundedCornerShape</span>(<span class="k-num">14</span>.dp),
+                border = <span class="k-type">BorderStroke</span>(<span class="k-num">1</span>.dp, <span class="k-type">CardeaTheme</span>.colors.glassBorder),
+            ) {
+                <span class="k-type">Text</span>(
+                    <span class="k-string">"Start a different program"</span>,
+                    color = <span class="k-type">CardeaTheme</span>.colors.textPrimary,                  <span class="k-comment">// avoid M3 primary leak</span>
+                    style = <span class="k-type">MaterialTheme</span>.typography.bodyMedium,
+                )
+            }
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">14</span>.dp))
+
+            <span class="k-type">TextButton</span>(onClick = onManualRun, modifier = <span class="k-type">Modifier</span>.<span class="k-fun">align</span>(<span class="k-type">Alignment</span>.CenterHorizontally)) {
+                <span class="k-type">Text</span>(
+                    <span class="k-string">"Manual run →"</span>,
+                    color = <span class="k-type">CardeaTheme</span>.colors.textTertiary,
+                    style = <span class="k-type">MaterialTheme</span>.typography.bodySmall,
+                )
+            }
+        }
+    }
+}</pre>
+  </section>
+
+  <div class="section-divider"><div class="line"></div><div class="label">03 · refresh — don't rebuild</div><div class="line"></div></div>
+
+  <!-- ╔══════════════════════════════════════════════ -->
+  <!-- ║  STATE 3 — NO BOOTCAMP CARD (REFRESH)         -->
+  <!-- ╚══════════════════════════════════════════════ -->
+  <a id="nobootcamp"></a>
+  <div class="stage">
+
+    <!-- LEFT ANNOTATIONS -->
+    <div class="annot-col left">
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Refresh, not rebuild</div>
+        <h4>Existing structure preserved</h4>
+        <p>Same gradient title pattern (line 970-980), same FeatureItem rows, same "Set Up Bootcamp" CTA. What changed: tighter copy, sharper feature trio, feature rows now grouped in their own glass container so they read as <em>a system</em>, not three loose icons.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Subtitle · before/after</div>
+        <h4>Cut "around your life, fitness…"</h4>
+        <p>Old: <em>"Cardea builds an adaptive plan around your life, fitness, and heart rate data."</em> Three concepts in one sentence is one too many — "adaptive" is the verb, the rest belongs in features. New: <em>"An adaptive plan that knows your week, your heart, and your pace."</em></p>
+      </div>
+      <div class="annot tier2">
+        <div class="tag"><span class="dot"></span>Feature trio · the right three</div>
+        <h4>HR · Schedule · Voice</h4>
+        <p>Current trio is correct: HR-zone coaching is the headline differentiator, life-aware scheduling is what keeps you in the program, voice cues are the in-run delivery. Don't swap them. Tighten the descriptions.</p>
+      </div>
+    </div>
+
+    <!-- PHONE -->
+    <div>
+      <div class="state-header">
+        <div class="state-num">03 · STATE</div>
+        <div class="state-title">NoBootcampCard</div>
+        <div class="state-sub">trigger · <span class="trigger">no enrollment | enrollment deleted</span></div>
+      </div>
+
+      <div class="phone-frame">
+        <div class="phone-inner">
+          <!-- status bar -->
+          <div class="status-bar">
+            <span>9:41</span>
+            <div class="status-right">
+              <svg viewBox="0 0 16 16" fill="none"><path d="M1 11h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-3h2v11h-2z" fill="white"/></svg>
+              <svg viewBox="0 0 16 16" fill="none"><path d="M8 12.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm-3.5-3.7C5.5 8.2 6.7 7.7 8 7.7s2.5.5 3.5 1.1l1.4-1.4C11.5 6.5 9.8 5.7 8 5.7s-3.5.8-4.9 1.7l1.4 1.4z" fill="white"/></svg>
+              <svg viewBox="0 0 24 16" fill="none"><rect x="0.5" y="0.5" width="20" height="13" rx="3" stroke="white" opacity="0.4"/><rect x="2" y="2" width="17" height="10" rx="1.5" fill="white"/><rect x="21" y="5" width="2" height="5" rx="1" fill="white" opacity="0.4"/></svg>
+            </div>
+          </div>
+
+          <!-- greeting -->
+          <div class="greeting-row">
+            <span class="greeting">Welcome to Cardea</span>
+            <div class="greeting-icons">
+              <div class="icon-32">
+                <svg viewBox="0 0 16 16" fill="none"><path d="M8 14s-5-3.4-5-7.5C3 4.5 4.5 3 6.5 3c1 0 2 .5 1.5 1.5C9.5 3.5 10.5 3 11.5 3 13.5 3 15 4.5 15 6.5 15 10.6 8 14 8 14z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg>
+              </div>
+              <div class="icon-32">
+                <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 13c0-2.5 2.2-4 5-4s5 1.5 5 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- BODY -->
+          <div class="body-scroll">
+
+            <div class="no-bc-card">
+              <div class="no-bc-eyebrow-row">
+                <div class="pulse-label">YOUR PERSONAL RUNNING COACH</div>
+              </div>
+
+              <h2 class="no-bc-headline">Train smarter,<br/>not harder.</h2>
+
+              <p class="no-bc-sub">An adaptive plan that knows your week, your heart, and your pace.</p>
+
+              <!-- Feature list (now in own glass container) -->
+              <div class="feature-list">
+                <div class="feature-row">
+                  <div class="feature-icon red">
+                    <svg viewBox="0 0 18 18" fill="none"><path d="M9 15.5s-6-3.7-6-8.5c0-2.2 1.6-3.8 3.6-3.8 1.4 0 2.4 0.8 2.4 0.8s1-.8 2.4-.8c2 0 3.6 1.6 3.6 3.8 0 4.8-6 8.5-6 8.5z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+                  </div>
+                  <div class="feature-text">
+                    <div class="title">HR zone coaching</div>
+                    <div class="desc">Live alerts keep you in the right zone.</div>
+                  </div>
+                </div>
+                <div class="feature-row">
+                  <div class="feature-icon blue">
+                    <svg viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M9 5v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </div>
+                  <div class="feature-text">
+                    <div class="title">Life-aware scheduling</div>
+                    <div class="desc">Adapts to your week — block days, pick your long run.</div>
+                  </div>
+                </div>
+                <div class="feature-row">
+                  <div class="feature-icon cyan">
+                    <svg viewBox="0 0 18 18" fill="none"><rect x="6.5" y="2.5" width="5" height="9" rx="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 9c0 3 2.5 5 5.5 5s5.5-2 5.5-5M9 14.5v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  </div>
+                  <div class="feature-text">
+                    <div class="title">Voice coaching</div>
+                    <div class="desc">Spoken pace, zone, and distance cues, in your ear.</div>
+                  </div>
+                </div>
+              </div>
+
+              <button class="no-bc-cta">
+                Set up bootcamp
+                <svg viewBox="0 0 16 16" fill="none"><path d="M5 3l5 5-5 5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+
+            <!-- Just-Run strip (existing, untouched) -->
+            <div style="margin-top:12px;display:flex;align-items:center;gap:12px;padding:12px 16px;border:1px solid var(--glass-border);border-radius:24px;background:rgba(255,255,255,0.025);cursor:pointer;">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);display:grid;place-items:center;">
+                <svg width="11" height="11" viewBox="0 0 11 11" fill="white"><path d="M3 2l6 3.5L3 9z"/></svg>
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:13.5px;font-weight:600;color:var(--text-primary);">Just run</div>
+                <div style="font-size:11.5px;color:var(--text-secondary);">No plan, no zones — just track it</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#5A6573" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+
+          </div>
+
+          <!-- TAB BAR -->
+          <div class="tab-bar">
+            <div class="tab-item active">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-4v-6h-8v6H4a1 1 0 0 1-1-1v-9z" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Home
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h2l2-5 4 10 2-5h4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Workout
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9" stroke-width="1.6"/><path d="M12 7v5l3 2" stroke-width="1.6" stroke-linecap="round"/></svg>
+              History
+            </div>
+            <div class="tab-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="9" r="3.5" stroke-width="1.6"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Account
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT ANNOTATIONS -->
+    <div class="annot-col right">
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Spacing review</div>
+        <h4>HomeCardPadding (no +4dp)</h4>
+        <p>Current is <code>HomeCardPadding + 4.dp</code>. New heroes use <code>HomeCardPadding</code> flat. Aligning all three to the same outer padding is the single biggest "they feel like the same card family" fix — drop the +4.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Feature container · grouping</div>
+        <h4>One nested glass, three rows</h4>
+        <p>Wrapping the feature trio in its own subtle glass container (2% white) gives the eye a place to settle. Without it, the rows fight the headline; with it, they read as "the system" the headline is selling.</p>
+      </div>
+      <div class="annot tier3">
+        <div class="tag"><span class="dot"></span>Just-run strip · unchanged</div>
+        <h4>Already in spec</h4>
+        <p>Existing <code>JustRunStrip</code> stays as-is — same height, same border, same copy. It's the only true escape hatch on this state and it works.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPOSE — NoBootcampCard refresh -->
+  <section class="code-section">
+    <h2>NoBootcampCard refresh <span class="pip">composable · diff vs HomeScreen.kt:943</span></h2>
+    <p class="lede">Three structural changes. Existing gradient text trick, FeatureItem primitive, and CardeaButton CTA — untouched.</p>
+
+    <div class="copy-variants">
+      <div class="copy-variant body">
+        <div class="label"><span>Subtitle · BEFORE</span></div>
+        <div class="text" style="text-decoration:line-through;text-decoration-color:rgba(229,72,77,0.5);">Cardea builds an adaptive plan around your life, fitness, and heart rate data.</div>
+      </div>
+      <div class="copy-variant body">
+        <div class="label"><span>Subtitle · AFTER</span><span class="pick">★ shipping</span></div>
+        <div class="text">An adaptive plan that knows your week, your heart, and your pace.</div>
+      </div>
+    </div>
+
+<pre><span class="k-comment">// ─────────────────────────────────────────────────────────────────────────────
+// NoBootcampCard — refresh, not rewrite. Three changes:
+//   1. Tighter subtitle (one sentence, three nouns).
+//   2. Feature trio wrapped in a nested glass container (rows now read as
+//      "a system" instead of three loose icons floating on the headline).
+//   3. Padding aligned to flat HomeCardPadding (drop the +4.dp) so all
+//      three Home heroes share the same outer rhythm.
+// Gradient title pattern, FeatureItem rows, and CTA primitive are unchanged.
+// ─────────────────────────────────────────────────────────────────────────────</span>
+<span class="k-anno">@Composable</span>
+<span class="k-keyword">private fun</span> <span class="k-fun">NoBootcampCard</span>(
+    onSetupBootcamp: () -> <span class="k-type">Unit</span>,
+    onStartRun: () -> <span class="k-type">Unit</span>,
+    modifier: <span class="k-type">Modifier</span> = <span class="k-type">Modifier</span>,
+) {
+    <span class="k-keyword">val</span> heroGradient = <span class="k-type">CardeaTheme</span>.colors.gradient
+    <span class="k-type">Column</span>(modifier = modifier.<span class="k-fun">padding</span>(horizontal = <span class="k-type">HomeGutter</span>)) {
+        <span class="k-type">Column</span>(
+            modifier = <span class="k-type">Modifier</span>
+                .<span class="k-fun">fillMaxWidth</span>()
+                .<span class="k-fun">clip</span>(<span class="k-type">HomeCardRadius</span>)
+                .<span class="k-fun">border</span>(<span class="k-num">1</span>.dp, <span class="k-type">CardeaTheme</span>.colors.glassBorder, <span class="k-type">HomeCardRadius</span>)
+                .<span class="k-fun">background</span>(<span class="k-type">CardeaTheme</span>.colors.glassHighlight, <span class="k-type">HomeCardRadius</span>)
+                .<span class="k-fun">padding</span>(<span class="k-type">HomeCardPadding</span>),                          <span class="k-comment">// ← was HomeCardPadding + 4.dp</span>
+        ) {
+            <span class="k-fun">PulseLabel</span>(text = <span class="k-string">"YOUR PERSONAL RUNNING COACH"</span>)
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">10</span>.dp))
+
+            <span class="k-type">Text</span>(
+                text = <span class="k-string">"Train smarter, not harder."</span>,
+                style = <span class="k-type">MaterialTheme</span>.typography.titleLarge.<span class="k-fun">copy</span>(fontWeight = <span class="k-type">FontWeight</span>.ExtraBold),
+                color = <span class="k-type">CardeaTheme</span>.colors.textPrimary,
+                modifier = <span class="k-type">Modifier</span>
+                    .<span class="k-fun">graphicsLayer</span> { compositingStrategy = <span class="k-type">CompositingStrategy</span>.Offscreen }
+                    .<span class="k-fun">drawWithContent</span> {
+                        <span class="k-fun">drawContent</span>()
+                        <span class="k-fun">drawRect</span>(brush = heroGradient, blendMode = <span class="k-type">BlendMode</span>.SrcIn)
+                    },
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">8</span>.dp))
+
+            <span class="k-comment">// ← copy change: 17 words → 13 words, 3 concepts → 3 nouns.</span>
+            <span class="k-type">Text</span>(
+                text = <span class="k-string">"An adaptive plan that knows your week, your heart, and your pace."</span>,
+                style = <span class="k-type">MaterialTheme</span>.typography.bodySmall,
+                color = <span class="k-type">CardeaTheme</span>.colors.textSecondary,
+            )
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">22</span>.dp))
+
+            <span class="k-comment">// ← NEW: feature trio wrapped in a nested glass container.</span>
+            <span class="k-type">Column</span>(
+                modifier = <span class="k-type">Modifier</span>
+                    .<span class="k-fun">fillMaxWidth</span>()
+                    .<span class="k-fun">clip</span>(<span class="k-type">RoundedCornerShape</span>(<span class="k-num">14</span>.dp))
+                    .<span class="k-fun">border</span>(<span class="k-num">1</span>.dp, <span class="k-type">CardeaTheme</span>.colors.glassBorder, <span class="k-type">RoundedCornerShape</span>(<span class="k-num">14</span>.dp))
+                    .<span class="k-fun">background</span>(<span class="k-type">Color</span>.White.<span class="k-fun">copy</span>(alpha = <span class="k-num">0.02f</span>))
+                    .<span class="k-fun">padding</span>(horizontal = <span class="k-num">14</span>.dp, vertical = <span class="k-num">16</span>.dp),
+                verticalArrangement = <span class="k-type">Arrangement</span>.<span class="k-fun">spacedBy</span>(<span class="k-num">14</span>.dp),
+            ) {
+                <span class="k-fun">FeatureItem</span>(
+                    icon = <span class="k-type">Icons</span>.Default.FavoriteBorder,
+                    iconTint = <span class="k-type">GradientRed</span>,
+                    iconBg = <span class="k-type">GradientRed</span>.<span class="k-fun">copy</span>(alpha = <span class="k-num">0.12f</span>),
+                    title = <span class="k-string">"HR zone coaching"</span>,
+                    description = <span class="k-string">"Live alerts keep you in the right zone."</span>,           <span class="k-comment">// ← was "Real-time"</span>
+                )
+                <span class="k-fun">FeatureItem</span>(
+                    icon = <span class="k-type">Icons</span>.Default.Timer,
+                    iconTint = <span class="k-type">GradientBlue</span>,
+                    iconBg = <span class="k-type">GradientBlue</span>.<span class="k-fun">copy</span>(alpha = <span class="k-num">0.12f</span>),
+                    title = <span class="k-string">"Life-aware scheduling"</span>,
+                    description = <span class="k-string">"Adapts to your week — block days, pick your long run."</span>,
+                )
+                <span class="k-fun">FeatureItem</span>(
+                    icon = <span class="k-type">Icons</span>.Default.Mic,
+                    iconTint = <span class="k-type">GradientCyan</span>,
+                    iconBg = <span class="k-type">GradientCyan</span>.<span class="k-fun">copy</span>(alpha = <span class="k-num">0.12f</span>),
+                    title = <span class="k-string">"Voice coaching"</span>,
+                    description = <span class="k-string">"Spoken pace, zone, and distance cues, in your ear."</span>,
+                )
+            }
+            <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">22</span>.dp))
+
+            <span class="k-fun">CardeaButton</span>(
+                text = <span class="k-string">"Set up bootcamp"</span>,
+                onClick = onSetupBootcamp,
+                innerPadding = <span class="k-type">PaddingValues</span>(horizontal = <span class="k-num">24</span>.dp, vertical = <span class="k-num">14</span>.dp),
+                modifier = <span class="k-type">Modifier</span>.<span class="k-fun">fillMaxWidth</span>(),
+            )
+        }
+        <span class="k-type">Spacer</span>(<span class="k-type">Modifier</span>.<span class="k-fun">height</span>(<span class="k-num">12</span>.dp))
+        <span class="k-fun">JustRunStrip</span>(onClick = onStartRun)                                          <span class="k-comment">// ← unchanged</span>
+    }
+}</pre>
+  </section>
+
+</div>
+
+</body>
+</html>

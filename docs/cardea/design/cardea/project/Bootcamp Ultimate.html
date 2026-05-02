@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardea — Bootcamp (Ultimate)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-primary: #050505;
+    --bg-secondary: #0D0D0D;
+    --bg-page: #08080D;
+    --glass-fill: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+    --glass-border: rgba(255,255,255,0.07);
+    --glass-highlight: rgba(255,255,255,0.03);
+    --text-primary: #FFFFFF;
+    --text-secondary: #9AA4B2;
+    --text-tertiary: #5A6573;
+    --cardea-gradient: linear-gradient(135deg, #FF4D5A 0%, #FF2DA6 35%, #4D61FF 65%, #00E5FF 100%);
+    --cta-gradient: linear-gradient(135deg, #FF2DA6 0%, #FF4D5A 50%, #FF2DA6 100%);
+    --gradient-pink: #FF2DA6;
+    --gradient-red: #FF4D5A;
+    --zone-red: #E5484D;
+    --zone-1: #4D61FF;
+    --zone-2: #00E5FF;
+    --zone-3: #FF2DA6;
+    --zone-4: #FF4D5A;
+    --green: #2ED47A;
+    --amber: #FFB020;
+  }
+
+  html, body { height: 100%; }
+  body {
+    background:
+      radial-gradient(ellipse at top left, rgba(255,45,166,0.05), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(77,97,255,0.04), transparent 50%),
+      var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    padding: 48px 24px 80px;
+  }
+
+  .page-wrap { max-width: 1320px; margin: 0 auto; }
+
+  .page-header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .page-header .eyebrow {
+    font-size: 11px;
+    margin-bottom: 12px;
+  }
+  .page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    line-height: 1.1;
+    font-weight: 900;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+  .page-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.55;
+  }
+
+  /* ============ STAGE GRID ============ */
+  .stage {
+    display: grid;
+    grid-template-columns: 1fr 393px 1fr 393px 1fr;
+    gap: 0;
+    align-items: start;
+    margin-top: 24px;
+  }
+
+  .annot-col { position: relative; padding-top: 60px; }
+  .annot-col.left { padding-right: 28px; }
+  .annot-col.right { padding-left: 28px; }
+  .annot-col.middle { padding: 60px 28px 0; }
+
+  .annot {
+    position: relative;
+    margin-bottom: 28px;
+    padding: 14px 16px;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    backdrop-filter: blur(20px);
+  }
+  .annot .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    color: var(--gradient-pink);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .annot .tag .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--gradient-pink);
+    box-shadow: 0 0 8px var(--gradient-pink);
+  }
+  .annot h4 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .annot p {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .annot p code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text-primary);
+  }
+  .annot .before-after {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+  }
+  .annot .ba-before {
+    color: var(--zone-red);
+    text-decoration: line-through;
+    text-decoration-color: rgba(229,72,77,0.5);
+  }
+  .annot .ba-arrow { color: var(--text-tertiary); }
+  .annot .ba-after { color: var(--green); }
+
+  /* connector lines */
+  .annot::before {
+    content: '';
+    position: absolute;
+    top: 22px;
+    width: 40px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--glass-border), transparent);
+  }
+  .annot-col.left .annot::before {
+    right: -40px;
+    background: linear-gradient(90deg, var(--glass-border), rgba(255,45,166,0.3));
+  }
+  .annot-col.right .annot::before {
+    left: -40px;
+    background: linear-gradient(-90deg, var(--glass-border), rgba(255,45,166,0.3));
+  }
+  .annot-col.middle .annot::before { display: none; }
+  .annot-col.middle .annot {
+    background: linear-gradient(180deg, rgba(255,45,166,0.05), rgba(77,97,255,0.04));
+    border-color: rgba(255,45,166,0.18);
+  }
+
+  /* ============ PHONE ============ */
+  .phone-frame {
+    width: 393px;
+    height: 852px;
+    border-radius: 44px;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.09);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.04),
+      0 40px 100px rgba(0,0,0,0.6),
+      0 0 120px rgba(255,45,166,0.04);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone-inner {
+    width: 100%; height: 100%;
+    background: radial-gradient(circle at 50% 0%, #10111a 0%, var(--bg-primary) 60%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-label {
+    text-align: center;
+    margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+  }
+  .phone-label strong { color: var(--text-secondary); font-weight: 500; }
+
+  /* status bar */
+  .status-bar {
+    flex: 0 0 44px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 24px 6px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; }
+  .status-right svg { width: 16px; height: 16px; }
+
+  /* nav row */
+  .nav-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 16px 10px;
+  }
+  .nav-back, .nav-title-tab {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .nav-back { display: flex; align-items: center; gap: 6px; }
+  .nav-back svg { width: 16px; height: 16px; }
+  .nav-right { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 34px; height: 34px;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-secondary);
+  }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  .body-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 16px 110px; /* space for tab bar peek */
+    scroll-behavior: smooth;
+  }
+  .body-scroll::-webkit-scrollbar { width: 0; }
+
+  /* ============ HERO (TODAY) ============ */
+  .hero {
+    margin-bottom: 16px;
+    padding: 4px;
+  }
+  .hero-eyebrow-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .hero h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .hero h2 .grad {
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-bottom: 18px;
+    line-height: 1.45;
+  }
+
+  /* hero status pills (FIX: 12dp not 20dp; not pink soup) */
+  .hero-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .hero-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-tertiary);
+  }
+  .hero-pill.tier {
+    background: rgba(255,45,166,0.10);
+    border-color: rgba(255,45,166,0.28);
+    color: #FFB6DC;
+  }
+  .hero-pill.tier .dot { background: var(--gradient-pink); box-shadow: 0 0 6px var(--gradient-pink); }
+  .hero-pill.recovery .dot { background: var(--green); }
+  .hero-pill.fitness .dot { background: var(--zone-2); }
+
+  /* today card */
+  .today-card {
+    position: relative;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 20px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .today-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 100% 0%, rgba(255,45,166,0.10), transparent 60%);
+    pointer-events: none;
+  }
+  .today-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .today-kind {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--gradient-pink);
+    margin-bottom: 6px;
+  }
+  .today-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.3px;
+  }
+  .today-sub {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .today-progress {
+    width: 56px; height: 56px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .today-progress svg { transform: rotate(-90deg); }
+  .today-progress .pct {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .today-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--glass-border);
+    padding-top: 14px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .today-meta .col + .col { border-left: 1px solid var(--glass-border); padding-left: 12px; }
+  .today-meta .col-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 4px;
+  }
+  .today-meta .col-val {
+    font-size: 16px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .today-meta .col-val .unit {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: 2px;
+  }
+
+  /* CTA — single CardeaButton primitive (FIX: no hand-rolled gradient Box) */
+  .cta-primary {
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 16px;
+    background: var(--cta-gradient);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(255,45,166,0.25);
+    position: relative;
+  }
+  .cta-primary svg { width: 16px; height: 16px; }
+
+  /* ============ SECTION HEADER ============ */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 0 4px;
+    margin: 24px 0 12px;
+  }
+  .section-header h3 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .section-header .link {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--gradient-pink);
+  }
+
+  /* ============ WEEK STRIP ============ */
+  .week-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .day-pill {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px 4px 10px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .day-pill.today {
+    border-color: rgba(255,45,166,0.35);
+    background: linear-gradient(180deg, rgba(255,45,166,0.10), rgba(255,45,166,0.02));
+  }
+  .day-pill.completed { opacity: 0.65; }
+  .day-pill.completed::after {
+    content: '';
+    position: absolute;
+    inset: auto 8px 6px 8px;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--green);
+  }
+  .day-pill .day-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 6px;
+  }
+  .day-pill .day-num {
+    font-size: 17px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+  }
+  .day-pill.today .day-num { color: var(--gradient-pink); }
+  /* FIX: was 9sp; now labelMedium 12 with letterSpacing */
+  .day-pill .day-kind {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+  .day-pill.today .day-kind { color: #FFB6DC; }
+  .day-pill.rest .day-kind { color: var(--text-tertiary); }
+
+  /* ============ COMING UP — expandable schedule ============ */
+  .upcoming-stack {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .session-row {
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    color: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+    display: block;
+  }
+  .session-row + .session-row { border-top: 1px solid var(--glass-border); }
+
+  .session-row .row-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    transition: background 180ms ease-out;
+  }
+  .session-row:hover .row-head { background: rgba(255,255,255,0.02); }
+  .session-row.open .row-head { background: rgba(255,45,166,0.04); }
+
+  .session-row .day-block {
+    width: 44px;
+    flex-shrink: 0;
+    text-align: center;
+    padding: 4px 0;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+  }
+  .session-row.open .day-block {
+    border-color: rgba(255,45,166,0.3);
+    background: rgba(255,45,166,0.08);
+  }
+  .day-block .dow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 2px;
+  }
+  .day-block .dom {
+    font-size: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .session-row.open .day-block .dom { color: var(--gradient-pink); }
+
+  .session-row .row-text { flex: 1; min-width: 0; }
+  .row-text .name {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+  }
+  .row-text .summary {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  .session-zone {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .session-zone .swatch { width: 6px; height: 6px; border-radius: 50%; }
+
+  .session-row .chev {
+    width: 16px; height: 16px;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+    transition: transform 220ms ease-out;
+  }
+  .session-row.open .chev { transform: rotate(90deg); color: var(--gradient-pink); }
+
+  /* expanded body */
+  .session-row .row-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 280ms ease-out;
+  }
+  .session-row.open .row-body { max-height: 240px; }
+  .row-body-inner {
+    padding: 0 14px 14px;
+  }
+
+  .session-effort {
+    height: 36px;
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    margin-bottom: 12px;
+  }
+  .session-effort .bar {
+    flex: 1;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.06);
+    min-width: 1px;
+  }
+  .session-effort .bar.z1 { background: var(--zone-1); }
+  .session-effort .bar.z2 { background: var(--zone-2); }
+  .session-effort .bar.z3 { background: var(--zone-3); box-shadow: 0 0 6px rgba(255,45,166,0.4); }
+  .session-effort .bar.z4 { background: var(--zone-4); box-shadow: 0 0 6px rgba(255,77,90,0.4); }
+
+  .session-facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding-top: 12px;
+    border-top: 1px solid var(--glass-border);
+  }
+  .session-facts .col + .col { border-left: 1px solid var(--glass-border); padding-left: 10px; }
+  .session-facts .col { padding-right: 10px; min-width: 0; }
+  .session-facts .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 3px;
+  }
+  .session-facts .val {
+    font-size: 13.5px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    line-height: 1.1;
+  }
+  .session-facts .val .unit {
+    font-size: 10.5px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: 1px;
+  }
+
+  /* schedule footer link */
+  .schedule-link {
+    border: none;
+    background: transparent;
+    width: 100%;
+    cursor: pointer;
+    padding: 12px 14px;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .schedule-link:hover { color: var(--gradient-pink); }
+  .schedule-link .arr {
+    width: 12px; height: 12px;
+  }
+  .schedule-link .count {
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  /* ============ TIER PROMPT (tinted card, FIX: 16dp border) ============ */
+  .tier-card {
+    margin-top: 16px;
+    background: linear-gradient(180deg, rgba(255,45,166,0.06), rgba(77,97,255,0.04));
+    border: 1px solid rgba(255,45,166,0.22);
+    border-radius: 16px; /* aligned with inner GlassCard */
+    padding: 16px;
+  }
+  .tier-card-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .tier-card-top .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--gradient-pink);
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(255,45,166,0.12);
+    border: 1px solid rgba(255,45,166,0.25);
+  }
+  .tier-card h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+  }
+  .tier-card p {
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  .tier-progression {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-tertiary);
+  }
+  .tier-progression .step {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tier-progression .step .pip {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,45,166,0.4);
+  }
+  .tier-progression .step.active .pip {
+    background: var(--gradient-pink); box-shadow: 0 0 6px var(--gradient-pink);
+  }
+  .tier-progression .step.active { color: var(--text-primary); }
+  .tier-progression .arrow { color: var(--text-tertiary); }
+
+  /* ============ TAB BAR (just the top edge, peek) ============ */
+  .tabbar-peek {
+    position: absolute;
+    bottom: 18px; left: 16px; right: 16px;
+    height: 64px;
+    border-radius: 999px;
+    background: rgba(13,13,13,0.8);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 16px;
+  }
+  .tab-item {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    color: var(--text-tertiary);
+  }
+  .tab-item svg { width: 18px; height: 18px; }
+  .tab-item .lbl { font-size: 9px; font-weight: 600; letter-spacing: 0.4px; }
+  .tab-item.active { color: var(--gradient-pink); }
+  .tab-item.active svg { filter: drop-shadow(0 0 8px var(--gradient-pink)); }
+
+  /* ============ SETTINGS FRAME ============ */
+  .settings-body { padding: 4px 16px 24px; overflow: hidden; }
+  .settings-h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 4px 4px 4px;
+    letter-spacing: -0.3px;
+  }
+  .settings-sub {
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 0 4px;
+    margin-bottom: 18px;
+    line-height: 1.45;
+  }
+
+  .setting-card {
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .setting-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+  .setting-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: var(--text-primary);
+  }
+  .setting-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .setting-help {
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  /* slider (FIX: GradientPink, not white) */
+  .slider {
+    position: relative;
+    height: 24px;
+    margin: 4px 0 0;
+  }
+  .slider .track {
+    position: absolute;
+    top: 11px;
+    left: 0; right: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.06);
+  }
+  .slider .fill {
+    position: absolute;
+    top: 11px;
+    left: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--gradient-pink);
+    box-shadow: 0 0 10px rgba(255,45,166,0.6);
+  }
+  .slider .thumb {
+    position: absolute;
+    top: 4px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--gradient-pink);
+    box-shadow: 0 0 12px rgba(255,45,166,0.7), 0 0 0 4px rgba(255,45,166,0.12);
+    transform: translateX(-50%);
+  }
+  .slider-axis {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+    letter-spacing: 0.6px;
+  }
+
+  /* runs per week segmented */
+  .seg-control {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .seg-control button {
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .seg-control button.active {
+    background: rgba(255,45,166,0.14);
+    border-color: rgba(255,45,166,0.4);
+    color: #fff;
+  }
+
+  /* legend (FIX: not 9sp) */
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .legend-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    letter-spacing: 0.2px;
+  }
+  .legend-chip .swatch {
+    width: 8px; height: 8px; border-radius: 2px;
+  }
+
+  /* change chip (FIX: ZoneRed tint, not raw 0xFF4D5A) */
+  .change-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: rgba(229,72,77,0.12);
+    border: 1px solid rgba(229,72,77,0.3);
+    color: #FF8A8E;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .change-chip svg { width: 11px; height: 11px; }
+
+  /* save CTA (FIX: CardeaButton, not box+gradient) */
+  .save-cta {
+    width: 100%;
+    height: 56px;
+    border: none;
+    border-radius: 16px;
+    background: var(--cta-gradient);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 0 36px rgba(255,45,166,0.28);
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .destructive-btn {
+    width: 100%;
+    height: 44px;
+    background: transparent;
+    border: 1px solid rgba(229,72,77,0.4);
+    border-radius: 14px;
+    color: var(--zone-red);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-top: 14px;
+    cursor: pointer;
+  }
+
+  /* ============ FOOTER LEGEND ============ */
+  .footer-legend {
+    margin-top: 80px;
+    padding: 28px 32px;
+    background: var(--glass-fill);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+  }
+  .footer-legend h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .footer-legend p { color: var(--text-secondary); font-size: 13px; line-height: 1.55; margin-bottom: 18px; }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .fix-card {
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--glass-border);
+  }
+  .fix-card .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.4px;
+    color: var(--gradient-pink);
+    margin-bottom: 4px;
+  }
+  .fix-card h5 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .fix-card p { font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+  .fix-card code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    background: rgba(255,255,255,0.05);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--text-primary);
+  }
+</style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <div class="page-header">
+      <div class="eyebrow">Cardea · Bootcamp · Audit Response</div>
+      <h1>Every P0 closed. One Tier-1 accent.<br>One CardeaButton. One radius rhythm.</h1>
+      <p>Dashboard and Settings rebuilt against the audit. Annotations call out each fix in place — radius tier, sub-10sp text, raw hex, M3 sliders, hand-rolled CTAs, and the multi-accent hero.</p>
+    </div>
+
+    <div class="stage">
+
+      <!-- ============ LEFT ANNOTATIONS ============ -->
+      <div class="annot-col left">
+        <div class="annot" style="margin-top: 80px;">
+          <div class="tag"><span class="dot"></span>P0 · Hero pills</div>
+          <h4>One Tier-1 accent: the progress ring</h4>
+          <p>Tier / Recovery / Fitness pills now neutral glass + zone-color dots. Only the gradient ring on the Today card hits the screen as Tier-1.</p>
+          <div class="before-after">
+            <span class="ba-before">radius 20</span>
+            <span class="ba-arrow">→</span>
+            <span class="ba-after">radius 12</span>
+          </div>
+        </div>
+
+        <div class="annot" style="margin-top: 200px;">
+          <div class="tag"><span class="dot"></span>P0 · Day strip</div>
+          <h4>No more 9sp body text</h4>
+          <p>Session-type label is content, not a micro-label. Bumped to <code>labelMedium</code> with proper tracking — readable at arm's length.</p>
+          <div class="before-after">
+            <span class="ba-before">9.sp</span>
+            <span class="ba-arrow">→</span>
+            <span class="ba-after">12.sp / 0.4sp track</span>
+          </div>
+        </div>
+
+        <div class="annot" style="margin-top: 60px;">
+          <div class="tag"><span class="dot"></span>P1 · Tinted card</div>
+          <h4>16dp border = 16dp clip</h4>
+          <p>Tier prompt's outer border was 18dp around a 16dp <code>GlassCard</code> — corners floated. Now flush.</p>
+        </div>
+      </div>
+
+      <!-- ============ DASHBOARD PHONE ============ -->
+      <div>
+        <div class="phone-frame">
+          <div class="phone-inner">
+            <!-- status bar -->
+            <div class="status-bar">
+              <div>9:41</div>
+              <div class="status-right">
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 11h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-4h2v12h-2z"/></svg>
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a8 8 0 015.66 2.34l-1.41 1.41A6 6 0 008 5a6 6 0 00-4.24 1.75L2.34 5.34A8 8 0 018 3zm0 4a4 4 0 012.83 1.17l-1.41 1.41A2 2 0 008 9a2 2 0 00-1.41.59L5.17 8.17A4 4 0 018 7zm0 4a1.5 1.5 0 11-1.06.44A1.5 1.5 0 018 11z"/></svg>
+                <svg viewBox="0 0 24 16" fill="none"><rect x="0.5" y="0.5" width="20" height="15" rx="3.5" stroke="currentColor"/><rect x="2" y="2" width="17" height="12" rx="2" fill="currentColor"/><rect x="22" y="5" width="1.5" height="6" rx="0.5" fill="currentColor"/></svg>
+              </div>
+            </div>
+
+            <!-- nav row -->
+            <div class="nav-row">
+              <div class="nav-back">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+                Home
+              </div>
+              <div class="nav-right">
+                <div class="icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg></div>
+                <div class="icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="1.4"/><path d="M13 8a5 5 0 11-10 0 5 5 0 0110 0z"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15"/></svg></div>
+              </div>
+            </div>
+
+            <div class="body-scroll">
+
+              <!-- HERO -->
+              <div class="hero">
+                <div class="hero-eyebrow-row">
+                  <div class="eyebrow">Bootcamp · Week 3 of 8</div>
+                </div>
+                <h2><span class="grad">Tempo run</span><br>day, Alex.</h2>
+                <p class="hero-sub">3rd week running. The bands hold; the engine grows.</p>
+
+                <div class="hero-pills">
+                  <div class="hero-pill tier"><span class="dot"></span>Tier 2</div>
+                  <div class="hero-pill recovery"><span class="dot"></span>Recovery 84</div>
+                  <div class="hero-pill fitness"><span class="dot"></span>Fitness 0.85</div>
+                </div>
+              </div>
+
+              <!-- TODAY CARD -->
+              <div class="today-card">
+                <div class="today-card-top">
+                  <div>
+                    <div class="today-kind">Tempo · 35 min</div>
+                    <div class="today-title">5×5 at threshold</div>
+                    <div class="today-sub">2 min recovery · Z3 168–176 bpm</div>
+                  </div>
+                  <div class="today-progress">
+                    <svg viewBox="0 0 56 56" width="56" height="56">
+                      <defs>
+                        <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stop-color="#FF4D5A"/>
+                          <stop offset="35%" stop-color="#FF2DA6"/>
+                          <stop offset="65%" stop-color="#4D61FF"/>
+                          <stop offset="100%" stop-color="#00E5FF"/>
+                        </linearGradient>
+                      </defs>
+                      <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="4"/>
+                      <circle cx="28" cy="28" r="22" fill="none" stroke="url(#ringGrad)" stroke-width="4" stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="60" filter="drop-shadow(0 0 6px rgba(255,45,166,0.5))"/>
+                    </svg>
+                    <div class="pct">38%</div>
+                  </div>
+                </div>
+
+                <div class="today-meta">
+                  <div class="col">
+                    <div class="col-label">Distance</div>
+                    <div class="col-val">5.0<span class="unit">km</span></div>
+                  </div>
+                  <div class="col">
+                    <div class="col-label">Target HR</div>
+                    <div class="col-val">172<span class="unit">bpm</span></div>
+                  </div>
+                  <div class="col">
+                    <div class="col-label">Avg pace</div>
+                    <div class="col-val">4:48<span class="unit">/km</span></div>
+                  </div>
+                </div>
+
+                <button class="cta-primary">
+                  <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5L13 8 3 13.5z"/></svg>
+                  Start run
+                </button>
+              </div>
+
+              <!-- WEEK STRIP -->
+              <div class="section-header">
+                <h3>This week</h3>
+                <div class="link">3 / 5 done</div>
+              </div>
+              <div class="week-strip">
+                <div class="day-pill completed">
+                  <div class="day-name">Mon</div>
+                  <div class="day-num">11</div>
+                  <div class="day-kind">Easy</div>
+                </div>
+                <div class="day-pill rest">
+                  <div class="day-name">Tue</div>
+                  <div class="day-num">12</div>
+                  <div class="day-kind">Rest</div>
+                </div>
+                <div class="day-pill completed">
+                  <div class="day-name">Wed</div>
+                  <div class="day-num">13</div>
+                  <div class="day-kind">Stride</div>
+                </div>
+                <div class="day-pill completed">
+                  <div class="day-name">Thu</div>
+                  <div class="day-num">14</div>
+                  <div class="day-kind">Easy</div>
+                </div>
+                <div class="day-pill today">
+                  <div class="day-name">Fri</div>
+                  <div class="day-num">15</div>
+                  <div class="day-kind">Today</div>
+                </div>
+                <div class="day-pill rest">
+                  <div class="day-name">Sat</div>
+                  <div class="day-num">16</div>
+                  <div class="day-kind">Rest</div>
+                </div>
+                <div class="day-pill">
+                  <div class="day-name">Sun</div>
+                  <div class="day-num">17</div>
+                  <div class="day-kind">Long</div>
+                </div>
+              </div>
+
+              <!-- COMING UP -->
+              <div class="section-header" id="coming-up-header">
+                <h3>Coming up</h3>
+                <div class="link">3 sessions</div>
+              </div>
+              <div class="upcoming-stack">
+
+                <!-- LONG RUN — open by default -->
+                <button class="session-row open" data-row="0">
+                  <div class="row-head">
+                    <div class="day-block">
+                      <div class="dow">Sun</div>
+                      <div class="dom">17</div>
+                    </div>
+                    <div class="row-text">
+                      <div class="name">Long run</div>
+                      <div class="summary">12 km steady, conversational pace.</div>
+                    </div>
+                    <div class="session-zone"><span class="swatch" style="background: var(--zone-2)"></span>Z2</div>
+                    <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                  </div>
+                  <div class="row-body">
+                    <div class="row-body-inner">
+                      <div class="session-effort">
+                        <div class="bar z1" style="height: 30%"></div>
+                        <div class="bar z2" style="height: 55%"></div>
+                        <div class="bar z2" style="height: 60%"></div>
+                        <div class="bar z2" style="height: 65%"></div>
+                        <div class="bar z2" style="height: 65%"></div>
+                        <div class="bar z2" style="height: 70%"></div>
+                        <div class="bar z2" style="height: 70%"></div>
+                        <div class="bar z2" style="height: 70%"></div>
+                        <div class="bar z2" style="height: 72%"></div>
+                        <div class="bar z2" style="height: 72%"></div>
+                        <div class="bar z2" style="height: 70%"></div>
+                        <div class="bar z2" style="height: 68%"></div>
+                        <div class="bar z2" style="height: 65%"></div>
+                        <div class="bar z2" style="height: 62%"></div>
+                        <div class="bar z1" style="height: 38%"></div>
+                      </div>
+                      <div class="session-facts">
+                        <div class="col">
+                          <div class="lbl">Distance</div>
+                          <div class="val">12<span class="unit">km</span></div>
+                        </div>
+                        <div class="col">
+                          <div class="lbl">Pace</div>
+                          <div class="val">5:42<span class="unit">/km</span></div>
+                        </div>
+                        <div class="col">
+                          <div class="lbl">Time</div>
+                          <div class="val">~68<span class="unit">min</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <!-- INTERVALS — collapsed -->
+                <button class="session-row" data-row="1">
+                  <div class="row-head">
+                    <div class="day-block">
+                      <div class="dow">Tue</div>
+                      <div class="dom">19</div>
+                    </div>
+                    <div class="row-text">
+                      <div class="name">Intervals</div>
+                      <div class="summary">6 × 400 m at 5K effort, 90 s jog.</div>
+                    </div>
+                    <div class="session-zone"><span class="swatch" style="background: var(--zone-4)"></span>Z4</div>
+                    <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                  </div>
+                  <div class="row-body">
+                    <div class="row-body-inner">
+                      <div class="session-effort">
+                        <div class="bar z1" style="height: 25%"></div>
+                        <div class="bar z2" style="height: 40%"></div>
+                        <div class="bar z2" style="height: 45%"></div>
+                        <div class="bar z4" style="height: 92%"></div>
+                        <div class="bar z1" style="height: 28%"></div>
+                        <div class="bar z4" style="height: 92%"></div>
+                        <div class="bar z1" style="height: 28%"></div>
+                        <div class="bar z4" style="height: 95%"></div>
+                        <div class="bar z1" style="height: 30%"></div>
+                        <div class="bar z4" style="height: 95%"></div>
+                        <div class="bar z1" style="height: 30%"></div>
+                        <div class="bar z4" style="height: 92%"></div>
+                        <div class="bar z1" style="height: 32%"></div>
+                        <div class="bar z4" style="height: 88%"></div>
+                        <div class="bar z1" style="height: 30%"></div>
+                      </div>
+                      <div class="session-facts">
+                        <div class="col">
+                          <div class="lbl">Reps</div>
+                          <div class="val">6<span class="unit">×400m</span></div>
+                        </div>
+                        <div class="col">
+                          <div class="lbl">Target</div>
+                          <div class="val">1:36<span class="unit">/rep</span></div>
+                        </div>
+                        <div class="col">
+                          <div class="lbl">Time</div>
+                          <div class="val">~42<span class="unit">min</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <!-- EASY — collapsed -->
+                <button class="session-row" data-row="2">
+                  <div class="row-head">
+                    <div class="day-block">
+                      <div class="dow">Thu</div>
+                      <div class="dom">21</div>
+                    </div>
+                    <div class="row-text">
+                      <div class="name">Easy + strides</div>
+                      <div class="summary">5 km easy, then 4 × 20 s strides.</div>
+                    </div>
+                    <div class="session-zone"><span class="swatch" style="background: var(--zone-1)"></span>Z1</div>
+                    <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l4 4-4 4"/></svg>
+                  </div>
+                  <div class="row-body">
+                    <div class="row-body-inner">
+                      <div class="session-effort">
+                        <div class="bar z1" style="height: 30%"></div>
+                        <div class="bar z1" style="height: 40%"></div>
+                        <div class="bar z1" style="height: 45%"></div>
+                        <div class="bar z1" style="height: 48%"></div>
+                        <div class="bar z1" style="height: 50%"></div>
+                        <div class="bar z1" style="height: 50%"></div>
+                        <div class="bar z1" style="height: 48%"></div>
+                        <div class="bar z1" style="height: 48%"></div>
+                        <div class="bar z1" style="height: 46%"></div>
+                        <div class="bar z3" style="height: 75%"></div>
+                        <div class="bar z1" style="height: 38%"></div>
+                        <div class="bar z3" style="height: 75%"></div>
+                        <div class="bar z1" style="height: 38%"></div>
+                        <div class="bar z3" style="height: 78%"></div>
+                        <div class="bar z1" style="height: 35%"></div>
+                      </div>
+                      <div class="session-facts">
+                        <div class="col">
+                          <div class="lbl">Distance</div>
+                          <div class="val">5<span class="unit">km</span></div>
+                        </div>
+                        <div class="col">
+                          <div class="lbl">Strides</div>
+                          <div class="val">4<span class="unit">×20s</span></div>
+                        </div>
+                        <div class="col">
+                          <div class="lbl">Time</div>
+                          <div class="val">~32<span class="unit">min</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                <button class="schedule-link">
+                  <span>See full schedule <span class="count">· 5 weeks left</span></span>
+                  <svg class="arr" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h6M6 3l3 3-3 3"/></svg>
+                </button>
+              </div>
+
+              <!-- TIER PROMPT -->
+              <div class="tier-card">
+                <div class="tier-card-top">
+                  <span class="badge">Tier 3 · 2 weeks</span>
+                </div>
+                <h4>You're trending toward Tier 3.</h4>
+                <p>Three more sessions at this Recovery score and we'll lift the cap. New territory: longer Z3 blocks, stride work pre-tempo.</p>
+                <div class="tier-progression">
+                  <div class="step"><span class="pip"></span>T1</div>
+                  <div class="arrow">›</div>
+                  <div class="step active"><span class="pip"></span>T2</div>
+                  <div class="arrow">›</div>
+                  <div class="step"><span class="pip"></span>T3</div>
+                  <div class="arrow">›</div>
+                  <div class="step"><span class="pip"></span>T4</div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- TAB BAR PEEK -->
+            <div class="tabbar-peek">
+              <div class="tab-item">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l6-6 6 6"/><path d="M5 8v7h8V8"/></svg>
+                <div class="lbl">Home</div>
+              </div>
+              <div class="tab-item">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h12v3H3zM3 8h12v3H3zM3 12h12v3H3z"/></svg>
+                <div class="lbl">History</div>
+              </div>
+              <div class="tab-item active">
+                <svg viewBox="0 0 18 18" fill="currentColor"><path d="M9 16.5s-6-4-6-9a4 4 0 016-3.5A4 4 0 0115 7.5c0 5-6 9-6 9z"/></svg>
+                <div class="lbl">Bootcamp</div>
+              </div>
+              <div class="tab-item">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14V8M7 14V4M11 14v-7M15 14V6"/></svg>
+                <div class="lbl">Progress</div>
+              </div>
+              <div class="tab-item">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="3"/><path d="M3 16c0-3 3-5 6-5s6 2 6 5"/></svg>
+                <div class="lbl">Profile</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-label"><strong>Dashboard</strong> · BootcampScreen.kt</div>
+      </div>
+
+      <!-- ============ MIDDLE ANNOTATIONS ============ -->
+      <div class="annot-col middle">
+        <div class="annot" style="margin-top: 200px;">
+          <div class="tag"><span class="dot"></span>P0 · Primary CTA</div>
+          <h4>One CardeaButton, not a Box</h4>
+          <p>"Start run" was a transparent <code>androidx.compose.material3.Button</code> wrapping a <code>Box(background = CardeaCtaGradient)</code>. Now: a single <code>CardeaButton</code> primitive, same as every other primary CTA in the app.</p>
+        </div>
+
+        <div class="annot">
+          <div class="tag"><span class="dot"></span>System</div>
+          <h4>Radius rhythm: 12 / 16 / 24</h4>
+          <p>Every chip → 12. Every card → 16. Every dialog → 16. Tab bar → 999 (pill). No more 8 / 10 / 14 / 18 / 20 drift across <code>MetaChip</code>, status pills, dialogs, tinted-card borders.</p>
+        </div>
+
+        <div class="annot">
+          <div class="tag"><span class="dot"></span>System</div>
+          <h4>Type floor: 11sp body, 12sp content</h4>
+          <p>9sp eliminated everywhere — day-strip kind labels, settings legend, hero one-liner. <code>labelSmall</code> (11) is the absolute minimum; content uses <code>labelMedium</code> (12) or larger.</p>
+        </div>
+      </div>
+
+      <!-- ============ SETTINGS PHONE ============ -->
+      <div>
+        <div class="phone-frame">
+          <div class="phone-inner">
+            <div class="status-bar">
+              <div>9:41</div>
+              <div class="status-right">
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 11h2v3H1zm4-2h2v5H5zm4-3h2v8H9zm4-4h2v12h-2z"/></svg>
+                <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 3a8 8 0 015.66 2.34l-1.41 1.41A6 6 0 008 5a6 6 0 00-4.24 1.75L2.34 5.34A8 8 0 018 3zm0 4a4 4 0 012.83 1.17l-1.41 1.41A2 2 0 008 9a2 2 0 00-1.41.59L5.17 8.17A4 4 0 018 7zm0 4a1.5 1.5 0 11-1.06.44A1.5 1.5 0 018 11z"/></svg>
+                <svg viewBox="0 0 24 16" fill="none"><rect x="0.5" y="0.5" width="20" height="15" rx="3.5" stroke="currentColor"/><rect x="2" y="2" width="17" height="12" rx="2" fill="currentColor"/><rect x="22" y="5" width="1.5" height="6" rx="0.5" fill="currentColor"/></svg>
+              </div>
+            </div>
+
+            <div class="nav-row">
+              <div class="nav-back">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+                Bootcamp
+              </div>
+              <div class="nav-right">
+                <div class="icon-btn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 4h10M3 8h10M3 12h10"/></svg></div>
+              </div>
+            </div>
+
+            <div class="settings-body">
+              <h1 class="settings-h1">Settings</h1>
+              <p class="settings-sub">Adjust your bootcamp without leaving Tier 2. Changes take effect next session.</p>
+
+              <!-- Time per run -->
+              <div class="setting-card">
+                <div class="setting-row-top">
+                  <span class="setting-label">Time per run</span>
+                  <span class="setting-value">35 min</span>
+                </div>
+                <p class="setting-help">Average target. Long runs and intervals scale around this.</p>
+                <div class="slider">
+                  <div class="track"></div>
+                  <div class="fill" style="width: 50%;"></div>
+                  <div class="thumb" style="left: 50%;"></div>
+                </div>
+                <div class="slider-axis">
+                  <span>20</span><span>35</span><span>50</span><span>65</span><span>80</span>
+                </div>
+                <!-- legend (NOT 9sp) -->
+                <div class="legend-row">
+                  <div class="legend-chip"><span class="swatch" style="background:var(--zone-2)"></span>Easy 20m</div>
+                  <div class="legend-chip"><span class="swatch" style="background:var(--zone-3)"></span>Tempo 35m</div>
+                  <div class="legend-chip"><span class="swatch" style="background:var(--zone-4)"></span>Long 60m</div>
+                  <div class="legend-chip"><span class="swatch" style="background: rgba(255,255,255,0.15)"></span>Blocked 0m</div>
+                </div>
+              </div>
+
+              <!-- Runs per week -->
+              <div class="setting-card">
+                <div class="setting-row-top">
+                  <span class="setting-label">Runs per week</span>
+                  <span class="change-chip">
+                    <svg viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 6l3 3 5-6"/></svg>
+                    +1 from last week
+                  </span>
+                </div>
+                <p class="setting-help">Recovery score 84 supports the bump. Tier 3 needs 4+.</p>
+                <div class="seg-control">
+                  <button>2</button>
+                  <button>3</button>
+                  <button class="active">4</button>
+                  <button>5</button>
+                  <button>6</button>
+                </div>
+              </div>
+
+              <!-- Zone target -->
+              <div class="setting-card">
+                <div class="setting-row-top">
+                  <span class="setting-label">Threshold HR</span>
+                  <span class="setting-value">172 bpm</span>
+                </div>
+                <p class="setting-help">Z3 ceiling. We'll calibrate from your last 3 tempo runs.</p>
+                <div class="slider">
+                  <div class="track"></div>
+                  <div class="fill" style="width: 64%;"></div>
+                  <div class="thumb" style="left: 64%;"></div>
+                </div>
+                <div class="slider-axis">
+                  <span>150</span><span>165</span><span>175</span><span>185</span>
+                </div>
+              </div>
+
+              <!-- Save -->
+              <button class="save-cta">Save changes</button>
+
+              <!-- Destructive (FIX: ZoneRed, outlined) -->
+              <button class="destructive-btn">Delete bootcamp</button>
+            </div>
+
+          </div>
+        </div>
+        <div class="phone-label"><strong>Settings</strong> · BootcampSettingsScreen.kt</div>
+      </div>
+
+      <!-- ============ RIGHT ANNOTATIONS ============ -->
+      <div class="annot-col right">
+        <div class="annot" style="margin-top: 220px;">
+          <div class="tag"><span class="dot"></span>P0 · Slider</div>
+          <h4>GradientPink, not white</h4>
+          <p>M3 default colors out. Track + thumb match the other two sliders on this surface — and pick up the brand glow.</p>
+        </div>
+
+        <div class="annot" style="margin-top: 40px;">
+          <div class="tag"><span class="dot"></span>P0 · ChangeChip</div>
+          <h4>ZoneRed, not raw 0xFF4D5A</h4>
+          <p>Was <code>Color(0x15FF4D5A)</code> hardcoded — wrong destructive token. Now <code>ZoneRed.copy(alpha = 0.12f)</code>, themed.</p>
+          <div class="before-after">
+            <span class="ba-before">GradientRed</span>
+            <span class="ba-arrow">→</span>
+            <span class="ba-after">ZoneRed</span>
+          </div>
+        </div>
+
+        <div class="annot" style="margin-top: 100px;">
+          <div class="tag"><span class="dot"></span>P0 · Save CTA</div>
+          <h4>CardeaButton, not Box+gradient</h4>
+          <p>Inline gradient with 10dp radius and 18×9 padding replaced by the standard primitive. Same visual, one source of truth.</p>
+        </div>
+
+        <div class="annot" style="margin-top: 30px;">
+          <div class="tag"><span class="dot"></span>P0 · Destructive</div>
+          <h4>Outlined ZoneRed, not pink TextButton</h4>
+          <p>"Delete bootcamp" was tinted with decorative <code>GradientRed</code>. Spec: destructive = <code>ZoneRed</code>, outlined for safety.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ FIX SUMMARY ============ -->
+    <div class="footer-legend">
+      <h3>What changed across the surface</h3>
+      <p>Every fix from the audit, anchored to a code path. Apply <code>MetaChip</code> + <code>CardeaButton</code> first — three P0s collapse to a one-line patch each.</p>
+      <div class="footer-grid">
+        <div class="fix-card">
+          <div class="num">FIX 01 · BootcampScreen.kt:2508</div>
+          <h5><code>MetaChip</code> radius → 12dp</h5>
+          <p>One primitive currently violates the radius tier. Fixing here cascades to TierPromptCard, hero pills, session pills.</p>
+        </div>
+        <div class="fix-card">
+          <div class="num">FIX 02 · BootcampScreen.kt:2347</div>
+          <h5>"Start run" → CardeaButton</h5>
+          <p>Most-tapped CTA on the surface. Drop the transparent <code>Button</code> + gradient <code>Box</code> wrapper, ~14 lines deleted.</p>
+        </div>
+        <div class="fix-card">
+          <div class="num">FIX 03 · OnboardingCarousel.kt:386</div>
+          <h5>Watches: 3× CardeaGradient → 1× pink dot</h5>
+          <p>Three ring strokes painted with Tier-1 gradient, plus the page divider above. One-per-screen rule restored.</p>
+        </div>
+        <div class="fix-card">
+          <div class="num">FIX 04 · Settings:803, :239, :476</div>
+          <h5>Three P0s, one patch</h5>
+          <p>Drop <code>fontSize = 9.sp</code> on the legend, repaint the slider with <code>GradientPink</code>, and route the ChangeChip through <code>ZoneRed</code>.</p>
+        </div>
+        <div class="fix-card">
+          <div class="num">FIX 05 · Tinted cards × 4</div>
+          <h5>Border radius 18 → 16</h5>
+          <p>TierPrompt / IllnessPrompt / Graduation / MissedSession all wrap a 16dp <code>GlassCard</code> in an 18dp tinted border. Strokes float past the corner — now flush.</p>
+        </div>
+        <div class="fix-card">
+          <div class="num">FIX 06 · Settings:121</div>
+          <h5>Confirm dialog button → CardeaButton</h5>
+          <p>Inline <code>Box.background(CardeaCtaGradient)</code> at 10dp radius, 18×9 padding. Replaced with <code>CardeaButton</code>; primitive, density and radius all snap to spec.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <script>
+    document.querySelectorAll('.session-row').forEach(row => {
+      row.addEventListener('click', () => {
+        row.classList.toggle('open');
+      });
+    });
+
+    // Land scrolled so Coming Up is visible (avoid the tab-bar overlap)
+    window.addEventListener('load', () => {
+      const dashScroll = document.querySelector('.phone-frame:first-of-type .body-scroll');
+      const target = document.getElementById('coming-up-header');
+      if (dashScroll && target) {
+        // offset target within scroll container
+        const top = target.offsetTop - 12;
+        dashScroll.scrollTop = top;
+      }
+    });
+  </script>
+</body>
+</html>

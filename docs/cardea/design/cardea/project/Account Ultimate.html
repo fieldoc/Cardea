@@ -1,0 +1,1102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Cardea — Account (Ultimate)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* — Cardea tokens, lifted from Color.kt — */
+    --bg-primary: #050505;
+    --bg-secondary: #0d0d0d;
+    --glass-border: rgba(255,255,255,0.15);
+    --glass-highlight: rgba(255,255,255,0.04);
+    --glass-focused: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-secondary: #c8c8d0;
+    --text-tertiary: #b0b0b8;
+    --grad-red: #ff4d5a;
+    --grad-pink: #ff2da6;
+    --grad-blue: #4d61ff;
+    --grad-cyan: #00e5ff;
+    --partner-teal: #38bdf8;
+    --zone-green: #22c55e;
+    --zone-amber: #facc15;
+    --zone-red: #ef4444;
+    --ach-gold: #facc15;
+    --ach-sky: #7dd3fc;
+    --ach-slate: #94a3b8;
+
+    --cardea-gradient: linear-gradient(135deg, var(--grad-red) 0%, var(--grad-pink) 35%, var(--grad-blue) 65%, var(--grad-cyan) 100%);
+    --cta-gradient: linear-gradient(135deg, var(--grad-red), var(--grad-pink));
+
+    --font: 'Roboto', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  html, body { background: #1a1a1c; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 32px 24px 80px;
+  }
+  .stage {
+    display: grid;
+    grid-template-columns: minmax(0, 412px) minmax(0, 1fr);
+    gap: 48px;
+    width: 100%;
+    max-width: 1180px;
+    align-items: start;
+  }
+  /* ── Phone shell ─────────────────────────────────────────── */
+  .phone {
+    width: 412px;
+    height: 892px;
+    border-radius: 56px;
+    background: #050505;
+    box-shadow:
+      0 0 0 2px #2a2a2c,
+      0 0 0 12px #050505,
+      0 30px 80px -20px rgba(0,0,0,.7);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .punch-hole {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #050505; box-shadow: inset 0 0 0 1px #1a1a1a;
+    z-index: 50;
+  }
+  .status-bar {
+    height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; color: #fff;
+    font-size: 14px; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .status-icons { display: flex; align-items: center; gap: 6px; }
+  .icon-svg { display: inline-flex; }
+  .nav-pill {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 134px; height: 5px; border-radius: 3px;
+    background: rgba(255,255,255,0.85);
+  }
+
+  /* ── Screen ──────────────────────────────────────────────── */
+  .screen {
+    flex: 1;
+    background: var(--bg-primary);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 96px;
+    /* hide scrollbar */
+    scrollbar-width: none;
+  }
+  .screen::-webkit-scrollbar { display: none; }
+
+  .h-pad { padding-left: 16px; padding-right: 16px; }
+  .h-pad-20 { padding-left: 20px; padding-right: 20px; }
+
+  /* Material symbols sizing */
+  .mi { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal;
+        font-size: 20px; line-height: 1; letter-spacing: normal;
+        text-transform: none; display: inline-block; white-space: nowrap;
+        word-wrap: normal; direction: ltr; -webkit-font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased; }
+
+  /* ── Page header ─────────────────────────────────────────── */
+  .page-title {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+    margin: 8px 0 0 0;
+    line-height: 1.05;
+  }
+
+  /* ── Section header ──────────────────────────────────────── */
+  .section-header { padding: 0 4px; }
+  .section-rule {
+    width: 25%;
+    height: 1px;
+    background: var(--glass-border);
+    margin-bottom: 8px;
+  }
+  .section-header-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+    text-transform: uppercase;
+  }
+  .section-trail {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    letter-spacing: 0.5px;
+  }
+  .section-subtitle {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* ── Glass card ──────────────────────────────────────────── */
+  .glass {
+    background: var(--glass-highlight);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .glass-tinted-teal {
+    border-color: rgba(56, 189, 248, 0.4);
+  }
+  .glass-tinted-gold {
+    border-color: rgba(250, 204, 21, 0.3);
+  }
+  .glass-tinted-sky {
+    border-color: rgba(125, 211, 252, 0.4);
+  }
+  .glass-tinted-slate {
+    border-color: rgba(148, 163, 184, 0.15);
+  }
+  .glass-r14 { border-radius: 14px; }
+  .glass-r12 { border-radius: 12px; }
+
+  /* ── Profile hero (Tier 1) ───────────────────────────────── */
+  .hero {
+    position: relative;
+    border-radius: 16px;
+    padding: 1px; /* gradient ring */
+    background: var(--cardea-gradient);
+  }
+  .hero-inner {
+    border-radius: 15px;
+    background:
+      linear-gradient(135deg, rgba(255,77,90,0.10) 0%, rgba(255,45,166,0.06) 35%, rgba(77,97,255,0.04) 65%, rgba(0,229,255,0.04) 100%),
+      var(--bg-primary);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .emblem-ring {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    padding: 2px;
+    background: var(--cardea-gradient);
+    flex-shrink: 0;
+  }
+  .emblem-inner {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; line-height: 1;
+  }
+  .hero-name {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+    line-height: 1.1;
+  }
+  .hero-name-grad {
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero-meta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+  .hero-edit {
+    margin-left: auto;
+    width: 36px; height: 36px;
+    border-radius: 12px;
+    background: var(--glass-highlight);
+    border: 1px solid var(--glass-border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .hero-edit .mi { font-size: 18px; }
+
+  /* ── Stat strip ──────────────────────────────────────────── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+  }
+  .stat-cell {
+    padding: 12px 16px;
+    text-align: center;
+    border-right: 1px solid var(--glass-border);
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-num {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.3px;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  /* stat numbers stay neutral white — no accent leak */
+  .stat-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-top: 2px;
+  }
+
+  /* ── Achievements grid ───────────────────────────────────── */
+  .ach-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .ach-card {
+    border-radius: 14px;
+    padding: 12px;
+    background: var(--glass-highlight);
+    border: 1px solid var(--glass-border);
+    display: flex; flex-direction: column; gap: 8px;
+    min-height: 92px;
+    position: relative;
+  }
+  /* Achievements stay on glass — Tier 2. Earned vs locked is the only signal. */
+  .ach-card.earned { background: var(--glass-highlight); border-color: var(--glass-border); }
+  .ach-icon {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--glass-highlight);
+    border: 1px solid var(--glass-border);
+  }
+  .ach-card.earned .ach-icon { color: var(--text-primary); }
+  .ach-icon .mi { font-size: 16px; }
+  .ach-title {
+    font-size: 13px; font-weight: 600; color: var(--text-primary); line-height: 1.2;
+  }
+  .ach-sub {
+    font-size: 11px; color: var(--text-tertiary); line-height: 1.3;
+    margin-top: auto;
+  }
+  .ach-locked { opacity: 0.55; }
+  .ach-empty {
+    border: 1px dashed var(--glass-border);
+    background: transparent;
+    border-radius: 14px;
+    min-height: 92px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary);
+    font-size: 11px;
+    letter-spacing: 0.4px;
+  }
+
+  /* ── Partner row ─────────────────────────────────────────── */
+  .partner-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+  }
+  .partner-row + .partner-row {
+    border-top: 1px solid var(--glass-border);
+  }
+  .partner-emblem {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    padding: 2px;
+    background: var(--cardea-gradient);
+    flex-shrink: 0;
+  }
+  .partner-emblem-inner {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .partner-meta { flex: 1; min-width: 0; }
+  .partner-name {
+    font-size: 14px; font-weight: 600; color: var(--text-primary);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .partner-stats {
+    font-size: 12px; color: var(--text-secondary); margin-top: 2px;
+    line-height: 1.3;
+  }
+  .partner-status {
+    font-size: 11px; font-weight: 600;
+    padding: 4px 8px; border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .partner-status.today {
+    color: var(--partner-teal);
+    background: rgba(56, 189, 248, 0.10);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+  }
+  .partner-status.yesterday {
+    color: var(--text-tertiary);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+  }
+  .partner-remove {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+  }
+  .partner-remove .mi { font-size: 18px; }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-cta {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px;
+    background: var(--cta-gradient);
+    color: #fff;
+    font-size: 14px; font-weight: 700; letter-spacing: 0.2px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px -4px rgba(255,45,166,0.4);
+  }
+  .btn-cta-sm {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--cta-gradient);
+    border: none;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  /* Partner add chip — TEAL not gradient (P0 fix) */
+  .btn-teal-sm {
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--partner-teal);
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text-secondary);
+    font-size: 14px; font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    width: 100%;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-outline.danger {
+    color: var(--zone-red);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  .btn-outline.danger:hover { background: rgba(239,68,68,0.05); }
+
+  .save-btn {
+    background: var(--cta-gradient);
+    color: #fff;
+    font-size: 12px; font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* ── Setting rows ────────────────────────────────────────── */
+  .setting-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 16px;
+  }
+  .setting-row + .setting-row,
+  .setting-section + .setting-row,
+  .setting-row + .setting-section,
+  .setting-section + .setting-section {
+    border-top: 1px solid var(--glass-border);
+  }
+  .setting-icon-box {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    background: rgba(200,200,208,0.08);
+    border: 1px solid rgba(200,200,208,0.15);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .setting-icon-box .mi { font-size: 16px; opacity: 0.85; }
+  .setting-meta { flex: 1; min-width: 0; }
+  .setting-title {
+    font-size: 14px; font-weight: 600; color: var(--text-primary);
+    line-height: 1.2;
+  }
+  .setting-sub {
+    font-size: 12px; color: var(--text-tertiary); margin-top: 2px;
+    line-height: 1.3;
+  }
+  .setting-section {
+    padding: 14px 16px;
+  }
+  .setting-section-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .setting-section-title {
+    font-size: 14px; font-weight: 600; color: var(--text-primary);
+  }
+
+  /* ── Switch ──────────────────────────────────────────────── */
+  .switch {
+    width: 44px; height: 24px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    flex-shrink: 0;
+    transition: all .2s;
+  }
+  .switch::after {
+    content: '';
+    position: absolute; left: 2px; top: 1px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    transition: all .2s;
+  }
+  .switch.on {
+    background: var(--cta-gradient);
+    border-color: transparent;
+  }
+  .switch.on::after {
+    left: 22px;
+    background: #fff;
+  }
+
+  /* ── Segmented buttons ───────────────────────────────────── */
+  .segmented {
+    display: grid;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-highlight);
+  }
+  .seg {
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+    cursor: pointer;
+    border-right: 1px solid var(--glass-border);
+  }
+  .seg:last-child { border-right: none; }
+  .seg.active {
+    background: var(--cta-gradient);
+    color: #fff;
+  }
+
+  /* ── Inputs ──────────────────────────────────────────────── */
+  .input-wrap {
+    position: relative;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 12px 14px 8px;
+  }
+  .input-wrap.focus {
+    background: rgba(255,255,255,0.08);
+    border-color: var(--grad-pink);
+  }
+  .input-label {
+    position: absolute; top: -8px; left: 12px;
+    background: var(--bg-primary);
+    padding: 0 6px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+  .input-value {
+    font-size: 16px;
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .input-help-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 8px;
+    gap: 12px;
+  }
+  .input-help {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    flex: 1;
+  }
+  .input-help.saved { color: var(--text-secondary); }
+  .input-cal {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    margin-top: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── Sound library link row ──────────────────────────────── */
+  .link-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+  }
+  .link-row .mi.chev { font-size: 18px; color: var(--text-tertiary); }
+
+  /* ── About footer ────────────────────────────────────────── */
+  .about {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    letter-spacing: 0.3px;
+    line-height: 1.5;
+  }
+  .about-version { display: block; margin-top: 4px; opacity: 0.7; }
+
+  /* ── Spacing utilities (4 / 8 / 12 / 16 / 24) ────────────── */
+  .v4  { height: 4px;  } .v8  { height: 8px;  } .v12 { height: 12px; }
+  .v16 { height: 16px; } .v24 { height: 24px; } .v32 { height: 32px; }
+
+  /* ── Annotations panel ───────────────────────────────────── */
+  .annotations {
+    color: #d8d8e0;
+    max-width: 580px;
+    padding-top: 24px;
+  }
+  .ann-h {
+    font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    color: rgba(255,255,255,0.5); text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .ann-title {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0 0 8px;
+    background: var(--cardea-gradient);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .ann-lede {
+    font-size: 14px; line-height: 1.55; color: #c8c8d0;
+    margin: 0 0 24px;
+  }
+  .ann-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .ann-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .ann-card .k {
+    font-size: 10px; letter-spacing: 1.5px; font-weight: 700;
+    color: rgba(255,255,255,0.45); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .ann-card .v {
+    font-size: 13px; line-height: 1.5; color: #e8e8ee;
+  }
+  .ann-card .v b { color: #fff; }
+  .ann-card .v code {
+    font-family: var(--mono); font-size: 11px;
+    background: rgba(255,255,255,0.06); padding: 1px 5px;
+    border-radius: 4px; color: #ffd0e8;
+  }
+  .ann-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .ann-list li {
+    font-size: 12px; line-height: 1.5; color: #c8c8d0;
+    padding-left: 18px; position: relative;
+  }
+  .ann-list li::before {
+    content: ''; position: absolute; left: 0; top: 7px;
+    width: 8px; height: 8px; border-radius: 2px;
+  }
+  .ann-list li.tier1::before { background: var(--cardea-gradient); }
+  .ann-list li.cta::before   { background: var(--cta-gradient); }
+  .ann-list li.teal::before  { background: var(--partner-teal); }
+  .ann-list li.green::before { background: var(--zone-green); }
+  .ann-list li.red::before   { background: var(--zone-red); }
+
+  .legend-row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: #c8c8d0;
+    padding: 8px 0;
+  }
+  .legend-swatch {
+    width: 32px; height: 16px;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+  .legend-swatch.t1 { background: var(--cardea-gradient); }
+  .legend-swatch.cta { background: var(--cta-gradient); }
+  .legend-swatch.teal { background: var(--partner-teal); }
+  .legend-swatch.green { background: var(--zone-green); }
+  .legend-swatch.red { background: var(--zone-red); }
+  .legend-swatch.glass {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+  }
+
+  @media (max-width: 1080px) {
+    .stage { grid-template-columns: 1fr; gap: 32px; }
+    .annotations { max-width: 412px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <!-- ─────────────── Phone ─────────────── -->
+  <div class="phone">
+    <div class="punch-hole"></div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div>9:41</div>
+      <div class="status-icons">
+        <!-- signal -->
+        <svg class="icon-svg" width="16" height="14" viewBox="0 0 16 14"><path d="M0 12h2v2H0zM4 9h2v5H4zM8 5h2v9H8zM12 0h2v14h-2z" fill="#fff"/></svg>
+        <!-- wifi -->
+        <svg class="icon-svg" width="16" height="14" viewBox="0 0 16 14"><path d="M8 13.3 .67 5.97a10.37 10.37 0 0 1 14.66 0L8 13.3z" fill="#fff"/></svg>
+        <!-- battery -->
+        <svg class="icon-svg" width="22" height="12" viewBox="0 0 22 12"><rect x="0.5" y="0.5" width="19" height="11" rx="2.5" fill="none" stroke="#fff" opacity="0.6"/><rect x="2" y="2" width="15" height="8" rx="1" fill="#fff"/><rect x="20" y="4" width="2" height="4" rx="0.5" fill="#fff" opacity="0.6"/></svg>
+      </div>
+    </div>
+
+    <!-- Screen content -->
+    <div class="screen">
+      <!-- ── Page title ── -->
+      <div class="h-pad-20" style="padding-top: 16px;">
+        <h1 class="page-title">Profile</h1>
+      </div>
+      <div class="v16"></div>
+
+      <!-- ── PROFILE section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">Profile</div>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <!-- Tier 1 hero — gradient ring border, ONE accent on this screen -->
+        <div class="hero">
+          <div class="hero-inner">
+            <div class="emblem-ring">
+              <div class="emblem-inner">🦌</div>
+            </div>
+            <div style="min-width:0; flex:1;">
+              <div class="hero-name">Alex Carter</div>
+              <div class="hero-meta">142 runs · joined Jun 2024 · v2.4.0</div>
+            </div>
+            <button class="hero-edit" aria-label="Edit profile">
+              <span class="mi">edit</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Stat strip — tier 3 ambient stats inside glass card -->
+        <div class="v8"></div>
+        <div class="glass">
+          <div class="stat-strip">
+            <div class="stat-cell">
+              <div class="stat-num">142</div>
+              <div class="stat-label">Runs</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-num">186</div>
+              <div class="stat-label">Max HR</div>
+            </div>
+            <div class="stat-cell">
+              <div class="stat-num">12</div>
+              <div class="stat-label">Achievements</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── ACHIEVEMENTS section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">Achievements</div>
+            <div class="section-trail">12 of 24 earned</div>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <div class="ach-grid">
+          <div class="ach-card earned">
+            <div class="ach-icon"><span class="mi">military_tech</span></div>
+            <div class="ach-title">Century Club</div>
+            <div class="ach-sub">100 runs · Mar 14</div>
+          </div>
+          <div class="ach-card earned">
+            <div class="ach-icon"><span class="mi">bolt</span></div>
+            <div class="ach-title">Speed Demon</div>
+            <div class="ach-sub">Sub-5min km · Jan 8</div>
+          </div>
+          <div class="ach-card earned">
+            <div class="ach-icon"><span class="mi">local_fire_department</span></div>
+            <div class="ach-title">30-Day Streak</div>
+            <div class="ach-sub">Earned Feb 22</div>
+          </div>
+          <div class="ach-card earned ach-locked">
+            <div class="ach-icon"><span class="mi">lock</span></div>
+            <div class="ach-title">Marathon Ready</div>
+            <div class="ach-sub">42km in a single run</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── PARTNERS section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">Partners <span style="color:var(--text-tertiary); font-weight:600; letter-spacing:1.5px;"> · 2 of 3</span></div>
+            <button class="btn-teal-sm">+ Add</button>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <!-- Partner card with TEAL tinted border -->
+        <div class="glass glass-tinted-teal">
+          <div class="partner-row">
+            <div class="partner-emblem"><div class="partner-emblem-inner">🦊</div></div>
+            <div class="partner-meta">
+              <div class="partner-name">Jordan Reyes</div>
+              <div class="partner-stats">4 runs · 12-day streak 🔥</div>
+            </div>
+            <div class="partner-status today">Ran today</div>
+            <button class="partner-remove" aria-label="Remove"><span class="mi">close</span></button>
+          </div>
+          <div class="partner-row">
+            <div class="partner-emblem"><div class="partner-emblem-inner">🐺</div></div>
+            <div class="partner-meta">
+              <div class="partner-name">Sam Patel</div>
+              <div class="partner-stats">2 runs · 3-day streak 🔥</div>
+            </div>
+            <div class="partner-status yesterday">Yesterday</div>
+            <button class="partner-remove" aria-label="Remove"><span class="mi">close</span></button>
+          </div>
+        </div>
+
+        <div class="v12"></div>
+
+        <!-- Partner nudges toggle, separate glass card -->
+        <div class="glass">
+          <div class="setting-row">
+            <div class="setting-icon-box"><span class="mi">group</span></div>
+            <div class="setting-meta">
+              <div class="setting-title">Partner nudges</div>
+              <div class="setting-sub">Ping me when a partner finishes a run</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── BACKUP section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">Backup</div>
+            <div class="section-trail">Synced 2m ago</div>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <div class="glass" style="padding: 16px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="mi" style="color:var(--text-secondary); font-size:18px;">cloud_done</span>
+            <div style="font-size:14px; font-weight:700; color:var(--text-primary);">Cloud Backup</div>
+          </div>
+          <div class="v12"></div>
+          <div style="font-size:13px; color:var(--text-secondary);">alex.carter@gmail.com</div>
+          <div class="v4"></div>
+          <div style="font-size:11px; color:var(--text-tertiary);">Workouts, partners and achievements backed up.</div>
+          <div class="v12"></div>
+          <button class="btn-outline">
+            <span class="mi" style="font-size:16px;">cloud_download</span>
+            Restore from cloud
+          </button>
+          <div class="v12"></div>
+          <button class="btn-outline danger">Sign out</button>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── TRAINING section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">Training</div>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <div class="glass">
+          <!-- Max HR -->
+          <div class="setting-section">
+            <div class="setting-section-head">
+              <div class="setting-icon-box"><span class="mi">favorite</span></div>
+              <div class="setting-section-title">Max heart rate</div>
+            </div>
+            <div class="input-wrap">
+              <div class="input-label">Max HR (bpm)</div>
+              <div class="input-value">186</div>
+            </div>
+            <div class="input-help-row">
+              <div class="input-help">Saved.</div>
+              <button class="save-btn">Save</button>
+            </div>
+            <div class="input-cal">Auto-calibrated · Apr 18</div>
+          </div>
+
+          <!-- Distance unit -->
+          <div class="setting-section">
+            <div class="setting-section-head">
+              <div class="setting-icon-box"><span class="mi">map</span></div>
+              <div class="setting-section-title">Distance unit</div>
+            </div>
+            <div class="segmented" style="grid-template-columns: 1fr 1fr;">
+              <div class="seg active">km</div>
+              <div class="seg">mi</div>
+            </div>
+          </div>
+
+          <!-- Auto-pause -->
+          <div class="setting-row">
+            <div class="setting-icon-box"><span class="mi">timer</span></div>
+            <div class="setting-meta">
+              <div class="setting-title">Auto-pause when stopped</div>
+              <div class="setting-sub">Pauses timer at red lights or breaks</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── AUDIO section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">Audio &amp; coaching</div>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <div class="glass">
+          <div class="setting-section">
+            <div class="setting-section-head">
+              <div class="setting-icon-box"><span class="mi">graphic_eq</span></div>
+              <div class="setting-section-title">Coaching voice</div>
+            </div>
+            <div class="segmented" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="seg">Minimal</div>
+              <div class="seg active">Standard</div>
+              <div class="seg">Verbose</div>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon-box"><span class="mi">vibration</span></div>
+            <div class="setting-meta">
+              <div class="setting-title">Vibration on cues</div>
+              <div class="setting-sub">Buzz when a zone target changes</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-icon-box"><span class="mi">timer_3_alt_1</span></div>
+            <div class="setting-meta">
+              <div class="setting-title">Halfway reminder</div>
+              <div class="setting-sub">Voice cue at the midpoint of every run</div>
+            </div>
+            <div class="switch"></div>
+          </div>
+        </div>
+
+        <div class="v12"></div>
+
+        <div class="glass">
+          <div class="link-row">
+            <div class="setting-icon-box"><span class="mi">volume_up</span></div>
+            <div class="setting-meta">
+              <div class="setting-title">Sound library</div>
+              <div class="setting-sub">Preview every coaching cue.</div>
+            </div>
+            <span class="mi chev">chevron_right</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── APP section ── -->
+      <div class="h-pad">
+        <div class="section-header">
+          <div class="section-rule"></div>
+          <div class="section-header-row">
+            <div class="section-title">App</div>
+          </div>
+        </div>
+        <div class="v12"></div>
+
+        <div class="glass">
+          <div class="setting-section">
+            <div class="setting-section-head">
+              <div class="setting-icon-box"><span class="mi">contrast</span></div>
+              <div class="setting-section-title">Theme</div>
+            </div>
+            <div class="segmented" style="grid-template-columns: 1fr 1fr 1fr;">
+              <div class="seg">System</div>
+              <div class="seg">Light</div>
+              <div class="seg active">Dark</div>
+            </div>
+          </div>
+          <div class="setting-section">
+            <div class="setting-section-head">
+              <div class="setting-icon-box"><span class="mi">map</span></div>
+              <div class="setting-section-title">Maps API key</div>
+            </div>
+            <div class="input-wrap">
+              <div class="input-label">Google Maps API key</div>
+              <div class="input-value" style="font-family: var(--mono); font-size: 13px; letter-spacing: 0.5px;">AIza••••••••••••••••••••KQ8</div>
+            </div>
+            <div class="input-help-row">
+              <div class="input-help">Used for route rendering in History.</div>
+              <button class="save-btn">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v24"></div>
+
+      <!-- ── ABOUT footer ── -->
+      <div class="h-pad about">
+        Cardea · Heart rate zone coach for runners
+        <span class="about-version">v2.4.0 (build 1287)</span>
+      </div>
+
+      <div class="v32"></div>
+    </div>
+
+    <!-- Gesture nav pill -->
+    <div class="nav-pill"></div>
+  </div>
+
+  <!-- ─────────────── Annotations ─────────────── -->
+  <div class="annotations">
+    <div class="ann-h">Account · Polish Pass</div>
+    <h2 class="ann-title">The ultimate Account.</h2>
+    <p class="ann-lede">
+      Two accents, period. <b>CardeaGradient</b> on the profile hero only.
+      <b>PartnerTeal</b> owns the partner surface. Everything else lives on
+      glass — white, secondary, tertiary. Achievements, sync state, "Saved",
+      input labels all demoted to neutral so your eye lands where it should.
+    </p>
+
+    <div class="ann-grid">
+      <div class="ann-card">
+        <div class="k">Tier 1 — once</div>
+        <div class="v">Profile hero gets the 4-stop <b>CardeaGradient</b> as a 1dp ring border. Everything else is glass.</div>
+      </div>
+      <div class="ann-card">
+        <div class="k">Partner surface</div>
+        <div class="v">PartnerTeal everywhere it used to be GradientPink: <b>+ Add</b> chip, "Ran today" badge, tinted border, code field.</div>
+      </div>
+      <div class="ann-card">
+        <div class="k">Section rhythm</div>
+        <div class="v">SectionHeader on Profile, Achievements, Partners, Backup, Training, Audio, App. <code>24dp</code> between sections, <code>12dp</code> after header.</div>
+      </div>
+      <div class="ann-card">
+        <div class="k">Radii — 16 / 14 / 12</div>
+        <div class="v">Cards <code>16</code>, achievement tiles <code>14</code>, chips & buttons <code>12</code>. Killed the rogue <code>18</code>, <code>10</code>, <code>8</code>, <code>6</code>.</div>
+      </div>
+      <div class="ann-card">
+        <div class="k">Inputs decorated</div>
+        <div class="v">All <code>OutlinedTextField</code>s now ship explicit container + placeholder colors per the toolbox spec.</div>
+      </div>
+      <div class="ann-card">
+        <div class="k">Destructive = ZoneRed</div>
+        <div class="v">"Sign out" is an outlined button with <b>ZoneRed</b> border + label. No primary leak.</div>
+      </div>
+    </div>
+
+    <div class="ann-h">Color roles in this screen</div>
+    <div class="legend-row"><div class="legend-swatch t1"></div><div><b>CardeaGradient</b> — Tier 1, profile hero only</div></div>
+    <div class="legend-row"><div class="legend-swatch cta"></div><div><b>CardeaCtaGradient</b> — Save buttons, segmented active, switches</div></div>
+    <div class="legend-row"><div class="legend-swatch teal"></div><div><b>PartnerTeal</b> — partner card border, "+ Add", "Ran today" only</div></div>
+    <div class="legend-row"><div class="legend-swatch red"></div><div><b>ZoneRed</b> — Sign out (destructive only)</div></div>
+    <div class="legend-row"><div class="legend-swatch glass"></div><div><b>GlassCard</b> — everything else, 1dp GlassBorder</div></div>
+    <div style="font-size:11px; color:rgba(255,255,255,0.4); margin-top:8px; line-height:1.5;">
+      ZoneGreen, ZoneAmber, gold/sky achievement tints — all pulled. Reserved
+      for HR zones and chart surfaces, not Account chrome.
+    </div>
+
+    <div class="v24"></div>
+    <div class="ann-h">Top 5 deltas vs current</div>
+    <ul class="ann-list">
+      <li class="tier1">Hero is a <code>GlassCard</code> with a <code>colors.gradient</code> border, not a raw Box with manual fill.</li>
+      <li class="teal">Every <code>GradientPink</code> in PartnerSection.kt is now PartnerTeal — chip, status, tint.</li>
+      <li class="cta">Hand-rolled gradient <code>Box</code>es replaced with <code>CardeaButton</code> for radii + <code>onGradient</code> text.</li>
+      <li class="green">All inputs ship full <code>OutlinedTextFieldDefaults.colors()</code> — container + placeholder.</li>
+      <li class="red">SectionHeaders on every grouping; spacers snap to <code>4 / 8 / 12 / 16 / 24</code>.</li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>
