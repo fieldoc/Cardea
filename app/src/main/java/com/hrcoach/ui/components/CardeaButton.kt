@@ -3,10 +3,16 @@ package com.hrcoach.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,6 +24,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -54,6 +61,7 @@ fun CardeaButton(
     cornerRadius: Dp = 14.dp,
     innerPadding: PaddingValues = PaddingValues(0.dp),
     emphasis: CardeaButtonEmphasis = CardeaButtonEmphasis.Filled,
+    leadingIcon: ImageVector? = null,
 ) {
     val shape = RoundedCornerShape(cornerRadius)
     val ctaGradient = CardeaTheme.colors.ctaGradient
@@ -81,35 +89,54 @@ fun CardeaButton(
         modifier = baseModifier,
         contentAlignment = Alignment.Center
     ) {
-        when (emphasis) {
-            CardeaButtonEmphasis.Filled -> Text(
-                text = text,
-                color = if (enabled) CardeaTheme.colors.onGradient else CardeaTheme.colors.textTertiary,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (leadingIcon != null) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = if (enabled) {
+                        when (emphasis) {
+                            CardeaButtonEmphasis.Filled -> CardeaTheme.colors.onGradient
+                            CardeaButtonEmphasis.Tonal -> CardeaTheme.colors.onGradient
+                        }
+                    } else CardeaTheme.colors.textTertiary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            when (emphasis) {
+                CardeaButtonEmphasis.Filled -> Text(
+                    text = text,
+                    color = if (enabled) CardeaTheme.colors.onGradient else CardeaTheme.colors.textTertiary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
 
-            CardeaButtonEmphasis.Tonal -> {
-                if (enabled) {
-                    Text(
-                        text = text,
-                        color = CardeaTheme.colors.onGradient,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier
-                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                            .drawWithContent {
-                                drawContent()
-                                drawRect(brush = ctaGradient, blendMode = BlendMode.SrcIn)
-                            }
-                    )
-                } else {
-                    Text(
-                        text = text,
-                        color = CardeaTheme.colors.textTertiary,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                CardeaButtonEmphasis.Tonal -> {
+                    if (enabled) {
+                        Text(
+                            text = text,
+                            color = CardeaTheme.colors.onGradient,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier
+                                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                                .drawWithContent {
+                                    drawContent()
+                                    drawRect(brush = ctaGradient, blendMode = BlendMode.SrcIn)
+                                }
+                        )
+                    } else {
+                        Text(
+                            text = text,
+                            color = CardeaTheme.colors.textTertiary,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

@@ -24,8 +24,39 @@ interface BootcampDao {
     @Query("SELECT * FROM bootcamp_enrollments WHERE status IN ('ACTIVE', 'PAUSED') ORDER BY id DESC LIMIT 1")
     suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity?
 
+    /**
+     * Latest enrollment regardless of status (ACTIVE / PAUSED / GRADUATED). Used by Home to
+     * surface graduate / paused heroes alongside the active hero. Returns null if the user has
+     * never enrolled.
+     */
+    @Query("SELECT * FROM bootcamp_enrollments ORDER BY id DESC LIMIT 1")
+    fun getLatestEnrollmentAnyStatus(): Flow<BootcampEnrollmentEntity?>
+
     @Query("SELECT * FROM bootcamp_enrollments WHERE id = :id")
     suspend fun getEnrollment(id: Long): BootcampEnrollmentEntity?
+
+    /** Count of completed sessions for an enrollment. Used by graduate / pause stats. */
+    @Query("SELECT COUNT(*) FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND status = 'COMPLETED'")
+    suspend fun getCompletedSessionCount(enrollmentId: Long): Int
+
+    /** Total session rows for an enrollment (any status). Used by paused / graduate progress display. */
+    @Query("SELECT COUNT(*) FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId")
+    suspend fun getTotalSessionCount(enrollmentId: Long): Int
+
+    /**
+     * Sum of distance (meters) for non-simulated workouts whose ID is referenced by a completed
+     * session in this enrollment. Used by the Graduate hero. Returns 0.0 when no completed
+     * sessions have an attached workout.
+     */
+    @Query("""
+        SELECT COALESCE(SUM(w.totalDistanceMeters), 0.0)
+        FROM workouts w
+        INNER JOIN bootcamp_sessions s ON s.completedWorkoutId = w.id
+        WHERE s.enrollmentId = :enrollmentId
+          AND s.status = 'COMPLETED'
+          AND w.isSimulated = 0
+    """)
+    suspend fun sumCompletedWorkoutDistanceMeters(enrollmentId: Long): Double
 
     @Insert
     suspend fun insertSession(session: BootcampSessionEntity): Long

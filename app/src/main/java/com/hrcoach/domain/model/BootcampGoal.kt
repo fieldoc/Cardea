@@ -16,7 +16,9 @@ enum class BootcampGoal(
     val neverPrescribeBelowMinutes: Int,
     val minLongRunMinutes: Int,
     val maxLongRunMinutes: Int,
-    val phaseArc: List<TrainingPhase>
+    val phaseArc: List<TrainingPhase>,
+    val shortLabel: String,
+    val displayName: String
 ) {
     CARDIO_HEALTH(
         suggestedMinMinutes = 20,
@@ -24,7 +26,9 @@ enum class BootcampGoal(
         neverPrescribeBelowMinutes = 10,
         minLongRunMinutes = 20,
         maxLongRunMinutes = 60,
-        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.EVERGREEN)
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.EVERGREEN),
+        shortLabel = "Health",
+        displayName = "Cardio health"
     ),
     RACE_5K(
         suggestedMinMinutes = 25,
@@ -32,7 +36,9 @@ enum class BootcampGoal(
         neverPrescribeBelowMinutes = 15,
         minLongRunMinutes = 30,
         maxLongRunMinutes = 60,
-        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER),
+        shortLabel = "5K",
+        displayName = "5K"
     ),
     RACE_10K(
         suggestedMinMinutes = 30,
@@ -40,7 +46,9 @@ enum class BootcampGoal(
         neverPrescribeBelowMinutes = 15,
         minLongRunMinutes = 40,
         maxLongRunMinutes = 75,
-        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER),
+        shortLabel = "10K",
+        displayName = "10K"
     ),
     HALF_MARATHON(
         suggestedMinMinutes = 30,
@@ -48,7 +56,9 @@ enum class BootcampGoal(
         neverPrescribeBelowMinutes = 20,
         minLongRunMinutes = 60,
         maxLongRunMinutes = 120,
-        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER),
+        shortLabel = "Half",
+        displayName = "Half marathon"
     ),
     MARATHON(
         suggestedMinMinutes = 45,
@@ -56,6 +66,8 @@ enum class BootcampGoal(
         neverPrescribeBelowMinutes = 20,
         minLongRunMinutes = 90,
         maxLongRunMinutes = 150,
-        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER)
+        phaseArc = listOf(TrainingPhase.BASE, TrainingPhase.BUILD, TrainingPhase.PEAK, TrainingPhase.TAPER),
+        shortLabel = "Full",
+        displayName = "Marathon"
     )
 }

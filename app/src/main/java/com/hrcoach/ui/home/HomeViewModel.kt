@@ -2,6 +2,7 @@ package com.hrcoach.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
@@ -35,18 +36,53 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
+/**
+ * Lifecycle-aware bootcamp state surfaced on the Home screen.
+ *
+ * - [None]        — user has never enrolled (or the row was deleted).
+ * - [Active]      — `STATUS_ACTIVE` enrollment; mirrors prior "next session" hero.
+ * - [Paused]      — `STATUS_PAUSED`; renders a "resume" hero with progress context.
+ * - [Graduated]   — `STATUS_GRADUATED`; triumphant summary with weeks/sessions/total km.
+ *
+ * EVERGREEN goals (CARDIO_HEALTH) should never reach `STATUS_GRADUATED`; the VM defensively
+ * promotes such rows back to [Active] (or [None] if no remaining sessions).
+ */
+sealed interface HomeBootcampState {
+    data object None : HomeBootcampState
+
+    data class Active(
+        val enrollment: BootcampEnrollmentEntity,
+        val nextSession: BootcampSessionEntity?,
+        val weekNumber: Int,
+        val isToday: Boolean,
+        val dayLabel: String,
+    ) : HomeBootcampState
+
+    data class Paused(
+        val enrollment: BootcampEnrollmentEntity,
+        val sessionsDone: Int,
+        val sessionsTotal: Int,
+        val pausedAtWeek: Int,
+        val totalWeeks: Int,
+    ) : HomeBootcampState
+
+    data class Graduated(
+        val enrollment: BootcampEnrollmentEntity,
+        val weeksCompleted: Int,
+        val sessionsCompleted: Int,
+        /** Total distance for this enrollment's completed workouts, in **kilometres**. */
+        val totalKm: Double,
+    ) : HomeBootcampState
+}
+
 data class HomeUiState(
     val greeting: String = "Good morning",
     val lastWorkout: WorkoutEntity? = null,
     val workoutsThisWeek: Int = 0,
     val weeklyTarget: Int = 4,
     val isSessionRunning: Boolean = false,
-    val hasActiveBootcamp: Boolean = false,
-    val nextSession: BootcampSessionEntity? = null,
-    val currentWeekNumber: Int = 1,
+    val bootcampState: HomeBootcampState = HomeBootcampState.None,
     val sessionStreak: Int = 0,
-    val isNextSessionToday: Boolean = false,
-    val nextSessionDayLabel: String = "",
     val sensorName: String? = null,
     val sensorLastSeenMs: Long? = null,
     val totalDistanceThisWeekMeters: Double = 0.0,
@@ -60,7 +96,29 @@ data class HomeUiState(
     val distanceUnit: DistanceUnit = DistanceUnit.KM,
     val maxHr: Int? = null,
     val restHr: Int? = null,
-)
+) {
+    /**
+     * Backwards-compat shim. New call sites should branch on [bootcampState] directly; this
+     * exists so [HomeScreen] (owned by another agent) and existing tests continue to compile
+     * while the data layer migrates. Returns true only for [HomeBootcampState.Active].
+     */
+    val hasActiveBootcamp: Boolean
+        get() = bootcampState is HomeBootcampState.Active
+
+    /** Convenience accessor for the active hero's next session. */
+    val nextSession: BootcampSessionEntity?
+        get() = (bootcampState as? HomeBootcampState.Active)?.nextSession
+
+    /** Absolute week index, or 1 when no active enrollment. */
+    val currentWeekNumber: Int
+        get() = (bootcampState as? HomeBootcampState.Active)?.weekNumber ?: 1
+
+    val isNextSessionToday: Boolean
+        get() = (bootcampState as? HomeBootcampState.Active)?.isToday ?: false
+
+    val nextSessionDayLabel: String
+        get() = (bootcampState as? HomeBootcampState.Active)?.dayLabel ?: ""
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -76,10 +134,17 @@ class HomeViewModel @Inject constructor(
     private val maxHr: Int? = userProfileRepository.getMaxHr()
     private val restHr: Int? = null
 
+    /**
+     * Cache of computed graduate stats keyed by enrollment ID. Stats are expensive (DB joins,
+     * session counts) and never change once an enrollment is graduated, so we memoize per-id
+     * to avoid recomputing on every Home recomposition / Flow emission.
+     */
+    private val graduatedStatsCache: MutableMap<Long, HomeBootcampState.Graduated> = mutableMapOf()
+
     val uiState: StateFlow<HomeUiState> = combine(
         combine(
             workoutRepository.getAllWorkouts(),
-            bootcampRepository.getActiveEnrollment(),
+            bootcampRepository.getLatestEnrollmentAnyStatus(),
             WorkoutState.snapshot.map { it.isRunning }.distinctUntilChanged(),
         ) { workouts, enrollment, isRunning -> Triple(workouts, enrollment, isRunning) },
         partnerRepository.observePartners(),
@@ -104,26 +169,66 @@ class HomeViewModel @Inject constructor(
                 else      -> "Good evening"
             }
 
-            // Only ACTIVE enrollment gets the hero card — PAUSED/GRADUATED fall back to no-bootcamp UI
-            val activeEnrollment = enrollment?.takeIf {
-                it.status == BootcampEnrollmentEntity.STATUS_ACTIVE
-            }
-
-            val bootcampGoal = activeEnrollment?.let {
+            val bootcampGoal = enrollment?.let {
                 runCatching { BootcampGoal.valueOf(it.goalType) }.getOrNull()
             }
             val phaseEngine = bootcampGoal?.let {
                 PhaseEngine(
                     goal = it,
-                    phaseIndex = activeEnrollment.currentPhaseIndex,
-                    weekInPhase = activeEnrollment.currentWeekInPhase,
-                    runsPerWeek = activeEnrollment.runsPerWeek,
-                    targetMinutes = activeEnrollment.targetMinutesPerRun
+                    phaseIndex = enrollment.currentPhaseIndex,
+                    weekInPhase = enrollment.currentWeekInPhase,
+                    runsPerWeek = enrollment.runsPerWeek,
+                    targetMinutes = enrollment.targetMinutesPerRun
                 )
             }
             val bootcampTotalWeeks = phaseEngine?.totalWeeks ?: 12
             val displayAbsoluteWeek: Int = phaseEngine?.absoluteWeek ?: 1
             val bootcampPercentComplete = displayAbsoluteWeek.toFloat() / bootcampTotalWeeks
+
+            // Derive the lifecycle hero state. EVERGREEN/CARDIO_HEALTH should never be GRADUATED;
+            // if the data anomaly exists we treat as Active (with whatever sessions remain) or
+            // None when the row is unusable.
+            val bootcampState: HomeBootcampState = when {
+                enrollment == null -> HomeBootcampState.None
+                enrollment.status == BootcampEnrollmentEntity.STATUS_GRADUATED &&
+                    bootcampGoal == BootcampGoal.CARDIO_HEALTH -> {
+                    // Defensive: EVERGREEN never graduates. Promote back to Active.
+                    buildActiveState(enrollment, displayAbsoluteWeek, today = now.toLocalDate(), zone = zone)
+                }
+                enrollment.status == BootcampEnrollmentEntity.STATUS_PAUSED -> {
+                    val done = bootcampRepository.getCompletedSessionCount(enrollment.id)
+                    val total = bootcampRepository.getTotalSessionCount(enrollment.id)
+                    HomeBootcampState.Paused(
+                        enrollment = enrollment,
+                        sessionsDone = done,
+                        sessionsTotal = total,
+                        pausedAtWeek = displayAbsoluteWeek,
+                        totalWeeks = bootcampTotalWeeks,
+                    )
+                }
+                enrollment.status == BootcampEnrollmentEntity.STATUS_GRADUATED -> {
+                    graduatedStatsCache.getOrPut(enrollment.id) {
+                        val sessionsCompleted = bootcampRepository.getCompletedSessionCount(enrollment.id)
+                        val totalMeters = bootcampRepository.sumCompletedWorkoutDistanceMeters(enrollment.id)
+                        val weeksCompleted = bootcampRepository
+                            .countConsecutiveCompletedWeeks(enrollment.id)
+                            .takeIf { it > 0 }
+                            ?: bootcampTotalWeeks
+                        HomeBootcampState.Graduated(
+                            enrollment = enrollment,
+                            weeksCompleted = weeksCompleted,
+                            sessionsCompleted = sessionsCompleted,
+                            totalKm = totalMeters / 1000.0,
+                        )
+                    }
+                }
+                enrollment.status == BootcampEnrollmentEntity.STATUS_ACTIVE -> {
+                    buildActiveState(enrollment, displayAbsoluteWeek, today = now.toLocalDate(), zone = zone)
+                }
+                else -> HomeBootcampState.None
+            }
+
+            val activeEnrollment = enrollment?.takeIf { bootcampState is HomeBootcampState.Active }
 
             // Weekly run count uses bootcamp_sessions (not WorkoutEntity rows) when
             // enrolled, so SKIPPED sessions still count toward the week.
@@ -153,44 +258,6 @@ class HomeViewModel @Inject constructor(
                 nowMs = System.currentTimeMillis()
             )
 
-            val today = now.toLocalDate()
-
-            // Find next session that is today or in the future (not past-day leftovers).
-            // The DAO's getNextSession() returns the earliest SCHEDULED/DEFERRED by
-            // weekNumber+dayOfWeek, which may be a past day still marked SCHEDULED.
-            // Bootcamp screen filters these out — home screen must match.
-            val nextSession: BootcampSessionEntity?
-            val nextSessionDate: LocalDate?
-            if (activeEnrollment != null) {
-                val enrollStartDate = Instant.ofEpochMilli(activeEnrollment.startDate)
-                    .atZone(zone).toLocalDate()
-                // Anchor to the Monday of the enrollment start week.
-                // session.dayOfWeek is ISO (1=Mon, 7=Sun), NOT an offset from enrollStartDate.
-                val enrollWeekMonday = enrollStartDate.with(DayOfWeek.MONDAY)
-                val allPending = bootcampRepository.getScheduledAndDeferredSessions(activeEnrollment.id)
-                val match = allPending.firstOrNull { session ->
-                    val sessionDate = enrollWeekMonday
-                        .plusWeeks((session.weekNumber - 1).toLong())
-                        .plusDays((session.dayOfWeek - 1).toLong())
-                    !sessionDate.isBefore(today)
-                }
-                nextSession = match
-                nextSessionDate = match?.let { session ->
-                    enrollWeekMonday
-                        .plusWeeks((session.weekNumber - 1).toLong())
-                        .plusDays((session.dayOfWeek - 1).toLong())
-                }
-            } else {
-                nextSession = null
-                nextSessionDate = null
-            }
-
-            val isNextSessionToday = nextSessionDate == today
-            val nextSessionDayLabel = nextSessionDate?.dayOfWeek
-                ?.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
-                ?.uppercase()
-                ?: ""
-
             val sessionStreak = if (activeEnrollment != null) {
                 val allSessions = bootcampRepository.getSessionsForEnrollmentOnce(activeEnrollment.id)
                 StreakCalculator.computeSessionStreak(allSessions, activeEnrollment.startDate)
@@ -200,6 +267,7 @@ class HomeViewModel @Inject constructor(
             val sensorName = blePrefs.getString("last_device_name", null)
             val sensorLastSeen = blePrefs.getLong("last_connected_ms", 0L).takeIf { it > 0L }
 
+            val today = now.toLocalDate()
             val userRanToday = workouts.any { workout ->
                 val workoutDate = Instant.ofEpochMilli(workout.startTime).atZone(zone).toLocalDate()
                 workoutDate == today
@@ -215,12 +283,8 @@ class HomeViewModel @Inject constructor(
                 workoutsThisWeek = thisWeek,
                 weeklyTarget = activeEnrollment?.runsPerWeek ?: 4,
                 isSessionRunning = isRunning,
-                hasActiveBootcamp = activeEnrollment != null,
-                nextSession = nextSession,
-                currentWeekNumber = displayAbsoluteWeek,
+                bootcampState = bootcampState,
                 sessionStreak = sessionStreak,
-                isNextSessionToday = isNextSessionToday,
-                nextSessionDayLabel = nextSessionDayLabel,
                 sensorName = sensorName,
                 sensorLastSeenMs = sensorLastSeen,
                 totalDistanceThisWeekMeters = totalDistanceM,
@@ -238,4 +302,61 @@ class HomeViewModel @Inject constructor(
         }
     }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    /**
+     * Builds the [HomeBootcampState.Active] hero payload.
+     *
+     * Honours the bootcamp-scheduling rule: session date is computed from
+     * `enrollStartDate.with(MONDAY).plusWeeks(weekNumber-1).plusDays(dayOfWeek-1)` and we filter
+     * SCHEDULED+DEFERRED entries against today, NOT relying on `getNextSession()` (which can
+     * return past-day SCHEDULED rows).
+     */
+    private suspend fun buildActiveState(
+        enrollment: BootcampEnrollmentEntity,
+        displayAbsoluteWeek: Int,
+        today: LocalDate,
+        zone: ZoneId,
+    ): HomeBootcampState.Active {
+        val enrollStartDate = Instant.ofEpochMilli(enrollment.startDate)
+            .atZone(zone).toLocalDate()
+        val enrollWeekMonday = enrollStartDate.with(DayOfWeek.MONDAY)
+        val allPending = bootcampRepository.getScheduledAndDeferredSessions(enrollment.id)
+        val match = allPending.firstOrNull { session ->
+            val sessionDate = enrollWeekMonday
+                .plusWeeks((session.weekNumber - 1).toLong())
+                .plusDays((session.dayOfWeek - 1).toLong())
+            !sessionDate.isBefore(today)
+        }
+        val nextSessionDate = match?.let { session ->
+            enrollWeekMonday
+                .plusWeeks((session.weekNumber - 1).toLong())
+                .plusDays((session.dayOfWeek - 1).toLong())
+        }
+        val isToday = nextSessionDate == today
+        val dayLabel = nextSessionDate?.dayOfWeek
+            ?.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.getDefault())
+            ?.uppercase()
+            ?: ""
+        return HomeBootcampState.Active(
+            enrollment = enrollment,
+            nextSession = match,
+            weekNumber = displayAbsoluteWeek,
+            isToday = isToday,
+            dayLabel = dayLabel,
+        )
+    }
+
+    /**
+     * Resume a paused bootcamp from the Home Resume hero. No-op when current state is not
+     * [HomeBootcampState.Paused] (defensive: prevents accidental status flips if the user double-taps
+     * a stale UI). The Flow re-emits naturally once the repository update completes.
+     */
+    fun resumeBootcamp() {
+        val state = uiState.value.bootcampState
+        if (state is HomeBootcampState.Paused) {
+            viewModelScope.launch {
+                bootcampRepository.resumeEnrollment(state.enrollment.id)
+            }
+        }
+    }
 }

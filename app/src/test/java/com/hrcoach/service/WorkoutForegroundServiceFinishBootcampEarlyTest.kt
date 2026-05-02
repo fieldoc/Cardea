@@ -254,8 +254,16 @@ private class FakeBootcampDao(
 
     override suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity? = activeEnrollment
 
+    override fun getLatestEnrollmentAnyStatus(): Flow<BootcampEnrollmentEntity?> = emptyFlow()
+
     override suspend fun getEnrollment(id: Long): BootcampEnrollmentEntity? =
         activeEnrollment?.takeIf { it.id == id }
+
+    override suspend fun getCompletedSessionCount(enrollmentId: Long): Int = 0
+
+    override suspend fun getTotalSessionCount(enrollmentId: Long): Int = 0
+
+    override suspend fun sumCompletedWorkoutDistanceMeters(enrollmentId: Long): Double = 0.0
 
     override suspend fun insertSession(session: BootcampSessionEntity): Long {
         sessionsByWeek.getOrPut(session.weekNumber) { mutableListOf() }.add(session)

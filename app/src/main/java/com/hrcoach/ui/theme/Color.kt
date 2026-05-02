@@ -43,6 +43,23 @@ val CardeaNavGradient = Brush.linearGradient(
 val CardeaTextPrimary   = Color(0xFFFFFFFF)
 val CardeaTextSecondary = Color(0xFFC8C8D0) // Neutral Gray — brightened for readability
 val CardeaTextTertiary  = Color(0xFFB0B0B8) // Neutral Gray — brightened for readability, stays below secondary
+val CardeaTextQuaternary = Color(0xFF3A424E) // Hero file only — for trailing arrows in tertiary links
+
+// ── Hero file glass borders ─────────────────────────────────
+/** Stronger glass border (14% white) used by Home hero outer borders per Hero States spec. */
+val GlassBorderStrong = Color(0xFFFFFFFF).copy(alpha = 0.14f)
+
+/** 3-stop CTA gradient (Pink→Red→Pink) — used by Home hero primary buttons. */
+val CardeaCtaGradient3Stop = Brush.linearGradient(
+    colorStops = arrayOf(
+        0.00f to GradientPink,
+        0.50f to GradientRed,
+        1.00f to GradientPink
+    )
+)
+
+// ── Hero / triumph accent ───────────────────────────────────
+val CardeaAmber = Color(0xFFFFB020) // Trophy chip + center laurel dot
 
 // ── Zone colors (Athletic Neon) ────────────────────────────
 val ZoneGreen = Color(0xFF22C55E) // Sharp Emerald

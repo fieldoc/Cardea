@@ -2,6 +2,7 @@ package com.hrcoach.ui.home
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,13 +27,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -52,18 +58,25 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hrcoach.data.db.BootcampEnrollmentEntity
 import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.domain.coaching.CoachingInsight
+import com.hrcoach.domain.model.RaceGoal
 import com.hrcoach.ui.components.ActiveSessionCard
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.CardeaButtonEmphasis
+import com.hrcoach.ui.theme.CardeaAmber
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientCyan
@@ -961,14 +974,14 @@ private fun NoBootcampCard(
                     color = CardeaTheme.colors.glassHighlight,
                     shape = HomeCardRadius
                 )
-                .padding(HomeCardPadding + 4.dp)
+                .padding(HomeCardPadding)
         ) {
             PulseLabel(text = "YOUR PERSONAL RUNNING COACH")
             Spacer(Modifier.height(10.dp))
 
-            // Title
+            // Title \u2014 gradient via BlendMode.SrcIn
             Text(
-                text = "Train smarter, not harder.",
+                text = "Train smarter,\nnot harder.",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.ExtraBold),
                 color = CardeaTheme.colors.textPrimary,
                 modifier = Modifier
@@ -978,47 +991,61 @@ private fun NoBootcampCard(
                         drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
                     }
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Subtitle
+            // Subtitle \u2014 refreshed copy
             Text(
-                text = "Cardea builds an adaptive plan around your life, fitness, and heart rate data.",
+                text = "An adaptive plan that knows your week, your heart, and your pace.",
                 style = MaterialTheme.typography.bodySmall,
                 color = CardeaTheme.colors.textSecondary
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(22.dp))
 
-            // Feature items
-            FeatureItem(
-                icon = Icons.Default.FavoriteBorder,
-                iconTint = GradientRed,
-                iconBg = GradientRed.copy(alpha = 0.12f),
-                title = "HR zone coaching",
-                description = "Real-time alerts keep you in the right zone"
-            )
-            Spacer(Modifier.height(18.dp))
-            FeatureItem(
-                icon = Icons.Default.Timer,
-                iconTint = GradientBlue,
-                iconBg = GradientBlue.copy(alpha = 0.12f),
-                title = "Life-aware scheduling",
-                description = "Adapts to your week \u2014 block days, pick your long run"
-            )
-            Spacer(Modifier.height(18.dp))
-            FeatureItem(
-                icon = Icons.Default.Mic,
-                iconTint = GradientCyan,
-                iconBg = GradientCyan.copy(alpha = 0.12f),
-                title = "Voice coaching",
-                description = "Spoken pace, zone, and distance cues in your ear"
-            )
-            Spacer(Modifier.height(20.dp))
+            // Feature trio nested glass container
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .border(
+                        width = 1.dp,
+                        color = CardeaTheme.colors.glassBorder,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    .background(Color.White.copy(alpha = 0.02f))
+                    .padding(horizontal = 14.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                FeatureItem(
+                    icon = Icons.Default.FavoriteBorder,
+                    iconTint = GradientRed,
+                    iconBg = GradientRed.copy(alpha = 0.12f),
+                    title = "HR zone coaching",
+                    description = "Live alerts keep you in the right zone."
+                )
+                FeatureItem(
+                    icon = Icons.Default.Timer,
+                    iconTint = GradientBlue,
+                    iconBg = GradientBlue.copy(alpha = 0.12f),
+                    title = "Life-aware scheduling",
+                    description = "Adapts to your week \u2014 block days, pick your long run."
+                )
+                FeatureItem(
+                    icon = Icons.Default.Mic,
+                    iconTint = GradientCyan,
+                    iconBg = GradientCyan.copy(alpha = 0.12f),
+                    title = "Voice coaching",
+                    description = "Spoken pace, zone, and distance cues, in your ear."
+                )
+            }
+            Spacer(Modifier.height(22.dp))
 
             // CTA button
             CardeaButton(
-                text = "Set Up Bootcamp",
+                text = "Set up bootcamp",
                 onClick = onSetupBootcamp,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                cornerRadius = 16.dp,
+                innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
             )
         }
 
@@ -1131,6 +1158,556 @@ private fun JustRunStrip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+// ── Hero state primitives (Graduate + Resume) ──────────────────
+
+@Composable
+private fun StatTile(value: String, label: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.Black,
+                fontSize = 30.sp,
+                lineHeight = 30.sp,
+                letterSpacing = (-0.8).sp
+            ),
+            color = CardeaTheme.colors.textPrimary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = label.uppercase(),
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Medium,
+            fontSize = 10.sp,
+            letterSpacing = 1.5.sp,
+            color = CardeaTheme.colors.textTertiary
+        )
+    }
+}
+
+@Composable
+private fun TrophyChip(weeksCompleted: Int, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(CardeaAmber.copy(alpha = 0.10f))
+            .border(1.dp, CardeaAmber.copy(alpha = 0.28f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 9.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.EmojiEvents,
+            contentDescription = null,
+            tint = CardeaAmber,
+            modifier = Modifier.size(10.dp)
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = "$weeksCompleted WEEKS",
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Bold,
+            fontSize = 10.sp,
+            letterSpacing = 1.2.sp,
+            color = CardeaAmber
+        )
+    }
+}
+
+@Composable
+private fun PauseGlyph(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.04f))
+            .border(1.dp, CardeaTheme.colors.glassBorder, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Box(
+                Modifier
+                    .size(width = 3.dp, height = 12.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(CardeaTheme.colors.textSecondary)
+            )
+            Box(
+                Modifier
+                    .size(width = 3.dp, height = 12.dp)
+                    .clip(RoundedCornerShape(1.dp))
+                    .background(CardeaTheme.colors.textSecondary)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LaurelDecoration(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .width(220.dp)
+            .height(28.dp)
+            .graphicsLayer { alpha = 0.55f },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            Modifier
+                .size(4.dp)
+                .clip(CircleShape)
+                .background(GradientPink)
+        )
+        Spacer(Modifier.width(28.dp))
+        Box(
+            Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(CardeaAmber)
+        )
+        Spacer(Modifier.width(28.dp))
+        Box(
+            Modifier
+                .size(4.dp)
+                .clip(CircleShape)
+                .background(GradientCyan)
+        )
+    }
+}
+
+@Composable
+private fun ProgressThread(
+    sessionsDone: Int,
+    sessionsTotal: Int,
+    pausedAtWeek: Int,
+    totalWeeks: Int,
+    modifier: Modifier = Modifier
+) {
+    val progress = if (sessionsTotal > 0) {
+        (sessionsDone.toFloat() / sessionsTotal).coerceIn(0f, 1f)
+    } else 0f
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.025f))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
+            .padding(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PulseLabel(text = "PROGRESS")
+            Text(
+                text = "$sessionsDone / $sessionsTotal sessions · week $pausedAtWeek of $totalWeeks",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                color = CardeaTheme.colors.textSecondary
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color.White.copy(alpha = 0.06f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(progress)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.85f))
+                        )
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun WhilePausedReassurance(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.015f))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        PulseLabel(text = "WHILE YOU'RE PAUSED")
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = "No streak penalty. No nagging. Manual runs still log to History — they just don't count toward this program until you resume.",
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontSize = 12.5.sp,
+                lineHeight = 17.sp
+            ),
+            color = CardeaTheme.colors.textSecondary
+        )
+    }
+}
+
+@Composable
+private fun EvergreenChoiceRow(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .border(1.dp, CardeaTheme.colors.glassBorderStrong, RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(GradientCyan.copy(alpha = 0.10f))
+                .border(1.dp, GradientCyan.copy(alpha = 0.28f), RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.FavoriteBorder,
+                contentDescription = null,
+                tint = GradientCyan,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Cardio Health",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.5.sp
+                    ),
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(GradientCyan.copy(alpha = 0.12f))
+                        .border(1.dp, GradientCyan.copy(alpha = 0.30f), RoundedCornerShape(999.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "EVERGREEN",
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        letterSpacing = 1.sp,
+                        color = GradientCyan
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Maintain race fitness. Tier-aware — keeps you at your level.",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.5.sp,
+                    lineHeight = 16.sp
+                ),
+                color = CardeaTheme.colors.textSecondary
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = CardeaTheme.colors.textTertiary,
+            modifier = Modifier.size(14.dp)
+        )
+    }
+}
+
+@Composable
+private fun RaceChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.White.copy(alpha = 0.025f))
+            .border(1.dp, CardeaTheme.colors.glassBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.5.sp
+            ),
+            color = CardeaTheme.colors.textSecondary
+        )
+    }
+}
+
+// ── GraduateHero ────────────────────────────────────────────────
+
+@Composable
+private fun GraduateHero(
+    enrollment: BootcampEnrollmentEntity,
+    weeksCompleted: Int,
+    sessionsCompleted: Int,
+    totalKm: Double,
+    onChooseEvergreen: () -> Unit,
+    onChooseRace: (RaceGoal) -> Unit,
+    onFreestyle: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val heroGradient = CardeaTheme.colors.gradient
+    val cardWash = Brush.verticalGradient(
+        colorStops = arrayOf(
+            0.00f to GradientPink.copy(alpha = 0.10f),
+            0.55f to GradientBlue.copy(alpha = 0.04f),
+            1.00f to CardeaTheme.colors.glassHighlight
+        )
+    )
+    val goalLabel = enrollment.goalType
+        .takeIf { it.isNotBlank() }
+        ?.replace("_", " ")
+        ?.uppercase()
+        ?: "PROGRAM"
+
+    Column(modifier = modifier.padding(horizontal = HomeGutter)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(HomeCardRadius)
+                .border(1.dp, CardeaTheme.colors.glassBorderStrong, HomeCardRadius)
+                .background(cardWash)
+                .padding(HomeCardPadding)
+        ) {
+            LaurelDecoration(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = (-4).dp)
+            )
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PulseLabel(text = "GRADUATED · $goalLabel")
+                    TrophyChip(weeksCompleted = weeksCompleted)
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Race-tier fitness,\nlocked in.",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = FontWeight.Black,
+                        fontSize = 38.sp,
+                        lineHeight = 40.sp,
+                        letterSpacing = (-1.2).sp
+                    ),
+                    color = CardeaTheme.colors.textPrimary,
+                    modifier = Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(brush = heroGradient, blendMode = BlendMode.SrcIn)
+                        }
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "You finished your training cycle. Every pace zone, every long run, banked. Here's where to take it next.",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        lineHeight = 19.sp
+                    ),
+                    color = CardeaTheme.colors.textSecondary
+                )
+                Spacer(Modifier.height(22.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StatTile(
+                        value = weeksCompleted.toString(),
+                        label = "WEEKS",
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatTile(
+                        value = sessionsCompleted.toString(),
+                        label = "SESSIONS",
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatTile(
+                        value = totalKm.toInt().toString(),
+                        label = "KM",
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(22.dp))
+                PulseLabel(text = "CHOOSE YOUR NEXT PROGRAM")
+                Spacer(Modifier.height(10.dp))
+                EvergreenChoiceRow(onClick = onChooseEvergreen)
+                Spacer(Modifier.height(18.dp))
+                PulseLabel(text = "NEW RACE")
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    RaceGoal.entries.forEach { goal ->
+                        RaceChip(
+                            label = goal.shortLabel,
+                            onClick = { onChooseRace(goal) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(18.dp))
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TextButton(onClick = onFreestyle) {
+                        Text(
+                            text = "Just freestyle today →",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                            color = CardeaTheme.colors.textTertiary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── ResumeCard ──────────────────────────────────────────────────
+
+@Composable
+private fun ResumeCard(
+    enrollment: BootcampEnrollmentEntity,
+    sessionsDone: Int,
+    sessionsTotal: Int,
+    pausedAtWeek: Int,
+    totalWeeks: Int,
+    onResume: () -> Unit,
+    onSwitchProgram: () -> Unit,
+    onManualRun: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val goalLabel = enrollment.goalType
+        .takeIf { it.isNotBlank() }
+        ?.replace("_", " ")
+        ?.lowercase()
+        ?: "program"
+
+    val annotated = buildAnnotatedString {
+        val bold = SpanStyle(
+            color = CardeaTheme.colors.textPrimary,
+            fontWeight = FontWeight.SemiBold
+        )
+        append("You had ")
+        withStyle(bold) { append("$sessionsDone of $sessionsTotal") }
+        append(" sessions complete in the ")
+        withStyle(bold) { append(goalLabel) }
+        append(" program. Your place is held — pick up exactly where you left off.")
+    }
+
+    Column(modifier = modifier.padding(horizontal = HomeGutter)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(HomeCardRadius)
+                .border(1.dp, CardeaTheme.colors.glassBorder, HomeCardRadius)
+                .background(CardeaTheme.colors.glassHighlight)
+                .padding(HomeCardPadding)
+        ) {
+            PauseGlyph(modifier = Modifier.align(Alignment.TopEnd))
+            Column {
+                PulseLabel(text = "PAUSED · WEEK $pausedAtWeek")
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Ready when\nyou are.",
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 30.sp,
+                        lineHeight = 32.sp,
+                        letterSpacing = (-0.5).sp
+                    ),
+                    color = CardeaTheme.colors.textPrimary
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = annotated,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 13.5.sp,
+                        lineHeight = 21.sp
+                    ),
+                    color = CardeaTheme.colors.textSecondary
+                )
+                Spacer(Modifier.height(22.dp))
+                ProgressThread(
+                    sessionsDone = sessionsDone,
+                    sessionsTotal = sessionsTotal,
+                    pausedAtWeek = pausedAtWeek,
+                    totalWeeks = totalWeeks
+                )
+                Spacer(Modifier.height(22.dp))
+                CardeaButton(
+                    text = "Resume training",
+                    onClick = onResume,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    cornerRadius = 16.dp,
+                    innerPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
+                    leadingIcon = Icons.Default.PlayArrow
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onSwitchProgram,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, CardeaTheme.colors.glassBorderStrong),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = CardeaTheme.colors.textPrimary
+                    )
+                ) {
+                    Text(
+                        text = "Start a different program",
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TextButton(onClick = onManualRun) {
+                        Text(
+                            text = "Manual run →",
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.5.sp),
+                            color = CardeaTheme.colors.textTertiary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Root HomeScreen ─────────────────────────────────────────────
 
 @Composable
@@ -1174,23 +1751,50 @@ fun HomeScreen(
                 onAccountClick = onGoToAccount
             )
 
-            // Hero section
-            val nextSession = state.nextSession
-            when {
-                state.hasActiveBootcamp && nextSession != null -> {
-                    PulseHero(
-                        session = nextSession,
-                        weekNumber = state.currentWeekNumber,
-                        isToday = state.isNextSessionToday,
-                        dayLabel = state.nextSessionDayLabel,
-                        maxHr = state.maxHr,
-                        restHr = state.restHr
+            // Hero section — branches on full bootcamp lifecycle state
+            when (val bootcamp = state.bootcampState) {
+                is HomeBootcampState.Active -> {
+                    if (bootcamp.nextSession != null) {
+                        PulseHero(
+                            session = bootcamp.nextSession,
+                            weekNumber = bootcamp.weekNumber,
+                            isToday = bootcamp.isToday,
+                            dayLabel = bootcamp.dayLabel,
+                            maxHr = state.maxHr,
+                            restHr = state.restHr
+                        )
+                    } else {
+                        AllCaughtUpCard(onGoToTraining = onGoToBootcamp)
+                    }
+                }
+                is HomeBootcampState.Paused -> {
+                    ResumeCard(
+                        enrollment = bootcamp.enrollment,
+                        sessionsDone = bootcamp.sessionsDone,
+                        sessionsTotal = bootcamp.sessionsTotal,
+                        pausedAtWeek = bootcamp.pausedAtWeek,
+                        totalWeeks = bootcamp.totalWeeks,
+                        onResume = { viewModel.resumeBootcamp() },
+                        onSwitchProgram = onGoToBootcamp,
+                        onManualRun = onStartRun
+                    )
+                    Spacer(Modifier.height(18.dp))
+                    Box(modifier = Modifier.padding(horizontal = HomeGutter)) {
+                        WhilePausedReassurance()
+                    }
+                }
+                is HomeBootcampState.Graduated -> {
+                    GraduateHero(
+                        enrollment = bootcamp.enrollment,
+                        weeksCompleted = bootcamp.weeksCompleted,
+                        sessionsCompleted = bootcamp.sessionsCompleted,
+                        totalKm = bootcamp.totalKm,
+                        onChooseEvergreen = onGoToBootcamp,
+                        onChooseRace = { _ -> onGoToBootcamp() },
+                        onFreestyle = onStartRun
                     )
                 }
-                state.hasActiveBootcamp -> {
-                    AllCaughtUpCard(onGoToTraining = onGoToBootcamp)
-                }
-                else -> {
+                HomeBootcampState.None -> {
                     NoBootcampCard(
                         onSetupBootcamp = onGoToBootcamp,
                         onStartRun = onStartRun
@@ -1198,8 +1802,8 @@ fun HomeScreen(
                 }
             }
 
-            // CTA — only when bootcamp is active (NoBootcampCard has its own button)
-            if (state.hasActiveBootcamp) {
+            // CTA — only when bootcamp is active (every other state hosts its own CTA)
+            if (state.bootcampState is HomeBootcampState.Active) {
                 CtaRow(
                     hasActiveBootcamp = true,
                     isNextSessionToday = state.isNextSessionToday,

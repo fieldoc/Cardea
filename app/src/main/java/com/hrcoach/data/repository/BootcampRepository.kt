@@ -18,6 +18,26 @@ class BootcampRepository @Inject constructor(
     suspend fun getActiveEnrollmentOnce(): BootcampEnrollmentEntity? =
         bootcampDao.getActiveEnrollmentOnce()
 
+    /**
+     * Latest enrollment regardless of status. Home uses this to surface paused / graduated
+     * lifecycle heroes that the ACTIVE/PAUSED-only [getActiveEnrollment] would hide.
+     */
+    fun getLatestEnrollmentAnyStatus(): Flow<BootcampEnrollmentEntity?> =
+        bootcampDao.getLatestEnrollmentAnyStatus()
+
+    suspend fun getCompletedSessionCount(enrollmentId: Long): Int =
+        bootcampDao.getCompletedSessionCount(enrollmentId)
+
+    suspend fun getTotalSessionCount(enrollmentId: Long): Int =
+        bootcampDao.getTotalSessionCount(enrollmentId)
+
+    /**
+     * Sum of meters across non-simulated workouts attached to completed sessions of this
+     * enrollment. Caller converts to km at display.
+     */
+    suspend fun sumCompletedWorkoutDistanceMeters(enrollmentId: Long): Double =
+        bootcampDao.sumCompletedWorkoutDistanceMeters(enrollmentId)
+
     suspend fun createEnrollment(
         goal: BootcampGoal,
         targetMinutesPerRun: Int,
