@@ -28,6 +28,7 @@ import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.engine.HrArtifactDetector
 import com.hrcoach.domain.engine.HrCalibrator
 import com.hrcoach.domain.engine.MetricsCalculator
+import com.hrcoach.domain.engine.PauseTracker
 import com.hrcoach.domain.engine.StridesController
 import com.hrcoach.domain.engine.StridesEvent
 import com.hrcoach.domain.engine.ZoneEngine
@@ -163,8 +164,7 @@ class WorkoutForegroundService : LifecycleService() {
 
     private var autoPauseDetector: AutoPauseDetector? = null
     private var sessionAutoPauseEnabled: Boolean = true
-    private var autoPauseStartMs: Long = 0L
-    private var totalAutoPausedMs: Long = 0L
+    private val pauseTracker = PauseTracker()
     private var autoPauseGraceUntilMs: Long = 0L
     // Auto-pause guard: the runner must have actually moved at least once before auto-pause
     // can fire. Prevents a pause tone while the runner's still tying their shoes or pocketing
@@ -178,8 +178,6 @@ class WorkoutForegroundService : LifecycleService() {
     private var sessionDistanceUnit = com.hrcoach.domain.model.DistanceUnit.KM
     private var workoutId: Long = 0L
     private var workoutStartMs: Long = 0L
-    private var totalPausedMs: Long = 0L
-    private var pauseStartMs: Long = 0L
     private var isStopping: Boolean = false
     private var latestTick: WorkoutTick? = null
 
@@ -262,10 +260,9 @@ class WorkoutForegroundService : LifecycleService() {
             ACTION_TOGGLE_AUTO_PAUSE -> {
                 sessionAutoPauseEnabled = !sessionAutoPauseEnabled
                 if (!sessionAutoPauseEnabled) {
-                    // If currently auto-paused when toggled off, resume everything cleanly
-                    if (WorkoutState.snapshot.value.isAutoPaused) {
-                        totalAutoPausedMs += clock.now() - autoPauseStartMs
-                        autoPauseStartMs = 0L
+                    val wasAutoPaused = pauseTracker.isAutoPaused
+                    pauseTracker.disableAutoPause(clock.now())
+                    if (wasAutoPaused && !pauseTracker.isManuallyPaused) {
                         locationSource?.setMoving(true)
                     }
                     autoPauseDetector?.reset()
@@ -315,12 +312,9 @@ class WorkoutForegroundService : LifecycleService() {
         isStopping = false
         workoutId = 0L
         latestTick = null
-        totalPausedMs = 0L
-        pauseStartMs = 0L
+        pauseTracker.reset()
         autoPauseDetector = AutoPauseDetector()
         sessionAutoPauseEnabled = autoPauseSettingsRepository.isAutoPauseEnabled()
-        autoPauseStartMs = 0L
-        totalAutoPausedMs = 0L
         autoPauseGraceUntilMs = 0L
         hasMovedSinceStart = false
         autoPauseCountThisSession = 0
@@ -423,6 +417,7 @@ class WorkoutForegroundService : LifecycleService() {
                     )
                 )
                 workoutStartMs = clock.now()
+                pauseTracker.start(workoutStartMs)
                 sessionDistanceUnit = com.hrcoach.domain.model.DistanceUnit.fromString(userProfileRepository.getDistanceUnit())
                 coachingAudioManager?.distanceUnit = sessionDistanceUnit
                 coachingEventRouter.reset(workoutStartMs)  // stamp the start time for IN_ZONE_CONFIRM baseline
@@ -509,52 +504,46 @@ class WorkoutForegroundService : LifecycleService() {
         val nowMs = clock.now()
 
         // Auto-pause detection: run before elapsed-time math so state is fresh this tick.
-        // Gated by THREE conditions:
+        // Gated by FOUR conditions (in addition to PauseTracker's own !isManuallyPaused gate):
         //   1. `sessionAutoPauseEnabled` — user preference
         //   2. `nowMs >= autoPauseGraceUntilMs` — wall-time grace (20s after start)
         //   3. `hasMovedSinceStart` — only pause-from-movement after actual movement. Prevents
         //      a pause tone while runner is still tying shoes or pocketing phone — "paused from
         //      movement" is only meaningful after you've moved.
+        //   4. `!pauseTracker.isManuallyPaused` — PauseTracker also drops auto events while
+        //      manually paused, but skipping the detector entirely keeps its internal state
+        //      clean so the next manual resume starts the confirm window from scratch.
         // ~0.5 m/s ≈ 1.8 km/h covers walking; below that is noise/GPS jitter.
         if (!hasMovedSinceStart && (tick.speed ?: 0f) > 0.5f) hasMovedSinceStart = true
-        var isAutoPaused = WorkoutState.snapshot.value.isAutoPaused  // read BEFORE potential update
-        if (sessionAutoPauseEnabled && nowMs >= autoPauseGraceUntilMs && hasMovedSinceStart) {
+        if (sessionAutoPauseEnabled && nowMs >= autoPauseGraceUntilMs && hasMovedSinceStart
+            && !pauseTracker.isManuallyPaused) {
             when (autoPauseDetector?.update(tick.speed, nowMs)) {
                 AutoPauseEvent.PAUSED -> {
-                    isAutoPaused = true  // use local var immediately — no StateFlow lag
-                    autoPauseStartMs = nowMs
-                    autoPauseCountThisSession++
-                    locationSource?.setMoving(false)
-                    WorkoutState.update { it.copy(isAutoPaused = true) }
-                    coachingAudioManager?.playPauseFeedback(paused = true)
-                    // Skip TTS on first auto-pause of session — tone + banner is enough signal
-                    // for a first-time surprise. Subsequent pauses announce normally.
-                    if (autoPauseCountThisSession > 1) {
-                        coachingAudioManager?.speakAnnouncement("Run autopaused")
+                    if (pauseTracker.autoPause(nowMs)) {
+                        autoPauseCountThisSession++
+                        locationSource?.setMoving(false)
+                        WorkoutState.update { it.copy(isAutoPaused = true) }
+                        coachingAudioManager?.playPauseFeedback(paused = true)
+                        // Skip TTS on first auto-pause of session — tone + banner is enough
+                        // signal for a first-time surprise. Subsequent pauses announce normally.
+                        if (autoPauseCountThisSession > 1) {
+                            coachingAudioManager?.speakAnnouncement("Run autopaused")
+                        }
                     }
                 }
                 AutoPauseEvent.RESUMED -> {
-                    isAutoPaused = false  // use local var immediately
-                    // Guard: autoPauseStartMs may have been zeroed by pauseWorkout() if manual
-                    // pause overlapped auto-pause — only accumulate if we still own the timer.
-                    if (autoPauseStartMs > 0L) {
-                        totalAutoPausedMs += nowMs - autoPauseStartMs
+                    if (pauseTracker.autoResume(nowMs)) {
+                        locationSource?.setMoving(true)
+                        WorkoutState.update { it.copy(isAutoPaused = false) }
+                        coachingAudioManager?.playPauseFeedback(paused = false)
+                        coachingAudioManager?.speakAnnouncement("Run resumed")
                     }
-                    autoPauseStartMs = 0L
-                    locationSource?.setMoving(true)
-                    WorkoutState.update { it.copy(isAutoPaused = false) }
-                    coachingAudioManager?.playPauseFeedback(paused = false)
-                    coachingAudioManager?.speakAnnouncement("Run resumed")
                 }
                 else -> Unit
             }
         }
-        val currentAutoPauseMs = if (isAutoPaused && autoPauseStartMs > 0L) nowMs - autoPauseStartMs else 0L
-        val elapsedSeconds = if (workoutStartMs > 0L) {
-            ((nowMs - workoutStartMs - totalPausedMs - totalAutoPausedMs - currentAutoPauseMs).coerceAtLeast(0L)) / 1000L
-        } else {
-            0L
-        }
+        val elapsedSeconds = pauseTracker.activeSeconds(nowMs)
+        val isAutoPaused = pauseTracker.isAutoPaused
         val target = when {
             workoutConfig.isTimeBased() -> workoutConfig.targetHrAtElapsedSeconds(elapsedSeconds)
             workoutConfig.hasMixedSegments() -> workoutConfig.targetHrForMixed(elapsedSeconds, tick.distanceMeters)
@@ -802,74 +791,61 @@ class WorkoutForegroundService : LifecycleService() {
     }
 
     private fun pauseWorkout() {
-        // Capture the timestamp before emitting state so processTick() can never observe
-        // isPaused=true while pauseStartMs is still 0.
+        // PauseTracker is the source of truth for pause state and accounting; WorkoutState's
+        // isPaused/isAutoPaused flags are mirrored here only for UI/notification consumption.
         val nowMs = clock.now()
-        var didPause = false
+        if (!pauseTracker.manualPause(nowMs)) return
         var pausedSnapshot: WorkoutSnapshot? = null
         WorkoutState.update { current ->
-            if (!current.isRunning || current.isPaused) current else {
-                didPause = true
-                current.copy(isPaused = true, guidanceText = "Workout paused")
-                    .also { pausedSnapshot = it }
+            if (!current.isRunning) current else {
+                current.copy(
+                    isPaused = true,
+                    // Guard 1 inside PauseTracker may have absorbed an in-flight auto-pause; mirror
+                    // that here so the badge / toggle-off path don't see a stale "true" later.
+                    isAutoPaused = false,
+                    guidanceText = "Workout paused",
+                ).also { pausedSnapshot = it }
             }
         }
-        if (didPause) {
-            pauseStartMs = nowMs
-            // If auto-pause is also active, latch its accumulated time now so the overlapping
-            // period isn't double-subtracted from elapsedSeconds when auto-pause resolves.
-            if (WorkoutState.snapshot.value.isAutoPaused && autoPauseStartMs > 0L) {
-                totalAutoPausedMs += nowMs - autoPauseStartMs
-                autoPauseStartMs = 0L
-            }
-            coachingAudioManager?.playPauseFeedback(paused = true)
-            val config = activeWorkoutConfig
-            if (config != null) {
-                val payload = NotifContentFormatter.format(
-                    snapshot = pausedSnapshot!!,
-                    config = config,
-                    totalSeconds = workoutTotalSeconds,
-                )
-                notificationHelper.update(payload)
-                updateMediaSessionState(payload)
-            } else {
-                notificationHelper.update("Workout paused")
-            }
+        // Reset the detector so a stale isAutoPaused state from before this pause doesn't
+        // immediately fire RESUMED once the user comes back.
+        autoPauseDetector?.reset()
+        coachingAudioManager?.playPauseFeedback(paused = true)
+        val config = activeWorkoutConfig
+        if (config != null && pausedSnapshot != null) {
+            val payload = NotifContentFormatter.format(
+                snapshot = pausedSnapshot!!,
+                config = config,
+                totalSeconds = workoutTotalSeconds,
+            )
+            notificationHelper.update(payload)
+            updateMediaSessionState(payload)
+        } else {
+            notificationHelper.update("Workout paused")
         }
     }
 
     private fun resumeWorkout() {
         val nowMs = clock.now()
-        var didResume = false
+        if (!pauseTracker.manualResume(nowMs)) return
         var resumedSnapshot: WorkoutSnapshot? = null
         WorkoutState.update { current ->
-            if (!current.isRunning || !current.isPaused) current else {
-                didResume = true
-                current.copy(isPaused = false)
-                    .also { resumedSnapshot = it }
+            if (!current.isRunning) current else {
+                current.copy(isPaused = false).also { resumedSnapshot = it }
             }
         }
-        if (didResume && pauseStartMs > 0L) {
-            totalPausedMs += nowMs - pauseStartMs
-            pauseStartMs = 0L
-            // If auto-pause is still active, restart its timer from now so the period
-            // already counted by pauseWorkout() is not re-counted when auto-pause resolves.
-            if (WorkoutState.snapshot.value.isAutoPaused) {
-                autoPauseStartMs = nowMs
-            }
-            coachingAudioManager?.playPauseFeedback(paused = false)
-            val config = activeWorkoutConfig
-            if (config != null) {
-                val payload = NotifContentFormatter.format(
-                    snapshot = resumedSnapshot!!,
-                    config = config,
-                    totalSeconds = workoutTotalSeconds,
-                )
-                notificationHelper.update(payload)
-                updateMediaSessionState(payload)
-            } else {
-                notificationHelper.update("Workout resumed")
-            }
+        coachingAudioManager?.playPauseFeedback(paused = false)
+        val config = activeWorkoutConfig
+        if (config != null && resumedSnapshot != null) {
+            val payload = NotifContentFormatter.format(
+                snapshot = resumedSnapshot!!,
+                config = config,
+                totalSeconds = workoutTotalSeconds,
+            )
+            notificationHelper.update(payload)
+            updateMediaSessionState(payload)
+        } else {
+            notificationHelper.update("Workout resumed")
         }
     }
 
@@ -896,10 +872,7 @@ class WorkoutForegroundService : LifecycleService() {
         // complete even after the service transitions.
         runCatching {
             val now = clock.now()
-            val currentPauseMs = if (pauseStartMs > 0L) now - pauseStartMs else 0L
-            val currentAutoPauseMs = if (autoPauseStartMs > 0L) now - autoPauseStartMs else 0L
-            val activeSec = (now - workoutStartMs - totalPausedMs - totalAutoPausedMs
-                - currentPauseMs - currentAutoPauseMs).coerceAtLeast(0L) / 1000L
+            val activeSec = pauseTracker.activeSeconds(now)
             val distanceMeters = WorkoutState.snapshot.value.distanceMeters
             val avgHr = if (finalHrSampleCount > 0) {
                 (finalHrSampleSum.toFloat() / finalHrSampleCount).toInt()
@@ -960,10 +933,7 @@ class WorkoutForegroundService : LifecycleService() {
                 runCatching {
                     val currentWorkout = repository.getWorkoutById(workoutId)
                     if (currentWorkout != null) {
-                        val currentPauseMs = if (pauseStartMs > 0L) now - pauseStartMs else 0L
-                        val currentAutoPauseMs = if (autoPauseStartMs > 0L) now - autoPauseStartMs else 0L
-                        val activeSec = (now - workoutStartMs - totalPausedMs - totalAutoPausedMs - currentPauseMs - currentAutoPauseMs)
-                            .coerceAtLeast(0L) / 1000L
+                        val activeSec = pauseTracker.activeSeconds(now)
                         repository.updateWorkout(
                             currentWorkout.copy(
                                 endTime = now,
@@ -1070,8 +1040,7 @@ class WorkoutForegroundService : LifecycleService() {
                     // and auto-pauses subtracted). MetricsCalculator.deriveFromPaceSamples()
                     // cannot compute TRIMP itself because its pace-sample inputs don't carry
                     // pause-boundary information.
-                    val durationMin = ((now - workoutStartMs - totalPausedMs - totalAutoPausedMs)
-                        .coerceAtLeast(0L)) / 60_000f
+                    val durationMin = pauseTracker.activeMs(now) / 60_000f
                     val sessionAvgHr = reliableMetrics?.avgHr
                         ?: if (finalHrSampleCount > 0) (finalHrSampleSum.toFloat() / finalHrSampleCount) else null
                     val hrMaxEst = currentProfile.hrMax?.toFloat() ?: ageBasedFallback.toFloat()
@@ -1271,8 +1240,7 @@ class WorkoutForegroundService : LifecycleService() {
         stridesCompleteAtSec = null
         autoPauseDetector?.reset()
         autoPauseDetector = null
-        autoPauseStartMs = 0L
-        totalAutoPausedMs = 0L
+        pauseTracker.reset()
         alertPolicy.reset()
         coachingEventRouter.reset()
         trackPointRecorder.reset()

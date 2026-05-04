@@ -1,6 +1,14 @@
 # WorkoutForegroundService Lifecycle & Races
 
-Load when touching `WorkoutForegroundService`, `WorkoutState`, `WorkoutNotificationHelper`, `AutoPauseDetector`, or anything called from `processTick`/`onHrTick`.
+Load when touching `WorkoutForegroundService`, `WorkoutState`, `WorkoutNotificationHelper`, `AutoPauseDetector`, `PauseTracker`, or anything called from `processTick`/`onHrTick`.
+
+## PauseTracker owns all pause math
+
+`domain/engine/PauseTracker.kt` is the single source of truth for `pauseStartMs`, `totalPausedMs`, `autoPauseStartMs`, `totalAutoPausedMs`, and the `activeMs(now)` formula used for the live elapsed display, end-of-run `activeDurationSeconds`, and TRIMP `durationMin`. WFS never touches those fields directly — it calls `pauseTracker.manualPause/manualResume/autoPause/autoResume/disableAutoPause` and reads `activeSeconds(now)` / `isAutoPaused`. Tests live in `PauseTrackerTest.kt`; if you change pause behaviour, change them there first.
+
+`isManuallyPaused` gates auto events. `autoPause()` and `autoResume()` are no-ops while the user is manually paused — auto-pause windows that overlap a manual pause have no meaning (the manual pause already covers the whole span) and processing them double-subtracts at manual resume. Workout #33 (2026-05-03) hit this: an 88-minute run reported `activeDurationSeconds=221` because the detector was firing during long manual pauses. Don't re-introduce auto accumulation while manually paused.
+
+In `pauseWorkout()`, `autoPauseDetector?.reset()` is called after `pauseTracker.manualPause()` so the detector starts a clean confirmation window when the manual pause ends — otherwise a stale `isAutoPaused=true` inside the detector would fire RESUMED on the very next tick after manual resume.
 
 ## Notification stop gate
 
@@ -14,11 +22,13 @@ Load when touching `WorkoutForegroundService`, `WorkoutState`, `WorkoutNotificat
 
 ## Dual Pause Overlap
 
-Manual pause and auto-pause can be simultaneous. Three guards keep `elapsedSeconds` correct; removing any one → double-subtraction:
+Manual pause and auto-pause can be simultaneous. PauseTracker enforces all four invariants — removing any one → double-subtraction or worse:
 
-1. **`pauseWorkout()`:** if `isAutoPaused`, latch `totalAutoPausedMs += nowMs - autoPauseStartMs` and zero `autoPauseStartMs`.
-2. **`resumeWorkout()`:** if `isAutoPaused` still true on manual resume, restart `autoPauseStartMs = nowMs`.
-3. **`AutoPauseEvent.RESUMED` handler:** guard `if (autoPauseStartMs > 0L)` before accumulating — `pauseWorkout()` may have zeroed it.
+1. **`manualPause()` Guard 1:** if `isAutoPaused`, latch `totalAutoPausedMs += nowMs - autoPauseStartMs`, zero `autoPauseStartMs`, **and clear `isAutoPaused=false`**. Without the flag clear, `disableAutoPause()` from a later toggle-off reads stale state and (without guard #4) computes `clock.now() - 0` ≈ 1.78 trillion ms.
+2. **`manualResume()` Guard 2:** if `isAutoPaused` still true on manual resume, restart `autoPauseStartMs = nowMs` so the eventual auto-resume doesn't re-count time already inside the manual window.
+3. **`autoResume()` Guard 3:** check `if (autoPauseStartMs > 0L)` before accumulating — Guard 1 may have zeroed it.
+4. **`autoPause()` / `autoResume()` early return:** both no-op when `isManuallyPaused` is true. The autopause-detection block in `processTick` is *also* gated on `!pauseTracker.isManuallyPaused` so the detector itself doesn't churn through PAUSED/RESUMED while the user is on a bench.
+5. **`disableAutoPause()` (toggle-off) guard:** check `if (isAutoPaused && autoPauseStartMs > 0L)` before accumulating. Calling unguarded after Guard 1 has zeroed `autoPauseStartMs` adds clock.now() to the running total and clamps `activeMs` to 0 for the rest of the run.
 
 ## Auto-pause Startup Gates
 
