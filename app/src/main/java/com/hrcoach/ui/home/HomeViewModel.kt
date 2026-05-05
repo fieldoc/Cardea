@@ -12,6 +12,7 @@ import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutRepository
 import com.hrcoach.domain.model.DistanceUnit
 import com.hrcoach.domain.achievement.StreakCalculator
+import com.hrcoach.domain.bootcamp.CalendarDriftRecoverer
 import com.hrcoach.domain.bootcamp.PhaseEngine
 import com.hrcoach.domain.coaching.CoachingInsight
 import com.hrcoach.domain.coaching.CoachingInsightEngine
@@ -127,6 +128,7 @@ class HomeViewModel @Inject constructor(
     private val bootcampRepository: BootcampRepository,
     private val partnerRepository: FirebasePartnerRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val calendarDriftRecoverer: CalendarDriftRecoverer,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -172,7 +174,7 @@ class HomeViewModel @Inject constructor(
             val bootcampGoal = enrollment?.let {
                 runCatching { BootcampGoal.valueOf(it.goalType) }.getOrNull()
             }
-            val phaseEngine = bootcampGoal?.let {
+            val initialPhaseEngine = bootcampGoal?.let {
                 PhaseEngine(
                     goal = it,
                     phaseIndex = enrollment.currentPhaseIndex,
@@ -181,6 +183,33 @@ class HomeViewModel @Inject constructor(
                     targetMinutes = enrollment.targetMinutesPerRun
                 )
             }
+
+            // Calendar drift recovery — mirror BootcampViewModel so Home and Training
+            // stay in lockstep. Idempotent; on a fresh week or with no completions,
+            // returns NoChange and the original enrollment/engine flow through.
+            val recoveryOutcome = if (
+                enrollment != null &&
+                initialPhaseEngine != null &&
+                enrollment.status == BootcampEnrollmentEntity.STATUS_ACTIVE
+            ) {
+                val workoutSnapshot = WorkoutState.snapshot.value
+                calendarDriftRecoverer.recover(
+                    enrollment = enrollment,
+                    engine = initialPhaseEngine,
+                    today = LocalDate.now(zone),
+                    zone = zone,
+                    isWorkoutActive = workoutSnapshot.isRunning,
+                    pendingSessionId = workoutSnapshot.pendingBootcampSessionId
+                )
+            } else null
+            val recoveredEnrollment = (recoveryOutcome as? CalendarDriftRecoverer.Outcome.Recovered)
+                ?.finalEnrollment
+            val phaseEngine = (recoveryOutcome as? CalendarDriftRecoverer.Outcome.Recovered)
+                ?.finalEngine ?: initialPhaseEngine
+            // Shadow `enrollment` with the recovered version for downstream reads.
+            @Suppress("NAME_SHADOWING")
+            val enrollment = recoveredEnrollment ?: enrollment
+
             val bootcampTotalWeeks = phaseEngine?.totalWeeks ?: 12
             val displayAbsoluteWeek: Int = phaseEngine?.absoluteWeek ?: 1
             val bootcampPercentComplete = displayAbsoluteWeek.toFloat() / bootcampTotalWeeks

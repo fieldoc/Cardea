@@ -135,43 +135,15 @@ class BootcampSessionCompleter @Inject constructor(
         tuningDirection: TuningDirection,
         completedWeekSessions: List<BootcampSessionEntity> = emptyList(),
         lastTierChangeWeek: Int? = null
-    ): List<BootcampSessionEntity> {
-        val currentPresetIndices = completedWeekSessions
-            .filter { it.presetIndex != null }
-            .mapNotNull { session ->
-                val key = sessionTypePresetKey(session.sessionType) ?: return@mapNotNull null
-                key to (session.presetIndex ?: 0)
-            }
-            .toMap()
-
-        val plannedSessions = nextEngine.planCurrentWeek(
-            tierIndex = tierIndex,
-            tuningDirection = tuningDirection,
-            currentPresetIndices = currentPresetIndices,
-            lastTierChangeWeek = lastTierChangeWeek
-        )
-        if (plannedSessions.isEmpty()) return emptyList()
-
-        val availableDays = preferredDays
-            .filter { it.level == DaySelectionLevel.AVAILABLE || it.level == DaySelectionLevel.LONG_RUN_BIAS }
-            .map { it.day }
-        val longRunBiasDay = preferredDays
-            .firstOrNull { it.level == DaySelectionLevel.LONG_RUN_BIAS }
-            ?.day
-
-        val assigned = SessionDayAssigner.assign(plannedSessions, availableDays, longRunBiasDay)
-
-        return assigned.map { (session, day) ->
-            BootcampRepository.buildSessionEntity(
-                enrollmentId = enrollmentId,
-                weekNumber = nextEngine.absoluteWeek,
-                dayOfWeek = day,
-                sessionType = session.type.name,
-                targetMinutes = session.minutes,
-                presetId = session.presetId
-            )
-        }
-    }
+    ): List<BootcampSessionEntity> = BootcampWeekSeeder.seed(
+        enrollmentId = enrollmentId,
+        nextEngine = nextEngine,
+        preferredDays = preferredDays,
+        tierIndex = tierIndex,
+        tuningDirection = tuningDirection,
+        completedWeekSessions = completedWeekSessions,
+        lastTierChangeWeek = lastTierChangeWeek
+    )
 
     private suspend fun backupSessionAndEnrollment(
         session: BootcampSessionEntity,
@@ -181,14 +153,5 @@ class BootcampSessionCompleter @Inject constructor(
             .onFailure { Log.w("SessionCompleter", "Cloud backup failed for session", it) }
         runCatching { cloudBackupManager.syncBootcampEnrollment(enrollment) }
             .onFailure { Log.w("SessionCompleter", "Cloud backup failed for enrollment", it) }
-    }
-
-    private fun sessionTypePresetKey(rawType: String): String? = when (rawType) {
-        "EASY" -> "easy"
-        "TEMPO" -> "tempo"
-        "INTERVAL" -> "interval"
-        "STRIDES" -> "strides"
-        "LONG" -> "long"
-        else -> null
     }
 }

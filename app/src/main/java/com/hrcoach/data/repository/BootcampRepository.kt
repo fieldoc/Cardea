@@ -151,6 +151,23 @@ class BootcampRepository @Inject constructor(
         )
     }
 
+    /**
+     * Marks a session SKIPPED with an explicit timestamp. Distinct entry point from
+     * [dropSession] so callers can past-date the skip when the calendar has rolled
+     * past the engine-week's natural end (used by [com.hrcoach.domain.bootcamp.CalendarDriftRecoverer]).
+     * Keeping the timestamp historical prevents StreakCalculator and friends from
+     * treating an auto-skip as a fresh-today bail.
+     */
+    suspend fun autoSkipSession(sessionId: Long, completedAtMs: Long) {
+        val session = bootcampDao.getSessionById(sessionId) ?: return
+        bootcampDao.updateSession(
+            session.copy(
+                status = BootcampSessionEntity.STATUS_SKIPPED,
+                completedAtMs = completedAtMs
+            )
+        )
+    }
+
     suspend fun graduateEnrollment(enrollmentId: Long) {
         val enrollment = bootcampDao.getEnrollment(enrollmentId) ?: return
         bootcampDao.updateEnrollment(

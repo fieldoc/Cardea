@@ -12,6 +12,7 @@ import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
+import com.hrcoach.domain.bootcamp.CalendarDriftRecoverer
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.service.BootcampNotificationManager
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
@@ -74,7 +75,8 @@ class BootcampViewModel @Inject constructor(
     private val notificationManager: BootcampNotificationManager,
     private val bleCoordinator: BleConnectionCoordinator,
     private val cloudBackupManager: CloudBackupManager,
-    private val audioSettingsRepository: AudioSettingsRepository
+    private val audioSettingsRepository: AudioSettingsRepository,
+    private val calendarDriftRecoverer: CalendarDriftRecoverer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BootcampUiState())
@@ -201,19 +203,39 @@ class BootcampViewModel @Inject constructor(
         }
     }
 
-    private suspend fun refreshFromEnrollment(enrollment: BootcampEnrollmentEntity) {
-        val goal = BootcampGoal.valueOf(enrollment.goalType)
+    private suspend fun refreshFromEnrollment(initialEnrollment: BootcampEnrollmentEntity) {
+        val goal = BootcampGoal.valueOf(initialEnrollment.goalType)
+
+        // ── Calendar drift recovery (runs before any state reads) ────────────
+        // If the engine fell behind the calendar (residual SCHEDULED in a past
+        // engine-week), self-heal: skip residuals, advance the engine, seed the
+        // next week. No-ops when a workout is in flight or no completions exist
+        // in the engine-week (GapAdvisor's territory).
+        val initialEngine = PhaseEngine(
+            goal = goal,
+            phaseIndex = initialEnrollment.currentPhaseIndex,
+            weekInPhase = initialEnrollment.currentWeekInPhase,
+            runsPerWeek = initialEnrollment.runsPerWeek,
+            targetMinutes = initialEnrollment.targetMinutesPerRun
+        )
+        val workoutSnapshot = WorkoutState.snapshot.value
+        val systemZone = ZoneId.systemDefault()
+        val recoveryOutcome = calendarDriftRecoverer.recover(
+            enrollment = initialEnrollment,
+            engine = initialEngine,
+            today = LocalDate.now(systemZone),
+            zone = systemZone,
+            isWorkoutActive = workoutSnapshot.isRunning,
+            pendingSessionId = workoutSnapshot.pendingBootcampSessionId
+        )
+        val enrollment = (recoveryOutcome as? CalendarDriftRecoverer.Outcome.Recovered)
+            ?.finalEnrollment ?: initialEnrollment
+        val engine = (recoveryOutcome as? CalendarDriftRecoverer.Outcome.Recovered)
+            ?.finalEngine ?: initialEngine
+
         val profile = adaptiveProfileRepository.getProfile()
         val recentMetrics = workoutMetricsRepository.getRecentMetrics(limitDays = RECENT_METRICS_DAYS)
         val enrollmentForPrompt = clearTierPromptSnoozeIfCtlSafe(goal, enrollment, profile.ctl)
-
-        val engine = PhaseEngine(
-            goal = goal,
-            phaseIndex = enrollment.currentPhaseIndex,
-            weekInPhase = enrollment.currentWeekInPhase,
-            runsPerWeek = enrollment.runsPerWeek,
-            targetMinutes = enrollment.targetMinutesPerRun
-        )
 
         val fitnessSignals = FitnessSignalEvaluator.evaluate(profile, recentMetrics)
         val fitnessLevel = FitnessEvaluator.assess(profile, recentMetrics)
@@ -262,7 +284,12 @@ class BootcampViewModel @Inject constructor(
         val missedSessionCount = missedOrDeferredSessions.size
         val missedSessionIds = missedOrDeferredSessions.map { it.id }
 
-        // Build 7-day strip items: one WeekDayItem per day M–S
+        // Build 7-day strip items: one WeekDayItem per day M–S.
+        // Header is calendar-driven; CalendarDriftRecoverer keeps the engine in
+        // sync with the calendar so the sessions plotted here are for the right
+        // week. (A formula-based clamp was considered but doesn't generalize —
+        // weekNumber → calendar week isn't a clean function for users with
+        // pre-enrollment sessions or who pull sessions forward via Reschedule.)
         val weekStart = LocalDate.now().with(DayOfWeek.MONDAY)
         val weekDays = (1..7).map { dow ->
             val session = scheduledSessions.find { it.dayOfWeek == dow }

@@ -6,6 +6,7 @@ import com.hrcoach.data.db.BootcampSessionEntity
 import com.hrcoach.data.db.WorkoutEntity
 import com.hrcoach.data.repository.BootcampRepository
 import com.hrcoach.data.repository.WorkoutRepository
+import com.hrcoach.domain.bootcamp.CalendarDriftRecoverer
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.service.WorkoutSnapshot
@@ -39,6 +40,7 @@ class HomeViewModelTest {
     private lateinit var bootcampRepository: BootcampRepository
     private lateinit var partnerRepository: FirebasePartnerRepository
     private lateinit var userProfileRepository: UserProfileRepository
+    private lateinit var calendarDriftRecoverer: CalendarDriftRecoverer
     private lateinit var context: Context
 
     @Before
@@ -48,8 +50,12 @@ class HomeViewModelTest {
         bootcampRepository = mockk(relaxed = true)
         partnerRepository = mockk(relaxed = true)
         userProfileRepository = mockk(relaxed = true)
+        calendarDriftRecoverer = mockk(relaxed = true)
         every { partnerRepository.observePartners() } returns flowOf(emptyList())
         every { userProfileRepository.getDistanceUnit() } returns "km"
+        coEvery {
+            calendarDriftRecoverer.recover(any(), any(), any(), any(), any(), any())
+        } returns CalendarDriftRecoverer.Outcome.NoChange
         context = mockk(relaxed = true)
     }
 
@@ -60,7 +66,14 @@ class HomeViewModelTest {
     }
 
     private fun createViewModel(): HomeViewModel {
-        return HomeViewModel(workoutRepository, bootcampRepository, partnerRepository, userProfileRepository, context)
+        return HomeViewModel(
+            workoutRepository,
+            bootcampRepository,
+            partnerRepository,
+            userProfileRepository,
+            calendarDriftRecoverer,
+            context
+        )
     }
 
     @Test

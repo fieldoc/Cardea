@@ -8,6 +8,7 @@ import com.hrcoach.data.repository.UserProfileRepository
 import com.hrcoach.data.repository.WorkoutMetricsRepository
 import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
+import com.hrcoach.domain.bootcamp.CalendarDriftRecoverer
 import com.hrcoach.domain.bootcamp.DayPreference
 import com.hrcoach.domain.bootcamp.DaySelectionLevel
 import com.hrcoach.domain.model.AdaptiveProfile
@@ -52,12 +53,18 @@ class BootcampViewModelTest {
     private val bleCoordinator: BleConnectionCoordinator = mockk(relaxed = true)
     private val cloudBackupManager: com.hrcoach.data.firebase.CloudBackupManager = mockk(relaxed = true)
     private val audioSettingsRepository: com.hrcoach.data.repository.AudioSettingsRepository = mockk(relaxed = true)
+    private val calendarDriftRecoverer: CalendarDriftRecoverer = mockk(relaxed = true)
 
     @Before
     fun setUp() {
         every { bleCoordinator.heartRate } returns MutableStateFlow(0)
         every { bleCoordinator.isConnected } returns MutableStateFlow(false)
         every { bleCoordinator.discoveredDevices } returns MutableStateFlow(emptyList<BluetoothDevice>())
+        // CalendarDriftRecoverer no-ops in these tests — focus is on the rest of
+        // refreshFromEnrollment. Recoverer behavior has its own dedicated suite.
+        coEvery {
+            calendarDriftRecoverer.recover(any(), any(), any(), any(), any(), any())
+        } returns CalendarDriftRecoverer.Outcome.NoChange
         Dispatchers.setMain(testDispatcher)
         WorkoutState.set(WorkoutSnapshot())
     }
@@ -79,7 +86,8 @@ class BootcampViewModelTest {
             notificationManager = notificationManager,
             bleCoordinator = bleCoordinator,
             cloudBackupManager = cloudBackupManager,
-            audioSettingsRepository = audioSettingsRepository
+            audioSettingsRepository = audioSettingsRepository,
+            calendarDriftRecoverer = calendarDriftRecoverer
         )
     }
 
