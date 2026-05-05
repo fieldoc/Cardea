@@ -78,7 +78,8 @@ data class BootcampUiState(
     val onboardingLongRunWarning: String? = null,
     val onboardingPreviewSessions: List<PlannedSession> = emptyList(),
     // Gap return
-    val welcomeBackMessage: String? = null,
+    val welcomeBackDisclosure: WelcomeBackDisclosure? = null,
+    val showRewindBreadcrumb: Boolean = false,
     val needsCalibration: Boolean = false,
     // Fitness
     val fitnessLevel: FitnessLevel = FitnessLevel.UNKNOWN,
@@ -137,6 +138,54 @@ data class BootcampUiState(
      */
     val stridesPrimerTotalReps: Int = 5
 )
+
+/**
+ * Structured payload for the post-gap "Welcome Back" dialog.
+ *
+ * Replaces the legacy single-string `welcomeBackMessage` so the UI can render BOTH
+ * the schedule rewind (always present when the dialog is shown) and the optional
+ * intensity easing as labeled sections, instead of one silently overriding the other.
+ *
+ * Built by `BootcampViewModel.applyGapAdjustmentIfNeeded()`; consumed by
+ * `WelcomeBackDialog`. See `docs/cardea/2026-05-05-welcome-back-disclosure.md`.
+ */
+data class WelcomeBackDisclosure(
+    /** SCHEDULE section body — required. Pre-formatted with concrete numbers. */
+    val schedule: ScheduleChange,
+    /** INTENSITY section body — null when no tier change / discovery run. */
+    val intensity: IntensityChange? = null
+) {
+    /** Pattern: "Rolled back from week 3 to week 2 of Base. Cleared 4 upcoming sessions." */
+    sealed class ScheduleChange {
+        /** weekInPhase rewound by 1 within the same phase. */
+        data class WeekRollback(
+            val fromWeek: Int,
+            val toWeek: Int,
+            val phaseName: String,
+            val sessionsCleared: Int
+        ) : ScheduleChange()
+
+        /** weekInPhase reset to 0 (start of phase) — same phase. */
+        data class PhaseStartReset(
+            val phaseName: String,
+            val sessionsCleared: Int
+        ) : ScheduleChange()
+
+        /** Full reset to start of Base (LONG_ABSENCE / FULL_RESET). */
+        data class FullReset(
+            val phaseName: String,
+            val sessionsCleared: Int
+        ) : ScheduleChange()
+    }
+
+    sealed class IntensityChange {
+        /** Tier was demoted because CTL decayed below the runner's prior tier band. */
+        object TierEased : IntensityChange()
+
+        /** Next run is a calibration / Discovery Run rather than a planned session. */
+        object DiscoveryRun : IntensityChange()
+    }
+}
 
 data class SessionUiItem(
     val dayLabel: String,

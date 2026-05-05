@@ -37,12 +37,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EventRepeat
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -96,6 +103,8 @@ import com.hrcoach.domain.model.WorkoutMode
 import com.hrcoach.ui.components.CardeaButton
 import com.hrcoach.ui.components.GlassCard
 import com.hrcoach.ui.theme.CardeaCtaGradient
+import com.hrcoach.ui.theme.CardeaCtaGradient3Stop
+import com.hrcoach.ui.theme.CardeaAccentPink
 import com.hrcoach.ui.theme.CardeaTheme
 import com.hrcoach.ui.theme.GradientBlue
 import com.hrcoach.ui.theme.GradientPink
@@ -258,7 +267,8 @@ fun BootcampScreen(
                     onTierClick = viewModel::showTierDetail,
                     onSavePreferredDays = viewModel::savePreferredDays,
                     onSettingsClick = onGoToSettings,
-                    onPreferredDaysClick = { showDaysSheet = true }
+                    onPreferredDaysClick = { showDaysSheet = true },
+                    onDismissRewindBreadcrumb = viewModel::dismissRewindBreadcrumb
                 )
 
                 if (uiState.showMaxHrGate) {
@@ -366,9 +376,9 @@ fun BootcampScreen(
             )
         }
 
-        if (uiState.welcomeBackMessage != null) {
+        if (uiState.welcomeBackDisclosure != null) {
             WelcomeBackDialog(
-                message = uiState.welcomeBackMessage!!,
+                disclosure = uiState.welcomeBackDisclosure!!,
                 onDismiss = { viewModel.dismissWelcomeBack() }
             )
         }
@@ -527,7 +537,8 @@ private fun FeatureBullet(
 private fun WeekStripCard(
     days: List<WeekDayItem>,
     dateRange: String,
-    onSessionClick: (SessionUiItem) -> Unit = {}
+    onSessionClick: (SessionUiItem) -> Unit = {},
+    breadcrumb: (@Composable () -> Unit)? = null
 ) {
     GlassCard(
         modifier = Modifier.fillMaxWidth(),
@@ -541,7 +552,21 @@ private fun WeekStripCard(
             modifier = Modifier.align(Alignment.End)
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        // Optional breadcrumb chip — sits between the date label and the day
+        // strip per the design, attaching the "adjusted after break" context
+        // to the days it explains rather than competing with the next-up card.
+        if (breadcrumb != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                breadcrumb()
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        } else {
+            Spacer(modifier = Modifier.height(6.dp))
+        }
 
         // 7-day pill row
         Row(
@@ -1494,7 +1519,8 @@ private fun ActiveBootcampDashboard(
     onTierClick: () -> Unit,
     onSavePreferredDays: (List<DayPreference>) -> Unit,
     onSettingsClick: () -> Unit,
-    onPreferredDaysClick: () -> Unit
+    onPreferredDaysClick: () -> Unit,
+    onDismissRewindBreadcrumb: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         var missedDismissedIds by remember { mutableStateOf(emptySet<Long>()) }
@@ -1529,7 +1555,10 @@ private fun ActiveBootcampDashboard(
             WeekStripCard(
                 days = uiState.currentWeekDays,
                 dateRange = uiState.currentWeekDateRange,
-                onSessionClick = onSessionClick
+                onSessionClick = onSessionClick,
+                breadcrumb = if (uiState.showRewindBreadcrumb) {
+                    { ScheduleRewindBreadcrumb(onDismiss = onDismissRewindBreadcrumb) }
+                } else null
             )
 
             PhaseTimelineCard(
@@ -3306,35 +3335,248 @@ private fun toggleBlackoutInList(days: List<DayPreference>, day: Int): List<DayP
 
 // ─── Welcome Back Dialog ────────────────────────────────────────────────────
 
+/**
+ * Restructured post-gap "Welcome Back" dialog. Renders the disclosure as two
+ * labeled sections (SCHEDULE always; INTENSITY when applicable) with concrete
+ * numbers em-highlighted in textPrimary. Replaces the prior single-string
+ * dialog where tier-easing copy silently overrode the schedule rewind.
+ *
+ * See `docs/cardea/2026-05-05-welcome-back-disclosure.md`.
+ */
 @Composable
 private fun WelcomeBackDialog(
-    message: String,
+    disclosure: WelcomeBackDisclosure,
     onDismiss: () -> Unit
 ) {
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Welcome Back",
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = CardeaTheme.colors.textPrimary
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = CardeaTheme.colors.textSecondary
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Got it", color = GradientPink)
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 320.dp)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        if (CardeaTheme.colors.isDark) CardeaTheme.colors.bgSecondary
+                        else CardeaTheme.colors.bgPrimary
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = CardeaTheme.colors.glassBorderStrong,
+                        shape = RoundedCornerShape(16.dp)
+                    )
+            ) {
+                // ── Title row (icon + "Welcome Back") ────────────────────
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Restore,
+                        contentDescription = null,
+                        tint = if (CardeaTheme.colors.isDark) GradientPink else CardeaAccentPink,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Welcome Back",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.2).sp,
+                        lineHeight = 20.sp,
+                        color = CardeaTheme.colors.textPrimary
+                    )
+                }
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = CardeaTheme.colors.glassBorder
+                )
+
+                // ── SCHEDULE section ─────────────────────────────────────
+                DisclosureSection(
+                    label = "Schedule",
+                    body = scheduleBody(disclosure.schedule)
+                )
+
+                // ── INTENSITY section (optional) ─────────────────────────
+                disclosure.intensity?.let { intensity ->
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = CardeaTheme.colors.glassBorder
+                    )
+                    DisclosureSection(
+                        label = "Intensity",
+                        body = intensityBody(intensity)
+                    )
+                }
+
+                // ── Footer CTA — single-source-of-emphasis gradient ──────
+                Box(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CardeaCtaGradient3Stop)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Got it",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.2.sp
+                        )
+                    }
+                }
             }
-        },
-        containerColor = CardeaTheme.colors.bgPrimary,
-        shape = RoundedCornerShape(16.dp)
+        }
+    }
+}
+
+@Composable
+private fun DisclosureSection(label: String, body: AnnotatedString) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 18.dp)
+    ) {
+        Text(
+            text = label.uppercase(),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 2.sp,
+            color = CardeaTheme.colors.textTertiary
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = body,
+            fontSize = 14.sp,
+            lineHeight = 21.sp,
+            color = CardeaTheme.colors.textSecondary
+        )
+    }
+}
+
+/**
+ * Build the SCHEDULE section body, em-highlighting the concrete numbers (week
+ * counts, sessions cleared, phase name) in textPrimary against the textSecondary
+ * narrative — matches the design's `<em>` styling.
+ */
+@Composable
+private fun scheduleBody(change: WelcomeBackDisclosure.ScheduleChange): AnnotatedString {
+    val emStyle = SpanStyle(
+        color = CardeaTheme.colors.textPrimary,
+        fontWeight = FontWeight.SemiBold
     )
+    return when (change) {
+        is WelcomeBackDisclosure.ScheduleChange.WeekRollback -> buildAnnotatedString {
+            append("Rolled back from week ")
+            withStyle(emStyle) { append(change.fromWeek.toString()) }
+            append(" to week ")
+            withStyle(emStyle) { append(change.toWeek.toString()) }
+            append(" of ")
+            withStyle(emStyle) { append(change.phaseName) }
+            append(". Cleared ")
+            withStyle(emStyle) { append(change.sessionsCleared.toString()) }
+            append(" upcoming sessions.")
+        }
+        is WelcomeBackDisclosure.ScheduleChange.PhaseStartReset -> buildAnnotatedString {
+            append("Rewound to the start of ")
+            withStyle(emStyle) { append(change.phaseName) }
+            append(". Cleared ")
+            withStyle(emStyle) { append(change.sessionsCleared.toString()) }
+            append(" upcoming sessions.")
+        }
+        is WelcomeBackDisclosure.ScheduleChange.FullReset -> buildAnnotatedString {
+            append("Reset to the start of ")
+            withStyle(emStyle) { append(change.phaseName) }
+            append(". Cleared ")
+            withStyle(emStyle) { append(change.sessionsCleared.toString()) }
+            append(" upcoming sessions.")
+        }
+    }
+}
+
+@Composable
+private fun intensityBody(intensity: WelcomeBackDisclosure.IntensityChange): AnnotatedString {
+    val emStyle = SpanStyle(
+        color = CardeaTheme.colors.textPrimary,
+        fontWeight = FontWeight.SemiBold
+    )
+    return when (intensity) {
+        WelcomeBackDisclosure.IntensityChange.TierEased -> buildAnnotatedString {
+            append("Eased your training intensity to match your current fitness.")
+        }
+        WelcomeBackDisclosure.IntensityChange.DiscoveryRun -> buildAnnotatedString {
+            append("Your first run will be a ")
+            withStyle(emStyle) { append("Discovery Run") }
+            append(" to gauge where you are now.")
+        }
+    }
+}
+
+// ─── Schedule Rewind Breadcrumb ─────────────────────────────────────────────
+//
+// Ambient pill above the week strip. Persists after dialog dismissal until the
+// runner completes a session in the new engine-week (auto-cleared by the VM)
+// or taps the X (in-memory dismiss flag). Tier-3 ambient label per Cardea
+// hierarchy: glass surface, no gradient — never competes with the next-up card.
+
+@Composable
+private fun ScheduleRewindBreadcrumb(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .height(28.dp)
+            .clip(CircleShape)
+            .background(CardeaTheme.colors.glassSurface)
+            .border(
+                width = 1.dp,
+                color = CardeaTheme.colors.glassBorder,
+                shape = CircleShape
+            )
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Restore,
+            contentDescription = null,
+            tint = if (CardeaTheme.colors.isDark) GradientPink else CardeaAccentPink,
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = "Adjusted after break",
+            fontSize = 12.sp,
+            color = CardeaTheme.colors.textSecondary,
+            lineHeight = 12.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Icon(
+            imageVector = Icons.Default.Close,
+            contentDescription = "Dismiss",
+            tint = CardeaTheme.colors.textTertiary,
+            modifier = Modifier
+                .size(14.dp)
+                .clickable(onClick = onDismiss)
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

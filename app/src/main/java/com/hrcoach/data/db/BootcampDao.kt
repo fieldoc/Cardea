@@ -106,7 +106,7 @@ interface BootcampDao {
     suspend fun getLastCompletedSession(enrollmentId: Long): BootcampSessionEntity?
 
     @Query("DELETE FROM bootcamp_sessions WHERE enrollmentId = :enrollmentId AND weekNumber > :weekNumber")
-    suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int)
+    suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int): Int
 
     /**
      * Atomically marks a session as completed, advances the enrollment phase/week pointer,

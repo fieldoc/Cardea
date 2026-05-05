@@ -119,13 +119,16 @@ internal class FakeBootcampDao(
             .sortedWith(compareByDescending<BootcampSessionEntity> { it.weekNumber }.thenByDescending { it.dayOfWeek })
             .firstOrNull()
 
-    override suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int) {
+    override suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int): Int {
+        var deleted = 0
         val weeksToDelete = sessionsByWeek.keys.filter { it > weekNumber }
         weeksToDelete.forEach { week ->
-            sessionsByWeek[week] = sessionsByWeek.getValue(week)
-                .filterNot { it.enrollmentId == enrollmentId }
-                .toMutableList()
+            val current = sessionsByWeek.getValue(week)
+            val (toDelete, toKeep) = current.partition { it.enrollmentId == enrollmentId }
+            deleted += toDelete.size
+            sessionsByWeek[week] = toKeep.toMutableList()
         }
+        return deleted
     }
 
     fun getSession(sessionId: Long): BootcampSessionEntity? =

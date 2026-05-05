@@ -83,8 +83,15 @@ class BootcampViewModel @Inject constructor(
     val uiState: StateFlow<BootcampUiState> = _uiState.asStateFlow()
 
     private var welcomeBackDismissed = false
+    private var rewindBreadcrumbDismissed = false
     private var illnessPromptSnoozedUntilMs = 0L
-    @Volatile private var _pendingTierDemotedMessage: String? = null
+    /**
+     * Latest gap-adjustment disclosure built by [applyGapAdjustmentIfNeeded].
+     * Null when the most recent load found no rewind / tier change worth disclosing.
+     * Persists across [refreshFromEnrollment] until the user dismisses both surfaces
+     * or completes a session in the new engine-week.
+     */
+    @Volatile private var _pendingDisclosure: WelcomeBackDisclosure? = null
     @Volatile private var currentEnrollment: BootcampEnrollmentEntity? = null
     @Volatile private var currentTuningDirection: TuningDirection = TuningDirection.HOLD
     private var loadJob: Job? = null
@@ -173,11 +180,6 @@ class BootcampViewModel @Inject constructor(
             gapAction.weekInPhase != enrollment.currentWeekInPhase
         val tierChanged = updatedTierIndex != enrollment.tierIndex
 
-        if (tierChanged) {
-            // I2: notify runner that their intensity was eased due to CTL decay
-            _pendingTierDemotedMessage = "Welcome back! We've eased your intensity to match your current fitness."
-        }
-
         if (phaseChanged || tierChanged) {
             // C3: Delete stale sessions whether phase or tier changed.
             // When only tier changes, gapAction.phaseIndex/weekInPhase equal the current position,
@@ -190,7 +192,7 @@ class BootcampViewModel @Inject constructor(
                 runsPerWeek = enrollment.runsPerWeek,
                 targetMinutes = enrollment.targetMinutesPerRun
             ).absoluteWeek
-            bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
+            val sessionsCleared = bootcampRepository.deleteSessionsAfterWeek(enrollment.id, targetWeek - 1)
             val gapUpdatedEnrollment = enrollment.copy(
                 currentPhaseIndex = gapAction.phaseIndex,
                 currentWeekInPhase = gapAction.weekInPhase,
@@ -200,8 +202,83 @@ class BootcampViewModel @Inject constructor(
             bootcampRepository.updateEnrollment(gapUpdatedEnrollment)
             runCatching { cloudBackupManager.syncBootcampEnrollment(gapUpdatedEnrollment) }
                 .onFailure { Log.w("BootcampVM", "Cloud backup failed for gap adjustment", it) }
+
+            // Build the disclosure shown by WelcomeBackDialog + the ambient
+            // breadcrumb chip on the week strip. Combines schedule + intensity
+            // sections so the override-style "tier message hides rewind" bug
+            // can't recur.
+            _pendingDisclosure = buildDisclosure(
+                oldPhaseIndex = enrollment.currentPhaseIndex,
+                oldWeekInPhase = enrollment.currentWeekInPhase,
+                newPhaseIndex = gapAction.phaseIndex,
+                newWeekInPhase = gapAction.weekInPhase,
+                goalType = enrollment.goalType,
+                sessionsCleared = sessionsCleared,
+                tierEased = tierChanged,
+                requiresCalibration = gapAction.requiresCalibration
+            )
+            // Ambient breadcrumb auto-rearms whenever a fresh disclosure lands.
+            rewindBreadcrumbDismissed = false
         }
     }
+
+    private fun buildDisclosure(
+        oldPhaseIndex: Int,
+        oldWeekInPhase: Int,
+        newPhaseIndex: Int,
+        newWeekInPhase: Int,
+        goalType: String,
+        sessionsCleared: Int,
+        tierEased: Boolean,
+        requiresCalibration: Boolean
+    ): WelcomeBackDisclosure {
+        val goal = BootcampGoal.valueOf(goalType)
+        val newPhaseName = phaseDisplayName(
+            PhaseEngine(goal = goal, phaseIndex = newPhaseIndex, weekInPhase = newWeekInPhase,
+                runsPerWeek = 1, targetMinutes = 30).currentPhase
+        )
+        val schedule = when {
+            // Phase index decreased — full reset (LONG_ABSENCE / FULL_RESET land here).
+            newPhaseIndex < oldPhaseIndex ->
+                WelcomeBackDisclosure.ScheduleChange.FullReset(
+                    phaseName = newPhaseName,
+                    sessionsCleared = sessionsCleared
+                )
+            // Same phase, week reset to 0 — EXTENDED_BREAK / start-of-phase landing.
+            newWeekInPhase == 0 && oldWeekInPhase != 0 ->
+                WelcomeBackDisclosure.ScheduleChange.PhaseStartReset(
+                    phaseName = newPhaseName,
+                    sessionsCleared = sessionsCleared
+                )
+            // Same phase, week stepped back by one or more — MEANINGFUL_BREAK.
+            newWeekInPhase < oldWeekInPhase ->
+                WelcomeBackDisclosure.ScheduleChange.WeekRollback(
+                    fromWeek = oldWeekInPhase + 1,   // 1-based for display
+                    toWeek = newWeekInPhase + 1,
+                    phaseName = newPhaseName,
+                    sessionsCleared = sessionsCleared
+                )
+            // No actual rewind — tier-only adjustment at start of phase. Treat
+            // as PhaseStartReset for a coherent "you're at the start" framing.
+            else ->
+                WelcomeBackDisclosure.ScheduleChange.PhaseStartReset(
+                    phaseName = newPhaseName,
+                    sessionsCleared = sessionsCleared
+                )
+        }
+        // DiscoveryRun (calibration) trumps TierEased — calibration is a
+        // genuinely different next-run kind, while tier easing is implied by
+        // the discovery run's open-ended nature.
+        val intensity = when {
+            requiresCalibration -> WelcomeBackDisclosure.IntensityChange.DiscoveryRun
+            tierEased -> WelcomeBackDisclosure.IntensityChange.TierEased
+            else -> null
+        }
+        return WelcomeBackDisclosure(schedule = schedule, intensity = intensity)
+    }
+
+    private fun phaseDisplayName(phase: TrainingPhase): String =
+        phase.name.lowercase().replaceFirstChar { it.titlecase(Locale.ROOT) }
 
     private suspend fun refreshFromEnrollment(initialEnrollment: BootcampEnrollmentEntity) {
         val goal = BootcampGoal.valueOf(initialEnrollment.goalType)
@@ -477,8 +554,8 @@ class BootcampViewModel @Inject constructor(
             activePreferredDays = activePreferredDays,
             upcomingWeeks = upcomingWeeks,
             upcomingRuns = upcomingRuns,
-            welcomeBackMessage = if (welcomeBackDismissed) null
-                else _pendingTierDemotedMessage ?: gapAction.welcomeMessage,
+            welcomeBackDisclosure = if (welcomeBackDismissed) null else _pendingDisclosure,
+            showRewindBreadcrumb = computeShowRewindBreadcrumb(scheduledSessions, today),
             needsCalibration = gapAction.requiresCalibration,
             fitnessLevel = fitnessLevel,
             tuningDirection = fitnessSignals.tuningDirection,
@@ -495,7 +572,24 @@ class BootcampViewModel @Inject constructor(
             showStridesPrimer = showStridesPrimer,
             stridesPrimerTotalReps = stridesPrimerTotalReps
         )
-        _pendingTierDemotedMessage = null  // I2: consumed; clear so it doesn't persist across refreshes
+    }
+
+    /**
+     * Show the breadcrumb chip while a disclosure is pending AND no session in
+     * the current engine-week has been completed yet. Auto-dismiss when the
+     * runner completes their first session in the new week — at that point the
+     * causal story has been replaced by visible progress.
+     */
+    private fun computeShowRewindBreadcrumb(
+        scheduledSessions: List<BootcampSessionEntity>,
+        today: Int
+    ): Boolean {
+        if (rewindBreadcrumbDismissed) return false
+        if (_pendingDisclosure == null) return false
+        val anyCompletedThisWeek = scheduledSessions.any {
+            it.status == BootcampSessionEntity.STATUS_COMPLETED
+        }
+        return !anyCompletedThisWeek
     }
 
     private fun computeDaysSinceLastRun(
@@ -811,7 +905,12 @@ class BootcampViewModel @Inject constructor(
 
     fun dismissWelcomeBack() {
         welcomeBackDismissed = true
-        _uiState.update { it.copy(welcomeBackMessage = null) }
+        _uiState.update { it.copy(welcomeBackDisclosure = null) }
+    }
+
+    fun dismissRewindBreadcrumb() {
+        rewindBreadcrumbDismissed = true
+        _uiState.update { it.copy(showRewindBreadcrumb = false) }
     }
 
     fun dismissTierPrompt() {

@@ -177,7 +177,8 @@ class BootcampRepository @Inject constructor(
         )
     }
 
-    suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int) =
+    /** Returns the number of sessions deleted (Room @Query DELETE row count). */
+    suspend fun deleteSessionsAfterWeek(enrollmentId: Long, weekNumber: Int): Int =
         bootcampDao.deleteSessionsAfterWeek(enrollmentId, weekNumber)
 
     suspend fun updatePreferredDays(
@@ -189,9 +190,9 @@ class BootcampRepository @Inject constructor(
         bootcampDao.updateEnrollment(enrollment.copy(preferredDays = newDays))
     }
 
-    suspend fun deleteScheduledSessionsFromWeek(enrollmentId: Long, weekNumber: Int) {
+    suspend fun deleteScheduledSessionsFromWeek(enrollmentId: Long, weekNumber: Int): Int {
         // deleteSessionsAfterWeek deletes WHERE weekNumber > N, so pass weekNumber - 1
-        bootcampDao.deleteSessionsAfterWeek(enrollmentId, weekNumber - 1)
+        return bootcampDao.deleteSessionsAfterWeek(enrollmentId, weekNumber - 1)
     }
 
     companion object {

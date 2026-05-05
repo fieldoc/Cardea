@@ -244,13 +244,13 @@ class BootcampViewModelTest {
         coEvery { bootcampRepository.getSessionsForWeek(any(), any()) } returns emptyList()
         coEvery { bootcampRepository.getSessionsForEnrollmentOnce(any()) } returns emptyList()
         coEvery { bootcampRepository.insertSessions(any()) } returns Unit
-        coEvery { bootcampRepository.deleteSessionsAfterWeek(any(), any()) } returns Unit
+        coEvery { bootcampRepository.deleteSessionsAfterWeek(any(), any()) } returns 0
         coEvery { bootcampRepository.updateEnrollment(capture(capturedEnrollment)) } returns Unit
         every { adaptiveProfileRepository.getProfile() } returns profileWithCtl
         coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
 
         // Act
-        createViewModel()
+        val vm = createViewModel()
 
         // Assert: updateEnrollment was called with tierIndex = 0 (T0 demotion)
         coVerify { bootcampRepository.updateEnrollment(any()) }
@@ -258,6 +258,198 @@ class BootcampViewModelTest {
             "Enrollment should be updated with demoted tierIndex=0 after CTL decay",
             0,
             capturedEnrollment.captured.tierIndex
+        )
+
+        // Disclosure must surface BOTH dimensions — fixing the prior bug where
+        // a tier-demotion message silently overrode the schedule rewind.
+        val disclosure = vm.uiState.value.welcomeBackDisclosure
+        assertTrue(
+            "Disclosure should be present after a meaningful break with tier demotion",
+            disclosure != null
+        )
+        assertTrue(
+            "Schedule should be a WeekRollback for MEANINGFUL_BREAK from week 2",
+            disclosure!!.schedule is WelcomeBackDisclosure.ScheduleChange.WeekRollback
+        )
+        assertEquals(
+            "Intensity row should be TierEased when CTL decay demoted the tier",
+            WelcomeBackDisclosure.IntensityChange.TierEased,
+            disclosure.intensity
+        )
+    }
+
+    // ── Test 6: PhaseStartReset (EXTENDED_BREAK) ───────────────────────────
+
+    @Test
+    fun `EXTENDED_BREAK from mid-phase produces PhaseStartReset disclosure`() {
+        // 35-day gap → EXTENDED_BREAK → weekInPhase reset to 0, phase unchanged.
+        // T0 runner so no tier demotion (we want a clean "schedule-only" assertion
+        // in the PhaseStartReset shape).
+        val gapMs = TimeUnit.DAYS.toMillis(35)
+        val enrollment = BootcampEnrollmentEntity(
+            id = 1L,
+            goalType = "RACE_5K",
+            targetMinutesPerRun = 30,
+            runsPerWeek = 3,
+            preferredDays = listOf(
+                DayPreference(2, DaySelectionLevel.AVAILABLE),
+                DayPreference(4, DaySelectionLevel.AVAILABLE),
+                DayPreference(6, DaySelectionLevel.LONG_RUN_BIAS)
+            ),
+            startDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(80),
+            currentPhaseIndex = 0,
+            currentWeekInPhase = 3,
+            status = BootcampEnrollmentEntity.STATUS_ACTIVE,
+            tierIndex = 0,
+            tierPromptDismissCount = 0,
+            tierPromptSnoozedUntilMs = 0L
+        )
+        val lastCompleted = BootcampSessionEntity(
+            id = 10L, enrollmentId = 1L, weekNumber = 4, dayOfWeek = 3,
+            sessionType = "EASY", targetMinutes = 30,
+            status = BootcampSessionEntity.STATUS_COMPLETED,
+            completedWorkoutId = 99L,
+            completedAtMs = System.currentTimeMillis() - gapMs
+        )
+
+        coEvery { bootcampRepository.getActiveEnrollmentOnce() } returns enrollment
+        every { bootcampRepository.getActiveEnrollment() } returns flowOf(enrollment)
+        coEvery { bootcampRepository.getLastCompletedSession(any()) } returns lastCompleted
+        coEvery { bootcampRepository.getSessionsForWeek(any(), any()) } returns emptyList()
+        coEvery { bootcampRepository.getSessionsForEnrollmentOnce(any()) } returns emptyList()
+        coEvery { bootcampRepository.insertSessions(any()) } returns Unit
+        coEvery { bootcampRepository.deleteSessionsAfterWeek(any(), any()) } returns 6
+        coEvery { bootcampRepository.updateEnrollment(any()) } returns Unit
+        every { adaptiveProfileRepository.getProfile() } returns AdaptiveProfile()
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = createViewModel()
+        val disclosure = vm.uiState.value.welcomeBackDisclosure
+
+        assertTrue("Disclosure must be present after EXTENDED_BREAK", disclosure != null)
+        val schedule = disclosure!!.schedule as? WelcomeBackDisclosure.ScheduleChange.PhaseStartReset
+        assertTrue("Schedule should be PhaseStartReset for EXTENDED_BREAK", schedule != null)
+        assertEquals(
+            "Sessions cleared count should bubble through from DAO return",
+            6, schedule!!.sessionsCleared
+        )
+        assertNull("No tier demotion for T0 runner — intensity row must be null", disclosure.intensity)
+    }
+
+    // ── Test 7: FullReset + DiscoveryRun (LONG_ABSENCE) ────────────────────
+
+    @Test
+    fun `LONG_ABSENCE from non-Base produces FullReset with DiscoveryRun intensity`() {
+        // 70-day gap from phase=1/week=2 → LONG_ABSENCE → phase=0, week=0,
+        // requiresCalibration=true.
+        val gapMs = TimeUnit.DAYS.toMillis(70)
+        val enrollment = BootcampEnrollmentEntity(
+            id = 1L,
+            goalType = "RACE_5K",
+            targetMinutesPerRun = 30,
+            runsPerWeek = 3,
+            preferredDays = listOf(
+                DayPreference(2, DaySelectionLevel.AVAILABLE),
+                DayPreference(4, DaySelectionLevel.AVAILABLE),
+                DayPreference(6, DaySelectionLevel.LONG_RUN_BIAS)
+            ),
+            startDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(120),
+            currentPhaseIndex = 1,
+            currentWeekInPhase = 2,
+            status = BootcampEnrollmentEntity.STATUS_ACTIVE,
+            tierIndex = 0,
+            tierPromptDismissCount = 0,
+            tierPromptSnoozedUntilMs = 0L
+        )
+        val lastCompleted = BootcampSessionEntity(
+            id = 10L, enrollmentId = 1L, weekNumber = 6, dayOfWeek = 3,
+            sessionType = "EASY", targetMinutes = 30,
+            status = BootcampSessionEntity.STATUS_COMPLETED,
+            completedWorkoutId = 99L,
+            completedAtMs = System.currentTimeMillis() - gapMs
+        )
+
+        coEvery { bootcampRepository.getActiveEnrollmentOnce() } returns enrollment
+        every { bootcampRepository.getActiveEnrollment() } returns flowOf(enrollment)
+        coEvery { bootcampRepository.getLastCompletedSession(any()) } returns lastCompleted
+        coEvery { bootcampRepository.getSessionsForWeek(any(), any()) } returns emptyList()
+        coEvery { bootcampRepository.getSessionsForEnrollmentOnce(any()) } returns emptyList()
+        coEvery { bootcampRepository.insertSessions(any()) } returns Unit
+        coEvery { bootcampRepository.deleteSessionsAfterWeek(any(), any()) } returns 8
+        coEvery { bootcampRepository.updateEnrollment(any()) } returns Unit
+        every { adaptiveProfileRepository.getProfile() } returns AdaptiveProfile()
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = createViewModel()
+        val disclosure = vm.uiState.value.welcomeBackDisclosure
+
+        assertTrue("Disclosure must be present after LONG_ABSENCE", disclosure != null)
+        val schedule = disclosure!!.schedule as? WelcomeBackDisclosure.ScheduleChange.FullReset
+        assertTrue("Schedule should be FullReset for LONG_ABSENCE from non-Base", schedule != null)
+        assertEquals(8, schedule!!.sessionsCleared)
+        assertEquals(
+            "DiscoveryRun should win over TierEased when calibration is required",
+            WelcomeBackDisclosure.IntensityChange.DiscoveryRun,
+            disclosure.intensity
+        )
+        assertTrue(
+            "needsCalibration must be true when GapAction requests calibration",
+            vm.uiState.value.needsCalibration
+        )
+    }
+
+    // ── Test 8: breadcrumb visibility & dismiss ────────────────────────────
+
+    @Test
+    fun `rewind breadcrumb is visible after a rewind and clears on dismiss`() {
+        val gapMs = TimeUnit.DAYS.toMillis(35)
+        val enrollment = BootcampEnrollmentEntity(
+            id = 1L,
+            goalType = "RACE_5K",
+            targetMinutesPerRun = 30,
+            runsPerWeek = 3,
+            preferredDays = listOf(
+                DayPreference(2, DaySelectionLevel.AVAILABLE),
+                DayPreference(4, DaySelectionLevel.AVAILABLE),
+                DayPreference(6, DaySelectionLevel.LONG_RUN_BIAS)
+            ),
+            startDate = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(80),
+            currentPhaseIndex = 0,
+            currentWeekInPhase = 3,
+            status = BootcampEnrollmentEntity.STATUS_ACTIVE,
+            tierIndex = 0,
+            tierPromptDismissCount = 0,
+            tierPromptSnoozedUntilMs = 0L
+        )
+        val lastCompleted = BootcampSessionEntity(
+            id = 10L, enrollmentId = 1L, weekNumber = 4, dayOfWeek = 3,
+            sessionType = "EASY", targetMinutes = 30,
+            status = BootcampSessionEntity.STATUS_COMPLETED,
+            completedWorkoutId = 99L,
+            completedAtMs = System.currentTimeMillis() - gapMs
+        )
+
+        coEvery { bootcampRepository.getActiveEnrollmentOnce() } returns enrollment
+        every { bootcampRepository.getActiveEnrollment() } returns flowOf(enrollment)
+        coEvery { bootcampRepository.getLastCompletedSession(any()) } returns lastCompleted
+        coEvery { bootcampRepository.getSessionsForWeek(any(), any()) } returns emptyList()
+        coEvery { bootcampRepository.getSessionsForEnrollmentOnce(any()) } returns emptyList()
+        coEvery { bootcampRepository.insertSessions(any()) } returns Unit
+        coEvery { bootcampRepository.deleteSessionsAfterWeek(any(), any()) } returns 4
+        coEvery { bootcampRepository.updateEnrollment(any()) } returns Unit
+        every { adaptiveProfileRepository.getProfile() } returns AdaptiveProfile()
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = createViewModel()
+        assertTrue(
+            "Breadcrumb should be visible after a rewind with no completed sessions in the current week",
+            vm.uiState.value.showRewindBreadcrumb
+        )
+
+        vm.dismissRewindBreadcrumb()
+        assertFalse(
+            "Breadcrumb must hide once the user dismisses it",
+            vm.uiState.value.showRewindBreadcrumb
         )
     }
 }
