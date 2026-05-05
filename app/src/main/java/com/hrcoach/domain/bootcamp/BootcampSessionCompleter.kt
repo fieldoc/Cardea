@@ -66,11 +66,7 @@ class BootcampSessionCompleter @Inject constructor(
             }
 
         return if (weekComplete) {
-            val nextEngine = if (engine.shouldAdvancePhase()) {
-                engine.advancePhase()
-            } else {
-                engine.copy(weekInPhase = engine.weekInPhase + 1)
-            }
+            val nextEngine = engine.advance()
 
             if (nextEngine == null) {
                 // Race goal completed — graduate the enrollment

@@ -113,11 +113,7 @@ class CalendarDriftRecoverer @Inject constructor(
 
             // Determine what advancing would look like. If null → graduation:
             // bail without writing anything, let normal completion path graduate.
-            val nextEngine = if (currentEngine.shouldAdvancePhase()) {
-                currentEngine.advancePhase()
-            } else {
-                currentEngine.copy(weekInPhase = currentEngine.weekInPhase + 1)
-            } ?: break
+            val nextEngine = currentEngine.advance() ?: break
 
             // Skip residuals, timestamped to the end of the latest completion's
             // calendar week (Sunday 23:59 local). Keeps the SKIP semantically

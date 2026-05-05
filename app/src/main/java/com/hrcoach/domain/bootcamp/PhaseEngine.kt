@@ -45,11 +45,7 @@ data class PhaseEngine(
         var cursor = this
         var steps = 0
         while (steps < 12) {
-            cursor = if (cursor.shouldAdvancePhase()) {
-                cursor.advancePhase() ?: return steps + 1 // graduation — no more recovery
-            } else {
-                cursor.copy(weekInPhase = cursor.weekInPhase + 1)
-            }
+            cursor = cursor.advance() ?: return steps + 1 // graduation — no more recovery
             steps++
             if (cursor.isRecoveryWeek(tuningDirection)) return steps
         }
@@ -84,6 +80,20 @@ data class PhaseEngine(
     fun shouldAdvancePhase(): Boolean =
         weekInPhase >= phaseMidpointWeeks(currentPhase)
 
+    /**
+     * Returns the engine for the next week. Increments [weekInPhase] by one, OR
+     * rolls to the next phase if [shouldAdvancePhase] is true. Returns null when
+     * advancing would graduate (race goals at the end of TAPER) — caller decides
+     * what to do with that signal (stop lookahead, graduate enrollment, bail
+     * recovery, etc.).
+     *
+     * Distinct from [advancePhase], which is the lower-level "skip directly to
+     * next phase" primitive used only when at a phase boundary.
+     */
+    fun advance(): PhaseEngine? =
+        if (shouldAdvancePhase()) advancePhase()
+        else copy(weekInPhase = weekInPhase + 1)
+
     fun advancePhase(): PhaseEngine? {
         val nextIndex = phaseIndex + 1
         return if (nextIndex >= goal.phaseArc.size) {
@@ -110,11 +120,7 @@ data class PhaseEngine(
         val result = mutableListOf<WeekLookahead>()
         var cursor = this
         repeat(count) {
-            cursor = if (cursor.shouldAdvancePhase()) {
-                cursor.advancePhase() ?: return result // graduated — stop lookahead
-            } else {
-                cursor.copy(weekInPhase = cursor.weekInPhase + 1)
-            }
+            cursor = cursor.advance() ?: return result // graduated — stop lookahead
             result.add(
                 WeekLookahead(
                     weekNumber = cursor.absoluteWeek,
