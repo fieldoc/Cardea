@@ -227,12 +227,13 @@ class PostRunSummaryViewModelTest {
     }
 
     @Test
-    fun `end-session-early path still marks run as bootcamp even when completer returns false`() = runTest {
-        // Simulates the WFS ACTION_FINISH_BOOTCAMP_EARLY flow: the WFS handler already
-        // credited the bootcamp session row as COMPLETED before stopWorkout(), so when
-        // PostRunSummaryViewModel re-invokes the completer, the idempotency guard in
-        // BootcampSessionCompleter returns completed=false. The run is still a bootcamp
-        // run and must render as such so Done routes to the bootcamp dashboard.
+    fun `pendingBootcampSessionId still marks run as bootcamp even when completer returns false`() = runTest {
+        // Defensive: if BootcampSessionCompleter hits its idempotency guard for any reason
+        // (e.g. PostRun re-entry on a session already marked STATUS_COMPLETED, deep-link
+        // restoration, or — historically — the WFS early-finish handler pre-crediting the
+        // session), the run is still a bootcamp run and must render as such so Done
+        // routes to the bootcamp dashboard. As of the early-finish race fix, the WFS
+        // handler no longer pre-credits, but this defensive gating remains correct.
         stubDefaults()
         WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 55L))
         coEvery { bootcampSessionCompleter.complete(any(), any(), any()) } returns
@@ -580,6 +581,63 @@ class PostRunSummaryViewModelTest {
         advanceUntilIdle()
 
         assertEquals(100, vm.uiState.value.typicalEffort)
+    }
+
+    // ── Training Signal copy decision (env-affected interaction) ──
+
+    @Test
+    fun `tuningSignalCopy uses muted hot-weather headline only when direction is HOLD`() {
+        val copy = tuningSignalCopy(
+            direction = TuningDirection.HOLD,
+            environmentAffected = true,
+        )
+        assertEquals("Holding the plan — hot weather ignored", copy.headline)
+        assertEquals("Next week stays as prescribed.", copy.driver)
+        assertTrue(
+            "HOLD + env-affected is the only case that warrants the muted headline",
+            copy.mutedHeadline,
+        )
+    }
+
+    @Test
+    fun `tuningSignalCopy keeps real PUSH_HARDER headline when env-affected and engine still pushed`() {
+        // Regression: previously the env-affected branch swallowed direction and
+        // claimed "next week stays as prescribed" while the engine had pushed
+        // harder based on other recent reliable runs.
+        val copy = tuningSignalCopy(
+            direction = TuningDirection.PUSH_HARDER,
+            environmentAffected = true,
+        )
+        assertEquals("Pushing harder next week", copy.headline)
+        assertFalse(
+            "Headline weight must stay confident — the engine actually pushed",
+            copy.mutedHeadline,
+        )
+    }
+
+    @Test
+    fun `tuningSignalCopy keeps real EASE_BACK headline when env-affected and engine still eased`() {
+        val copy = tuningSignalCopy(
+            direction = TuningDirection.EASE_BACK,
+            environmentAffected = true,
+        )
+        assertEquals("Easing back next week", copy.headline)
+        assertFalse(copy.mutedHeadline)
+    }
+
+    @Test
+    fun `tuningSignalCopy uses normal direction copy when environment is fine`() {
+        val push = tuningSignalCopy(TuningDirection.PUSH_HARDER, environmentAffected = false)
+        assertEquals("Pushing harder next week", push.headline)
+        assertFalse(push.mutedHeadline)
+
+        val ease = tuningSignalCopy(TuningDirection.EASE_BACK, environmentAffected = false)
+        assertEquals("Easing back next week", ease.headline)
+        assertFalse(ease.mutedHeadline)
+
+        val hold = tuningSignalCopy(TuningDirection.HOLD, environmentAffected = false)
+        assertEquals("Holding the plan", hold.headline)
+        assertFalse(hold.mutedHeadline)
     }
 
     @Test

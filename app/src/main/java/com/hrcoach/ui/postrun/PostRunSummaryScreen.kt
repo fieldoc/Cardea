@@ -676,20 +676,33 @@ private fun BootcampContextCard(
  *   │ Your efficiency is trending up and you're recovered…       │
  *   └────────────────────────────────────────────────────────────┘
  *
- * Env-flag muted variant: headline reverts to "Holding the plan — hot weather ignored",
- * Effort number gets line-through, comparator dropped, italic footer added below a
- * 1px divider explaining the exclusion. Direction is communicated by copy + a small
- * directional glyph; no color encoding (greens/yellows/reds reserved elsewhere).
+ * Env-flag muted variant: this run's Effort number gets line-through, comparator
+ * dropped, italic footer added below a 1px divider explaining the exclusion. The
+ * headline still reflects the engine's actual decision — env-affected only excludes
+ * THIS run from the fitness signal; if other recent reliable runs drove the engine
+ * to PUSH/EASE, that decision still applies and the user must hear about it.
+ * Headline reverts to the "hot weather ignored" copy ONLY when the engine actually
+ * landed on HOLD, since that is the one case where the plan really did stay put.
+ * Direction is communicated by copy + a small directional glyph; no color encoding
+ * (greens/yellows/reds reserved elsewhere).
  */
-@Composable
-private fun TuningDirectionCard(
+/**
+ * Pure decision table for the Training Signal card's copy + headline weight. Extracted
+ * from [TuningDirectionCard] so the env-affected interactions (which are easy to get
+ * wrong) can be unit-tested without spinning up Compose.
+ */
+internal data class TuningSignalCopy(
+    val headline: String,
+    val driver: String,
+    val mutedHeadline: Boolean,
+)
+
+internal fun tuningSignalCopy(
     direction: TuningDirection,
-    runEffort: Int?,
-    typicalEffort: Int?,
     environmentAffected: Boolean,
-) {
+): TuningSignalCopy {
     val (headline, driver) = when {
-        environmentAffected ->
+        environmentAffected && direction == TuningDirection.HOLD ->
             "Holding the plan — hot weather ignored" to "Next week stays as prescribed."
         direction == TuningDirection.PUSH_HARDER ->
             "Pushing harder next week" to
@@ -701,11 +714,31 @@ private fun TuningDirectionCard(
             "Holding the plan" to
                 "Solid session — keeping next week as prescribed."
     }
+    // Muted headline styling only when the headline itself is the muted "hot weather
+    // ignored" copy. When the engine pushed/eased on the strength of other runs, the
+    // headline conveys real news and should read with full weight.
+    return TuningSignalCopy(
+        headline = headline,
+        driver = driver,
+        mutedHeadline = environmentAffected && direction == TuningDirection.HOLD,
+    )
+}
+
+@Composable
+private fun TuningDirectionCard(
+    direction: TuningDirection,
+    runEffort: Int?,
+    typicalEffort: Int?,
+    environmentAffected: Boolean,
+) {
+    val copy = tuningSignalCopy(direction, environmentAffected)
+    val headline = copy.headline
+    val driver = copy.driver
     val headlineColor =
-        if (environmentAffected) CardeaTheme.colors.textSecondary
+        if (copy.mutedHeadline) CardeaTheme.colors.textSecondary
         else CardeaTheme.colors.textPrimary
     val headlineWeight =
-        if (environmentAffected) FontWeight.SemiBold else FontWeight.Bold
+        if (copy.mutedHeadline) FontWeight.SemiBold else FontWeight.Bold
 
     GlassCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
         Row(

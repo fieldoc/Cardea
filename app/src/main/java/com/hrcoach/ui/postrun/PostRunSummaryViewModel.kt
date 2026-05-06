@@ -210,13 +210,16 @@ class PostRunSummaryViewModel @Inject constructor(
                 val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
                 if (pendingId != null) {
                     // If there was a pending bootcamp session id at stop time, this IS a
-                    // bootcamp run — regardless of whether complete() succeeds here. The
-                    // "End session early" path (WFS ACTION_FINISH_BOOTCAMP_EARLY) credits
-                    // the session before reaching PostRun, so the re-invocation below will
-                    // return completed=false due to the idempotency guard in
-                    // BootcampSessionCompleter. Gate isBootcampRun on pendingId presence,
-                    // NOT on result.completed, so the Done button still routes to the
-                    // bootcamp dashboard and the bootcamp-completion UI still renders.
+                    // bootcamp run — regardless of whether complete() succeeds here. Both
+                    // the normal-finish and "End session early" (WFS
+                    // ACTION_FINISH_BOOTCAMP_EARLY) paths funnel completion through this
+                    // call so the seeder uses the freshly-computed lastTuningDirection
+                    // that stopWorkout() just persisted; the Training Signal card below
+                    // reads the same value, keeping seeded plan and surfaced headline in
+                    // sync. We still gate isBootcampRun on pendingId presence rather than
+                    // result.completed so the Done button routes to the bootcamp
+                    // dashboard even if the completer hits the idempotency guard (e.g.
+                    // a re-entry on a session already marked STATUS_COMPLETED).
                     val tuningDirection = adaptiveProfileRepository.getProfile().lastTuningDirection
                         ?: TuningDirection.HOLD
                     // Read this run's metrics for the Training Signal card. Cheap re-fetch:

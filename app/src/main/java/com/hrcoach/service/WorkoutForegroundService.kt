@@ -275,31 +275,22 @@ class WorkoutForegroundService : LifecycleService() {
 
             ACTION_FINISH_BOOTCAMP_EARLY -> {
                 // Graceful bootcamp-session finish from the active-run settings menu.
-                // Mirrors the WFS sim-path completion flow: read lastTuningDirection from the
-                // saved AdaptiveProfile, call the completer, then funnel through stopWorkout()
-                // for the authoritative teardown (notification stop gate, dual-pause cleanup,
-                // metrics save, stopForeground, stopSelf). If there is no pending bootcamp
-                // session, we still stop the workout — the action is a "finish" first.
+                // We deliberately do NOT call BootcampSessionCompleter here. Doing so
+                // would seed next week's plan with the PRE-stop lastTuningDirection
+                // (the previous run's decision), while stopWorkout() is about to
+                // recompute and persist a fresh direction. PostRunSummaryViewModel
+                // calls the completer after navigation, by which time the fresh
+                // direction is on disk — so the seeder and the Training Signal card
+                // agree on what was applied. WorkoutState.pendingBootcampSessionId
+                // survives WorkoutState.reset() (see WorkoutState.reset comment) so
+                // the pending ID is still readable from PostRun.
+                //
+                // skipShortRunDiscard=true is unconditional: the user explicitly
+                // asked to finish, so even a 30-second tap should preserve the
+                // workout row. PostRun's later completer call needs the row to
+                // still exist so the bootcamp session's completedWorkoutId points
+                // at something real.
                 lifecycleScope.launch(Dispatchers.IO) {
-                    val pendingId = WorkoutState.snapshot.value.pendingBootcampSessionId
-                    if (pendingId != null && workoutId > 0L) {
-                        runCatching {
-                            val profile = adaptiveProfileRepository.getProfile()
-                            bootcampSessionCompleter.complete(
-                                workoutId = workoutId,
-                                pendingSessionId = pendingId,
-                                tuningDirection = profile.lastTuningDirection ?: TuningDirection.HOLD
-                            )
-                        }.onFailure { e ->
-                            Log.w("WorkoutService", "Bootcamp early-finish completion failed", e)
-                        }
-                    }
-                    // skipShortRunDiscard=true is critical here: we just credited the
-                    // bootcamp session with completedWorkoutId=this workoutId. If the
-                    // user ended within 60s/200m, the normal discard branch would delete
-                    // the workout row and FK CASCADE SET NULL would orphan the session.
-                    // Pass true unconditionally on this action — even if no pendingId
-                    // (defensive), the UX is that the user explicitly asked to finish.
                     stopWorkout(skipShortRunDiscard = true)
                 }
                 return START_NOT_STICKY
