@@ -32,6 +32,25 @@ sealed class TodayState {
     ) : TodayState()
 }
 
+/**
+ * Reason a candidate day looks the way it does in the reschedule chip strip.
+ * Mirrors `domain.bootcamp.SuggestionReason` but lives in the UI layer to keep the
+ * domain model free of UI vocabulary. Precedence (single-valued, most-restrictive
+ * wins): OCCUPIED > BLACKOUT > RECOVERY > FREE.
+ */
+enum class RescheduleReasonUi { FREE, OCCUPIED, RECOVERY, BLACKOUT }
+
+/** One chip in the reschedule sheet's day strip. */
+data class RescheduleDayUi(
+    /** ISO day-of-week, 1=Mon … 7=Sun */
+    val day: Int,
+    /** Short locale-aware label (e.g. "Wed"). */
+    val label: String,
+    val reason: RescheduleReasonUi,
+    /** True for the first FREE day — gets the "Recommended" callout. */
+    val isRecommended: Boolean
+)
+
 /** One slot in the 7-day week strip. `session` is null for rest days. */
 data class WeekDayItem(
     val dayOfWeek: Int,       // 1=Mon … 7=Sun
@@ -95,11 +114,14 @@ data class BootcampUiState(
     val showDeleteConfirmDialog: Boolean = false,
     // Reschedule bottom sheet
     val rescheduleSheetSessionId: Long? = null,
+    val rescheduleSessionTypeLabel: String? = null,
     val rescheduleAutoTargetDay: Int? = null,
     val rescheduleAutoTargetLabel: String? = null,
-    val rescheduleDropSessionId: Long? = null,
-    val rescheduleAvailableDays: List<Int> = emptyList(),
-    val rescheduleAvailableLabels: List<String> = emptyList(),
+    val rescheduleSuggestions: List<RescheduleDayUi> = emptyList(),
+    // Advisory-confirm dialog (rotation/process-death-safe state)
+    val rescheduleConfirmDay: Int? = null,
+    val rescheduleConfirmDayLabel: String? = null,
+    val rescheduleConfirmReason: RescheduleReasonUi? = null,
     // Session detail sheet
     val showSessionDetail: Boolean = false,
     val sessionDetailItem: SessionUiItem? = null,

@@ -12,9 +12,29 @@ data class RescheduleRequest(
     val allSessionsThisWeek: List<BootcampSessionEntity>
 )
 
+/**
+ * Why a candidate day looks the way it does. Single-valued; multi-reason precedence is
+ * OCCUPIED > BLACKOUT > RECOVERY_SPACING > FREE (most restrictive wins). OCCUPIED must
+ * surface so the disabled chip can explain itself; BLACKOUT is a stronger user signal
+ * than RECOVERY_SPACING (a coach heuristic), so it wins when both apply.
+ */
+enum class SuggestionReason { FREE, OCCUPIED, RECOVERY_SPACING, BLACKOUT }
+
+data class DaySuggestion(
+    /** ISO day-of-week, 1=Mon … 7=Sun */
+    val dayOfWeek: Int,
+    val reason: SuggestionReason,
+    /** True if the day is in the user's preferred-days list at AVAILABLE or LONG_RUN_BIAS. */
+    val isPreferred: Boolean
+)
+
 sealed class RescheduleResult {
-    data class Moved(val newDayOfWeek: Int) : RescheduleResult()
-    data class Dropped(val droppedSessionId: Long) : RescheduleResult()
+    /**
+     * The recommended target day, or null when no FREE day exists in the suggestion list
+     * (e.g. every future day is OCCUPIED/BLACKOUT/RECOVERY_SPACING). Callers should fall
+     * back to letting the user pick a non-FREE chip via the confirm-dialog flow.
+     */
+    data class Moved(val firstFreeDayOrNull: Int?) : RescheduleResult()
     object Deferred : RescheduleResult()
 }
 
@@ -22,52 +42,55 @@ object SessionRescheduler {
 
     private val hardTypes = setOf("TEMPO", "INTERVAL", "INTERVALS", "LONG", "RACE_SIM")
 
-    fun reschedule(req: RescheduleRequest): RescheduleResult {
-        val validDays = availableDays(req)
-        if (validDays.isNotEmpty()) return RescheduleResult.Moved(validDays.first())
-        val toDrop = lowestPrioritySession(req.allSessionsThisWeek, req.session)
-        return RescheduleResult.Dropped(toDrop.id)
-    }
-
-    fun defer(): RescheduleResult = RescheduleResult.Deferred
-
-    fun availableDays(req: RescheduleRequest): List<Int> {
+    /**
+     * Returns one suggestion per future day in the current week (today through Sunday),
+     * excluding the session's own day. Sorted with FREE first, then by ascending dayOfWeek
+     * within each reason group.
+     */
+    fun suggestions(req: RescheduleRequest): List<DaySuggestion> {
         val prefs = req.enrollment.preferredDays
         val hardDaysOtherThanThis = req.allSessionsThisWeek
             .filter { it.sessionType in hardTypes && it.dayOfWeek != req.session.dayOfWeek }
             .map { it.dayOfWeek }
             .toSet()
 
-        return (req.todayDayOfWeek..7).filter { candidate ->
-            // Never "reschedule" to the session's own day (no-op move)
-            if (candidate == req.session.dayOfWeek) return@filter false
-            val pref = prefs.find { it.day == candidate }
-            val isBlackout = pref?.level == DaySelectionLevel.BLACKOUT
-            val isOccupied = candidate in req.occupiedDaysThisWeek
-            val violatesRecovery = hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 }
-            !isBlackout && !isOccupied && !violatesRecovery
-        }
+        val raw = (req.todayDayOfWeek..7)
+            .filter { it != req.session.dayOfWeek }
+            .map { candidate ->
+                val pref = prefs.find { it.day == candidate }
+                val isPreferred = pref?.level == DaySelectionLevel.AVAILABLE ||
+                    pref?.level == DaySelectionLevel.LONG_RUN_BIAS
+                val isOccupied = candidate in req.occupiedDaysThisWeek
+                val isBlackout = pref?.level == DaySelectionLevel.BLACKOUT
+                val violatesRecovery =
+                    hardDaysOtherThanThis.any { kotlin.math.abs(it - candidate) < 2 }
+
+                // Precedence: OCCUPIED > BLACKOUT > RECOVERY_SPACING > FREE.
+                val reason = when {
+                    isOccupied      -> SuggestionReason.OCCUPIED
+                    isBlackout      -> SuggestionReason.BLACKOUT
+                    violatesRecovery -> SuggestionReason.RECOVERY_SPACING
+                    else            -> SuggestionReason.FREE
+                }
+                DaySuggestion(candidate, reason, isPreferred)
+            }
+
+        return raw.sortedWith(
+            compareBy<DaySuggestion> {
+                when (it.reason) {
+                    SuggestionReason.FREE             -> 0
+                    SuggestionReason.RECOVERY_SPACING -> 1
+                    SuggestionReason.BLACKOUT         -> 2
+                    SuggestionReason.OCCUPIED         -> 3
+                }
+            }.thenBy { it.dayOfWeek }
+        )
     }
 
-    private fun lowestPrioritySession(
-        sessions: List<BootcampSessionEntity>,
-        current: BootcampSessionEntity
-    ): BootcampSessionEntity {
-        val candidates = sessions.filter {
-            it.id != current.id && it.status == BootcampSessionEntity.STATUS_SCHEDULED
-        }
-        return candidates
-            .minByOrNull { dropPriority(it.sessionType) }
-            ?: current
+    fun reschedule(req: RescheduleRequest): RescheduleResult {
+        val firstFree = suggestions(req).firstOrNull { it.reason == SuggestionReason.FREE }
+        return RescheduleResult.Moved(firstFree?.dayOfWeek)
     }
 
-    /** Lower number = drop first */
-    private fun dropPriority(type: String): Int = when (type) {
-        "EASY"                  -> 0
-        "STRIDES"               -> 0
-        "TEMPO"                 -> 1
-        "INTERVAL", "INTERVALS" -> 2
-        "LONG", "RACE_SIM"      -> 3
-        else                    -> 1
-    }
+    fun defer(): RescheduleResult = RescheduleResult.Deferred
 }

@@ -28,6 +28,7 @@ import com.hrcoach.domain.bootcamp.RescheduleRequest
 import com.hrcoach.domain.bootcamp.RescheduleResult
 import com.hrcoach.domain.bootcamp.SessionDayAssigner
 import com.hrcoach.domain.bootcamp.SessionRescheduler
+import com.hrcoach.domain.bootcamp.SuggestionReason
 import com.hrcoach.domain.bootcamp.SessionType
 import com.hrcoach.domain.education.ZoneEducationProvider
 import com.hrcoach.domain.bootcamp.DurationScaler
@@ -1042,37 +1043,80 @@ class BootcampViewModel @Inject constructor(
                 occupiedDaysThisWeek = occupied,
                 allSessionsThisWeek = sessions
             )
-            val result = SessionRescheduler.reschedule(req)
-            val validDays = SessionRescheduler.availableDays(req)
-            val autoTargetDay = (result as? RescheduleResult.Moved)?.newDayOfWeek
-            val alternativeDays = when {
-                autoTargetDay != null -> validDays.filterNot { it == autoTargetDay }
-                else -> validDays
+            val suggestions = SessionRescheduler.suggestions(req)
+            val firstFreeDay = suggestions.firstOrNull { it.reason == SuggestionReason.FREE }?.dayOfWeek
+
+            val ui = suggestions.map { s ->
+                RescheduleDayUi(
+                    day = s.dayOfWeek,
+                    label = dayLabelFor(s.dayOfWeek),
+                    reason = s.reason.toUi(),
+                    isRecommended = s.dayOfWeek == firstFreeDay
+                )
             }
 
             _uiState.update {
                 it.copy(
                     rescheduleSheetSessionId = sessionId,
-                    rescheduleAutoTargetDay = autoTargetDay,
-                    rescheduleAutoTargetLabel = autoTargetDay?.let(::dayLabelFor),
-                    rescheduleDropSessionId = (result as? RescheduleResult.Dropped)?.droppedSessionId,
-                    rescheduleAvailableDays = alternativeDays,
-                    rescheduleAvailableLabels = alternativeDays.map(::dayLabelFor)
+                    rescheduleSessionTypeLabel = sessionTypeDisplayName(session.sessionType, session.presetId),
+                    rescheduleAutoTargetDay = firstFreeDay,
+                    rescheduleAutoTargetLabel = firstFreeDay?.let(::dayLabelFor),
+                    rescheduleSuggestions = ui,
+                    rescheduleConfirmDay = null,
+                    rescheduleConfirmDayLabel = null,
+                    rescheduleConfirmReason = null
                 )
             }
         }
     }
 
-    fun confirmReschedule(dayOverride: Int? = null) {
-        val sessionId = _uiState.value.rescheduleSheetSessionId ?: return
-        val newDay = dayOverride ?: _uiState.value.rescheduleAutoTargetDay
-        val droppedSessionId = _uiState.value.rescheduleDropSessionId ?: sessionId
-        viewModelScope.launch {
-            if (newDay != null) {
-                bootcampRepository.rescheduleSession(sessionId, newDay)
-            } else {
-                bootcampRepository.dropSession(droppedSessionId)
+    /** Tap on a chip in the reschedule strip. FREE → confirm immediately; OCCUPIED → no-op
+     *  defensive guard (chip is disabled in UI); BLACKOUT/RECOVERY → open advisory dialog. */
+    fun onRescheduleChipTapped(day: Int) {
+        val state = _uiState.value
+        val suggestion = state.rescheduleSuggestions.firstOrNull { it.day == day } ?: return
+        when (suggestion.reason) {
+            RescheduleReasonUi.FREE -> performReschedule(day)
+            RescheduleReasonUi.OCCUPIED -> Unit
+            RescheduleReasonUi.BLACKOUT, RescheduleReasonUi.RECOVERY -> {
+                _uiState.update {
+                    it.copy(
+                        rescheduleConfirmDay = day,
+                        rescheduleConfirmDayLabel = suggestion.label,
+                        rescheduleConfirmReason = suggestion.reason
+                    )
+                }
             }
+        }
+    }
+
+    /** Confirm-button on the advisory dialog. */
+    fun confirmAdvisoryReschedule() {
+        val day = _uiState.value.rescheduleConfirmDay ?: return
+        performReschedule(day)
+    }
+
+    /** Cancel-button on the advisory dialog — closes dialog only, leaves chip strip open. */
+    fun dismissAdvisoryConfirm() {
+        _uiState.update {
+            it.copy(
+                rescheduleConfirmDay = null,
+                rescheduleConfirmDayLabel = null,
+                rescheduleConfirmReason = null
+            )
+        }
+    }
+
+    /** Tap "Sounds good" on the recommendation callout. */
+    fun confirmRecommendedReschedule() {
+        val day = _uiState.value.rescheduleAutoTargetDay ?: return
+        performReschedule(day)
+    }
+
+    private fun performReschedule(day: Int) {
+        val sessionId = _uiState.value.rescheduleSheetSessionId ?: return
+        viewModelScope.launch {
+            bootcampRepository.rescheduleSession(sessionId, day)
             clearRescheduleSheet()
             loadBootcampState()
         }
@@ -1093,13 +1137,22 @@ class BootcampViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 rescheduleSheetSessionId = null,
+                rescheduleSessionTypeLabel = null,
                 rescheduleAutoTargetDay = null,
                 rescheduleAutoTargetLabel = null,
-                rescheduleDropSessionId = null,
-                rescheduleAvailableDays = emptyList(),
-                rescheduleAvailableLabels = emptyList()
+                rescheduleSuggestions = emptyList(),
+                rescheduleConfirmDay = null,
+                rescheduleConfirmDayLabel = null,
+                rescheduleConfirmReason = null
             )
         }
+    }
+
+    private fun SuggestionReason.toUi(): RescheduleReasonUi = when (this) {
+        SuggestionReason.FREE             -> RescheduleReasonUi.FREE
+        SuggestionReason.OCCUPIED         -> RescheduleReasonUi.OCCUPIED
+        SuggestionReason.RECOVERY_SPACING -> RescheduleReasonUi.RECOVERY
+        SuggestionReason.BLACKOUT         -> RescheduleReasonUi.BLACKOUT
     }
 
     fun graduateCurrentGoal() {

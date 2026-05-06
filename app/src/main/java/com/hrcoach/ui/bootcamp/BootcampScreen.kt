@@ -81,6 +81,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -392,13 +395,23 @@ fun BootcampScreen(
 
         if (uiState.rescheduleSheetSessionId != null) {
             RescheduleBottomSheet(
-                autoTargetLabel = uiState.rescheduleAutoTargetLabel,
-                availableDays = uiState.rescheduleAvailableDays,
-                availableLabels = uiState.rescheduleAvailableLabels,
-                onConfirm   = { day -> viewModel.confirmReschedule(day) },
-                onDefer     = { viewModel.deferReschedule() },
-                onDismiss   = { viewModel.dismissRescheduleSheet() }
+                sessionTypeLabel        = uiState.rescheduleSessionTypeLabel,
+                autoTargetLabel         = uiState.rescheduleAutoTargetLabel,
+                suggestions             = uiState.rescheduleSuggestions,
+                onChipTapped            = { day -> viewModel.onRescheduleChipTapped(day) },
+                onConfirmRecommended    = { viewModel.confirmRecommendedReschedule() },
+                onDefer                 = { viewModel.deferReschedule() },
+                onDismiss               = { viewModel.dismissRescheduleSheet() }
             )
+
+            if (uiState.rescheduleConfirmDay != null && uiState.rescheduleConfirmReason != null) {
+                AdvisoryRescheduleDialog(
+                    dayLabel = uiState.rescheduleConfirmDayLabel ?: "",
+                    reason   = uiState.rescheduleConfirmReason!!,
+                    onConfirm = { viewModel.confirmAdvisoryReschedule() },
+                    onDismiss = { viewModel.dismissAdvisoryConfirm() }
+                )
+            }
         }
 
         SnackbarHost(
@@ -3019,14 +3032,17 @@ private fun IllnessPromptCard(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RescheduleBottomSheet(
+    sessionTypeLabel: String?,
     autoTargetLabel: String?,
-    availableDays: List<Int>,
-    availableLabels: List<String>,
-    onConfirm: (Int?) -> Unit,
+    suggestions: List<RescheduleDayUi>,
+    onChipTapped: (Int) -> Unit,
+    onConfirmRecommended: () -> Unit,
     onDefer: () -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(
+        // System back / swipe-down = no-op dismiss (NOT defer). Defer is an explicit
+        // footer button. Conflating these used to be a bug.
         onDismissRequest = onDismiss,
         containerColor = CardeaTheme.colors.bgPrimary,
         dragHandle = null,
@@ -3037,93 +3053,66 @@ private fun RescheduleBottomSheet(
                 .fillMaxWidth()
                 .padding(24.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(bottom = 16.dp)
         ) {
             Text(
-                text = "Reschedule Run",
+                text = if (sessionTypeLabel != null) "Reschedule $sessionTypeLabel" else "Reschedule Run",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 color = CardeaTheme.colors.textPrimary
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (autoTargetLabel != null) {
-                Text(
-                    text = "Recommended for $autoTargetLabel",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTheme.colors.textSecondary
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                CardeaButton(
-                    text = "Sounds good",
-                    onClick = { onConfirm(null) }, // Use auto target
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                )
-            } else {
-                Text(
-                    text = "No other preferred slots this week.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = CardeaTheme.colors.textSecondary
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-
-                CardeaButton(
-                    text = "Drop for this week",
-                    onClick = { onConfirm(null) }, // Drops the session
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                )
-            }
-            
-            if (availableDays.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Text(
-                    text = "Or pick another day",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = CardeaTheme.colors.textTertiary
-                )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    availableDays.forEachIndexed { index, day ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(CardeaTheme.colors.glassHighlight)
-                                .clickable { onConfirm(day) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = availableLabels[index],
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                                color = CardeaTheme.colors.textSecondary
-                            )
-                        }
-                    }
+            when {
+                // No future days at all (e.g. Sun reschedule of a Sun session).
+                suggestions.isEmpty() -> {
+                    Text(
+                        text = "There's no other day to move this run to. You can defer it instead.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                }
+                // Free recommendation available.
+                autoTargetLabel != null -> {
+                    Text(
+                        text = "Recommended: $autoTargetLabel — open day.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    CardeaButton(
+                        text = "Sounds good",
+                        onClick = onConfirmRecommended,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "Or pick another day",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = CardeaTheme.colors.textTertiary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    RescheduleChipStrip(suggestions = suggestions, onChipTapped = onChipTapped)
+                }
+                // No FREE day exists — every chip carries a conflict.
+                else -> {
+                    Text(
+                        text = "No open days left this week. Pick a day below — we'll flag any conflicts — or defer this session to later.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CardeaTheme.colors.textSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    RescheduleChipStrip(suggestions = suggestions, onChipTapped = onChipTapped)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Two distinct outs:
+            // Two distinct outs (preserved from prior fix):
             //  • Cancel (no-op) — backs out without changing the schedule
             //  • Defer this session — deliberately marks the session as needing reschedule later
-            // Previously a single "I'm not sure yet" button triggered the destructive defer write,
-            // which read as a soft dismiss and silently changed schedule state.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -3146,6 +3135,133 @@ private fun RescheduleBottomSheet(
             }
         }
     }
+}
+
+@Composable
+private fun RescheduleChipStrip(
+    suggestions: List<RescheduleDayUi>,
+    onChipTapped: (Int) -> Unit
+) {
+    // Sort by ascending dayOfWeek for the visible row (engine pre-sorts by reason for
+    // recommendation logic, but the user expects calendar order).
+    val byDay = suggestions.sortedBy { it.day }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            byDay.forEach { s ->
+                RescheduleDayChip(
+                    suggestion = s,
+                    onTap = { onChipTapped(s.day) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RescheduleDayChip(
+    suggestion: RescheduleDayUi,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val reasonText = when (suggestion.reason) {
+        RescheduleReasonUi.FREE     -> "open day"
+        RescheduleReasonUi.OCCUPIED -> "already has a run"
+        RescheduleReasonUi.RECOVERY -> "right after a hard session"
+        RescheduleReasonUi.BLACKOUT -> "marked as a day off"
+    }
+    val captionText = when (suggestion.reason) {
+        RescheduleReasonUi.FREE     -> null
+        RescheduleReasonUi.OCCUPIED -> "Already a run"
+        RescheduleReasonUi.RECOVERY -> "Hard run nearby"
+        RescheduleReasonUi.BLACKOUT -> "Off day"
+    }
+    val isEnabled = suggestion.reason != RescheduleReasonUi.OCCUPIED
+    val bgColor = when (suggestion.reason) {
+        RescheduleReasonUi.FREE     -> CardeaTheme.colors.glassHighlight
+        else                        -> CardeaTheme.colors.glassSurface
+    }
+    val labelColor = when {
+        !isEnabled                              -> CardeaTheme.colors.textTertiary
+        suggestion.reason == RescheduleReasonUi.FREE -> CardeaTheme.colors.textPrimary
+        else                                    -> CardeaTheme.colors.textSecondary
+    }
+
+    // Outer Column carries the parent's sizing (e.g. weight(1f) inside a Row).
+    // The Box is the visible chip surface; clip(RoundedCornerShape) precedes background()
+    // per CLAUDE.md.
+    Column(
+        modifier = modifier
+            .semantics {
+                contentDescription = "${suggestion.label}, $reasonText"
+                if (!isEnabled) disabled()
+            },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(bgColor)
+                .let { base -> if (isEnabled) base.clickable(onClick = onTap) else base },
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = suggestion.label,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = if (suggestion.reason == RescheduleReasonUi.FREE)
+                        FontWeight.SemiBold
+                    else FontWeight.Medium
+                ),
+                color = labelColor
+            )
+        }
+        if (captionText != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = captionText,
+                style = MaterialTheme.typography.labelSmall,
+                color = CardeaTheme.colors.textTertiary,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdvisoryRescheduleDialog(
+    dayLabel: String,
+    reason: RescheduleReasonUi,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val title = "Run $dayLabel?"
+    val body = when (reason) {
+        RescheduleReasonUi.RECOVERY ->
+            "$dayLabel is right after a hard session. Stack runs that close together only if you feel ready."
+        RescheduleReasonUi.BLACKOUT ->
+            "You marked $dayLabel as a day off. We'll move this run there for this week only — your usual schedule isn't changed."
+        // OCCUPIED chips are disabled, so this branch shouldn't render. FREE never opens
+        // the dialog. Both fall through to a generic prompt as a defensive default.
+        else -> "Move this run to $dayLabel?"
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { Text(body) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("Confirm") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
