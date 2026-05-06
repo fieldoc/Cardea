@@ -84,9 +84,10 @@ val CardeaLightBgPrimary    = Color(0xFFFAFAFA)
 val CardeaLightBgSecondary  = Color(0xFFF0F0F2)
 val CardeaLightSurfaceVariant = Color(0xFFE8E8EC)
 
-val LightGlassBorder    = Color(0x1A000000)
-val LightGlassHighlight = Color(0x0A000000)
-val LightGlassSurface   = Color(0x0F000000)
+val LightGlassBorder       = Color(0x1A000000)  // 10% black
+val LightGlassBorderStrong = Color(0x24000000)  // 14% black — matches dark GlassBorderStrong's prominence vs glassBorder
+val LightGlassHighlight    = Color(0x0A000000)
+val LightGlassSurface      = Color(0x0F000000)
 
 val CardeaLightTextPrimary   = Color(0xFF1A1A1A)
 val CardeaLightTextSecondary = Color(0xFF6B6B73)
