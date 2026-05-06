@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import javax.inject.Inject
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 data class PostRunComparison(
     val title: String,
@@ -58,6 +59,19 @@ data class PostRunSummaryUiState(
     val newAchievements: List<AchievementEntity> = emptyList(),
     // Non-null when HRmax was auto-calibrated during this session: Pair(oldMax, newMax)
     val hrMaxDelta: Pair<Int, Int>? = null,
+    // ── Training Signal card (bootcamp runs only) ──
+    // Direction the engine just applied to next week's plan. Null when the run is not
+    // a bootcamp run; the card simply doesn't render in that case.
+    val tuningDirection: TuningDirection? = null,
+    // This run's TRIMP (Banister-ish load score) rounded to Int. Surfaced as "Effort N"
+    // in the Training Signal card. Null when metrics weren't computed or trimpScore<=0.
+    val runEffort: Int? = null,
+    // Median Effort across the runner's last 30d of reliable, non-environment-affected
+    // sessions, excluding this run. Null when fewer than 3 baseline runs exist.
+    val typicalEffort: Int? = null,
+    // True when EnvironmentFlagDetector excluded this run from fitness signal. Drives
+    // the muted variant of the Training Signal card.
+    val runEnvironmentAffected: Boolean = false,
     // Per-workout counts of coaching cues fired, parsed from WorkoutMetrics.cueCountsJson.
     // Rendered by SoundsHeardSection on the first three runs only.
     val cueCounts: Map<com.hrcoach.domain.model.CoachingEvent, Int> = emptyMap(),
@@ -203,10 +217,27 @@ class PostRunSummaryViewModel @Inject constructor(
                     // BootcampSessionCompleter. Gate isBootcampRun on pendingId presence,
                     // NOT on result.completed, so the Done button still routes to the
                     // bootcamp dashboard and the bootcamp-completion UI still renders.
-                    _uiState.update { it.copy(isBootcampRun = true) }
+                    val tuningDirection = adaptiveProfileRepository.getProfile().lastTuningDirection
+                        ?: TuningDirection.HOLD
+                    // Read this run's metrics for the Training Signal card. Cheap re-fetch:
+                    // it's a single primary-key DAO query and keeps the surfacing logic
+                    // self-contained in the bootcamp branch where it belongs.
+                    val signalMetrics = runCatching {
+                        workoutMetricsRepository.getWorkoutMetrics(id)
+                    }.getOrNull()
+                    val typicalEffort = runCatching {
+                        computeTypicalEffort(currentWorkoutId = id)
+                    }.getOrNull()
+                    _uiState.update { it.copy(
+                        isBootcampRun = true,
+                        tuningDirection = tuningDirection,
+                        runEffort = signalMetrics?.trimpScore
+                            ?.takeIf { v -> v > 0f }
+                            ?.roundToInt(),
+                        typicalEffort = typicalEffort,
+                        runEnvironmentAffected = signalMetrics?.environmentAffected ?: false,
+                    ) }
                     runCatching {
-                        val tuningDirection = adaptiveProfileRepository.getProfile().lastTuningDirection
-                            ?: TuningDirection.HOLD
                         val result = bootcampSessionCompleter.complete(
                             workoutId = id,
                             pendingSessionId = pendingId,
@@ -381,6 +412,34 @@ class PostRunSummaryViewModel @Inject constructor(
         }
 
         return items
+    }
+
+    /**
+     * Median Effort (TRIMP) across recent reliable, non-environment-affected sessions.
+     * Used as the comparator number on the Training Signal card. Returns null when fewer
+     * than 3 baseline runs exist so the comparator can be omitted entirely rather than
+     * shown with a misleading single-sample baseline.
+     *
+     * Excludes the current run by [currentWorkoutId] — the eye reads "Effort 110 · typical 90"
+     * as "this vs. usual," so the baseline must not include `this`.
+     */
+    private suspend fun computeTypicalEffort(currentWorkoutId: Long): Int? {
+        val baseline = workoutMetricsRepository
+            .getRecentMetrics(limitDays = 30)
+            .asSequence()
+            .filter { it.workoutId != currentWorkoutId }
+            .filter { it.trimpReliable && !it.environmentAffected }
+            .mapNotNull { it.trimpScore?.takeIf { v -> v > 0f } }
+            .toList()
+        if (baseline.size < 3) return null
+        val sorted = baseline.sorted()
+        val mid = sorted.size / 2
+        // Even count: average of the two middle values (closer to a true median); odd
+        // count: middle element. Both round to Int for display parity with runEffort.
+        val median = if (sorted.size % 2 == 0) {
+            (sorted[mid - 1] + sorted[mid]) / 2f
+        } else sorted[mid]
+        return median.roundToInt()
     }
 
     private fun hasAnyMapsApiKey(): Boolean {

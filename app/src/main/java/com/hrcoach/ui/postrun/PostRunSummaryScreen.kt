@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -58,12 +59,16 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.data.db.AchievementEntity
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hrcoach.R
@@ -276,10 +281,15 @@ fun PostRunSummaryScreen(
                                 .padding(horizontal = 16.dp, vertical = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(24.dp)  // inter-section
                         ) {
-                            // ── Section 1: Status (HRR + HRmax delta) ──
+                            // ── Section 1: Status (HRR + HRmax delta + Training Signal) ──
                             // Shown only when at least one status card has content. Status goes first
-                            // because HRR is time-sensitive and HRmax is the most notable change.
-                            val hasStatus = isHrrActive || uiState.hrMaxDelta != null
+                            // because HRR is time-sensitive, HRmax is the most notable change, and the
+                            // Training Signal explains how this run reshapes next week's plan.
+                            val showSignalCard = uiState.isBootcampRun &&
+                                uiState.tuningDirection != null
+                            val hasStatus = isHrrActive ||
+                                uiState.hrMaxDelta != null ||
+                                showSignalCard
                             if (hasStatus) {
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     SectionHeader("STATUS")
@@ -288,6 +298,14 @@ fun PostRunSummaryScreen(
                                     }
                                     uiState.hrMaxDelta?.let { (oldMax, newMax) ->
                                         HrMaxUpdatedCard(oldMax = oldMax, newMax = newMax)
+                                    }
+                                    if (showSignalCard) {
+                                        TuningDirectionCard(
+                                            direction = uiState.tuningDirection!!,
+                                            runEffort = uiState.runEffort,
+                                            typicalEffort = uiState.typicalEffort,
+                                            environmentAffected = uiState.runEnvironmentAffected,
+                                        )
                                     }
                                 }
                             }
@@ -617,6 +635,9 @@ private fun BootcampContextCard(
     progressLabel: String,
     weekComplete: Boolean
 ) {
+    // Editorial line ("Strong finish. Next week will adapt…") removed 2026-05-05 —
+    // the Training Signal card in STATUS now owns "what this run does to next week".
+    // This card stays for pure bookkeeping: title + week-progress label.
     GlassCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -640,16 +661,192 @@ private fun BootcampContextCard(
                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                     color = CardeaTheme.colors.textPrimary
                 )
-                Text(
-                    text = if (weekComplete) {
-                        "Strong finish. Next week will adapt from this session."
-                    } else {
-                        "This run has been applied to your current bootcamp week."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CardeaTheme.colors.textSecondary
+            }
+        }
+    }
+}
+
+/**
+ * Training Signal card — surfaces the adaptive engine's plan-tuning decision in plain
+ * English with a single earned number. Bootcamp runs only.
+ *
+ * Layout matches the 2026-05-05 design handoff (`Training Signal Card v2.html`):
+ *   ┌────────────────────────────────────────────────────────────┐
+ *   │ Pushing harder next week         ︿  EFFORT 110 · typical 90 │
+ *   │ Your efficiency is trending up and you're recovered…       │
+ *   └────────────────────────────────────────────────────────────┘
+ *
+ * Env-flag muted variant: headline reverts to "Holding the plan — hot weather ignored",
+ * Effort number gets line-through, comparator dropped, italic footer added below a
+ * 1px divider explaining the exclusion. Direction is communicated by copy + a small
+ * directional glyph; no color encoding (greens/yellows/reds reserved elsewhere).
+ */
+@Composable
+private fun TuningDirectionCard(
+    direction: TuningDirection,
+    runEffort: Int?,
+    typicalEffort: Int?,
+    environmentAffected: Boolean,
+) {
+    val (headline, driver) = when {
+        environmentAffected ->
+            "Holding the plan — hot weather ignored" to "Next week stays as prescribed."
+        direction == TuningDirection.PUSH_HARDER ->
+            "Pushing harder next week" to
+                "Your efficiency is trending up and you're recovered enough to step it up."
+        direction == TuningDirection.EASE_BACK ->
+            "Easing back next week" to
+                "You're carrying fatigue — next week eases off."
+        else ->
+            "Holding the plan" to
+                "Solid session — keeping next week as prescribed."
+    }
+    val headlineColor =
+        if (environmentAffected) CardeaTheme.colors.textSecondary
+        else CardeaTheme.colors.textPrimary
+    val headlineWeight =
+        if (environmentAffected) FontWeight.SemiBold else FontWeight.Bold
+
+    GlassCard(contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = headline,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = headlineWeight,
+                    fontSize = 16.sp,
+                    lineHeight = 20.sp
+                ),
+                color = headlineColor,
+                modifier = Modifier.weight(1f)
+            )
+            if (runEffort != null) {
+                EffortMeta(
+                    runEffort = runEffort,
+                    typicalEffort = typicalEffort,
+                    direction = direction,
+                    muted = environmentAffected,
                 )
             }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = driver,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontSize = 12.sp,
+                lineHeight = 18.sp
+            ),
+            color = CardeaTheme.colors.textSecondary
+        )
+        if (environmentAffected) {
+            Spacer(Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Color.White.copy(alpha = 0.06f))
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "This run was unusually hot — not counted toward fitness signal.",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    fontStyle = FontStyle.Italic
+                ),
+                color = CardeaTheme.colors.textTertiary
+            )
+        }
+    }
+}
+
+@Composable
+private fun EffortMeta(
+    runEffort: Int,
+    typicalEffort: Int?,
+    direction: TuningDirection,
+    muted: Boolean,
+) {
+    val labelColor = CardeaTheme.colors.textTertiary
+    val numberColor =
+        if (muted) CardeaTheme.colors.textTertiary
+        else CardeaTheme.colors.textPrimary
+    val glyphTint =
+        if (muted) CardeaTheme.colors.textTertiary
+        else CardeaTheme.colors.textSecondary
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        DirectionGlyph(direction = direction, tint = glyphTint)
+        Text(
+            text = "EFFORT",
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 11.sp,
+                letterSpacing = 1.4.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = labelColor,
+        )
+        Text(
+            text = runEffort.toString(),
+            style = MaterialTheme.typography.titleSmall.copy(
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold
+            ),
+            color = numberColor,
+            textDecoration = if (muted) TextDecoration.LineThrough else null,
+        )
+        if (!muted && typicalEffort != null) {
+            Text(
+                text = "· typical $typicalEffort",
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                color = labelColor
+            )
+        }
+    }
+}
+
+/**
+ * 11dp polyline glyph for the Effort row: chevron-up for PUSH_HARDER, horizontal line
+ * for HOLD, chevron-down for EASE_BACK. Drawn directly with Canvas so we don't have to
+ * scale a 24dp Material icon down to a non-standard size — the design calls for a
+ * tight 11dp glyph that sits inline with 11sp uppercase text.
+ */
+@Composable
+private fun DirectionGlyph(direction: TuningDirection, tint: Color) {
+    Canvas(modifier = Modifier.size(11.dp)) {
+        val w = size.width
+        val h = size.height
+        val stroke = 1.6.dp.toPx()
+        val points = when (direction) {
+            TuningDirection.PUSH_HARDER -> listOf(
+                Offset(w * 0.20f, h * 0.65f),
+                Offset(w * 0.50f, h * 0.32f),
+                Offset(w * 0.80f, h * 0.65f),
+            )
+            TuningDirection.EASE_BACK -> listOf(
+                Offset(w * 0.20f, h * 0.35f),
+                Offset(w * 0.50f, h * 0.68f),
+                Offset(w * 0.80f, h * 0.35f),
+            )
+            TuningDirection.HOLD -> listOf(
+                Offset(w * 0.18f, h * 0.50f),
+                Offset(w * 0.82f, h * 0.50f),
+            )
+        }
+        for (i in 0 until points.size - 1) {
+            drawLine(
+                color = tint,
+                start = points[i],
+                end = points[i + 1],
+                strokeWidth = stroke,
+                cap = StrokeCap.Round
+            )
         }
     }
 }

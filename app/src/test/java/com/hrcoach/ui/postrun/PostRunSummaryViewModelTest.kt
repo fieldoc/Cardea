@@ -11,6 +11,7 @@ import com.hrcoach.domain.achievement.AchievementEvaluator
 import com.hrcoach.domain.bootcamp.BootcampSessionCompleter
 import com.hrcoach.domain.engine.TuningDirection
 import com.hrcoach.domain.model.AdaptiveProfile
+import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import com.hrcoach.service.WorkoutState
 import com.hrcoach.service.WorkoutSnapshot
 import io.mockk.coEvery
@@ -389,5 +390,211 @@ class PostRunSummaryViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) { workoutRepository.getAllWorkoutsOnce() }
+    }
+
+    // ── Training Signal card surfacing (2026-05-05) ──
+
+    private fun makeMetrics(
+        workoutId: Long = 1L,
+        recordedAtMs: Long = System.currentTimeMillis(),
+        trimpScore: Float? = null,
+        trimpReliable: Boolean = true,
+        environmentAffected: Boolean = false,
+    ) = WorkoutAdaptiveMetrics(
+        workoutId = workoutId,
+        recordedAtMs = recordedAtMs,
+        trimpScore = trimpScore,
+        trimpReliable = trimpReliable,
+        environmentAffected = environmentAffected,
+    )
+
+    @Test
+    fun `tuningDirection surfaced on bootcamp run with adaptive profile direction`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.PUSH_HARDER)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 110f)
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(TuningDirection.PUSH_HARDER, state.tuningDirection)
+        assertEquals(110, state.runEffort)
+        assertFalse(state.runEnvironmentAffected)
+    }
+
+    @Test
+    fun `tuningDirection defaults to HOLD when adaptive profile direction is null`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = null)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 94f)
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertEquals(TuningDirection.HOLD, vm.uiState.value.tuningDirection)
+    }
+
+    @Test
+    fun `tuningDirection null when run is not a bootcamp run`() = runTest {
+        stubDefaults()
+        // No pendingBootcampSessionId → not a bootcamp run; card must not render.
+        WorkoutState.set(WorkoutSnapshot())
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertFalse(state.isBootcampRun)
+        assertNull(state.tuningDirection)
+        assertNull(state.runEffort)
+    }
+
+    @Test
+    fun `runEffort null when current metrics have no trimp score`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = null)
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        // Direction still set, but Effort number cannot be shown.
+        assertEquals(TuningDirection.HOLD, vm.uiState.value.tuningDirection)
+        assertNull(vm.uiState.value.runEffort)
+    }
+
+    @Test
+    fun `runEffort null when trimp score is non-positive`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 0f)
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertNull(vm.uiState.value.runEffort)
+    }
+
+    @Test
+    fun `typicalEffort is median of recent reliable non-environment-affected runs`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 110f)
+        // 5 baseline runs (different IDs from current=1), trimps 60/80/100/120/140 → median 100
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns listOf(
+            makeMetrics(workoutId = 10L, trimpScore = 60f),
+            makeMetrics(workoutId = 11L, trimpScore = 80f),
+            makeMetrics(workoutId = 12L, trimpScore = 100f),
+            makeMetrics(workoutId = 13L, trimpScore = 120f),
+            makeMetrics(workoutId = 14L, trimpScore = 140f),
+        )
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertEquals(100, vm.uiState.value.typicalEffort)
+    }
+
+    @Test
+    fun `typicalEffort excludes environment-affected and unreliable runs`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 110f)
+        // After filtering: only 80/100/120 survive → median 100. The 200-trimp env-flagged
+        // run and the 40-trimp unreliable run must be excluded.
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns listOf(
+            makeMetrics(workoutId = 10L, trimpScore = 200f, environmentAffected = true),
+            makeMetrics(workoutId = 11L, trimpScore = 80f),
+            makeMetrics(workoutId = 12L, trimpScore = 100f),
+            makeMetrics(workoutId = 13L, trimpScore = 120f),
+            makeMetrics(workoutId = 14L, trimpScore = 40f, trimpReliable = false),
+        )
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertEquals(100, vm.uiState.value.typicalEffort)
+    }
+
+    @Test
+    fun `typicalEffort null when fewer than 3 baseline runs exist`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 110f)
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns listOf(
+            makeMetrics(workoutId = 10L, trimpScore = 80f),
+            makeMetrics(workoutId = 11L, trimpScore = 120f),
+        )
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        // Only 2 baseline runs survive — comparator must be omitted entirely.
+        assertNull(vm.uiState.value.typicalEffort)
+    }
+
+    @Test
+    fun `typicalEffort excludes the current run from baseline`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 999f)
+        // The current run's huge 999 value would skew the median if not excluded.
+        // After filtering out workoutId=1: 80/100/120 remain → median 100.
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns listOf(
+            makeMetrics(workoutId = 1L, trimpScore = 999f),
+            makeMetrics(workoutId = 11L, trimpScore = 80f),
+            makeMetrics(workoutId = 12L, trimpScore = 100f),
+            makeMetrics(workoutId = 13L, trimpScore = 120f),
+        )
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertEquals(100, vm.uiState.value.typicalEffort)
+    }
+
+    @Test
+    fun `runEnvironmentAffected mirrors current metrics flag`() = runTest {
+        stubDefaults()
+        WorkoutState.set(WorkoutSnapshot(pendingBootcampSessionId = 42L))
+        coEvery { adaptiveProfileRepository.getProfile() } returns
+            AdaptiveProfile(lastTuningDirection = TuningDirection.HOLD)
+        coEvery { workoutMetricsRepository.getWorkoutMetrics(1L) } returns
+            makeMetrics(workoutId = 1L, trimpScore = 142f, environmentAffected = true)
+        coEvery { workoutMetricsRepository.getRecentMetrics(any()) } returns emptyList()
+
+        val vm = buildVm(fresh = true)
+        advanceUntilIdle()
+
+        assertTrue(vm.uiState.value.runEnvironmentAffected)
     }
 }
