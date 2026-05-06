@@ -1051,7 +1051,8 @@ class BootcampViewModel @Inject constructor(
                     day = s.dayOfWeek,
                     label = dayLabelFor(s.dayOfWeek),
                     reason = s.reason.toUi(),
-                    isRecommended = s.dayOfWeek == firstFreeDay
+                    isRecommended = s.dayOfWeek == firstFreeDay,
+                    isPreferred = s.isPreferred
                 )
             }
 
@@ -1064,6 +1065,7 @@ class BootcampViewModel @Inject constructor(
                     rescheduleSuggestions = ui,
                     rescheduleConfirmDay = null,
                     rescheduleConfirmDayLabel = null,
+                    rescheduleConfirmDayLongLabel = null,
                     rescheduleConfirmReason = null
                 )
             }
@@ -1083,6 +1085,7 @@ class BootcampViewModel @Inject constructor(
                     it.copy(
                         rescheduleConfirmDay = day,
                         rescheduleConfirmDayLabel = suggestion.label,
+                        rescheduleConfirmDayLongLabel = dayLabelLongFor(day),
                         rescheduleConfirmReason = suggestion.reason
                     )
                 }
@@ -1102,6 +1105,7 @@ class BootcampViewModel @Inject constructor(
             it.copy(
                 rescheduleConfirmDay = null,
                 rescheduleConfirmDayLabel = null,
+                rescheduleConfirmDayLongLabel = null,
                 rescheduleConfirmReason = null
             )
         }
@@ -1143,6 +1147,7 @@ class BootcampViewModel @Inject constructor(
                 rescheduleSuggestions = emptyList(),
                 rescheduleConfirmDay = null,
                 rescheduleConfirmDayLabel = null,
+                rescheduleConfirmDayLongLabel = null,
                 rescheduleConfirmReason = null
             )
         }
@@ -1447,6 +1452,11 @@ class BootcampViewModel @Inject constructor(
 
     private fun dayLabelFor(dayOfWeek: Int): String =
         DayOfWeek.of(dayOfWeek.coerceIn(1, 7)).getDisplayName(TextStyle.SHORT, Locale.getDefault())
+
+    /** Long-form day label (e.g. "Wednesday") — used in the advisory dialog body for
+     *  natural-sounding copy. The chip strip and dialog title still use the short form. */
+    private fun dayLabelLongFor(dayOfWeek: Int): String =
+        DayOfWeek.of(dayOfWeek.coerceIn(1, 7)).getDisplayName(TextStyle.FULL, Locale.getDefault())
 
     /** "54 min · Base" / "35 min · Threshold" — minutes + short zone for the Coming-Up list. */
     private fun buildUpcomingSubtitle(minutes: Int, rawSessionType: String): String {

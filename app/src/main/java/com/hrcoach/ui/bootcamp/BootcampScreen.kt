@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -406,10 +408,11 @@ fun BootcampScreen(
 
             if (uiState.rescheduleConfirmDay != null && uiState.rescheduleConfirmReason != null) {
                 AdvisoryRescheduleDialog(
-                    dayLabel = uiState.rescheduleConfirmDayLabel ?: "",
-                    reason   = uiState.rescheduleConfirmReason!!,
-                    onConfirm = { viewModel.confirmAdvisoryReschedule() },
-                    onDismiss = { viewModel.dismissAdvisoryConfirm() }
+                    dayLabel     = uiState.rescheduleConfirmDayLabel ?: "",
+                    dayLongLabel = uiState.rescheduleConfirmDayLongLabel ?: uiState.rescheduleConfirmDayLabel ?: "",
+                    reason       = uiState.rescheduleConfirmReason!!,
+                    onConfirm    = { viewModel.confirmAdvisoryReschedule() },
+                    onDismiss    = { viewModel.dismissAdvisoryConfirm() }
                 )
             }
         }
@@ -3145,18 +3148,19 @@ private fun RescheduleChipStrip(
     // Sort by ascending dayOfWeek for the visible row (engine pre-sorts by reason for
     // recommendation logic, but the user expects calendar order).
     val byDay = suggestions.sortedBy { it.day }
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            byDay.forEach { s ->
-                RescheduleDayChip(
-                    suggestion = s,
-                    onTap = { onChipTapped(s.day) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+    // LazyRow with fixed-width chips so a 6-chip Mon-on-Mon worst case scrolls cleanly
+    // on narrow phones instead of bunching captions. 64dp + 8dp gaps fits 5 chips inside
+    // a 411dp viewport with the 24dp sheet padding (5*64 + 4*8 = 352 ≤ 363).
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(byDay, key = { it.day }) { s ->
+            RescheduleDayChip(
+                suggestion = s,
+                onTap = { onChipTapped(s.day) },
+                modifier = Modifier.width(64.dp)
+            )
         }
     }
 }
@@ -3167,11 +3171,17 @@ private fun RescheduleDayChip(
     onTap: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val reasonText = when (suggestion.reason) {
-        RescheduleReasonUi.FREE     -> "open day"
-        RescheduleReasonUi.OCCUPIED -> "already has a run"
-        RescheduleReasonUi.RECOVERY -> "right after a hard session"
-        RescheduleReasonUi.BLACKOUT -> "marked as a day off"
+    val isFree = suggestion.reason == RescheduleReasonUi.FREE
+    val isPreferredFree = isFree && suggestion.isPreferred
+    val reasonText = when {
+        isPreferredFree -> "open day, your preferred day"
+        isFree          -> "open day"
+        else -> when (suggestion.reason) {
+            RescheduleReasonUi.OCCUPIED -> "already has a run"
+            RescheduleReasonUi.RECOVERY -> "right after a hard session"
+            RescheduleReasonUi.BLACKOUT -> "marked as a day off"
+            RescheduleReasonUi.FREE     -> "open day" // unreachable but keeps `when` exhaustive
+        }
     }
     val captionText = when (suggestion.reason) {
         RescheduleReasonUi.FREE     -> null
@@ -3180,14 +3190,22 @@ private fun RescheduleDayChip(
         RescheduleReasonUi.BLACKOUT -> "Off day"
     }
     val isEnabled = suggestion.reason != RescheduleReasonUi.OCCUPIED
-    val bgColor = when (suggestion.reason) {
-        RescheduleReasonUi.FREE     -> CardeaTheme.colors.glassHighlight
-        else                        -> CardeaTheme.colors.glassSurface
-    }
+    // Three-tier emphasis on FREE: preferred-FREE shouts (highlighted bg + primary text +
+    // SemiBold), non-preferred-FREE is readable-but-quieter (surface bg + primary text +
+    // Medium), advisory/disabled fall through to subdued styling.
+    val bgColor = if (isPreferredFree)
+        CardeaTheme.colors.glassHighlight
+    else
+        CardeaTheme.colors.glassSurface
     val labelColor = when {
-        !isEnabled                              -> CardeaTheme.colors.textTertiary
-        suggestion.reason == RescheduleReasonUi.FREE -> CardeaTheme.colors.textPrimary
-        else                                    -> CardeaTheme.colors.textSecondary
+        !isEnabled      -> CardeaTheme.colors.textTertiary
+        isFree          -> CardeaTheme.colors.textPrimary
+        else            -> CardeaTheme.colors.textSecondary
+    }
+    val labelWeight = when {
+        isPreferredFree -> FontWeight.SemiBold
+        isFree          -> FontWeight.Medium
+        else            -> FontWeight.Medium
     }
 
     // Outer Column carries the parent's sizing (e.g. weight(1f) inside a Row).
@@ -3212,11 +3230,7 @@ private fun RescheduleDayChip(
         ) {
             Text(
                 text = suggestion.label,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontWeight = if (suggestion.reason == RescheduleReasonUi.FREE)
-                        FontWeight.SemiBold
-                    else FontWeight.Medium
-                ),
+                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = labelWeight),
                 color = labelColor
             )
         }
@@ -3237,6 +3251,7 @@ private fun RescheduleDayChip(
 @Composable
 private fun AdvisoryRescheduleDialog(
     dayLabel: String,
+    dayLongLabel: String,
     reason: RescheduleReasonUi,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
@@ -3244,12 +3259,12 @@ private fun AdvisoryRescheduleDialog(
     val title = "Run $dayLabel?"
     val body = when (reason) {
         RescheduleReasonUi.RECOVERY ->
-            "$dayLabel is right after a hard session. Stack runs that close together only if you feel ready."
+            "$dayLongLabel is right after a hard session. Stack runs that close together only if you feel ready."
         RescheduleReasonUi.BLACKOUT ->
-            "You marked $dayLabel as a day off. We'll move this run there for this week only — your usual schedule isn't changed."
+            "You marked $dayLongLabel as a day off. We'll move this run there for this week only — your usual schedule isn't changed."
         // OCCUPIED chips are disabled, so this branch shouldn't render. FREE never opens
         // the dialog. Both fall through to a generic prompt as a defensive default.
-        else -> "Move this run to $dayLabel?"
+        else -> "Move this run to $dayLongLabel?"
     }
     AlertDialog(
         onDismissRequest = onDismiss,

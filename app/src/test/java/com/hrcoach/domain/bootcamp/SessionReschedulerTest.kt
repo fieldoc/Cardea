@@ -33,18 +33,22 @@ class SessionReschedulerTest {
     // ─── reschedule() result shape ────────────────────────────────────────────
 
     @Test fun moves_to_next_available_day() {
+        // Preferred days 1/3/6 are all occupied — so the only FREE candidates are the
+        // non-preferred days 2/4/5/7. Recommendation falls to day 2 (earliest non-pref FREE).
         val req = RescheduleRequest(
             session = session(day = 1),
             enrollment = enrollment(),
             todayDayOfWeek = 1,
-            occupiedDaysThisWeek = setOf(1),
+            // Match the production VM: occupied mirrors allSessionsThisWeek.
+            occupiedDaysThisWeek = setOf(1, 3, 6),
             allSessionsThisWeek = listOf(session(1), session(3), session(6))
         )
         val suggestions = SessionRescheduler.suggestions(req)
         assertEquals(SuggestionReason.FREE, reasonOn(suggestions, 2))
+        assertEquals(SuggestionReason.OCCUPIED, reasonOn(suggestions, 3))
+        assertEquals(SuggestionReason.OCCUPIED, reasonOn(suggestions, 6))
         val result = SessionRescheduler.reschedule(req)
         assertTrue(result is RescheduleResult.Moved)
-        // Day 2 is the first FREE day (3 and 6 are OCCUPIED).
         assertEquals(2, (result as RescheduleResult.Moved).firstFreeDayOrNull)
     }
 
@@ -297,5 +301,56 @@ class SessionReschedulerTest {
         )
         val suggestions = SessionRescheduler.suggestions(req)
         assertEquals(SuggestionReason.OCCUPIED, reasonOn(suggestions, 5))
+    }
+
+    @Test fun multi_reason_precedence_picks_blackout_over_recovery_spacing() {
+        // Day 4 is BLACKOUT and adjacent to a hard session on day 3 — BLACKOUT wins
+        // over RECOVERY_SPACING per the precedence rule.
+        val req = RescheduleRequest(
+            session = session(day = 1, type = "EASY"),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                3 to DaySelectionLevel.AVAILABLE,
+                4 to DaySelectionLevel.BLACKOUT,
+                6 to DaySelectionLevel.AVAILABLE
+            )),
+            todayDayOfWeek = 1,
+            occupiedDaysThisWeek = setOf(1, 3),
+            allSessionsThisWeek = listOf(
+                session(1, "EASY"),
+                session(3, "TEMPO")  // hard session adjacent to day 4
+            )
+        )
+        val suggestions = SessionRescheduler.suggestions(req)
+        assertEquals(
+            "BLACKOUT must take precedence over RECOVERY_SPACING when both apply",
+            SuggestionReason.BLACKOUT,
+            reasonOn(suggestions, 4)
+        )
+    }
+
+    @Test fun preferred_free_day_is_recommended_over_non_preferred_free_day() {
+        // Both day 2 (Tue, not preferred) and day 6 (Sat, preferred) are FREE. The
+        // recommendation should land on Sat — the user actually plans to run that day.
+        // Without the isPreferred sort, ascending dayOfWeek would push Tue first.
+        val req = RescheduleRequest(
+            session = session(day = 1),
+            enrollment = enrollment(dayPrefs(
+                1 to DaySelectionLevel.AVAILABLE,
+                6 to DaySelectionLevel.AVAILABLE  // Sat preferred; Tue/Thu/Fri/Sun NONE
+            )),
+            todayDayOfWeek = 1,
+            occupiedDaysThisWeek = setOf(1),
+            allSessionsThisWeek = listOf(session(1))
+        )
+        val result = SessionRescheduler.reschedule(req) as RescheduleResult.Moved
+        assertEquals(
+            "Recommendation must prefer the user's planned day over an arbitrary open day",
+            6,
+            result.firstFreeDayOrNull
+        )
+        // And the suggestion list itself flags day 6 as preferred.
+        val day6 = SessionRescheduler.suggestions(req).first { it.dayOfWeek == 6 }
+        assertTrue(day6.isPreferred)
     }
 }

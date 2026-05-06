@@ -47,8 +47,11 @@ data class RescheduleDayUi(
     /** Short locale-aware label (e.g. "Wed"). */
     val label: String,
     val reason: RescheduleReasonUi,
-    /** True for the first FREE day — gets the "Recommended" callout. */
-    val isRecommended: Boolean
+    /** True for the first preferred FREE day — gets the "Recommended" callout. */
+    val isRecommended: Boolean,
+    /** True if this day is in the user's preferred-days list at AVAILABLE/LONG_RUN_BIAS.
+     *  Drives stronger emphasis on FREE chips that match the user's plan. */
+    val isPreferred: Boolean
 )
 
 /** One slot in the 7-day week strip. `session` is null for rest days. */
@@ -118,9 +121,10 @@ data class BootcampUiState(
     val rescheduleAutoTargetDay: Int? = null,
     val rescheduleAutoTargetLabel: String? = null,
     val rescheduleSuggestions: List<RescheduleDayUi> = emptyList(),
-    // Advisory-confirm dialog (rotation/process-death-safe state)
+    // Advisory-confirm dialog (rotation-safe; resets on process death along with the sheet)
     val rescheduleConfirmDay: Int? = null,
     val rescheduleConfirmDayLabel: String? = null,
+    val rescheduleConfirmDayLongLabel: String? = null,
     val rescheduleConfirmReason: RescheduleReasonUi? = null,
     // Session detail sheet
     val showSessionDetail: Boolean = false,

@@ -75,6 +75,9 @@ object SessionRescheduler {
                 DaySuggestion(candidate, reason, isPreferred)
             }
 
+        // Sort: FREE first, then RECOVERY_SPACING, BLACKOUT, OCCUPIED. Within FREE,
+        // preferred-FREE comes before non-preferred-FREE so the recommendation lands on
+        // a day the user actually planned to run on. Within each tier, ascending dayOfWeek.
         return raw.sortedWith(
             compareBy<DaySuggestion> {
                 when (it.reason) {
@@ -83,7 +86,9 @@ object SessionRescheduler {
                     SuggestionReason.BLACKOUT         -> 2
                     SuggestionReason.OCCUPIED         -> 3
                 }
-            }.thenBy { it.dayOfWeek }
+            }
+                .thenBy { if (it.reason == SuggestionReason.FREE && it.isPreferred) 0 else 1 }
+                .thenBy { it.dayOfWeek }
         )
     }
 
