@@ -85,7 +85,6 @@ class BootcampViewModel @Inject constructor(
 
     private var welcomeBackDismissed = false
     private var rewindBreadcrumbDismissed = false
-    private var illnessPromptSnoozedUntilMs = 0L
     /**
      * Latest gap-adjustment disclosure built by [applyGapAdjustmentIfNeeded].
      * Null when the most recent load found no rewind / tier change worth disclosing.
@@ -319,7 +318,6 @@ class BootcampViewModel @Inject constructor(
         val fitnessLevel = FitnessEvaluator.assess(profile, recentMetrics)
         currentEnrollment = enrollment
         currentTuningDirection = fitnessSignals.tuningDirection
-        val illnessFlag = fitnessSignals.illnessFlag && System.currentTimeMillis() >= illnessPromptSnoozedUntilMs
         val tierPrompt = resolveTierPromptDirection(
             goal = goal,
             profileCtl = profile.ctl,
@@ -329,8 +327,8 @@ class BootcampViewModel @Inject constructor(
             recentMetrics = recentMetrics,
             currentPhase = engine.currentPhase
         )
-        val tierPromptDirection = if (illnessFlag) TierPromptDirection.NONE else tierPrompt.direction
-        val tierPromptEvidence = if (illnessFlag) null else tierPrompt.evidence
+        val tierPromptDirection = tierPrompt.direction
+        val tierPromptEvidence = tierPrompt.evidence
 
         val lastSession = bootcampRepository.getLastCompletedSession(enrollment.id)
         val daysSinceLastRun = computeDaysSinceLastRun(enrollment, lastSession)
@@ -560,7 +558,6 @@ class BootcampViewModel @Inject constructor(
             needsCalibration = gapAction.requiresCalibration,
             fitnessLevel = fitnessLevel,
             tuningDirection = fitnessSignals.tuningDirection,
-            illnessFlag = illnessFlag,
             tierIndex = enrollment.tierIndex,
             ctl = profile.ctl,
             tierPromptDirection = tierPromptDirection,
@@ -998,21 +995,6 @@ class BootcampViewModel @Inject constructor(
 
     fun retryLoad() {
         loadBootcampState()
-    }
-
-    fun confirmIllness() {
-        illnessPromptSnoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(ILLNESS_CONFIRM_SNOOZE_DAYS)
-        _uiState.update {
-            it.copy(
-                illnessFlag = false,
-                tuningDirection = TuningDirection.EASE_BACK
-            )
-        }
-    }
-
-    fun dismissIllness() {
-        illnessPromptSnoozedUntilMs = System.currentTimeMillis() + TimeUnit.DAYS.toMillis(ILLNESS_DISMISS_SNOOZE_DAYS)
-        _uiState.update { it.copy(illnessFlag = false) }
     }
 
     fun swapTodayForRest() {
@@ -1844,8 +1826,6 @@ class BootcampViewModel @Inject constructor(
 
     companion object {
         private const val RECENT_METRICS_DAYS = 42
-        const val ILLNESS_CONFIRM_SNOOZE_DAYS = 10L
-        const val ILLNESS_DISMISS_SNOOZE_DAYS = 1L
     }
 
 }

@@ -24,12 +24,12 @@ Audit method: three-tier dispatch — four Haiku file-scoped agents in parallel,
 
 **A2. HRR1 infrastructure absent; illness detection dead code**
 - `WorkoutForegroundService.kt:728` / `FitnessSignalEvaluator.kt:69-71`
-- Design specifies a 120s post-workout BLE hold with HR samples at T=0/60/120s, stored as `hrr1Bpm`. Never implemented. Comment on FitnessSignalEvaluator.kt:69 explicitly acknowledges "illness detection previously relied on hrr1Bpm, which is never computed."
+- Design specifies a 120s post-workout BLE hold with HR samples at T=0/60/120s, stored as `hrr1Bpm`. Never implemented.
 - Runner effect: SOFT and FULL illness tiers never trigger. Runner training through a cold gets no EASE_BACK signal. Fitness improvements via faster recovery are not credited.
-- **Fix (recommended):** delete dead schema. Remove `hrr1Bpm` field, `IllnessSignalTier.SOFT`, `IllnessSignalTier.FULL`, and the dead branch in FitnessSignalEvaluator. Reopen as its own plan when feature is prioritized.
-- **Fix (alternative):** build the full cool-down pathway — requires BLE hold past `stopForeground`, a cool-down UI screen, T=0/60/120s sampling, and `hrr1Bpm` write-through. Nontrivial.
+- **Fix taken:** delete dead schema. Removed `hrr1Bpm` field, `IllnessSignalTier`, illness fields on `FitnessEvaluation`, the `IllnessPromptCard` UI path, and the `illnessPromptSnoozedUntilMs` enrollment column. DB migration v19→v20 rebuilds both tables to drop the columns. Cloud backup/restore stops emitting/reading the keys; older remote backups continue to restore (the surplus keys are simply ignored).
+- **If reopened:** build the full cool-down pathway — requires BLE hold past `stopForeground`, a cool-down UI screen, T=0/60/120s sampling, and `hrr1Bpm` write-through. Reintroduce as its own plan.
 - Owner: engine + UI
-- Status: proposed
+- Status: **resolved 2026-05-06**
 
 **A3. TSB PUSH_HARDER threshold aggressive**
 - `FitnessSignalEvaluator.kt:21`
@@ -102,9 +102,11 @@ New algorithm: conservative upward-only rule. Sustained 2-min rolling peak must 
 
 Tests: updated `SubMaxHrEstimatorTest.kt` — three existing tests rewritten for the new behavior (including a regression test explicitly named `returns null when moderate effort - the pre-2026-04-14 mushing case`), two new tests added for margin-gate edge cases.
 
-### A2 — HRR1 infrastructure (documented as dead)
+### A2 — HRR1 infrastructure (deleted 2026-05-06)
 
-HRR1 post-workout measurement was never implemented. Rather than deleting the data schema (which would require a Room migration and UI removal) or building the full feature (120s BLE hold + cool-down UI, non-trivial), the dead path is now explicitly tagged. Added `TODO(HRR1):` comment in `FitnessSignalEvaluator.kt` pointing to the Science Constants Register entry. The illness-flag UI path in `BootcampViewModel`/`BootcampScreen` is permanently dormant until HRR1 lands as its own plan.
+HRR1 post-workout measurement was never implemented. Initially the dead path was just tagged with a `TODO(HRR1):` comment; on 2026-05-06 it was deleted outright. DB migration v19→v20 rebuilds `workout_metrics` (drops `hrr1Bpm`) and `bootcamp_enrollments` (drops `illnessPromptSnoozedUntilMs`) via the table-rebuild pattern (SQLite < 3.35 lacks `DROP COLUMN`; minSdk = 26). The `IllnessSignalTier` enum, illness fields on `FitnessEvaluation`, `IllnessPromptCard`, and the `confirmIllness`/`dismissIllness` viewmodel methods are gone. Cloud backup stops emitting `hrr1Bpm` / `illnessPromptSnoozedUntilMs`; restore ignores them in older remote backups.
+
+Reintroduce as its own plan if a 120s post-workout cool-down hold (BLE held past `stopForeground` + cool-down UI screen + T=0/60/120s sampling + write-through) is ever prioritized.
 
 ### A3 — TSB PUSH threshold (re-verified, not changed)
 

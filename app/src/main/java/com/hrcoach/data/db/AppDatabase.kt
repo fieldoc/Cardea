@@ -11,11 +11,105 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [WorkoutEntity::class, TrackPointEntity::class, WorkoutMetricsEntity::class,
                 BootcampEnrollmentEntity::class, BootcampSessionEntity::class,
                 AchievementEntity::class],
-    version = 19,
+    version = 20,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     companion object {
+        // v20 deletes the dormant HRR1/illness-detection schema (TODO(HRR1) was never implemented;
+        // see docs/plans/2026-04-14-science-fidelity-audit-findings.md A2). Drops:
+        //   - workout_metrics.hrr1Bpm
+        //   - bootcamp_enrollments.illnessPromptSnoozedUntilMs
+        // SQLite < 3.35 (Android API < 34, our minSdk = 26) lacks ALTER TABLE DROP COLUMN, so each
+        // table is rebuilt via CREATE NEW / INSERT SELECT / DROP / RENAME (same pattern as
+        // MIGRATION_11_12). All other user data is preserved by explicit column-list copy.
+        val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // ── workout_metrics: drop hrr1Bpm ────────────────────────────────
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `workout_metrics_new` (
+                        `workoutId` INTEGER NOT NULL,
+                        `recordedAtMs` INTEGER NOT NULL,
+                        `avgPaceMinPerKm` REAL,
+                        `avgHr` REAL,
+                        `hrAtSixMinPerKm` REAL,
+                        `settleDownSec` REAL,
+                        `settleUpSec` REAL,
+                        `longTermHrTrimBpm` REAL NOT NULL,
+                        `responseLagSec` REAL NOT NULL,
+                        `efficiencyFactor` REAL,
+                        `aerobicDecoupling` REAL,
+                        `efFirstHalf` REAL,
+                        `efSecondHalf` REAL,
+                        `heartbeatsPerKm` REAL,
+                        `paceAtRefHrMinPerKm` REAL,
+                        `trimpScore` REAL,
+                        `trimpReliable` INTEGER NOT NULL,
+                        `environmentAffected` INTEGER NOT NULL,
+                        `cueCountsJson` TEXT,
+                        PRIMARY KEY(`workoutId`),
+                        FOREIGN KEY(`workoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO `workout_metrics_new` (
+                        `workoutId`, `recordedAtMs`, `avgPaceMinPerKm`, `avgHr`, `hrAtSixMinPerKm`,
+                        `settleDownSec`, `settleUpSec`, `longTermHrTrimBpm`, `responseLagSec`,
+                        `efficiencyFactor`, `aerobicDecoupling`, `efFirstHalf`, `efSecondHalf`,
+                        `heartbeatsPerKm`, `paceAtRefHrMinPerKm`, `trimpScore`, `trimpReliable`,
+                        `environmentAffected`, `cueCountsJson`
+                    )
+                    SELECT
+                        `workoutId`, `recordedAtMs`, `avgPaceMinPerKm`, `avgHr`, `hrAtSixMinPerKm`,
+                        `settleDownSec`, `settleUpSec`, `longTermHrTrimBpm`, `responseLagSec`,
+                        `efficiencyFactor`, `aerobicDecoupling`, `efFirstHalf`, `efSecondHalf`,
+                        `heartbeatsPerKm`, `paceAtRefHrMinPerKm`, `trimpScore`, `trimpReliable`,
+                        `environmentAffected`, `cueCountsJson`
+                    FROM `workout_metrics`
+                """.trimIndent())
+                db.execSQL("DROP TABLE `workout_metrics`")
+                db.execSQL("ALTER TABLE `workout_metrics_new` RENAME TO `workout_metrics`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_workout_metrics_workoutId` ON `workout_metrics` (`workoutId`)")
+
+                // ── bootcamp_enrollments: drop illnessPromptSnoozedUntilMs ───────
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `bootcamp_enrollments_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `goalType` TEXT NOT NULL,
+                        `targetMinutesPerRun` INTEGER NOT NULL,
+                        `runsPerWeek` INTEGER NOT NULL,
+                        `preferredDays` TEXT NOT NULL,
+                        `startDate` INTEGER NOT NULL,
+                        `currentPhaseIndex` INTEGER NOT NULL,
+                        `currentWeekInPhase` INTEGER NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `tierIndex` INTEGER NOT NULL,
+                        `tierPromptSnoozedUntilMs` INTEGER NOT NULL,
+                        `tierPromptDismissCount` INTEGER NOT NULL,
+                        `pausedAtMs` INTEGER NOT NULL,
+                        `targetFinishingTimeMinutes` INTEGER,
+                        `lastTierChangeWeek` INTEGER
+                    )
+                """.trimIndent())
+                db.execSQL("""
+                    INSERT INTO `bootcamp_enrollments_new` (
+                        `id`, `goalType`, `targetMinutesPerRun`, `runsPerWeek`, `preferredDays`,
+                        `startDate`, `currentPhaseIndex`, `currentWeekInPhase`, `status`,
+                        `tierIndex`, `tierPromptSnoozedUntilMs`, `tierPromptDismissCount`,
+                        `pausedAtMs`, `targetFinishingTimeMinutes`, `lastTierChangeWeek`
+                    )
+                    SELECT
+                        `id`, `goalType`, `targetMinutesPerRun`, `runsPerWeek`, `preferredDays`,
+                        `startDate`, `currentPhaseIndex`, `currentWeekInPhase`, `status`,
+                        `tierIndex`, `tierPromptSnoozedUntilMs`, `tierPromptDismissCount`,
+                        `pausedAtMs`, `targetFinishingTimeMinutes`, `lastTierChangeWeek`
+                    FROM `bootcamp_enrollments`
+                """.trimIndent())
+                db.execSQL("DROP TABLE `bootcamp_enrollments`")
+                db.execSQL("ALTER TABLE `bootcamp_enrollments_new` RENAME TO `bootcamp_enrollments`")
+            }
+        }
+
         val MIGRATION_18_19 = object : Migration(18, 19) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE workout_metrics ADD COLUMN cueCountsJson TEXT")

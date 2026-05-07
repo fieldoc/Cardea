@@ -3,7 +3,6 @@ package com.hrcoach.domain.engine
 import com.hrcoach.domain.model.AdaptiveProfile
 import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
@@ -20,7 +19,6 @@ class FitnessSignalEvaluatorTest {
             recordedAtMs = nowMs - daysAgo * 86_400_000L,
             efficiencyFactor = ef,
             aerobicDecoupling = decoupling,
-            hrr1Bpm = null,
             environmentAffected = false,
             trimpReliable = true
         )
@@ -44,20 +42,6 @@ class FitnessSignalEvaluatorTest {
         val profile = AdaptiveProfile(ctl = 60f, atl = 90f)
         val result = FitnessSignalEvaluator.evaluate(profile, emptyList())
         assertEquals(TuningDirection.EASE_BACK, result.tuningDirection)
-    }
-
-    @Test
-    fun `illness tier always NONE until HRR1 measurement is implemented`() {
-        val profile = AdaptiveProfile(ctl = 60f, atl = 50f)
-        val recentMetrics = listOf(
-            metrics(ef = 1.1f, decoupling = 3f, daysAgo = 12),
-            metrics(ef = 1.1f, decoupling = 3f, daysAgo = 8),
-            metrics(ef = 0.95f, decoupling = 9f, daysAgo = 1)
-        )
-
-        val result = FitnessSignalEvaluator.evaluate(profile, recentMetrics)
-        assertEquals(IllnessSignalTier.NONE, result.illnessTier)
-        assertFalse(result.illnessFlag)
     }
 
     @Test

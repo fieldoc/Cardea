@@ -19,7 +19,6 @@ data class BootcampEnrollmentEntity(
     val tierIndex: Int = 0,
     val tierPromptSnoozedUntilMs: Long = 0,
     val tierPromptDismissCount: Int = 0,
-    val illnessPromptSnoozedUntilMs: Long = 0,
     val pausedAtMs: Long = 0,
     val targetFinishingTimeMinutes: Int? = null,
     /** Absolute week number when tier last changed (for transition-week logic). Null = no recent change. */

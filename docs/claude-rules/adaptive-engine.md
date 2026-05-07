@@ -49,7 +49,7 @@ Load when touching `AdaptivePaceController`, `FitnessSignalEvaluator`, `SubMaxHr
 - **`FitnessSignalEvaluator.efTrend`** uses least-squares regression slope scaled to total span (not endpoint delta). Slope = `(n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX)`, then `× (n-1)` → total estimated change; comparable to old threshold 0.04. Robust to single-session outliers.
 - **TSB thresholds are conjunctive-gated** — `TSB_PUSH_THRESHOLD = 5f` alone looks aggressive, but PUSH_HARDER requires BOTH `tsb > 5` AND `efTrend > 0.04` (3+ reliable sessions / 42 days). EF requirement is the real filter. Don't flag +5 as "aggressive" in isolation. EASE at -25 is unilateral (Friel's "overreached").
 - **`TierCtlRanges`** is 0-indexed internal (Foundation/Development/Performance → spec T1/T2/T3). Intentionally extends spec at both ends: Foundation floor = 0 (new users with CTL<10), Performance ceiling = 200 (terminal, no promotion). Documented in `TierCtlRanges.kt` KDoc.
-- **HRR1 pathway dormant** — illness tier permanently `NONE` because `hrr1Bpm` never computed (120s post-workout cool-down hold not implemented). BootcampVM/Screen illness UI is dead code tagged `TODO(HRR1)`. Don't delete schema fields — needed when feature lands.
+- **No illness detection** — `FitnessSignalEvaluator` returns only `tuningDirection`. Illness/HRR1 signal was deleted at DB v19→v20 (2026-05-06): the 120s post-workout cool-down hold needed to compute `hrr1Bpm` was never built, so the path was dead. Reopen as its own plan if the cool-down feature is ever prioritized.
 
 ## Sample book-keeping
 

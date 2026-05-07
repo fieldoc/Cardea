@@ -223,14 +223,11 @@ Valid `Source` values:
 - **User-facing:** toggled via `AudioSettings.inZoneConfirmCadence` (no UI yet — field-testing defaults). Persists through both local Gson blob and cloud backup/restore.
 - **Last reviewed:** 2026-04-17
 
-### HRR1 post-workout measurement window
-- **File:** Not implemented (design specifies 120s with samples at T=0/60/120s)
-- **Value:** N/A — **feature absent**
-- **Source:** intended-published, not built
-- **Citation:** Cole CR et al. (1999). *Heart-rate recovery immediately after exercise as a predictor of mortality*. NEJM 341:1351-1357.
-- **Effect if wrong:** Currently: `FitnessSignalEvaluator` has dead code for `IllnessSignalTier.SOFT`/`FULL` because it can't read HRR1. Runner never gets illness detection, never gets credit for improving recovery.
-- **Action:** either build the full 120s BLE hold + cool-down UI, or delete `hrr1Bpm`, `IllnessSignalTier.SOFT`, `IllnessSignalTier.FULL` from the data model as dead schema. Do not leave in limbo.
-- **Last reviewed:** 2026-04-14 (flagged for resolve)
+### HRR1 post-workout measurement window — **DELETED 2026-05-06**
+- **Status:** removed entirely. The 120s post-workout BLE cool-down hold was never built, so `hrr1Bpm` was always null and `IllnessSignalTier.SOFT`/`FULL` were unreachable. Resolved at DB v19→v20 by dropping the `hrr1Bpm` column from `workout_metrics`, the `illnessPromptSnoozedUntilMs` column from `bootcamp_enrollments`, the `IllnessSignalTier` enum, the illness fields on `FitnessEvaluation`, and the `IllnessPromptCard` UI path.
+- **Citation if revisited:** Cole CR et al. (1999). *Heart-rate recovery immediately after exercise as a predictor of mortality*. NEJM 341:1351-1357.
+- **If reopened:** would require keeping BLE alive past `stopForeground`, a cool-down UI screen, T=0/60/120s sampling, write-through into a re-added `hrr1Bpm` column, and a fresh tier model. Reintroduce as its own plan; do not attempt to revive the schema piecemeal.
+- **Last reviewed:** 2026-05-06 (deleted)
 
 ---
 

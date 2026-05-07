@@ -106,7 +106,6 @@ data class BootcampUiState(
     // Fitness
     val fitnessLevel: FitnessLevel = FitnessLevel.UNKNOWN,
     val tuningDirection: TuningDirection = TuningDirection.HOLD,
-    val illnessFlag: Boolean = false,
     val tierIndex: Int = 0,
     val ctl: Float = 0f,
     val showTierDetail: Boolean = false,

@@ -261,8 +261,6 @@ fun BootcampScreen(
                     onEndProgram = { viewModel.showDeleteConfirmDialog() },
                     onDismissTierPrompt = viewModel::dismissTierPrompt,
                     onAcceptTierChange = viewModel::acceptTierChange,
-                    onConfirmIllness = viewModel::confirmIllness,
-                    onDismissIllness = viewModel::dismissIllness,
                     onSwapTodayForRest = viewModel::swapTodayForRest,
                     onGraduateGoal = viewModel::graduateCurrentGoal,
                     onReschedule = { sessionId -> viewModel.requestReschedule(sessionId) },
@@ -1524,8 +1522,6 @@ private fun ActiveBootcampDashboard(
     onEndProgram: () -> Unit,
     onDismissTierPrompt: () -> Unit,
     onAcceptTierChange: (TierPromptDirection) -> Unit,
-    onConfirmIllness: () -> Unit,
-    onDismissIllness: () -> Unit,
     onSwapTodayForRest: () -> Unit,
     onGraduateGoal: () -> Unit,
     onReschedule: (Long) -> Unit,
@@ -1604,11 +1600,6 @@ private fun ActiveBootcampDashboard(
                     evidence = uiState.tierPromptEvidence,
                     onAccept = onAcceptTierChange,
                     onDismiss = onDismissTierPrompt
-                )
-            } else if (uiState.illnessFlag) {
-                IllnessPromptCard(
-                    onConfirm = onConfirmIllness,
-                    onDismiss = onDismissIllness
                 )
             }
 
@@ -2988,42 +2979,6 @@ private fun TierPromptCard(
                 onClick = { onAccept(direction) },
                 modifier = Modifier
                     .weight(2f)
-                    .height(44.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun IllnessPromptCard(
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    GlassCard(modifier = Modifier.fillMaxWidth().border(1.dp, ZoneAmber.copy(alpha = 0.15f), RoundedCornerShape(16.dp)), borderColor = Color.Transparent) {
-        Text(
-            text = "Check in with your body",
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = CardeaTheme.colors.textPrimary
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Recent signals look atypical. If you're getting sick, keep today's effort easy.",
-            style = MaterialTheme.typography.bodySmall,
-            color = CardeaTheme.colors.textSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            TextButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                Text("Dismiss", color = CardeaTheme.colors.textSecondary)
-            }
-            CardeaButton(
-                text = "I'm unwell",
-                onClick = onConfirm,
-                modifier = Modifier
-                    .weight(1f)
                     .height(44.dp)
             )
         }

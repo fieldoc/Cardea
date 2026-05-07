@@ -5,12 +5,9 @@ import com.hrcoach.domain.model.WorkoutAdaptiveMetrics
 
 enum class TuningDirection { EASE_BACK, HOLD, PUSH_HARDER }
 enum class TierPromptDirection { NONE, UP, DOWN }
-enum class IllnessSignalTier { NONE, SOFT, FULL }
 
 data class FitnessEvaluation(
     val tuningDirection: TuningDirection,
-    val illnessTier: IllnessSignalTier,
-    val illnessFlag: Boolean,
     val tsb: Float,
     val efTrend: Float?
 )
@@ -61,8 +58,6 @@ object FitnessSignalEvaluator {
         if (tsb < TSB_EASE_THRESHOLD) {
             return FitnessEvaluation(
                 tuningDirection = TuningDirection.EASE_BACK,
-                illnessTier = IllnessSignalTier.NONE,
-                illnessFlag = false,
                 tsb = tsb,
                 efTrend = null
             )
@@ -70,8 +65,6 @@ object FitnessSignalEvaluator {
         if (reliable.size < MIN_RELIABLE_SESSIONS || profile.ctl < 5f) {
             return FitnessEvaluation(
                 tuningDirection = TuningDirection.HOLD,
-                illnessTier = IllnessSignalTier.NONE,
-                illnessFlag = false,
                 tsb = tsb,
                 efTrend = null
             )
@@ -91,13 +84,6 @@ object FitnessSignalEvaluator {
             (slope * (n - 1)).toFloat()
         } else null
 
-        // TODO(HRR1): illness detection (IllnessSignalTier.SOFT / FULL) is designed to key off
-        // `hrr1Bpm`, the post-workout heart rate recovery measurement. HRR1 is never computed
-        // — the design-spec'd 120s post-workout BLE hold is not implemented. See
-        // `docs/plans/2026-04-14-science-constants-register.md` entry "HRR1 post-workout
-        // measurement window". Until that feature lands, illness tier is permanently NONE and
-        // the BootcampViewModel/BootcampScreen illness-flag UI path is dead code.
-
         val tuningDirection = when {
             tsb > TSB_PUSH_THRESHOLD &&
                 efTrend != null &&
@@ -107,8 +93,6 @@ object FitnessSignalEvaluator {
 
         return FitnessEvaluation(
             tuningDirection = tuningDirection,
-            illnessTier = IllnessSignalTier.NONE,
-            illnessFlag = false,
             tsb = tsb,
             efTrend = efTrend
         )

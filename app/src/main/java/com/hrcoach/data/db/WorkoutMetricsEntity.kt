@@ -33,7 +33,6 @@ data class WorkoutMetricsEntity(
     val efSecondHalf: Float? = null,
     val heartbeatsPerKm: Float? = null,
     val paceAtRefHrMinPerKm: Float? = null,
-    val hrr1Bpm: Float? = null,
     val trimpScore: Float? = null,
     val trimpReliable: Boolean = true,
     val environmentAffected: Boolean = false,
